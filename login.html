@@ -6,11 +6,6 @@
 <title>أكاديمية سليم | تسجيل الدخول</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  const SUPA_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co';
-  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s';
-  const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
-</script>
 <style>
 :root {
   --blue:       #1A56DB;
@@ -677,6 +672,11 @@ body {
 </div>
 
 <script>
+// ── SUPABASE INIT ──
+const SUPA_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s';
+const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
 // ── TAB SWITCH ──
 function switchTab(tab) {
   document.querySelectorAll('.auth-tab').forEach(function(t,i){
