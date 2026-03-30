@@ -794,7 +794,7 @@ async function handleLogin() {
     document.getElementById('login-alert-msg').textContent = msg;
     document.getElementById('login-alert').classList.add('show');
   } else {
-    window.location.href = 'seleem-dashboard.html';
+    window.location.href = 'dashboard.html';
   }
 }
 
@@ -871,14 +871,14 @@ async function handleRegister() {
 
 // ── GO TO DASHBOARD ──
 function goToDashboard() {
-  window.location.href = 'seleem-dashboard.html';
+  window.location.href = 'dashboard.html';
 }
 
 // ── CHECK IF ALREADY LOGGED IN ──
 window.addEventListener('load', async function() {
   var { data } = await window._sb.auth.getSession();
   if (data.session) {
-    window.location.href = 'seleem-dashboard.html';
+    window.location.href = 'dashboard.html';
   }
 });
 </script>
