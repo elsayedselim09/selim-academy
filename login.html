@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>أكاديمية سليم | تسجيل الدخول</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --blue:       #1A56DB;
@@ -671,12 +670,17 @@ body {
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onload="initSupabase()"></script>
 <script>
-// ── SUPABASE INIT ──
-const SUPA_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s';
-const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
-
+var _supabase;
+function initSupabase() {
+  _supabase = window.supabase.createClient(
+    'https://hjhoudwknwnxfndrgpfe.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s'
+  );
+}
+</script>
+<script>
 // ── TAB SWITCH ──
 function switchTab(tab) {
   document.querySelectorAll('.auth-tab').forEach(function(t,i){
@@ -763,7 +767,7 @@ async function handleLogin() {
   var email = id;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id)) {
     // البحث عن البريد بالهاتف
-    var { data: studentData } = await supabase
+    var { data: studentData } = await _supabase
       .from('students')
       .select('id')
       .eq('phone', id)
@@ -774,7 +778,7 @@ async function handleLogin() {
       document.getElementById('login-alert').classList.add('show');
       return;
     }
-    var { data: userData } = await supabase
+    var { data: userData } = await _supabase
       .from('auth.users')
       .select('email')
       .eq('id', studentData.id)
@@ -782,7 +786,7 @@ async function handleLogin() {
     email = userData ? userData.email : id;
   }
 
-  var { data, error } = await supabase.auth.signInWithPassword({
+  var { data, error } = await _supabase.auth.signInWithPassword({
     email: email,
     password: pwd
   });
@@ -838,7 +842,7 @@ async function handleRegister() {
   btn.disabled = true;
 
   // إنشاء الحساب في Supabase Auth
-  var { data, error } = await supabase.auth.signUp({
+  var { data, error } = await _supabase.auth.signUp({
     email: em,
     password: pwd
   });
@@ -854,7 +858,7 @@ async function handleRegister() {
 
   // حفظ بيانات الطالب في جدول students
   if (data.user) {
-    await supabase.from('students').insert({
+    await _supabase.from('students').insert({
       id:         data.user.id,
       first_name: fn,
       last_name:  ln,
@@ -878,7 +882,7 @@ function goToDashboard() {
 
 // ── CHECK IF ALREADY LOGGED IN ──
 window.addEventListener('load', async function() {
-  var { data } = await supabase.auth.getSession();
+  var { data } = await _supabase.auth.getSession();
   if (data.session) {
     window.location.href = 'dashboard.html';
   }
