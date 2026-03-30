@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>أكاديمية سليم | تسجيل الدخول</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  window._sb = window.supabase.createClient('https://hjhoudwknwnxfndrgpfe.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s');
+</script>
+<style>
+:root {
+  --blue:       #1A56DB;
+  --blue-dark:  #1342B0;
+  --blue-light: #EBF5FF;
   --blue-mid:   #3B82F6;
   --green:      #0E9F6E;
   --gold:       #F59E0B;
@@ -666,8 +675,6 @@ body {
 </div>
 
 <script>
-var _sb;
-
 // ── TAB SWITCH ──
 function switchTab(tab) {
   document.querySelectorAll('.auth-tab').forEach(function(t,i){
@@ -754,7 +761,7 @@ async function handleLogin() {
   var email = id;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id)) {
     // البحث عن البريد بالهاتف
-    var { data: studentData } = await _sb
+    var { data: studentData } = await window._sb
       .from('students')
       .select('id')
       .eq('phone', id)
@@ -765,7 +772,7 @@ async function handleLogin() {
       document.getElementById('login-alert').classList.add('show');
       return;
     }
-    var { data: userData } = await _sb
+    var { data: userData } = await window._sb
       .from('auth.users')
       .select('email')
       .eq('id', studentData.id)
@@ -773,7 +780,7 @@ async function handleLogin() {
     email = userData ? userData.email : id;
   }
 
-  var { data, error } = await _sb.auth.signInWithPassword({
+  var { data, error } = await window._sb.auth.signInWithPassword({
     email: email,
     password: pwd
   });
@@ -787,7 +794,7 @@ async function handleLogin() {
     document.getElementById('login-alert-msg').textContent = msg;
     document.getElementById('login-alert').classList.add('show');
   } else {
-    window.location.href = 'dashboard.html';
+    window.location.href = 'seleem-dashboard.html';
   }
 }
 
@@ -829,7 +836,7 @@ async function handleRegister() {
   btn.disabled = true;
 
   // إنشاء الحساب في Supabase Auth
-  var { data, error } = await _sb.auth.signUp({
+  var { data, error } = await window._sb.auth.signUp({
     email: em,
     password: pwd
   });
@@ -845,7 +852,7 @@ async function handleRegister() {
 
   // حفظ بيانات الطالب في جدول students
   if (data.user) {
-    await _sb.from('students').insert({
+    await window._sb.from('students').insert({
       id:         data.user.id,
       first_name: fn,
       last_name:  ln,
@@ -864,23 +871,16 @@ async function handleRegister() {
 
 // ── GO TO DASHBOARD ──
 function goToDashboard() {
-  window.location.href = 'dashboard.html';
+  window.location.href = 'seleem-dashboard.html';
 }
 
 // ── CHECK IF ALREADY LOGGED IN ──
 window.addEventListener('load', async function() {
-  var { data } = await _sb.auth.getSession();
+  var { data } = await window._sb.auth.getSession();
   if (data.session) {
-    window.location.href = 'dashboard.html';
+    window.location.href = 'seleem-dashboard.html';
   }
 });
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  var _sb = supabase.createClient(
-    'https://hjhoudwknwnxfndrgpfe.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s'
-  );
 </script>
 </body>
 </html>
