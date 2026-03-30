@@ -7,9 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  const SUPA_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co';
-  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s';
-  const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  window._sb = window.supabase.createClient('https://hjhoudwknwnxfndrgpfe.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s');
 </script>
 <style>
 :root {
@@ -1411,7 +1409,7 @@ body {
 window.addEventListener('load', async function() {
 
   // 1. التحقق من تسجيل الدخول
-  var { data: sessionData } = await supabase.auth.getSession();
+  var { data: sessionData } = await window._sb.auth.getSession();
   if (!sessionData.session) {
     window.location.href = 'login.html';
     return;
@@ -1420,7 +1418,7 @@ window.addEventListener('load', async function() {
   var user = sessionData.session.user;
 
   // 2. جلب بيانات الطالب
-  var { data: student } = await supabase
+  var { data: student } = await window._sb
     .from('students')
     .select('*')
     .eq('id', user.id)
@@ -1450,7 +1448,7 @@ window.addEventListener('load', async function() {
   }
 
   // 3. جلب الكورسات المسجل بها
-  var { data: enrollments } = await supabase
+  var { data: enrollments } = await window._sb
     .from('enrollments')
     .select('*, courses(*)')
     .eq('student_id', user.id);
@@ -1461,7 +1459,7 @@ window.addEventListener('load', async function() {
   }
 
   // 4. جلب الحصص
-  var { data: sessions } = await supabase
+  var { data: sessions } = await window._sb
     .from('sessions')
     .select('*')
     .eq('student_id', user.id)
@@ -1517,7 +1515,7 @@ function joinSession(link) {
 // ── LOGOUT ──
 async function confirmLogout() {
   if (confirm('هل تريد تسجيل الخروج؟')) {
-    await supabase.auth.signOut();
+    await window._sb.auth.signOut();
     window.location.href = 'login.html';
   }
 }
