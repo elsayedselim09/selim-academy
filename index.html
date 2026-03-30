@@ -627,11 +627,9 @@ footer{background:var(--dark);padding:60px 5% 30px;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  const SUPA_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co';
-  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s';
-  const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  window._sb = window.supabase.createClient('https://hjhoudwknwnxfndrgpfe.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s');
   window.addEventListener('load', async function() {
-    var { data } = await supabase.auth.getSession();
+    var { data } = await window._sb.auth.getSession();
     var btns = document.getElementById('nav-auth-btns');
     if (data.session) {
       btns.innerHTML = '<a href="dashboard.html" class="btn-register">🎓 حسابي</a>';
