@@ -5,10 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>أكاديمية سليم | لوحة التحكم</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  window._sb = window.supabase.createClient('https://hjhoudwknwnxfndrgpfe.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s');
-</script>
 <style>
 :root {
   --blue:        #1A56DB;
@@ -758,7 +754,7 @@ body {
 
 <!-- ════ SIDEBAR ════ -->
 <aside class="sidebar" id="sidebar">
-  <a class="sidebar-logo" href="index.html">
+  <a class="sidebar-logo" href="seleem-sorted-fix.html">
     <div class="sidebar-logo-icon">أس</div>
     <div>
       <div class="sidebar-logo-text">أكاديمية سليم</div>
@@ -796,7 +792,7 @@ body {
     </button>
 
     <div class="nav-section-label" style="margin-top:10px;">الموقع</div>
-    <a class="nav-item" href="index.html">
+    <a class="nav-item" href="seleem-sorted-fix.html">
       <span class="nav-icon">🌐</span> العودة للموقع
     </a>
   </nav>
@@ -1375,7 +1371,7 @@ body {
       <div class="support-card" onclick="alert('سيتم فتح المحادثة')">
         <div class="support-icon">📧</div>
         <div class="support-title">البريد الإلكتروني</div>
-        <div class="support-desc"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9be8eeebebf4e9efdbe8fef7fefef6b6faf8fafffef6e2b5f8f4f6">[email&#160;protected]</a></div>
+        <div class="support-desc">support@seleem-academy.com</div>
       </div>
       <div class="support-card" onclick="alert('سيتم الاتصال')">
         <div class="support-icon">📞</div>
@@ -1404,73 +1400,7 @@ body {
 
 </main>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-// ── SUPABASE: تحميل بيانات الطالب ──
-window.addEventListener('load', async function() {
-
-  // 1. التحقق من تسجيل الدخول
-  var { data: sessionData } = await window._sb.auth.getSession();
-  if (!sessionData.session) {
-    window.location.href = 'login.html';
-    return;
-  }
-
-  var user = sessionData.session.user;
-
-  // 2. جلب بيانات الطالب
-  var { data: student } = await window._sb
-    .from('students')
-    .select('*')
-    .eq('id', user.id)
-    .single();
-
-  if (student) {
-    var firstName = student.first_name;
-
-    // تحديث الاسم في الواجهة
-    document.querySelectorAll('.header-welcome span').forEach(function(el){
-      el.textContent = firstName;
-    });
-    document.querySelectorAll('.header-uname').forEach(function(el){
-      el.textContent = firstName + ' ' + student.last_name;
-    });
-    document.querySelectorAll('.user-mini-name').forEach(function(el){
-      el.textContent = firstName + ' ' + student.last_name;
-    });
-    document.querySelectorAll('.header-avatar, .user-avatar-sm').forEach(function(el){
-      el.textContent = firstName.charAt(0) + student.last_name.charAt(0);
-    });
-    // تحديث رسالة الترحيب
-    var titleEl = document.querySelector('#page-home .page-title');
-    if (titleEl) titleEl.textContent = 'لوحة التحكم';
-    var subEl = document.querySelector('#page-home .page-sub');
-    if (subEl) subEl.textContent = 'مرحباً ' + firstName + '، إليك ملخص نشاطك التعليمي';
-  }
-
-  // 3. جلب الكورسات المسجل بها
-  var { data: enrollments } = await window._sb
-    .from('enrollments')
-    .select('*, courses(*)')
-    .eq('student_id', user.id);
-
-  if (enrollments && enrollments.length > 0) {
-    // تحديث عدد الكورسات
-    document.querySelector('.stat-card:nth-child(1) .stat-num').textContent = enrollments.length;
-  }
-
-  // 4. جلب الحصص
-  var { data: sessions } = await window._sb
-    .from('sessions')
-    .select('*')
-    .eq('student_id', user.id)
-    .order('session_date', { ascending: true });
-
-  if (sessions && sessions.length > 0) {
-    var upcoming = sessions.filter(function(s){ return new Date(s.session_date) >= new Date(); });
-    document.querySelector('.stat-card:nth-child(2) .stat-num').textContent = upcoming.length;
-  }
-});
-
+<script>
 // ── SHOW PAGE ──
 function showPage(name) {
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
@@ -1513,10 +1443,9 @@ function joinSession(link) {
 }
 
 // ── LOGOUT ──
-async function confirmLogout() {
+function confirmLogout() {
   if (confirm('هل تريد تسجيل الخروج؟')) {
-    await window._sb.auth.signOut();
-    window.location.href = 'login.html';
+    window.location.href = 'seleem-auth.html';
   }
 }
 
@@ -1532,4 +1461,11 @@ function openWA() {
 
 // ── SAVE SETTINGS ──
 function saveSettings() {
-  alert('✅ تم حفظ بياناتك 
+  alert('✅ تم حفظ بياناتك بنجاح!\n\n(يتطلب Backend للحفظ الفعلي)');
+}
+function savePassword() {
+  alert('✅ تم تغيير كلمة المرور بنجاح!\n\n(يتطلب Backend للتغيير الفعلي)');
+}
+</script>
+</body>
+</html>
