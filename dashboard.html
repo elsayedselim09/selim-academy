@@ -1330,11 +1330,11 @@ body {
         <div class="settings-row">
           <div class="settings-group">
             <label>البريد الإلكتروني</label>
-            <input type="email" value="mohammed@example.com">
+            <input type="email" id="settings-email" value="">
           </div>
           <div class="settings-group">
             <label>رقم الهاتف</label>
-            <input type="tel" value="0501234567">
+            <input type="tel" id="settings-phone" value="">
           </div>
         </div>
         <button class="btn-save" onclick="saveSettings()">💾 حفظ التغييرات</button>
@@ -1487,27 +1487,32 @@ function savePassword() {
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s'
   );
 
-  // ── CHECK SESSION ON LOAD ──
+  // ── CHECK SESSION & LOAD DATA ──
   window.addEventListener('load', async function() {
-    var { data: { user } } = await _sb.auth.getUser();
 
-    if (!user) {
+    // 1. تحقق من الجلسة
+    var { data: { session } } = await _sb.auth.getSession();
+    if (!session) {
       window.location.href = 'login.html';
       return;
     }
+    var user = session.user;
 
-    // جلب بيانات الطالب
+    // 2. جلب بيانات الطالب من جدول students
     var { data: student } = await _sb
       .from('students')
       .select('*')
       .eq('id', user.id)
       .single();
 
-    var firstName = student ? student.first_name : user.email;
-    var fullName  = student ? student.first_name + ' ' + student.last_name : user.email;
-    var initials  = student ? student.first_name.charAt(0) + student.last_name.charAt(0) : '؟';
+    // 3. تحضير البيانات
+    var firstName = (student && student.first_name) ? student.first_name : user.email.split('@')[0];
+    var lastName  = (student && student.last_name)  ? student.last_name  : '';
+    var fullName  = (firstName + ' ' + lastName).trim();
+    var phone     = (student && student.phone)       ? student.phone      : '';
+    var initials  = firstName.charAt(0).toUpperCase() + (lastName ? lastName.charAt(0).toUpperCase() : '');
 
-    // تحديث الاسم في كل الأماكن
+    // 4. تحديث الاسم والمرحبا
     document.querySelectorAll('.header-welcome span').forEach(function(el){ el.textContent = firstName; });
     document.querySelectorAll('.header-uname').forEach(function(el){ el.textContent = fullName; });
     document.querySelectorAll('.user-mini-name').forEach(function(el){ el.textContent = fullName; });
@@ -1516,13 +1521,27 @@ function savePassword() {
     var subEl = document.querySelector('#page-home .page-sub');
     if (subEl) subEl.textContent = 'مرحباً ' + firstName + '، إليك ملخص نشاطك التعليمي';
 
-    // جلب الكورسات
+    // 5. تحديث صفحة الإعدادات بالبيانات الحقيقية
+    var emailInputs = document.querySelectorAll('input[type="email"]');
+    emailInputs.forEach(function(el){ el.value = user.email; });
+
+    var phoneInputs = document.querySelectorAll('input[type="tel"]');
+    phoneInputs.forEach(function(el){ if (phone) el.value = phone; });
+
+    var firstNameInputs = document.querySelectorAll('input[placeholder="أحمد"], input[id="first-name"]');
+    firstNameInputs.forEach(function(el){ el.value = firstName; });
+
+    var lastNameInputs = document.querySelectorAll('input[placeholder="السيد"], input[id="last-name"]');
+    lastNameInputs.forEach(function(el){ el.value = lastName; });
+
+    // 6. جلب الكورسات المشترك فيها
     var { data: enrollments } = await _sb
       .from('enrollments')
       .select('*, courses(*)')
       .eq('student_id', user.id);
 
     var numEl = document.querySelector('.stat-card:nth-child(1) .stat-num');
+
     if (enrollments && enrollments.length > 0) {
       if (numEl) numEl.textContent = enrollments.length;
     } else {
@@ -1531,11 +1550,18 @@ function savePassword() {
       var coursesBody = document.querySelector('#page-courses');
       if (coursesBody) {
         var msg = document.createElement('div');
-        msg.style = 'text-align:center;padding:60px 20px;color:#6B7280;font-size:1rem;';
+        msg.style = 'text-align:center;padding:60px 20px;color:#6B7280;font-size:1.05rem;font-family:Cairo,sans-serif;';
         msg.innerHTML = '📚 أنت غير مشترك في أي كورس حتى الآن';
         coursesBody.appendChild(msg);
       }
     }
+
+    // 7. الاستماع لتغييرات الجلسة (keep logged in after refresh)
+    _sb.auth.onAuthStateChange(function(event, session) {
+      if (event === 'SIGNED_OUT' || !session) {
+        window.location.href = 'login.html';
+      }
+    });
   });
 
   // ── LOGOUT ──
