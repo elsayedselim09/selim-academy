@@ -809,7 +809,7 @@ body {
     <div class="user-mini">
       <div class="user-avatar-sm">م.أ</div>
       <div>
-        <div class="user-mini-name">محمد أحمد</div>
+        <div class="user-mini-name" id="user-name">محمد أحمد</div>
         <div class="user-mini-role">طالب · الثانوية</div>
       </div>
     </div>
@@ -1058,6 +1058,11 @@ body {
   <div class="page" id="page-courses">
     <div class="page-title">كورساتي 📚</div>
     <p class="page-sub">تابع تقدمك في كل كورس واستكمل رحلتك التعليمية</p>
+
+    <!-- Empty state: shown when user has no enrollments -->
+    <div id="empty-message" style="display:none;text-align:center;padding:60px 20px;color:#6B7280;font-size:1.05rem;font-family:Cairo,sans-serif;">
+      📚 أنت غير مشترك في أي كورس حتى الآن
+    </div>
 
     <div class="dash-grid">
       <div class="section-card">
@@ -1320,21 +1325,21 @@ body {
         <div class="settings-row">
           <div class="settings-group">
             <label>الاسم الأول</label>
-            <input type="text" value="محمد">
+            <input type="text" id="first-name" placeholder="الاسم الأول" value="">
           </div>
           <div class="settings-group">
             <label>اسم العائلة</label>
-            <input type="text" value="أحمد">
+            <input type="text" id="last-name" placeholder="اسم العائلة" value="">
           </div>
         </div>
         <div class="settings-row">
           <div class="settings-group">
             <label>البريد الإلكتروني</label>
-            <input type="email" id="settings-email" value="">
+            <input type="email" id="user-email" value="">
           </div>
           <div class="settings-group">
             <label>رقم الهاتف</label>
-            <input type="tel" id="settings-phone" value="">
+            <input type="tel" id="user-phone" value="">
           </div>
         </div>
         <button class="btn-save" onclick="saveSettings()">💾 حفظ التغييرات</button>
@@ -1498,21 +1503,25 @@ function savePassword() {
     }
     var user = session.user;
 
-    // 2. جلب بيانات الطالب من جدول students
+    // 2. جلب بيانات الطالب من جدول users
     var { data: student } = await _sb
-      .from('students')
+      .from('users')
       .select('*')
       .eq('id', user.id)
       .single();
 
     // 3. تحضير البيانات
-    var firstName = (student && student.first_name) ? student.first_name : user.email.split('@')[0];
-    var lastName  = (student && student.last_name)  ? student.last_name  : '';
+    var firstName = (student && student.first_name) ? student.first_name
+                  : (student && student.name)       ? student.name.split(' ')[0]
+                  : user.email.split('@')[0];
+    var lastName  = (student && student.last_name)  ? student.last_name
+                  : (student && student.name && student.name.split(' ').length > 1) ? student.name.split(' ').slice(1).join(' ')
+                  : '';
     var fullName  = (firstName + ' ' + lastName).trim();
-    var phone     = (student && student.phone)       ? student.phone      : '';
+    var phone     = (student && student.phone) ? student.phone : '';
     var initials  = firstName.charAt(0).toUpperCase() + (lastName ? lastName.charAt(0).toUpperCase() : '');
 
-    // 4. تحديث الاسم والمرحبا
+    // 4. تحديث عناصر الاسم في الهيدر والسايدبار
     document.querySelectorAll('.header-welcome span').forEach(function(el){ el.textContent = firstName; });
     document.querySelectorAll('.header-uname').forEach(function(el){ el.textContent = fullName; });
     document.querySelectorAll('.user-mini-name').forEach(function(el){ el.textContent = fullName; });
@@ -1521,18 +1530,25 @@ function savePassword() {
     var subEl = document.querySelector('#page-home .page-sub');
     if (subEl) subEl.textContent = 'مرحباً ' + firstName + '، إليك ملخص نشاطك التعليمي';
 
-    // 5. تحديث صفحة الإعدادات بالبيانات الحقيقية
-    var emailInputs = document.querySelectorAll('input[type="email"]');
-    emailInputs.forEach(function(el){ el.value = user.email; });
+    // 5. ربط البيانات بالعناصر ذات المعرّفات (ID binding)
+    // #user-email → حقل الإيميل في الإعدادات
+    var userEmailEl = document.getElementById('user-email');
+    if (userEmailEl) userEmailEl.value = user.email;
 
-    var phoneInputs = document.querySelectorAll('input[type="tel"]');
-    phoneInputs.forEach(function(el){ if (phone) el.value = phone; });
+    // #user-name → اسم المستخدم في السايدبار
+    var userNameEl = document.getElementById('user-name');
+    if (userNameEl) userNameEl.textContent = fullName;
 
-    var firstNameInputs = document.querySelectorAll('input[placeholder="أحمد"], input[id="first-name"]');
-    firstNameInputs.forEach(function(el){ el.value = firstName; });
+    // #user-phone → حقل الهاتف في الإعدادات
+    var userPhoneEl = document.getElementById('user-phone');
+    if (userPhoneEl && phone) userPhoneEl.value = phone;
 
-    var lastNameInputs = document.querySelectorAll('input[placeholder="السيد"], input[id="last-name"]');
-    lastNameInputs.forEach(function(el){ el.value = lastName; });
+    // حقول الاسم في الإعدادات
+    var firstNameEl = document.getElementById('first-name');
+    if (firstNameEl) firstNameEl.value = firstName;
+
+    var lastNameEl = document.getElementById('last-name');
+    if (lastNameEl) lastNameEl.value = lastName;
 
     // 6. جلب الكورسات المشترك فيها
     var { data: enrollments } = await _sb
@@ -1540,20 +1556,22 @@ function savePassword() {
       .select('*, courses(*)')
       .eq('student_id', user.id);
 
+    // تحديث عداد الكورسات في بطاقات الإحصاء
     var numEl = document.querySelector('.stat-card:nth-child(1) .stat-num');
 
     if (enrollments && enrollments.length > 0) {
       if (numEl) numEl.textContent = enrollments.length;
+
+      // إخفاء رسالة "لا يوجد كورسات" إن كانت ظاهرة
+      var emptyMsg = document.getElementById('empty-message');
+      if (emptyMsg) emptyMsg.style.display = 'none';
+
     } else {
       if (numEl) numEl.textContent = '0';
-      // رسالة "لا يوجد كورسات"
-      var coursesBody = document.querySelector('#page-courses');
-      if (coursesBody) {
-        var msg = document.createElement('div');
-        msg.style = 'text-align:center;padding:60px 20px;color:#6B7280;font-size:1.05rem;font-family:Cairo,sans-serif;';
-        msg.innerHTML = '📚 أنت غير مشترك في أي كورس حتى الآن';
-        coursesBody.appendChild(msg);
-      }
+
+      // إظهار #empty-message
+      var emptyMsg = document.getElementById('empty-message');
+      if (emptyMsg) emptyMsg.style.display = 'block';
     }
 
     // 7. الاستماع لتغييرات الجلسة (keep logged in after refresh)
