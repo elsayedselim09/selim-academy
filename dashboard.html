@@ -862,7 +862,7 @@ body {
       <span class="header-arrow">▼</span>
     </div>
 
-    <button class="btn-logout" onclick="confirmLogout()">
+    <button class="btn-logout" onclick="window._logout()">
       🚪 خروج
     </button>
   </div>
@@ -1453,7 +1453,7 @@ function joinSession(link) {
 // ── LOGOUT ──
 function confirmLogout() {
   if (confirm('هل تريد تسجيل الخروج؟')) {
-    window.location.href = 'seleem-auth.html';
+    window.location.href = 'login.html';
   }
 }
 
@@ -1469,4 +1469,83 @@ function openWA() {
 
 // ── SAVE SETTINGS ──
 function saveSettings() {
-  alert('✅ تم حفظ بياناتك 
+  alert('✅ تم حفظ بياناتك بنجاح!');
+}
+
+function savePassword() {
+  alert('✅ تم تغيير كلمة المرور!');
+}
+
+</script>
+
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function() {
+  var _sb = supabase.createClient(
+    'https://hjhoudwknwnxfndrgpfe.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s'
+  );
+
+  // ── CHECK SESSION ON LOAD ──
+  window.addEventListener('load', async function() {
+    var { data: { user } } = await _sb.auth.getUser();
+
+    if (!user) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    // جلب بيانات الطالب
+    var { data: student } = await _sb
+      .from('students')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    var firstName = student ? student.first_name : user.email;
+    var fullName  = student ? student.first_name + ' ' + student.last_name : user.email;
+    var initials  = student ? student.first_name.charAt(0) + student.last_name.charAt(0) : '؟';
+
+    // تحديث الاسم في كل الأماكن
+    document.querySelectorAll('.header-welcome span').forEach(function(el){ el.textContent = firstName; });
+    document.querySelectorAll('.header-uname').forEach(function(el){ el.textContent = fullName; });
+    document.querySelectorAll('.user-mini-name').forEach(function(el){ el.textContent = fullName; });
+    document.querySelectorAll('.header-avatar, .user-avatar-sm').forEach(function(el){ el.textContent = initials; });
+
+    var subEl = document.querySelector('#page-home .page-sub');
+    if (subEl) subEl.textContent = 'مرحباً ' + firstName + '، إليك ملخص نشاطك التعليمي';
+
+    // جلب الكورسات
+    var { data: enrollments } = await _sb
+      .from('enrollments')
+      .select('*, courses(*)')
+      .eq('student_id', user.id);
+
+    var numEl = document.querySelector('.stat-card:nth-child(1) .stat-num');
+    if (enrollments && enrollments.length > 0) {
+      if (numEl) numEl.textContent = enrollments.length;
+    } else {
+      if (numEl) numEl.textContent = '0';
+      // رسالة "لا يوجد كورسات"
+      var coursesBody = document.querySelector('#page-courses');
+      if (coursesBody) {
+        var msg = document.createElement('div');
+        msg.style = 'text-align:center;padding:60px 20px;color:#6B7280;font-size:1rem;';
+        msg.innerHTML = '📚 أنت غير مشترك في أي كورس حتى الآن';
+        coursesBody.appendChild(msg);
+      }
+    }
+  });
+
+  // ── LOGOUT ──
+  window._logout = async function() {
+    if (confirm('هل تريد تسجيل الخروج؟')) {
+      await _sb.auth.signOut();
+      window.location.href = 'login.html';
+    }
+  };
+})();
+</script>
+</body>
+</html>
