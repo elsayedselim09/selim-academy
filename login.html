@@ -678,7 +678,14 @@ body {
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// ── SUPABASE CLIENT ──
+var _sb = supabase.createClient(
+  'https://hjhoudwknwnxfndrgpfe.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s'
+);
+
 // ── TAB SWITCH ──
 function switchTab(tab) {
   document.querySelectorAll('.auth-tab').forEach(function(t,i){
@@ -713,18 +720,18 @@ function checkStrength(val) {
   strength.classList.add('show');
 
   var score = 0;
-  if (val.length >= 8)              score++;
-  if (/[A-Z]/.test(val))            score++;
-  if (/[0-9]/.test(val))            score++;
-  if (/[^A-Za-z0-9]/.test(val))     score++;
+  if (val.length >= 8)           score++;
+  if (/[A-Z]/.test(val))         score++;
+  if (/[0-9]/.test(val))         score++;
+  if (/[^A-Za-z0-9]/.test(val))  score++;
 
   bars.forEach(function(b){ b.className = 'strength-bar'; });
 
-  var cls, txt;
-  if (score <= 1)      { cls='weak';   txt='ضعيفة';   bars[0].classList.add('weak'); }
-  else if (score === 2){ cls='medium'; txt='متوسطة';  bars[0].classList.add('medium'); bars[1].classList.add('medium'); }
-  else if (score === 3){ cls='medium'; txt='جيدة';    [0,1,2].forEach(function(i){bars[i].classList.add('medium');}); }
-  else                 { cls='strong'; txt='قوية جداً';bars.forEach(function(b){b.classList.add('strong');}); }
+  var txt;
+  if (score <= 1)       { txt='ضعيفة';    bars[0].classList.add('weak'); }
+  else if (score === 2) { txt='متوسطة';   bars[0].classList.add('medium'); bars[1].classList.add('medium'); }
+  else if (score === 3) { txt='جيدة';     [0,1,2].forEach(function(i){ bars[i].classList.add('medium'); }); }
+  else                  { txt='قوية جداً'; bars.forEach(function(b){ b.classList.add('strong'); }); }
 
   label.textContent = txt;
 }
@@ -735,7 +742,6 @@ function showErr(id, msg) {
   if (msg) el.textContent = msg;
   el.classList.add('show');
 }
-function hideErr(id) { document.getElementById(id).classList.remove('show'); }
 function markError(inputId, errId, msg) {
   document.getElementById(inputId).classList.add('error');
   showErr(errId, msg);
@@ -745,6 +751,10 @@ function clearErrors() {
   document.querySelectorAll('input').forEach(function(i){ i.classList.remove('error'); });
   document.querySelectorAll('.alert').forEach(function(a){ a.classList.remove('show'); });
 }
+function showAlert(alertId, msgId, msg) {
+  document.getElementById(msgId).textContent = msg;
+  document.getElementById(alertId).classList.add('show');
+}
 
 // ── LOGIN HANDLER ──
 async function handleLogin() {
@@ -753,35 +763,33 @@ async function handleLogin() {
   var pwd = document.getElementById('login-password').value;
   var ok  = true;
 
-  if (!id)  { markError('login-identifier','err-login-identifier'); ok=false; }
-  if (!pwd) { markError('login-password','err-login-password'); ok=false; }
+  if (!id)  { markError('login-identifier','err-login-identifier','مطلوب'); ok=false; }
+  if (!pwd) { markError('login-password','err-login-password','مطلوب'); ok=false; }
   if (!ok) return;
 
   var btn = document.getElementById('btn-login');
   btn.classList.add('loading');
   btn.disabled = true;
 
-  // تحديد إذا كان بريد أو هاتف
   var email = id;
+
+  // لو مش email — ابحث عن الـ email بالهاتف من جدول profiles
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id)) {
-    // البحث عن البريد بالهاتف
-    var { data: studentData } = await _sb
-      .from('students')
-      .select('id')
+    var { data: profileData, error: profileErr } = await _sb
+      .from('profiles')
+      .select('id, phone')
       .eq('phone', id)
       .single();
-    if (!studentData) {
+
+    if (profileErr || !profileData) {
       btn.classList.remove('loading'); btn.disabled = false;
-      document.getElementById('login-alert-msg').textContent = 'رقم الهاتف غير مسجل';
-      document.getElementById('login-alert').classList.add('show');
+      showAlert('login-alert','login-alert-msg','رقم الهاتف غير مسجل');
       return;
     }
-    var { data: userData } = await _sb
-      .from('auth.users')
-      .select('email')
-      .eq('id', studentData.id)
-      .single();
-    email = userData ? userData.email : id;
+    // مش ممكن نجيب الـ email من profiles مباشرة — نطلب منه يدخل الـ email
+    btn.classList.remove('loading'); btn.disabled = false;
+    showAlert('login-alert','login-alert-msg','من فضلك استخدم البريد الإلكتروني لتسجيل الدخول');
+    return;
   }
 
   var { data, error } = await _sb.auth.signInWithPassword({
@@ -795,8 +803,8 @@ async function handleLogin() {
   if (error) {
     var msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
     if (error.message.includes('Email not confirmed')) msg = 'من فضلك تحقق من بريدك الإلكتروني أولاً';
-    document.getElementById('login-alert-msg').textContent = msg;
-    document.getElementById('login-alert').classList.add('show');
+    if (error.message.includes('Invalid login'))       msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+    showAlert('login-alert','login-alert-msg', msg);
   } else {
     window.location.href = 'dashboard.html';
   }
@@ -805,17 +813,17 @@ async function handleLogin() {
 // ── REGISTER HANDLER ──
 async function handleRegister() {
   clearErrors();
-  var fn   = document.getElementById('reg-firstname').value.trim();
-  var ln   = document.getElementById('reg-lastname').value.trim();
-  var em   = document.getElementById('reg-email').value.trim();
-  var ph   = document.getElementById('reg-phone').value.trim();
-  var pwd  = document.getElementById('reg-password').value;
-  var conf = document.getElementById('reg-confirm').value;
-  var terms= document.getElementById('terms').checked;
-  var ok   = true;
+  var fn    = document.getElementById('reg-firstname').value.trim();
+  var ln    = document.getElementById('reg-lastname').value.trim();
+  var em    = document.getElementById('reg-email').value.trim();
+  var ph    = document.getElementById('reg-phone').value.trim();
+  var pwd   = document.getElementById('reg-password').value;
+  var conf  = document.getElementById('reg-confirm').value;
+  var terms = document.getElementById('terms').checked;
+  var ok    = true;
 
-  if (!fn)  { markError('reg-firstname','err-firstname','مطلوب'); ok=false; }
-  if (!ln)  { markError('reg-lastname','err-lastname','مطلوب'); ok=false; }
+  if (!fn) { markError('reg-firstname','err-firstname','مطلوب'); ok=false; }
+  if (!ln) { markError('reg-lastname','err-lastname','مطلوب'); ok=false; }
   if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
     markError('reg-email','err-email','من فضلك أدخل بريد إلكتروني صحيح'); ok=false;
   }
@@ -829,8 +837,7 @@ async function handleRegister() {
     markError('reg-confirm','err-confirm','كلمتا المرور غير متطابقتين'); ok=false;
   }
   if (!terms) {
-    document.getElementById('register-alert-msg').textContent = 'يجب الموافقة على الشروط والأحكام أولاً';
-    document.getElementById('register-alert').classList.add('show');
+    showAlert('register-alert','register-alert-msg','يجب الموافقة على الشروط والأحكام أولاً');
     ok=false;
   }
   if (!ok) return;
@@ -839,29 +846,33 @@ async function handleRegister() {
   btn.classList.add('loading');
   btn.disabled = true;
 
-  // إنشاء الحساب في Supabase Auth
+  // إنشاء الحساب في Supabase Auth مع إرسال الاسم والهاتف في الـ metadata
+  // الـ trigger هيحفظهم تلقائياً في جدول profiles
   var { data, error } = await _sb.auth.signUp({
     email: em,
-    password: pwd
+    password: pwd,
+    options: {
+      data: {
+        full_name: fn + ' ' + ln,
+        phone: ph,
+        role: 'student'
+      }
+    }
   });
 
   if (error) {
     btn.classList.remove('loading'); btn.disabled = false;
     var msg = 'حدث خطأ، من فضلك حاول مرة أخرى';
-    if (error.message.includes('already registered')) msg = 'البريد الإلكتروني مسجل بالفعل';
-    document.getElementById('register-alert-msg').textContent = msg;
-    document.getElementById('register-alert').classList.add('show');
+    if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+      msg = 'البريد الإلكتروني مسجل بالفعل';
+    }
+    showAlert('register-alert','register-alert-msg', msg);
     return;
   }
 
-  // حفظ بيانات الطالب في جدول students
+  // تحديث الـ phone في profiles (لأن الـ trigger بياخد full_name بس)
   if (data.user) {
-    await _sb.from('students').insert({
-      id:         data.user.id,
-      first_name: fn,
-      last_name:  ln,
-      phone:      ph
-    });
+    await _sb.from('profiles').update({ phone: ph }).eq('id', data.user.id);
   }
 
   btn.classList.remove('loading');
@@ -885,13 +896,6 @@ window.addEventListener('load', async function() {
     window.location.href = 'dashboard.html';
   }
 });
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-var _sb = supabase.createClient(
-  'https://hjhoudwknwnxfndrgpfe.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s'
-);
 </script>
 </body>
 </html>
