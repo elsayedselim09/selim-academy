@@ -976,43 +976,8 @@ body {
           <a class="see-all" onclick="showPage('courses')">عرض الكل ←</a>
         </div>
         <div class="section-body">
-          <div class="courses-list">
-            <div class="course-item">
-              <div class="course-thumb-mini" style="background:#EBF5FF;">📐</div>
-              <div class="course-info">
-                <div class="course-name">رياضيات الثانوي</div>
-                <div class="course-meta">م. السيد سليم · 48 ساعة</div>
-                <div class="progress-wrap">
-                  <div class="progress-bar"><div class="progress-fill" style="width:72%"></div></div>
-                  <div class="progress-pct">72%</div>
-                </div>
-              </div>
-              <button class="btn-continue" onclick="showPage('courses')">استكمال</button>
-            </div>
-            <div class="course-item">
-              <div class="course-thumb-mini" style="background:#ECFDF5;">⚛️</div>
-              <div class="course-info">
-                <div class="course-name">فيزياء الثانوي</div>
-                <div class="course-meta">م. السيد سليم · 36 ساعة</div>
-                <div class="progress-wrap">
-                  <div class="progress-bar"><div class="progress-fill" style="width:45%"></div></div>
-                  <div class="progress-pct">45%</div>
-                </div>
-              </div>
-              <button class="btn-continue" onclick="showPage('courses')">استكمال</button>
-            </div>
-            <div class="course-item">
-              <div class="course-thumb-mini" style="background:#FFFBEB;">🧪</div>
-              <div class="course-info">
-                <div class="course-name">كيمياء الثانوي</div>
-                <div class="course-meta">م. السيد سليم · 30 ساعة</div>
-                <div class="progress-wrap">
-                  <div class="progress-bar"><div class="progress-fill" style="width:30%"></div></div>
-                  <div class="progress-pct">30%</div>
-                </div>
-              </div>
-              <button class="btn-continue" onclick="showPage('courses')">استكمال</button>
-            </div>
+          <div class="courses-list" id="home-courses-list">
+            <div style="text-align:center;padding:30px;color:var(--gray);font-size:.9rem;">جاري تحميل الكورسات...</div>
           </div>
         </div>
       </div>
@@ -1064,62 +1029,8 @@ body {
       📚 أنت غير مشترك في أي كورس حتى الآن
     </div>
 
-    <div class="dash-grid">
-      <div class="section-card">
-        <div class="section-head"><h3>📐 رياضيات الثانوي</h3><span style="font-size:.78rem;color:var(--green);font-weight:700;">72% مكتمل</span></div>
-        <div class="section-body">
-          <div class="progress-bar" style="height:8px;margin-bottom:20px;"><div class="progress-fill" style="width:72%"></div></div>
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;background:var(--green-light);border:1px solid #BBF7D0;">
-              <span style="color:var(--green);font-size:1rem;">✅</span>
-              <span style="font-size:.88rem;font-weight:600;">الدرس 1 — المقدمة والأساسيات</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;background:var(--green-light);border:1px solid #BBF7D0;">
-              <span style="color:var(--green);font-size:1rem;">✅</span>
-              <span style="font-size:.88rem;font-weight:600;">الدرس 2 — المعادلات التربيعية</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;background:var(--blue-light);border:1px solid rgba(26,86,219,.2);">
-              <span style="font-size:1rem;">▶</span>
-              <span style="font-size:.88rem;font-weight:600;color:var(--blue);">الدرس 3 — المشتقات (جاري الآن)</span>
-              <button style="margin-right:auto;padding:5px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-family:Cairo,sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;">▶ شاهد</button>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;background:var(--gray-light);border:1px solid var(--gray-mid);">
-              <span style="color:var(--gray);font-size:1rem;">🔒</span>
-              <span style="font-size:.88rem;color:var(--gray);">الدرس 4 — التكامل</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;background:var(--gray-light);border:1px solid var(--gray-mid);">
-              <span style="color:var(--gray);font-size:1rem;">🔒</span>
-              <span style="font-size:.88rem;color:var(--gray);">الدرس 5 — الهندسة التحليلية</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-card">
-        <div class="section-head"><h3>⚛️ فيزياء الثانوي</h3><span style="font-size:.78rem;color:var(--gold);font-weight:700;">45% مكتمل</span></div>
-        <div class="section-body">
-          <div class="progress-bar" style="height:8px;margin-bottom:20px;"><div class="progress-fill" style="width:45%;background:linear-gradient(90deg,var(--gold),#FCD34D)"></div></div>
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;background:var(--green-light);border:1px solid #BBF7D0;">
-              <span style="color:var(--green);">✅</span>
-              <span style="font-size:.88rem;font-weight:600;">الدرس 1 — الميكانيكا</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;background:var(--blue-light);border:1px solid rgba(26,86,219,.2);">
-              <span>▶</span>
-              <span style="font-size:.88rem;font-weight:600;color:var(--blue);">الدرس 2 — الموجات الضوئية</span>
-              <button style="margin-right:auto;padding:5px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-family:Cairo,sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;">▶ شاهد</button>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;background:var(--gray-light);border:1px solid var(--gray-mid);">
-              <span style="color:var(--gray);">🔒</span>
-              <span style="font-size:.88rem;color:var(--gray);">الدرس 3 — الكهرباء</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;background:var(--gray-light);border:1px solid var(--gray-mid);">
-              <span style="color:var(--gray);">🔒</span>
-              <span style="font-size:.88rem;color:var(--gray);">الدرس 4 — المغناطيسية</span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div id="courses-grid" class="dash-grid">
+      <div style="text-align:center;padding:60px;color:var(--gray);font-size:.95rem;grid-column:1/-1;">جاري تحميل الكورسات...</div>
     </div>
   </div>
 
@@ -1132,80 +1043,8 @@ body {
       <div class="section-head"><h3>الحصص القادمة والسابقة</h3></div>
       <div class="section-body">
 
-        <!-- Session: NOW -->
-        <div class="session-item">
-          <div class="session-time-box">
-            <div class="session-day">اليوم</div>
-            <div class="session-hour">5:00م</div>
-          </div>
-          <div class="session-info">
-            <div class="session-subj">رياضيات — المشتقات</div>
-            <div class="session-teacher">م. السيد سليم · 60 دقيقة</div>
-            <div class="countdown">🟢 الحصة تبدأ الآن!</div>
-          </div>
-          <span class="session-status now">الآن</span>
-          <button class="btn-join active" onclick="joinSession('https://zoom.us')">
-            🎥 ادخل الحصة
-          </button>
-        </div>
-
-        <!-- Session: SOON (10 min) -->
-        <div class="session-item">
-          <div class="session-time-box">
-            <div class="session-day">اليوم</div>
-            <div class="session-hour">8:00م</div>
-          </div>
-          <div class="session-info">
-            <div class="session-subj">كيمياء — الجدول الدوري</div>
-            <div class="session-teacher">م. السيد سليم · 60 دقيقة</div>
-            <div class="countdown">⏰ متبقي 10 دقائق</div>
-          </div>
-          <span class="session-status soon">قريباً</span>
-          <button class="btn-join soon">
-            ⏳ قريباً
-          </button>
-        </div>
-
-        <!-- Session: COMING -->
-        <div class="session-item">
-          <div class="session-time-box">
-            <div class="session-day">غداً</div>
-            <div class="session-hour">7:00م</div>
-          </div>
-          <div class="session-info">
-            <div class="session-subj">فيزياء — الموجات الضوئية</div>
-            <div class="session-teacher">م. السيد سليم · 60 دقيقة</div>
-            <div class="countdown">⏳ متبقي يوم واحد</div>
-          </div>
-          <span class="session-status coming">قادمة</span>
-          <button class="btn-join disabled" disabled>لم يبدأ بعد</button>
-        </div>
-
-        <!-- Session: DONE -->
-        <div class="session-item">
-          <div class="session-time-box" style="background:var(--gray-light);border-color:var(--gray-mid);">
-            <div class="session-day" style="color:var(--gray);">أمس</div>
-            <div class="session-hour" style="color:var(--gray);">6:00م</div>
-          </div>
-          <div class="session-info">
-            <div class="session-subj">كيمياء — التفاعلات الكيميائية</div>
-            <div class="session-teacher">م. السيد سليم · 60 دقيقة</div>
-          </div>
-          <span class="session-status done">انتهت</span>
-          <button class="btn-join ended" disabled>انتهت الحصة</button>
-        </div>
-
-        <div class="session-item">
-          <div class="session-time-box" style="background:var(--gray-light);border-color:var(--gray-mid);">
-            <div class="session-day" style="color:var(--gray);">السبت</div>
-            <div class="session-hour" style="color:var(--gray);">5:00م</div>
-          </div>
-          <div class="session-info">
-            <div class="session-subj">رياضيات — المعادلات التربيعية</div>
-            <div class="session-teacher">م. السيد سليم · 60 دقيقة</div>
-          </div>
-          <span class="session-status done">انتهت</span>
-          <button class="btn-join ended" disabled>انتهت الحصة</button>
+        <div id="sessions-list">
+          <div style="text-align:center;padding:40px;color:var(--gray);font-size:.9rem;">جاري تحميل الحصص...</div>
         </div>
 
       </div>
@@ -1583,34 +1422,179 @@ async function savePassword() {
     // 6. جلب الكورسات المشترك فيها
     var { data: enrollments } = await _sb
       .from('enrollments')
-      .select('*, courses(*)')
+      .select('*, courses(*, teachers(*, profiles(full_name)))')
       .eq('student_id', user.id);
 
-    // تحديث عداد الكورسات في بطاقات الإحصاء
+    // تحديث عداد الكورسات
     var numEl = document.querySelector('.stat-card:nth-child(1) .stat-num');
+    var emptyMsg = document.getElementById('empty-message');
 
     if (enrollments && enrollments.length > 0) {
       if (numEl) numEl.textContent = enrollments.length;
-
-      // إخفاء رسالة "لا يوجد كورسات" إن كانت ظاهرة
-      var emptyMsg = document.getElementById('empty-message');
       if (emptyMsg) emptyMsg.style.display = 'none';
-
+      renderCourses(enrollments);
     } else {
       if (numEl) numEl.textContent = '0';
-
-      // إظهار #empty-message
-      var emptyMsg = document.getElementById('empty-message');
       if (emptyMsg) emptyMsg.style.display = 'block';
+      renderCourses([]);
     }
 
-    // 7. الاستماع لتغييرات الجلسة (keep logged in after refresh)
+    // 7. جلب الحصص المحجوزة
+    var { data: bookings } = await _sb
+      .from('bookings')
+      .select('*, courses(title), teachers(*, profiles(full_name))')
+      .eq('student_id', user.id)
+      .order('session_at', { ascending: true });
+
+    renderSessions(bookings || []);
+
+    // تحديث عداد الحصص
+    var sessionsEl = document.querySelector('.stat-card:nth-child(2) .stat-num');
+    if (sessionsEl && bookings) {
+      var upcoming = bookings.filter(function(b){ return new Date(b.session_at) > new Date() && b.status !== 'cancelled'; });
+      sessionsEl.textContent = upcoming.length;
+    }
+
+    // 8. الاستماع لتغييرات الجلسة
     _sb.auth.onAuthStateChange(function(event, session) {
       if (event === 'SIGNED_OUT' || !session) {
         window.location.href = 'login.html';
       }
     });
   });
+
+  // ── RENDER COURSES ──
+  function renderCourses(enrollments) {
+    var emojis = ['📐','⚛️','🧪','📖','🔬','🎨','💻','🌍','📊','🎵'];
+    var colors = ['#EBF5FF','#ECFDF5','#FFFBEB','#F5F3FF','#FEF2F2','#F0FDF4'];
+
+    // صفحة الكورسات الكاملة
+    var grid = document.getElementById('courses-grid');
+    // قائمة الكورسات في الصفحة الرئيسية
+    var homeList = document.getElementById('home-courses-list');
+
+    if (!enrollments || enrollments.length === 0) {
+      if (grid) grid.innerHTML = '<div style="text-align:center;padding:60px;color:var(--gray);font-size:.95rem;grid-column:1/-1;">📚 أنت غير مشترك في أي كورس حتى الآن<br><br><button onclick="openWA()" style="margin-top:12px;padding:10px 24px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-family:Cairo,sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">تواصل معنا للاشتراك</button></div>';
+      if (homeList) homeList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray);font-size:.88rem;">لا يوجد كورسات بعد</div>';
+      return;
+    }
+
+    // رندر قائمة الهوم
+    if (homeList) {
+      homeList.innerHTML = enrollments.slice(0,3).map(function(e, i) {
+        var course = e.courses || {};
+        var teacherName = (course.teachers && course.teachers.profiles) ? course.teachers.profiles.full_name : 'أكاديمية سليم';
+        var emoji = emojis[i % emojis.length];
+        var bg = colors[i % colors.length];
+        return '<div class="course-item">' +
+          '<div class="course-thumb-mini" style="background:' + bg + ';">' + emoji + '</div>' +
+          '<div class="course-info">' +
+            '<div class="course-name">' + (course.title || 'كورس') + '</div>' +
+            '<div class="course-meta">م. ' + teacherName + (course.price ? ' · ' + course.price + ' ج.م' : '') + '</div>' +
+            '<div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:0%"></div></div><div class="progress-pct">0%</div></div>' +
+          '</div>' +
+          '<button class="btn-continue" onclick="showPage('courses')">استكمال</button>' +
+        '</div>';
+      }).join('');
+    }
+
+    // رندر صفحة الكورسات الكاملة
+    if (grid) {
+      grid.innerHTML = enrollments.map(function(e, i) {
+        var course = e.courses || {};
+        var teacherName = (course.teachers && course.teachers.profiles) ? course.teachers.profiles.full_name : 'أكاديمية سليم';
+        var emoji = emojis[i % emojis.length];
+        var level = course.level === 'beginner' ? 'مبتدئ' : course.level === 'intermediate' ? 'متوسط' : course.level === 'advanced' ? 'متقدم' : '';
+        var statusColor = e.status === 'completed' ? 'var(--green)' : 'var(--blue)';
+        var statusPct = e.status === 'completed' ? '100%' : '0%';
+        var statusLabel = e.status === 'completed' ? '100% مكتمل' : 'جاري';
+        return '<div class="section-card">' +
+          '<div class="section-head">' +
+            '<h3>' + emoji + ' ' + (course.title || 'كورس') + '</h3>' +
+            '<span style="font-size:.78rem;color:' + statusColor + ';font-weight:700;">' + statusLabel + '</span>' +
+          '</div>' +
+          '<div class="section-body">' +
+            '<div class="progress-bar" style="height:8px;margin-bottom:16px;"><div class="progress-fill" style="width:' + statusPct + ';"></div></div>' +
+            '<div style="font-size:.85rem;color:var(--gray);margin-bottom:8px;">المدرس: م. ' + teacherName + '</div>' +
+            (level ? '<div style="font-size:.82rem;color:var(--gray);margin-bottom:8px;">المستوى: ' + level + '</div>' : '') +
+            (course.description ? '<div style="font-size:.84rem;color:var(--dark-mid);line-height:1.6;">' + course.description + '</div>' : '') +
+            '<div style="margin-top:14px;display:flex;gap:10px;">' +
+              '<button onclick="openWA()" style="padding:8px 18px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-family:Cairo,sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">▶ متابعة الكورس</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+  }
+
+  // ── RENDER SESSIONS ──
+  function renderSessions(bookings) {
+    var list = document.getElementById('sessions-list');
+    if (!list) return;
+
+    if (!bookings || bookings.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray);font-size:.9rem;">لا يوجد حصص محجوزة حتى الآن<br><br><button onclick="openWA()" style="margin-top:12px;padding:10px 24px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-family:Cairo,sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">احجز حصة الآن</button></div>';
+      return;
+    }
+
+    var days = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    var now = new Date();
+
+    list.innerHTML = bookings.map(function(b) {
+      var sessionDate = new Date(b.session_at);
+      var teacherName = (b.teachers && b.teachers.profiles) ? b.teachers.profiles.full_name : 'المدرس';
+      var courseTitle = b.courses ? b.courses.title : 'حصة خاصة';
+      var diffMs = sessionDate - now;
+      var diffMin = Math.round(diffMs / 60000);
+
+      var dayLabel, statusClass, statusText, btnHtml;
+
+      if (b.status === 'cancelled') {
+        dayLabel = days[sessionDate.getDay()];
+        statusClass = 'done'; statusText = 'ملغية';
+        btnHtml = '<button class="btn-join ended" disabled>ملغية</button>';
+      } else if (b.status === 'completed' || diffMs < -3600000) {
+        dayLabel = days[sessionDate.getDay()];
+        statusClass = 'done'; statusText = 'انتهت';
+        btnHtml = '<button class="btn-join ended" disabled>انتهت</button>';
+      } else if (diffMin <= 0 && diffMin >= -60) {
+        dayLabel = 'اليوم';
+        statusClass = 'now'; statusText = 'الآن';
+        btnHtml = '<button class="btn-join active" onclick="joinSession('' + (b.notes || '#') + '')">🎥 ادخل الحصة</button>';
+      } else if (diffMin > 0 && diffMin <= 30) {
+        dayLabel = 'اليوم';
+        statusClass = 'soon'; statusText = 'قريباً';
+        btnHtml = '<button class="btn-join soon">⏳ ' + diffMin + ' دقيقة</button>';
+      } else if (sessionDate.toDateString() === now.toDateString()) {
+        dayLabel = 'اليوم';
+        statusClass = 'coming'; statusText = 'قادمة';
+        btnHtml = '<button class="btn-join disabled" disabled>لم يبدأ بعد</button>';
+      } else {
+        var tmr = new Date(now); tmr.setDate(tmr.getDate()+1);
+        dayLabel = sessionDate.toDateString() === tmr.toDateString() ? 'غداً' : days[sessionDate.getDay()];
+        statusClass = 'coming'; statusText = 'قادمة';
+        btnHtml = '<button class="btn-join disabled" disabled>لم يبدأ بعد</button>';
+      }
+
+      var timeStr = sessionDate.toLocaleTimeString('ar-EG', { hour:'2-digit', minute:'2-digit' });
+      var isOld = statusClass === 'done';
+      var boxStyle = isOld ? 'background:var(--gray-light);border-color:var(--gray-mid);' : '';
+      var dayStyle = isOld ? 'color:var(--gray);' : '';
+
+      return '<div class="session-item">' +
+        '<div class="session-time-box" style="' + boxStyle + '">' +
+          '<div class="session-day" style="' + dayStyle + '">' + dayLabel + '</div>' +
+          '<div class="session-hour" style="' + dayStyle + '">' + timeStr + '</div>' +
+        '</div>' +
+        '<div class="session-info">' +
+          '<div class="session-subj">' + courseTitle + '</div>' +
+          '<div class="session-teacher">م. ' + teacherName + ' · ' + (b.duration_minutes || 60) + ' دقيقة</div>' +
+        '</div>' +
+        '<span class="session-status ' + statusClass + '">' + statusText + '</span>' +
+        btnHtml +
+      '</div>';
+    }).join('');
+  }
 
   // ── LOGOUT ──
   window._logout = async function() {
