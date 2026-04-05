@@ -1111,6 +1111,70 @@ body {
     </div>
   </div>
 
+  <!-- ══ BOOKING PAGE ══ -->
+  <div class="page" id="page-booking">
+    <div class="page-title">احجز حصة 📅</div>
+    <p class="page-sub">اختار المدرس والموعد المناسب ليك</p>
+
+    <!-- Alert -->
+    <div id="booking-alert" style="display:none;padding:14px 18px;border-radius:10px;font-size:.9rem;font-weight:600;margin-bottom:20px;align-items:center;gap:10px;"></div>
+
+    <div class="section-card">
+      <div class="section-head"><h3>🎓 اختار المدرس</h3></div>
+      <div class="section-body">
+        <div id="teachers-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;">
+          <div style="text-align:center;padding:30px;color:var(--gray);grid-column:1/-1;">جاري تحميل المدرسين...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card" id="booking-form-card" style="display:none;">
+      <div class="section-head"><h3>📋 تفاصيل الحجز</h3></div>
+      <div class="section-body">
+
+        <div id="selected-teacher-info" style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--blue-light);border-radius:10px;margin-bottom:20px;border:1px solid rgba(26,86,219,.15);">
+          <div style="width:48px;height:48px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;font-weight:900;" id="teacher-avatar">م</div>
+          <div>
+            <div style="font-size:.95rem;font-weight:700;color:var(--dark);" id="teacher-name-display">المدرس</div>
+            <div style="font-size:.8rem;color:var(--gray);" id="teacher-subject-display">المادة</div>
+          </div>
+          <button onclick="resetTeacher()" style="margin-right:auto;padding:6px 14px;background:#fff;border:1px solid var(--gray-mid);border-radius:8px;font-family:Cairo,sans-serif;font-size:.8rem;cursor:pointer;color:var(--gray);">تغيير</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <div>
+            <label style="display:block;font-size:.82rem;font-weight:700;color:var(--dark);margin-bottom:7px;">📅 تاريخ الحصة <span style="color:var(--red);">*</span></label>
+            <input type="date" id="booking-date" style="width:100%;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:11px 14px;font-family:Cairo,sans-serif;font-size:.9rem;outline:none;direction:ltr;">
+          </div>
+          <div>
+            <label style="display:block;font-size:.82rem;font-weight:700;color:var(--dark);margin-bottom:7px;">🕐 وقت الحصة <span style="color:var(--red);">*</span></label>
+            <input type="time" id="booking-time" style="width:100%;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:11px 14px;font-family:Cairo,sans-serif;font-size:.9rem;outline:none;direction:ltr;">
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:.82rem;font-weight:700;color:var(--dark);margin-bottom:7px;">⏱ مدة الحصة</label>
+          <select id="booking-duration" style="width:100%;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:11px 14px;font-family:Cairo,sans-serif;font-size:.9rem;outline:none;direction:rtl;">
+            <option value="60">60 دقيقة</option>
+            <option value="90">90 دقيقة</option>
+            <option value="120">ساعتين</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:.82rem;font-weight:700;color:var(--dark);margin-bottom:7px;">📝 ملاحظات (اختياري)</label>
+          <textarea id="booking-notes" rows="3" placeholder="مثلاً: عايز أراجع المشتقات والتكامل..." style="width:100%;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:11px 14px;font-family:Cairo,sans-serif;font-size:.9rem;resize:none;outline:none;direction:rtl;"></textarea>
+        </div>
+
+        <button id="btn-book" onclick="submitBooking()" style="width:100%;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-family:Cairo,sans-serif;font-size:1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .25s;">
+          <span id="book-btn-text">📅 تأكيد الحجز</span>
+          <div id="book-spinner" style="display:none;width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;"></div>
+        </button>
+
+      </div>
+    </div>
+  </div>
+
   <!-- ══ SUBSCRIPTION PAGE ══ -->
   <div class="page" id="page-subscription">
     <div class="page-title">الاشتراك 💳</div>
@@ -1260,10 +1324,12 @@ function showPage(name) {
   document.getElementById('page-' + name).classList.add('active');
   // Activate nav item
   var items = document.querySelectorAll('.nav-item');
-  var map = { home:0, courses:1, sessions:2, progress:3, subscription:4, settings:5, support:6 };
+  var map = { home:0, courses:1, sessions:2, booking:3, progress:4, subscription:5, settings:6, support:7 };
   if (map[name] !== undefined) items[map[name]].classList.add('active');
   closeSidebar();
   window.scrollTo(0,0);
+  // Load teachers when booking page opens
+  if (name === 'booking' && typeof loadTeachers === 'function') loadTeachers();
 }
 
 // ── SIDEBAR TOGGLE ──
@@ -1595,6 +1661,132 @@ async function savePassword() {
       '</div>';
     }).join('');
   }
+
+  // ── LOAD TEACHERS FOR BOOKING ──
+  var _selectedTeacher = null;
+
+  async function loadTeachers() {
+    var { data: teachers } = await _sb
+      .from('teachers')
+      .select('*, profiles(full_name)')
+      .eq('is_active', true);
+
+    var list = document.getElementById('teachers-list');
+    if (!list) return;
+
+    if (!teachers || teachers.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray);grid-column:1/-1;">لا يوجد مدرسين متاحين حالياً</div>';
+      return;
+    }
+
+    list.innerHTML = teachers.map(function(t) {
+      var name = (t.profiles && t.profiles.full_name) ? t.profiles.full_name : 'مدرس';
+      var initials = name.split(' ').map(function(w){ return w[0]; }).join('').slice(0,2).toUpperCase();
+      var price = t.hourly_rate ? t.hourly_rate + ' ج.م/ساعة' : 'تواصل للسعر';
+      return '<div onclick="selectTeacher(' + JSON.stringify(t).replace(/"/g,'&quot;') + ')" style="padding:18px;border:1.5px solid var(--gray-mid);border-radius:12px;cursor:pointer;transition:all .2s;text-align:center;background:#fff;" onmouseover="this.style.borderColor='var(--blue)';this.style.background='var(--blue-light)'" onmouseout="this.style.borderColor='var(--gray-mid)';this.style.background='#fff'">' +
+        '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-mid));display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;font-weight:900;margin:0 auto 12px;">' + initials + '</div>' +
+        '<div style="font-size:.92rem;font-weight:700;color:var(--dark);margin-bottom:4px;">م. ' + name + '</div>' +
+        '<div style="font-size:.78rem;color:var(--gray);margin-bottom:6px;">' + (t.subject || '') + '</div>' +
+        '<div style="font-size:.78rem;color:var(--blue);font-weight:700;">' + price + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  window.selectTeacher = function(teacher) {
+    _selectedTeacher = teacher;
+    var name = (teacher.profiles && teacher.profiles.full_name) ? teacher.profiles.full_name : 'مدرس';
+    document.getElementById('teacher-name-display').textContent = 'م. ' + name;
+    document.getElementById('teacher-subject-display').textContent = teacher.subject || '';
+    document.getElementById('teacher-avatar').textContent = name.split(' ').map(function(w){ return w[0]; }).join('').slice(0,2).toUpperCase();
+    document.getElementById('booking-form-card').style.display = 'block';
+    document.getElementById('booking-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Set min date to today
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('booking-date').min = today;
+  };
+
+  window.resetTeacher = function() {
+    _selectedTeacher = null;
+    document.getElementById('booking-form-card').style.display = 'none';
+  };
+
+  window.submitBooking = async function() {
+    var bookingAlert = document.getElementById('booking-alert');
+    bookingAlert.style.display = 'none';
+
+    if (!_selectedTeacher) {
+      showBookingAlert('error', '⚠️ من فضلك اختار مدرس أولاً');
+      return;
+    }
+    var date = document.getElementById('booking-date').value;
+    var time = document.getElementById('booking-time').value;
+    var duration = parseInt(document.getElementById('booking-duration').value);
+    var notes = document.getElementById('booking-notes').value.trim();
+
+    if (!date) { showBookingAlert('error', '⚠️ من فضلك اختار تاريخ الحصة'); return; }
+    if (!time) { showBookingAlert('error', '⚠️ من فضلك اختار وقت الحصة'); return; }
+
+    var sessionAt = new Date(date + 'T' + time).toISOString();
+    if (new Date(sessionAt) <= new Date()) {
+      showBookingAlert('error', '⚠️ من فضلك اختار تاريخ ووقت في المستقبل');
+      return;
+    }
+
+    var btn = document.getElementById('btn-book');
+    document.getElementById('book-btn-text').style.display = 'none';
+    document.getElementById('book-spinner').style.display = 'block';
+    btn.disabled = true;
+
+    var { data, error } = await window._sbClient
+      .from('bookings')
+      .insert({
+        student_id: window._currentUser.id,
+        teacher_id: _selectedTeacher.id,
+        session_at: sessionAt,
+        duration_minutes: duration,
+        notes: notes || null,
+        status: 'pending'
+      });
+
+    document.getElementById('book-btn-text').style.display = 'block';
+    document.getElementById('book-spinner').style.display = 'none';
+    btn.disabled = false;
+
+    if (error) {
+      showBookingAlert('error', '❌ حدث خطأ: ' + error.message);
+    } else {
+      showBookingAlert('success', '✅ تم إرسال طلب الحجز! سيتم التأكيد قريباً');
+      document.getElementById('booking-date').value = '';
+      document.getElementById('booking-time').value = '';
+      document.getElementById('booking-notes').value = '';
+      window.resetTeacher();
+      // Refresh sessions
+      var { data: bookings } = await window._sbClient
+        .from('bookings')
+        .select('*, courses(title), teachers(*, profiles(full_name))')
+        .eq('student_id', window._currentUser.id)
+        .order('session_at', { ascending: true });
+      renderSessions(bookings || []);
+    }
+  };
+
+  function showBookingAlert(type, msg) {
+    var el = document.getElementById('booking-alert');
+    el.textContent = msg;
+    el.style.display = 'flex';
+    if (type === 'error') {
+      el.style.background = 'var(--red-light)';
+      el.style.color = 'var(--red)';
+      el.style.border = '1px solid #FECACA';
+    } else {
+      el.style.background = '#F0FDF4';
+      el.style.color = '#15803D';
+      el.style.border = '1px solid #BBF7D0';
+    }
+  }
+
+  // Load teachers when booking page is shown
+  var _originalShowPage = window.showPage;
 
   // ── LOGOUT ──
   window._logout = async function() {
