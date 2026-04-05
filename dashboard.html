@@ -1457,7 +1457,9 @@ function joinSession(link) {
 
 // ── LOGOUT ──
 function confirmLogout() {
-  if (confirm('هل تريد تسجيل الخروج؟')) {
+  if (window._logout) {
+    window._logout();
+  } else {
     window.location.href = 'login.html';
   }
 }
@@ -1473,12 +1475,41 @@ function openWA() {
 }
 
 // ── SAVE SETTINGS ──
-function saveSettings() {
-  alert('✅ تم حفظ بياناتك بنجاح!');
+async function saveSettings() {
+  if (!window._sbClient || !window._currentUser) return;
+  var fn = document.getElementById('first-name') ? document.getElementById('first-name').value.trim() : '';
+  var ln = document.getElementById('last-name')  ? document.getElementById('last-name').value.trim()  : '';
+  var ph = document.getElementById('user-phone') ? document.getElementById('user-phone').value.trim() : '';
+  var fullName = (fn + ' ' + ln).trim();
+
+  var { error } = await window._sbClient
+    .from('profiles')
+    .update({ full_name: fullName, phone: ph })
+    .eq('id', window._currentUser.id);
+
+  if (error) {
+    alert('❌ حدث خطأ أثناء الحفظ');
+  } else {
+    alert('✅ تم حفظ بياناتك بنجاح!');
+    document.querySelectorAll('.header-uname, .user-mini-name').forEach(function(el){ el.textContent = fullName; });
+  }
 }
 
-function savePassword() {
-  alert('✅ تم تغيير كلمة المرور!');
+async function savePassword() {
+  if (!window._sbClient) return;
+  var newPwd = document.querySelector('#page-settings input[placeholder="8 أحرف على الأقل"]');
+  var confPwd = document.querySelector('#page-settings input[placeholder="أعد الكتابة"]');
+  if (!newPwd || !confPwd) return;
+  if (newPwd.value.length < 8) { alert('كلمة المرور يجب أن تكون 8 أحرف على الأقل'); return; }
+  if (newPwd.value !== confPwd.value) { alert('كلمتا المرور غير متطابقتين'); return; }
+
+  var { error } = await window._sbClient.auth.updateUser({ password: newPwd.value });
+  if (error) {
+    alert('❌ حدث خطأ: ' + error.message);
+  } else {
+    alert('✅ تم تغيير كلمة المرور بنجاح!');
+    newPwd.value = ''; confPwd.value = '';
+  }
 }
 
 </script>
@@ -1502,23 +1533,22 @@ function savePassword() {
       return;
     }
     var user = session.user;
+    window._currentUser = user;
+    window._sbClient = _sb;
 
-    // 2. جلب بيانات الطالب من جدول users
-    var { data: student } = await _sb
-      .from('users')
+    // 2. جلب بيانات الطالب من جدول profiles
+    var { data: profile } = await _sb
+      .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
 
     // 3. تحضير البيانات
-    var firstName = (student && student.first_name) ? student.first_name
-                  : (student && student.name)       ? student.name.split(' ')[0]
-                  : user.email.split('@')[0];
-    var lastName  = (student && student.last_name)  ? student.last_name
-                  : (student && student.name && student.name.split(' ').length > 1) ? student.name.split(' ').slice(1).join(' ')
-                  : '';
-    var fullName  = (firstName + ' ' + lastName).trim();
-    var phone     = (student && student.phone) ? student.phone : '';
+    var fullName  = (profile && profile.full_name) ? profile.full_name : user.email.split('@')[0];
+    var nameParts = fullName.trim().split(' ');
+    var firstName = nameParts[0];
+    var lastName  = nameParts.slice(1).join(' ');
+    var phone     = (profile && profile.phone) ? profile.phone : '';
     var initials  = firstName.charAt(0).toUpperCase() + (lastName ? lastName.charAt(0).toUpperCase() : '');
 
     // 4. تحديث عناصر الاسم في الهيدر والسايدبار
