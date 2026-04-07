@@ -1,0 +1,147 @@
+:root {
+  --bg: #f3f5fb;
+  --card: #ffffff;
+  --text: #18212f;
+  --muted: #5b6678;
+  --primary: #1a56db;
+  --border: #dde3ef;
+  --success: #0e9f6e;
+  --danger: #dc2626;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Cairo", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.auth {
+  max-width: 420px;
+  margin: 80px auto;
+}
+
+h1, h2, h3 {
+  margin: 0 0 8px;
+}
+
+.muted {
+  color: var(--muted);
+  margin-top: 0;
+}
+
+form {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+input, button {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 15px;
+}
+
+button {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+button.secondary {
+  margin-top: 10px;
+  background: #e9efff;
+  color: #173d94;
+}
+
+.hidden { display: none; }
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.grid {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.two-cols {
+  grid-template-columns: 1fr 1fr;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.tag {
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #e6f0ff;
+  color: #2146a9;
+}
+
+.status {
+  margin: 8px 0 0;
+  min-height: 24px;
+  color: var(--muted);
+}
+
+.status.ok { color: var(--success); }
+.status.err { color: var(--danger); }
+
+.profile-form {
+  grid-template-columns: 1fr 1fr auto;
+}
+
+@media (max-width: 900px) {
+  .stats { grid-template-columns: 1fr 1fr; }
+  .two-cols { grid-template-columns: 1fr; }
+  .profile-form { grid-template-columns: 1fr; }
+  .topbar { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
