@@ -635,12 +635,15 @@ footer{background:var(--dark);padding:60px 5% 30px;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  // Set this globally (window.DASHBOARD_APP_URL) to point to the standalone React dashboard.
+  // Fallback keeps legacy behavior if no URL is configured.
+  var DASHBOARD_APP_URL = window.DASHBOARD_APP_URL || localStorage.getItem('seleem_dashboard_url') || 'dashboard.html';
   window._sb = window.supabase.createClient('https://hjhoudwknwnxfndrgpfe.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s');
   window.addEventListener('load', async function() {
     var { data } = await window._sb.auth.getSession();
     var btns = document.getElementById('nav-auth-btns');
     if (data.session) {
-      btns.innerHTML = '<a href="dashboard.html" class="btn-register">🎓 حسابي</a>';
+      btns.innerHTML = '<a href="' + DASHBOARD_APP_URL + '" class="btn-register">🎓 حسابي</a>';
     }
   });
 </script>

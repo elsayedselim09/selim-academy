@@ -680,6 +680,10 @@ body {
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// Set this globally (window.DASHBOARD_APP_URL) to point to the standalone React dashboard.
+// Fallback keeps legacy behavior if no URL is configured.
+var DASHBOARD_APP_URL = window.DASHBOARD_APP_URL || localStorage.getItem('seleem_dashboard_url') || 'dashboard.html';
+
 // ── SUPABASE CLIENT ──
 var _sb = supabase.createClient(
   'https://hjhoudwknwnxfndrgpfe.supabase.co',
@@ -806,7 +810,7 @@ async function handleLogin() {
     if (error.message.includes('Invalid login'))       msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
     showAlert('login-alert','login-alert-msg', msg);
   } else {
-    window.location.href = 'dashboard.html';
+    window.location.href = DASHBOARD_APP_URL;
   }
 }
 
@@ -886,14 +890,14 @@ async function handleRegister() {
 
 // ── GO TO DASHBOARD ──
 function goToDashboard() {
-  window.location.href = 'dashboard.html';
+  window.location.href = DASHBOARD_APP_URL;
 }
 
 // ── CHECK IF ALREADY LOGGED IN ──
 window.addEventListener('load', async function() {
   var { data } = await _sb.auth.getSession();
   if (data.session) {
-    window.location.href = 'dashboard.html';
+    window.location.href = DASHBOARD_APP_URL;
   }
 });
 </script>
