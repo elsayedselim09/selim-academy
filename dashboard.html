@@ -557,7 +557,7 @@ async function fetchAllData(userId) {
   const [p, e, ses, sub, act, notif] = await Promise.all([
     sb.from('profiles').select('*').eq('id', userId).single(),
     sb.from('enrollments').select('*, courses(*)').eq('user_id', userId).order('enrolled_at', { ascending: false }),
-    sb.from('sessions').select('*').order('scheduled_at', { ascending: true }).limit(50),
+    sb.from('sessions').select('*').eq('user_id', userId).order('scheduled_at', { ascending: true }).limit(50),
     sb.from('subscriptions').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     sb.from('activity_log').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(8),
     sb.from('notifications').select('*').eq('user_id', userId).order('is_read', { ascending: true }).order('created_at', { ascending: false }).limit(20),
@@ -1022,13 +1022,18 @@ function updateHeaderUI() {
 // ══════════════════════════════════════════════════════════════════
 // APP INIT — entry point
 // ══════════════════════════════════════════════════════════════════
-sb.auth.onAuthStateChange(async (event, session) => {
+// ── INIT: فحص السيشن مرة واحدة فقط ──────────────────────────────
+let _authHandled = false;
+
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+
   if (session?.user) {
+    _authHandled = true;
     STATE.user = session.user;
-    // Show loader while fetching
-    document.getElementById('loader').style.display          = 'flex';
-    document.getElementById('auth-screen').style.display     = 'none';
-    document.getElementById('dashboard-screen').style.display= 'none';
+    document.getElementById('loader').style.display           = 'flex';
+    document.getElementById('auth-screen').style.display      = 'none';
+    document.getElementById('dashboard-screen').style.display = 'none';
 
     await fetchAllData(session.user.id);
 
@@ -1038,20 +1043,34 @@ sb.auth.onAuthStateChange(async (event, session) => {
     renderNav();
     renderPage();
   } else {
-    STATE.user = null;
-    document.getElementById('loader').style.display          = 'none';
-    document.getElementById('auth-screen').style.display     = 'flex';
-    document.getElementById('dashboard-screen').style.display= 'none';
-  }
-});
-
-// Initial session check
-(async () => {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
     document.getElementById('loader').style.display      = 'none';
     document.getElementById('auth-screen').style.display = 'flex';
   }
+
+  // بعد ما تحققنا من الحالة الأولى، نسمع للتغييرات (login/logout)
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (_authHandled && event === 'INITIAL_SESSION') return; // تجاهل الأول
+
+    if (session?.user) {
+      STATE.user = session.user;
+      document.getElementById('loader').style.display           = 'flex';
+      document.getElementById('auth-screen').style.display      = 'none';
+      document.getElementById('dashboard-screen').style.display = 'none';
+
+      await fetchAllData(session.user.id);
+
+      document.getElementById('loader').style.display           = 'none';
+      document.getElementById('dashboard-screen').style.display = 'block';
+      updateHeaderUI();
+      renderNav();
+      renderPage();
+    } else {
+      STATE.user = null;
+      document.getElementById('loader').style.display           = 'none';
+      document.getElementById('auth-screen').style.display      = 'flex';
+      document.getElementById('dashboard-screen').style.display = 'none';
+    }
+  });
 })();
 </script>
 </body>
