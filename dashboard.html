@@ -1022,55 +1022,54 @@ function updateHeaderUI() {
 // ══════════════════════════════════════════════════════════════════
 // APP INIT — entry point
 // ══════════════════════════════════════════════════════════════════
-// ── INIT: فحص السيشن مرة واحدة فقط ──────────────────────────────
-let _authHandled = false;
+// ── HELPERS ──────────────────────────────────────────────────────
+function showDashboard() {
+  document.getElementById('loader').style.display           = 'none';
+  document.getElementById('auth-screen').style.display      = 'none';
+  document.getElementById('dashboard-screen').style.display = 'block';
+}
+function showAuth() {
+  document.getElementById('loader').style.display           = 'none';
+  document.getElementById('dashboard-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display      = 'flex';
+}
+function showLoader() {
+  document.getElementById('loader').style.display           = 'flex';
+  document.getElementById('auth-screen').style.display      = 'none';
+  document.getElementById('dashboard-screen').style.display = 'none';
+}
 
-(async () => {
-  const { data: { session } } = await sb.auth.getSession();
+// ── INIT ──────────────────────────────────────────────────────────
+let _appReady = false; // هل الداشبورد اتحمل قبل كده؟
+
+sb.auth.onAuthStateChange(async (event, session) => {
+  // TOKEN_REFRESHED أو INITIAL_SESSION بعد ما الداشبورد اشتغل → تجاهل
+  if (_appReady && event !== 'SIGNED_OUT') return;
 
   if (session?.user) {
-    _authHandled = true;
     STATE.user = session.user;
-    document.getElementById('loader').style.display           = 'flex';
-    document.getElementById('auth-screen').style.display      = 'none';
-    document.getElementById('dashboard-screen').style.display = 'none';
 
+    // لو الداشبورد اشتغل قبل كده، متعملش حاجة
+    if (_appReady) return;
+
+    showLoader();
     await fetchAllData(session.user.id);
-
-    document.getElementById('loader').style.display           = 'none';
-    document.getElementById('dashboard-screen').style.display = 'block';
+    _appReady = true;
+    showDashboard();
     updateHeaderUI();
     renderNav();
     renderPage();
-  } else {
-    document.getElementById('loader').style.display      = 'none';
-    document.getElementById('auth-screen').style.display = 'flex';
+  } else if (event === 'SIGNED_OUT') {
+    _appReady = false;
+    STATE.user = null;
+    showAuth();
   }
+});
 
-  // بعد ما تحققنا من الحالة الأولى، نسمع للتغييرات (login/logout)
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if (!['SIGNED_IN', 'SIGNED_OUT'].includes(event)) return;
-
-    if (session?.user) {
-      STATE.user = session.user;
-      document.getElementById('loader').style.display           = 'flex';
-      document.getElementById('auth-screen').style.display      = 'none';
-      document.getElementById('dashboard-screen').style.display = 'none';
-
-      await fetchAllData(session.user.id);
-
-      document.getElementById('loader').style.display           = 'none';
-      document.getElementById('dashboard-screen').style.display = 'block';
-      updateHeaderUI();
-      renderNav();
-      renderPage();
-    } else {
-      STATE.user = null;
-      document.getElementById('loader').style.display           = 'none';
-      document.getElementById('auth-screen').style.display      = 'flex';
-      document.getElementById('dashboard-screen').style.display = 'none';
-    }
-  });
+// فحص أولي سريع لو مفيش session
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) showAuth();
 })();
 </script>
 </body>
