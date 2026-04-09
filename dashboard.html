@@ -1049,7 +1049,7 @@ let _authHandled = false;
 
   // بعد ما تحققنا من الحالة الأولى، نسمع للتغييرات (login/logout)
   sb.auth.onAuthStateChange(async (event, session) => {
-    if (_authHandled && event === 'INITIAL_SESSION') return; // تجاهل الأول
+    if (!['SIGNED_IN', 'SIGNED_OUT'].includes(event)) return;
 
     if (session?.user) {
       STATE.user = session.user;
