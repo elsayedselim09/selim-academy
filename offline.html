@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>غير متصل — أكاديمية سليم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: linear-gradient(135deg, #EFF6FF, #F0FDF4);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    color: #111928;
+  }
+  .icon { font-size: 4rem; margin-bottom: 20px; }
+  h1 { font-size: 1.8rem; font-weight: 900; margin-bottom: 10px; color: #1A56DB; }
+  p { font-size: 1rem; color: #6B7280; line-height: 1.7; max-width: 320px; margin-bottom: 30px; }
+  .btn {
+    display: inline-block;
+    padding: 12px 28px;
+    background: #1A56DB;
+    color: #fff;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    border: none;
+    font-family: 'Cairo', sans-serif;
+    text-decoration: none;
+  }
+  .logo {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #1A56DB;
+  }
+</style>
+</head>
+<body>
+<div class="logo">📚 أكاديمية سليم</div>
+<div class="icon">📶</div>
+<h1>أنت غير متصل بالإنترنت</h1>
+<p>يبدو أن اتصالك بالإنترنت منقطع. تحقق من اتصالك ثم أعد المحاولة.</p>
+<button class="btn" onclick="window.location.reload()">🔄 إعادة المحاولة</button>
+</body>
+</html>

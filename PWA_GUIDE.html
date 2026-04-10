@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دليل PWA — أكاديمية سليم</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Fira+Code&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue: #1A56DB;
+  --blue-dark: #1342B0;
+  --blue-light: #EBF5FF;
+  --green: #0E9F6E;
+  --green-light: #ECFDF5;
+  --gold: #F59E0B;
+  --gold-light: #FFFBEB;
+  --red: #EF4444;
+  --red-light: #FEF2F2;
+  --dark: #111928;
+  --gray: #6B7280;
+  --gray-mid: #E5E7EB;
+  --white: #fff;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Cairo', sans-serif;
+  background: #F9FAFB;
+  color: var(--dark);
+  line-height: 1.7;
+  direction: rtl;
+}
+.container { max-width: 860px; margin: 0 auto; padding: 40px 20px 80px; }
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  color: #fff;
+  border-radius: 16px;
+  padding: 36px;
+  margin-bottom: 32px;
+  text-align: center;
+}
+.header h1 { font-size: 1.8rem; font-weight: 900; margin-bottom: 8px; }
+.header p  { opacity: .85; font-size: 1rem; }
+
+/* Steps */
+.step {
+  background: var(--white);
+  border-radius: 14px;
+  border: 1px solid var(--gray-mid);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--gray-mid);
+  background: var(--blue-light);
+}
+.step-num {
+  width: 36px; height: 36px;
+  background: var(--blue);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 1rem;
+  flex-shrink: 0;
+}
+.step-title { font-weight: 900; font-size: 1.05rem; color: var(--blue-dark); }
+.step-body { padding: 24px; }
+
+/* Code blocks */
+pre {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border-radius: 10px;
+  padding: 20px;
+  font-family: 'Fira Code', monospace;
+  font-size: .82rem;
+  line-height: 1.65;
+  overflow-x: auto;
+  margin: 14px 0;
+  position: relative;
+}
+.copy-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255,255,255,.1);
+  color: #cdd6f4;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: .75rem;
+  cursor: pointer;
+  font-family: 'Cairo', sans-serif;
+  transition: background .2s;
+}
+.copy-btn:hover { background: rgba(255,255,255,.2); }
+.copy-btn.copied { background: #0E9F6E; color: #fff; }
+
+/* Tags */
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 50px;
+  font-size: .78rem;
+  font-weight: 700;
+  margin: 2px;
+}
+.tag.green { background: var(--green-light); color: var(--green); }
+.tag.blue  { background: var(--blue-light);  color: var(--blue);  }
+.tag.red   { background: var(--red-light);   color: var(--red);   }
+.tag.gold  { background: var(--gold-light);  color: #92400E;      }
+
+/* Alert boxes */
+.alert {
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin: 14px 0;
+  font-size: .9rem;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.alert.info   { background: var(--blue-light);  border-right: 4px solid var(--blue);  color: #1e40af; }
+.alert.warn   { background: var(--gold-light);  border-right: 4px solid var(--gold);  color: #78350F; }
+.alert.success{ background: var(--green-light); border-right: 4px solid var(--green); color: #065F46; }
+.alert.danger { background: var(--red-light);   border-right: 4px solid var(--red);   color: #991B1B; }
+
+/* Checklist */
+.checklist { list-style: none; margin: 12px 0; }
+.checklist li { padding: 6px 0; display: flex; align-items: flex-start; gap: 8px; font-size: .92rem; }
+.checklist li::before { content: '✅'; flex-shrink: 0; }
+.checklist li.warn::before { content: '⚠️'; }
+.checklist li.x::before   { content: '❌'; }
+
+/* File tree */
+.file-tree {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border-radius: 10px;
+  padding: 20px;
+  font-family: 'Fira Code', monospace;
+  font-size: .82rem;
+  line-height: 1.8;
+  margin: 14px 0;
+}
+.file-tree .folder { color: #89b4fa; }
+.file-tree .new    { color: #a6e3a1; }
+.file-tree .mod    { color: #f9e2af; }
+
+p { margin-bottom: 10px; }
+h3 { margin: 16px 0 8px; color: var(--blue-dark); font-size: 1rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>🚀 دليل تحويل أكاديمية سليم إلى PWA كامل</h1>
+  <p>كل ملف، كل سطر كود، كل خطوة — جاهز للنسخ والتطبيق</p>
+</div>
+
+<!-- ═══ هيكل الملفات ═══ -->
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">📁</div>
+    <div class="step-title">هيكل الملفات النهائي في مشروعك</div>
+  </div>
+  <div class="step-body">
+    <div class="file-tree">
+selim-academy/
+├── <span class="new">manifest.json</span>          ← جديد (من الملفات المُرفقة)
+├── <span class="new">sw.js</span>                  ← جديد (Service Worker)
+├── <span class="new">pwa-register.js</span>        ← جديد (كود التسجيل)
+├── <span class="new">offline.html</span>           ← جديد (صفحة بدون إنترنت)
+├── <span class="new">icons/</span>                 ← جديد (مجلد الأيقونات)
+│   ├── icon-72x72.png
+│   ├── icon-96x96.png
+│   ├── icon-128x128.png
+│   ├── icon-144x144.png
+│   ├── icon-152x152.png
+│   ├── icon-192x192.png
+│   ├── icon-384x384.png
+│   └── icon-512x512.png
+├── <span class="mod">index.html</span>             ← تعديل: إضافة 4 أسطر في &lt;head&gt; وسطر في &lt;body&gt;
+├── <span class="mod">dashboard.html</span>         ← تعديل: نفس الأسطر
+├── <span class="mod">login.html</span>             ← تعديل: نفس الأسطر
+├── sitemap.xml
+├── robots.txt
+└── google9e051104a445dd06.html
+    </div>
+  </div>
+</div>
+
+<!-- ═══ الخطوة 1 ═══ -->
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">1</div>
+    <div class="step-title">الكود الذي تضيفه في &lt;head&gt; لكل صفحة HTML</div>
+  </div>
+  <div class="step-body">
+    <p>أضف هذا الكود داخل <code>&lt;head&gt;</code> في <strong>index.html</strong> و <strong>dashboard.html</strong> و <strong>login.html</strong> — بعد سطر <code>meta viewport</code> مباشرةً:</p>
+    <div style="position:relative">
+<pre id="code1">&lt;!-- ═══ PWA — Progressive Web App ═══ --&gt;
+&lt;link rel="manifest" href="/selim-academy/manifest.json"&gt;
+&lt;meta name="theme-color" content="#1A56DB"&gt;
+&lt;meta name="mobile-web-app-capable" content="yes"&gt;
+&lt;meta name="apple-mobile-web-app-capable" content="yes"&gt;
+&lt;meta name="apple-mobile-web-app-status-bar-style" content="default"&gt;
+&lt;meta name="apple-mobile-web-app-title" content="أكاديمية سليم"&gt;
+&lt;link rel="apple-touch-icon" href="/selim-academy/icons/icon-192x192.png"&gt;
+&lt;link rel="apple-touch-icon" sizes="152x152" href="/selim-academy/icons/icon-152x152.png"&gt;
+&lt;link rel="apple-touch-icon" sizes="192x192" href="/selim-academy/icons/icon-192x192.png"&gt;
+&lt;link rel="icon" type="image/png" sizes="192x192" href="/selim-academy/icons/icon-192x192.png"&gt;
+&lt;link rel="icon" type="image/png" sizes="512x512" href="/selim-academy/icons/icon-512x512.png"&gt;</pre>
+      <button class="copy-btn" onclick="copyCode('code1', this)">نسخ</button>
+    </div>
+
+    <div class="alert info">
+      💡 <div>أسطر <code>apple-mobile-web-app-*</code> ضرورية لـ iOS لأن Safari لا يدعم manifest بشكل كامل.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ الخطوة 2 ═══ -->
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">2</div>
+    <div class="step-title">السطر الذي تضيفه قبل &lt;/body&gt; في كل صفحة</div>
+  </div>
+  <div class="step-body">
+    <p>أضف هذا السطر الوحيد قبل إغلاق <code>&lt;/body&gt;</code> في كل صفحة:</p>
+    <div style="position:relative">
+<pre id="code2">&lt;script src="/selim-academy/pwa-register.js" defer&gt;&lt;/script&gt;</pre>
+      <button class="copy-btn" onclick="copyCode('code2', this)">نسخ</button>
+    </div>
+    <div class="alert success">
+      ✅ <div>هذا السطر يتولى تسجيل الـ Service Worker تلقائياً + عرض زر "أضف للشاشة الرئيسية" على Android.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ الخطوة 3 ═══ -->
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">3</div>
+    <div class="step-title">رفع الملفات على GitHub</div>
+  </div>
+  <div class="step-body">
+    <p>ارفع هذه الملفات إلى root مجلد <code>selim-academy</code> في الـ repository:</p>
+    <ul class="checklist">
+      <li><code>manifest.json</code></li>
+      <li><code>sw.js</code></li>
+      <li><code>pwa-register.js</code></li>
+      <li><code>offline.html</code></li>
+      <li>مجلد <code>icons/</code> كاملاً بكل ملفاته الـ 8</li>
+    </ul>
+    <p>ثم عدّل الصفحات الثلاث (index, dashboard, login) بإضافة الكود من الخطوات 1 و 2.</p>
+
+    <div class="alert warn">
+      ⚠️ <div><strong>مهم:</strong> الـ Service Worker يجب أن يكون في <code>/selim-academy/sw.js</code> وليس في أي مجلد فرعي، وإلا لن يتمكن من التحكم في الصفحات.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ الخطوة 4 — iOS ═══ -->
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">4</div>
+    <div class="step-title">ملاحظات iOS (iPhone/iPad) — مهمة جداً</div>
+  </div>
+  <div class="step-body">
+    <div class="alert danger">
+      ❌ <div>Safari على iOS لا يدعم <code>beforeinstallprompt</code>، أي زر "تثبيت" تلقائي لن يظهر على iPhone. المستخدم لازم يضيف التطبيق يدوياً.</div>
+    </div>
+
+    <h3>طريقة الإضافة اليدوية على iOS:</h3>
+    <ul class="checklist">
+      <li>افتح الموقع في Safari (مش Chrome)</li>
+      <li>اضغط أيقونة المشاركة (Share) ← المربع اللي فيه سهم للأعلى</li>
+      <li>اختر "Add to Home Screen"</li>
+      <li>اضغط "Add" — التطبيق هيتفتح standalone مباشرةً</li>
+    </ul>
+
+    <div class="alert info">
+      💡 <div>يمكنك إضافة بانر توجيهي للمستخدمين على iOS بالكود التالي:</div>
+    </div>
+    <div style="position:relative">
+<pre id="code3">// أضف هذا في pwa-register.js بعد السطر الأول
+var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+var isStandaloneIOS = window.navigator.standalone === true;
+
+if (isIOS && !isStandaloneIOS) {
+  var iosBanner = document.createElement('div');
+  iosBanner.innerHTML =
+    '📱 لتثبيت التطبيق: اضغط <strong>المشاركة</strong> ← <strong>إضافة إلى الشاشة الرئيسية</strong>' +
+    ' &nbsp;<button onclick="this.parentElement.remove()" style="' +
+    'background:rgba(255,255,255,.2);color:#fff;border:none;padding:4px 10px;' +
+    'border-radius:6px;cursor:pointer;font-family:Cairo,sans-serif;">✕</button>';
+  Object.assign(iosBanner.style, {
+    position: 'fixed', bottom: '20px', right: '16px', left: '16px',
+    background: '#1A56DB', color: '#fff', padding: '14px 16px',
+    borderRadius: '12px', fontSize: '.88rem', zIndex: '9999',
+    fontFamily: 'Cairo, sans-serif', textAlign: 'center',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+  });
+  document.body.appendChild(iosBanner);
+}</pre>
+      <button class="copy-btn" onclick="copyCode('code3', this)">نسخ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ الخطوة 5 — الاختبار ═══ -->
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">5</div>
+    <div class="step-title">كيف تتأكد أن الموقع بقى PWA حقيقي</div>
+  </div>
+  <div class="step-body">
+
+    <h3>🔍 باستخدام Chrome DevTools (الأسرع):</h3>
+    <ul class="checklist">
+      <li>افتح <code>https://elsayedselim09.github.io/selim-academy/</code> في Chrome</li>
+      <li>اضغط F12 → تبويب <strong>Application</strong></li>
+      <li>من القائمة: <strong>Service Workers</strong> → تأكد إن Status = <span class="tag green">activated and running</span></li>
+      <li>من القائمة: <strong>Manifest</strong> → تأكد من ظهور جميع البيانات والأيقونات</li>
+      <li>من القائمة: <strong>Cache Storage</strong> → تأكد من وجود <code>selim-academy-v2</code></li>
+    </ul>
+
+    <h3>🏆 باستخدام Lighthouse (الأشمل):</h3>
+    <ul class="checklist">
+      <li>F12 → تبويب <strong>Lighthouse</strong></li>
+      <li>اختر فقط: <strong>Progressive Web App</strong></li>
+      <li>اضغط <strong>Analyze page load</strong></li>
+      <li>يجب أن تحصل على ✅ في: Installable, PWA Optimized</li>
+    </ul>
+
+    <h3>📱 الاختبار الحقيقي على موبايل:</h3>
+    <ul class="checklist">
+      <li>افتح الموقع على Chrome Android</li>
+      <li>يجب أن يظهر Banner "أضف للشاشة الرئيسية" تلقائياً</li>
+      <li>بعد الإضافة: افتح التطبيق من الشاشة الرئيسية</li>
+      <li>تأكد من غياب شريط URL بالكامل ✅</li>
+      <li>تأكد من ظهور اسم التطبيق "أكاديمية سليم" في الأعلى</li>
+    </ul>
+
+    <div class="alert success">
+      ✅ <div>يمكنك أيضاً استخدام <strong>https://www.pwabuilder.com</strong> — أدخل رابط موقعك وهيعطيك تقرير شامل.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ الخطوة 6 — مشاكل GitHub Pages ═══ -->
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">6</div>
+    <div class="step-title">مشاكل شائعة في GitHub Pages مع PWA وحلولها</div>
+  </div>
+  <div class="step-body">
+
+    <h3>❌ المشكلة 1: Service Worker يظهر خطأ 404</h3>
+    <div class="alert danger">
+      <div>السبب: sw.js مش موجود في مسار <code>/selim-academy/sw.js</code> بالضبط.</div>
+    </div>
+    <div class="alert success">
+      <div><strong>الحل:</strong> تأكد أن الملف في root مجلد المشروع وليس في مجلد فرعي. تحقق من URL مباشرة: <code>https://elsayedselim09.github.io/selim-academy/sw.js</code></div>
+    </div>
+
+    <h3>❌ المشكلة 2: manifest.json يظهر scope error</h3>
+    <div class="alert danger">
+      <div>السبب: start_url أو scope خاطئ.</div>
+    </div>
+    <div class="alert success">
+      <div><strong>الحل:</strong> تأكد من وجود trailing slash: <code>"start_url": "/selim-academy/"</code> وليس <code>"/selim-academy"</code></div>
+    </div>
+
+    <h3>❌ المشكلة 3: التطبيق يفتح بالـ URL Bar (مش Standalone)</h3>
+    <div class="alert danger">
+      <div>السبب: display في manifest.json ليس standalone.</div>
+    </div>
+    <div class="alert success">
+      <div><strong>الحل:</strong> تأكد من <code>"display": "standalone"</code> في manifest.json. بعد التعديل، احذف التطبيق من الشاشة الرئيسية وأضفه مجدداً.</div>
+    </div>
+
+    <h3>❌ المشكلة 4: HTTPS Error (نادر على GitHub Pages)</h3>
+    <div class="alert success">
+      <div><strong>لا مشكلة:</strong> GitHub Pages يدعم HTTPS تلقائياً ✅ وهذا شرط أساسي للـ PWA.</div>
+    </div>
+
+    <h3>❌ المشكلة 5: الكاش القديم يمنع التحديثات</h3>
+    <div class="alert success">
+      <div><strong>الحل:</strong> عند أي تحديث للموقع، غيّر رقم النسخة في sw.js: <code>const CACHE_NAME = 'selim-academy-v3';</code> (v2 ← v3 إلخ)</div>
+    </div>
+
+    <h3>❌ المشكلة 6: الأيقونات لا تظهر</h3>
+    <div class="alert success">
+      <div><strong>الحل:</strong> تأكد من رفع مجلد <code>icons/</code> كاملاً وأن المسارات في manifest.json تبدأ بـ <code>/selim-academy/icons/</code></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ملخص الملفات ═══ -->
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">✅</div>
+    <div class="step-title">ملخص: الملفات المرفقة في هذه الحزمة</div>
+  </div>
+  <div class="step-body">
+    <ul class="checklist">
+      <li><strong>manifest.json</strong> — ملف الـ manifest المُعدّ لـ GitHub Pages</li>
+      <li><strong>sw.js</strong> — Service Worker احترافي بـ 3 استراتيجيات cache</li>
+      <li><strong>pwa-register.js</strong> — كود التسجيل + زر A2HS + كشف التحديثات</li>
+      <li><strong>offline.html</strong> — صفحة جميلة عند انقطاع الإنترنت</li>
+      <li><strong>icons/</strong> — 8 أيقونات بجميع الأحجام المطلوبة</li>
+      <li><strong>generate_icons.py</strong> — سكريبت لإعادة توليد أيقونات مخصصة</li>
+    </ul>
+
+    <div class="alert info">
+      💡 <div>الأيقونات المُولّدة تلقائياً بسيطة التصميم. للحصول على أيقونة بشعار الأكاديمية الحقيقي، استخدم <strong>https://www.pwabuilder.com/imageGenerator</strong> أو Figma لتصميم أيقونة PNG 512x512 وولّد منها باقي الأحجام.</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function copyCode(id, btn) {
+  var pre = document.getElementById(id);
+  var text = pre.innerText || pre.textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    btn.textContent = '✅ تم النسخ';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = 'نسخ';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+</script>
+</body>
+</html>
