@@ -13,44 +13,8 @@
   "categories": ["education"],
   "icons": [
     {
-      "src": "/selim-academy/icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/selim-academy/icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/selim-academy/icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/selim-academy/icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/selim-academy/icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
       "src": "/selim-academy/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/selim-academy/icons/icon-384x384.png",
-      "sizes": "384x384",
       "type": "image/png",
       "purpose": "maskable any"
     },
@@ -67,14 +31,14 @@
       "short_name": "دروس",
       "description": "تصفح الدروس المتاحة",
       "url": "/selim-academy/#courses",
-      "icons": [{ "src": "/selim-academy/icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/selim-academy/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "تواصل معنا",
       "short_name": "تواصل",
       "description": "تواصل مع الأكاديمية",
       "url": "/selim-academy/#contact",
-      "icons": [{ "src": "/selim-academy/icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/selim-academy/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ],
   "screenshots": [],
