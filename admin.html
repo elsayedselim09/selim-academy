@@ -440,7 +440,7 @@ body {
 
 <!-- ══ SIDEBAR ══ -->
 <aside class="sidebar" id="sidebar">
-  <a class="sidebar-logo" href="dashboard.html">
+  <a class="sidebar-logo" href="index.html">
     <div class="logo-icon">أس</div>
     <div>
       <div class="logo-text">أكاديمية سليم</div>
@@ -664,20 +664,44 @@ async function doLogout() {
 async function loadRequests() {
   try {
     // جلب طلبات الاشتراك مع بيانات المستخدم والكورس عبر join
-    const { data, error } = await sb
+    // جلب الطلبات أولاً
+    const { data: reqData, error } = await sb
       .from('subscription_requests')
-      .select(`
-        id, status, created_at, note,
-        user_id,
-        course_id,
-        profiles:user_id ( full_name, phone ),
-        courses:course_id ( name, icon )
-      `)
+      .select('id, status, created_at, note, user_id, course_id')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    STATE.requests = data || [];
+    const requests = reqData || [];
+
+    // جلب بيانات الـ profiles والكورسات بشكل منفصل
+    const userIds  = [...new Set(requests.map(r => r.user_id))];
+    const courseIds = [...new Set(requests.map(r => r.course_id))];
+
+    const [profRes, courseRes] = await Promise.all([
+      userIds.length
+        ? sb.from('profiles').select('id, full_name, phone').in('id', userIds)
+        : { data: [] },
+      courseIds.length
+        ? sb.from('courses').select('id, name, icon').in('id', courseIds)
+        : { data: [] }
+    ]);
+
+    // بناء maps للوصول السريع
+    const profileMap = {};
+    (profRes.data || []).forEach(p => { profileMap[p.id] = p; });
+
+    const courseMap = {};
+    (courseRes.data || []).forEach(c => { courseMap[c.id] = c; });
+
+    // دمج البيانات
+    const data = requests.map(r => ({
+      ...r,
+      profiles: profileMap[r.user_id]  || null,
+      courses:  courseMap[r.course_id] || null
+    }));
+
+    STATE.requests = data;
     updateStats();
     updateBadge();
     renderOverview();
