@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أكاديمية سليم | لوحة المدرس</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+/* ══ RESET & VARIABLES ══════════════════════════════════════════ */
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes spin   { to{transform:rotate(360deg)} }
+@keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+:root {
+  --blue:        #1A56DB;
+  --blue-dark:   #1342B0;
+  --blue-light:  #EBF5FF;
+  --blue-mid:    #3B82F6;
+  --green:       #0E9F6E;
+  --green-light: #ECFDF5;
+  --red:         #EF4444;
+  --red-light:   #FEF2F2;
+  --gold:        #F59E0B;
+  --gold-light:  #FFFBEB;
+  --purple:      #8B5CF6;
+  --purple-light:#F5F3FF;
+  --dark:        #111928;
+  --gray:        #6B7280;
+  --gray-light:  #F9FAFB;
+  --gray-mid:    #E5E7EB;
+  --white:       #ffffff;
+  --sidebar-w:   260px;
+  --header-h:    64px;
+  --radius:      12px;
+  --shadow:      0 2px 12px rgba(0,0,0,.07);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,.12);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Cairo', sans-serif;
+  background: var(--gray-light);
+  color: var(--dark);
+  direction: rtl;
+  overflow-x: hidden;
+}
+
+/* ══ LOADER ═════════════════════════════════════════════════════ */
+#loader {
+  position: fixed; inset: 0;
+  background: var(--gray-light);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; z-index: 9999;
+}
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--gray-mid);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+.loader-text { font-size: .9rem; color: var(--gray); font-weight: 600; }
+
+/* ══ SIDEBAR ════════════════════════════════════════════════════ */
+.sidebar {
+  position: fixed; top: 0; right: 0;
+  width: var(--sidebar-w); height: 100vh;
+  background: var(--dark);
+  display: flex; flex-direction: column;
+  z-index: 100; transition: transform .3s;
+}
+.sidebar-logo {
+  padding: 20px 22px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  text-decoration: none;
+}
+.logo-icon {
+  width: 38px; height: 38px;
+  background: var(--blue); border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: .9rem; font-weight: 900; flex-shrink: 0;
+}
+.logo-text  { font-size: 1.05rem; font-weight: 900; color: #fff; line-height: 1.2; }
+.logo-sub   { font-size: .7rem; color: rgba(255,255,255,.4); }
+
+.sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+.nav-label {
+  font-size: .68rem; color: rgba(255,255,255,.3);
+  font-weight: 700; letter-spacing: .8px;
+  padding: 12px 10px 6px; text-transform: uppercase;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 12px; border-radius: 10px;
+  color: rgba(255,255,255,.55);
+  font-size: .9rem; font-weight: 600;
+  cursor: pointer; transition: all .2s;
+  margin-bottom: 2px; border: none;
+  background: none; width: 100%;
+  font-family: 'Cairo', sans-serif; text-align: right;
+}
+.nav-item:hover  { background: rgba(255,255,255,.07); color: rgba(255,255,255,.9); }
+.nav-item.active { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(26,86,219,.4); }
+.nav-icon { font-size: 1.1rem; width: 22px; text-align: center; flex-shrink: 0; }
+.nav-badge {
+  margin-right: auto;
+  background: var(--red); color: #fff;
+  font-size: .65rem; font-weight: 900;
+  padding: 2px 7px; border-radius: 50px;
+}
+
+.sidebar-bottom {
+  padding: 16px 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+.user-mini {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  margin-bottom: 8px;
+}
+.user-av {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), var(--blue-mid));
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: .85rem; font-weight: 900; flex-shrink: 0;
+}
+.user-mini-name  { font-size: .85rem; font-weight: 700; color: #fff; }
+.user-mini-role  { font-size: .72rem; color: rgba(255,255,255,.4); }
+
+.btn-logout {
+  width: 100%; padding: 10px 16px;
+  background: rgba(239,68,68,.15); color: #FCA5A5;
+  border: 1px solid rgba(239,68,68,.25); border-radius: 10px;
+  font-family: 'Cairo', sans-serif; font-size: .85rem; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-logout:hover { background: var(--red); color: #fff; border-color: var(--red); }
+
+/* ══ HEADER ═════════════════════════════════════════════════════ */
+.main-header {
+  position: fixed; top: 0; left: 0;
+  width: calc(100% - var(--sidebar-w));
+  height: var(--header-h);
+  background: var(--white);
+  border-bottom: 1px solid var(--gray-mid);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px; z-index: 99;
+  box-shadow: var(--shadow);
+}
+.header-welcome { font-size: .95rem; font-weight: 700; color: var(--dark); }
+.header-welcome span { color: var(--blue); }
+.header-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--purple-light); color: var(--purple);
+  border: 1px solid #DDD6FE; border-radius: 50px;
+  padding: 4px 14px; font-size: .78rem; font-weight: 700;
+}
+.hamburger {
+  display: none; background: none; border: none;
+  font-size: 1.4rem; cursor: pointer; color: var(--dark);
+}
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.5); z-index: 99;
+}
+.overlay.show { display: block; }
+
+/* ══ MAIN CONTENT ════════════════════════════════════════════════ */
+#app {
+  margin-right: var(--sidebar-w);
+  margin-top: var(--header-h);
+  padding: 28px;
+  min-height: calc(100vh - var(--header-h));
+}
+
+/* ══ PAGE SECTIONS ═══════════════════════════════════════════════ */
+.page { display: none; animation: fadeIn .3s ease; }
+.page.active { display: block; }
+
+.page-title { font-size: 1.4rem; font-weight: 900; color: var(--dark); margin-bottom: 4px; }
+.page-sub   { font-size: .88rem; color: var(--gray); margin-bottom: 28px; }
+
+/* ══ STATS ROW ═══════════════════════════════════════════════════ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px; margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--gray-mid);
+  border-radius: var(--radius);
+  padding: 22px;
+  display: flex; align-items: flex-start; gap: 16px;
+  transition: all .25s;
+}
+.stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+.stat-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; flex-shrink: 0;
+}
+.stat-icon.gold   { background: var(--gold-light); }
+.stat-icon.green  { background: var(--green-light); }
+.stat-icon.red    { background: var(--red-light); }
+.stat-num   { font-size: 1.8rem; font-weight: 900; color: var(--dark); line-height: 1; }
+.stat-label { font-size: .8rem; color: var(--gray); margin-top: 3px; }
+
+/* ══ SECTION CARD ════════════════════════════════════════════════ */
+.section-card {
+  background: var(--white);
+  border: 1px solid var(--gray-mid);
+  border-radius: var(--radius);
+  overflow: hidden; margin-bottom: 20px;
+}
+.section-head {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--gray-mid);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.section-head h3 { font-size: 1rem; font-weight: 900; color: var(--dark); }
+.section-body { padding: 0; }
+
+/* ══ FILTER BAR ══════════════════════════════════════════════════ */
+.filter-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--gray-mid);
+  background: var(--gray-light);
+  flex-wrap: wrap;
+}
+.filter-btn {
+  padding: 6px 16px;
+  border-radius: 50px; border: 1.5px solid var(--gray-mid);
+  background: var(--white); color: var(--gray);
+  font-family: 'Cairo', sans-serif; font-size: .82rem; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+}
+.filter-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+.search-input {
+  margin-right: auto;
+  padding: 7px 14px;
+  border: 1.5px solid var(--gray-mid);
+  border-radius: 50px; background: var(--white);
+  font-family: 'Cairo', sans-serif; font-size: .85rem;
+  color: var(--dark); outline: none; min-width: 200px;
+  transition: border-color .2s;
+}
+.search-input:focus { border-color: var(--blue); }
+
+/* ══ REQUEST TABLE ═══════════════════════════════════════════════ */
+.req-table { width: 100%; border-collapse: collapse; }
+.req-table th {
+  background: var(--gray-light);
+  padding: 12px 18px; text-align: right;
+  font-size: .78rem; font-weight: 700;
+  color: var(--gray); border-bottom: 1px solid var(--gray-mid);
+  white-space: nowrap;
+}
+.req-table td {
+  padding: 15px 18px; border-bottom: 1px solid var(--gray-mid);
+  font-size: .87rem; color: var(--dark); vertical-align: middle;
+}
+.req-table tr:last-child td { border-bottom: none; }
+.req-table tr { transition: background .15s; }
+.req-table tr:hover td { background: var(--gray-light); }
+
+/* ── ID CELL ── */
+.id-cell {
+  font-family: monospace; font-size: .75rem;
+  color: var(--gray); background: var(--gray-light);
+  padding: 3px 8px; border-radius: 5px;
+  border: 1px solid var(--gray-mid);
+  display: inline-block; max-width: 120px;
+  overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; cursor: pointer;
+  transition: all .2s;
+}
+.id-cell:hover { background: var(--blue-light); color: var(--blue); border-color: var(--blue); }
+
+/* ── STUDENT INFO ── */
+.student-info { display: flex; align-items: center; gap: 10px; }
+.student-av {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), var(--blue-mid));
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: .8rem; font-weight: 900; flex-shrink: 0;
+}
+.student-name  { font-size: .88rem; font-weight: 700; color: var(--dark); }
+.student-email { font-size: .74rem; color: var(--gray); }
+
+/* ── COURSE CHIP ── */
+.course-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 12px;
+  background: var(--blue-light); color: var(--blue);
+  border: 1px solid rgba(26,86,219,.15); border-radius: 8px;
+  font-size: .82rem; font-weight: 700;
+}
+
+/* ── STATUS BADGE ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px;
+  font-size: .75rem; font-weight: 700;
+}
+.badge-pending  { background: var(--gold-light);  color: #92400E; border: 1px solid #FCD34D; }
+.badge-approved { background: var(--green-light); color: #065F46; border: 1px solid #6EE7B7; }
+.badge-rejected { background: var(--red-light);   color: var(--red); border: 1px solid #FECACA; }
+
+/* ── DATE CELL ── */
+.date-cell { font-size: .78rem; color: var(--gray); white-space: nowrap; }
+
+/* ── ACTION BUTTONS ── */
+.actions { display: flex; gap: 8px; }
+.btn-approve, .btn-reject, .btn-done {
+  padding: 7px 14px; border: none; border-radius: 8px;
+  font-family: 'Cairo', sans-serif; font-size: .78rem;
+  font-weight: 700; cursor: pointer; transition: all .2s;
+  display: flex; align-items: center; gap: 5px;
+  white-space: nowrap;
+}
+.btn-approve { background: var(--green); color: #fff; }
+.btn-approve:hover { background: #0B8A5F; transform: translateY(-1px); }
+.btn-reject  { background: var(--red-light); color: var(--red); border: 1px solid #FECACA; }
+.btn-reject:hover  { background: var(--red); color: #fff; }
+.btn-done { background: var(--gray-light); color: var(--gray); cursor: default; }
+.btn-approve:disabled, .btn-reject:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+/* ══ EMPTY STATE ═════════════════════════════════════════════════ */
+.empty-box {
+  text-align: center; padding: 60px 20px;
+}
+.empty-box .ei { font-size: 3rem; margin-bottom: 14px; }
+.empty-box .et { font-size: 1rem; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+.empty-box .ed { font-size: .85rem; color: var(--gray); }
+
+/* ══ SKELETON ════════════════════════════════════════════════════ */
+.skel {
+  background: var(--gray-mid); border-radius: 6px;
+  animation: pulse 1.5s ease-in-out infinite; display: block;
+}
+
+/* ══ TOAST ═══════════════════════════════════════════════════════ */
+#toast-container {
+  position: fixed; bottom: 24px; left: 24px;
+  z-index: 9999; display: flex; flex-direction: column; gap: 10px;
+}
+.toast {
+  padding: 13px 18px; border-radius: 12px;
+  font-size: .88rem; font-weight: 600;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: var(--shadow-lg);
+  animation: fadeIn .3s ease;
+  min-width: 260px;
+}
+.toast-ok  { background: var(--green-light); color: #065F46; border: 1px solid #6EE7B7; }
+.toast-err { background: var(--red-light);   color: var(--red); border: 1px solid #FECACA; }
+
+/* ══ CONFIRM MODAL ════════════════════════════════════════════════ */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45); z-index: 1000;
+  display: none; align-items: center; justify-content: center;
+}
+.modal-backdrop.show { display: flex; }
+.modal-box {
+  background: var(--white); border-radius: 18px;
+  padding: 32px; max-width: 400px; width: 90%;
+  box-shadow: var(--shadow-lg); animation: fadeIn .25s ease;
+  text-align: center;
+}
+.modal-icon { font-size: 2.5rem; margin-bottom: 14px; }
+.modal-title { font-size: 1.1rem; font-weight: 900; color: var(--dark); margin-bottom: 8px; }
+.modal-sub   { font-size: .88rem; color: var(--gray); margin-bottom: 24px; }
+.modal-btns  { display: flex; gap: 12px; justify-content: center; }
+.modal-cancel {
+  padding: 10px 24px;
+  background: var(--gray-light); color: var(--gray);
+  border: 1px solid var(--gray-mid); border-radius: 9px;
+  font-family: 'Cairo', sans-serif; font-size: .9rem; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+}
+.modal-cancel:hover { border-color: var(--gray); }
+.modal-confirm {
+  padding: 10px 24px; border: none; border-radius: 9px;
+  font-family: 'Cairo', sans-serif; font-size: .9rem; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+}
+.modal-confirm.approve { background: var(--green); color: #fff; }
+.modal-confirm.reject  { background: var(--red);   color: #fff; }
+.modal-confirm:hover   { opacity: .85; }
+
+/* ══ DASHBOARD OVERVIEW ══════════════════════════════════════════ */
+.welcome-banner {
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  border-radius: 18px; padding: 28px 32px; color: #fff;
+  margin-bottom: 28px; position: relative; overflow: hidden;
+}
+.welcome-banner::before {
+  content: ''; position: absolute;
+  width: 220px; height: 220px; border-radius: 50%;
+  background: rgba(255,255,255,.07);
+  top: -70px; left: -50px;
+}
+.wb-title { font-size: 1.3rem; font-weight: 900; margin-bottom: 6px; }
+.wb-sub   { font-size: .88rem; opacity: .8; }
+
+/* ══ RESPONSIVE ══════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main-header { width: 100%; }
+  #app { margin-right: 0; }
+  .hamburger { display: flex; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  #app { padding: 16px; }
+  .main-header { padding: 0 16px; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .req-table th:nth-child(1),
+  .req-table td:nth-child(1) { display: none; }
+  .search-input { min-width: 120px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ LOADER ══ -->
+<div id="loader">
+  <div style="font-size:2.5rem">🎓</div>
+  <div class="spinner"></div>
+  <div class="loader-text">جاري التحقق من الصلاحيات...</div>
+</div>
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar" id="sidebar">
+  <a class="sidebar-logo" href="dashboard.html">
+    <div class="logo-icon">أس</div>
+    <div>
+      <div class="logo-text">أكاديمية سليم</div>
+      <div class="logo-sub">لوحة المدرس</div>
+    </div>
+  </a>
+
+  <nav class="sidebar-nav">
+    <div class="nav-label">القائمة</div>
+    <button class="nav-item active" id="nav-overview" onclick="showPage('overview')">
+      <span class="nav-icon">🏠</span> نظرة عامة
+    </button>
+    <button class="nav-item" id="nav-requests" onclick="showPage('requests')">
+      <span class="nav-icon">📋</span> طلبات الاشتراك
+      <span class="nav-badge" id="pending-badge" style="display:none">0</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <div class="user-mini">
+      <div class="user-av" id="sidebar-av">م</div>
+      <div>
+        <div class="user-mini-name" id="sidebar-name">جاري التحميل...</div>
+        <div class="user-mini-role">👨‍🏫 مدرس</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">
+      🚪 تسجيل الخروج
+    </button>
+  </div>
+</aside>
+
+<!-- ══ OVERLAY (mobile) ══ -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- ══ HEADER ══ -->
+<header class="main-header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <button class="hamburger" onclick="openSidebar()">☰</button>
+    <div class="header-welcome">مرحباً، <span id="header-name">...</span></div>
+  </div>
+  <div class="header-badge">👨‍🏫 لوحة المدرس</div>
+</header>
+
+<!-- ══ MAIN APP ══ -->
+<main id="app">
+
+  <!-- ── OVERVIEW PAGE ── -->
+  <div class="page active" id="page-overview">
+    <div class="welcome-banner">
+      <div class="wb-title">أهلاً بك في لوحة التحكم 👋</div>
+      <div class="wb-sub">إدارة طلبات الاشتراك والمتابعة مع الطلاب</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon gold">⏳</div>
+        <div>
+          <div class="stat-num" id="stat-pending">—</div>
+          <div class="stat-label">طلبات معلقة</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">✅</div>
+        <div>
+          <div class="stat-num" id="stat-approved">—</div>
+          <div class="stat-label">طلبات مقبولة</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red">❌</div>
+        <div>
+          <div class="stat-num" id="stat-rejected">—</div>
+          <div class="stat-label">طلبات مرفوضة</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-head">
+        <h3>⏳ آخر الطلبات المعلقة</h3>
+        <span class="filter-btn" style="cursor:pointer" onclick="showPage('requests')">عرض الكل</span>
+      </div>
+      <div class="section-body" id="overview-list">
+        <div style="padding:20px">
+          <div class="skel" style="height:48px;margin-bottom:12px"></div>
+          <div class="skel" style="height:48px;margin-bottom:12px"></div>
+          <div class="skel" style="height:48px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── REQUESTS PAGE ── -->
+  <div class="page" id="page-requests">
+    <div class="page-title">📋 طلبات الاشتراك</div>
+    <p class="page-sub">مراجعة وإدارة طلبات انضمام الطلاب للكورسات</p>
+
+    <div class="section-card">
+      <div class="section-head">
+        <h3>قائمة الطلبات</h3>
+        <button onclick="loadRequests()" style="background:var(--blue-light);color:var(--blue);border:none;padding:6px 14px;border-radius:8px;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">
+          🔄 تحديث
+        </button>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="setFilter('pending')"  id="filter-pending">⏳ معلقة</button>
+        <button class="filter-btn"        onclick="setFilter('approved')" id="filter-approved">✅ مقبولة</button>
+        <button class="filter-btn"        onclick="setFilter('rejected')" id="filter-rejected">❌ مرفوضة</button>
+        <button class="filter-btn"        onclick="setFilter('all')"      id="filter-all">📋 الكل</button>
+        <input  class="search-input" type="text" id="search-box"
+                placeholder="🔍 بحث بالاسم أو الكورس..."
+                oninput="renderTable()">
+      </div>
+
+      <div class="section-body" id="requests-body">
+        <!-- filled dynamically -->
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══ CONFIRM MODAL ══ -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal-box">
+    <div class="modal-icon" id="modal-icon">❓</div>
+    <div class="modal-title" id="modal-title">تأكيد الإجراء</div>
+    <div class="modal-sub"   id="modal-sub">هل أنت متأكد؟</div>
+    <div class="modal-btns">
+      <button class="modal-cancel"  onclick="closeModal()">إلغاء</button>
+      <button class="modal-confirm" id="modal-confirm-btn" onclick="confirmAction()">تأكيد</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div id="toast-container"></div>
+
+<!-- ══ SCRIPT ══════════════════════════════════════════════════════ -->
+<script>
+// ── SUPABASE CLIENT ──────────────────────────────────────────────
+const sb = supabase.createClient(
+  'https://hjhoudwknwnxfndrgpfe.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s'
+);
+
+// ── STATE ─────────────────────────────────────────────────────────
+const STATE = {
+  user:        null,
+  profile:     null,
+  requests:    [],   // كل الطلبات المحملة
+  filter:      'pending',
+  pendingAction: null  // { id, action }
+};
+
+// ── HELPERS ───────────────────────────────────────────────────────
+function initials(name) {
+  if (!name) return 'م';
+  return name.trim().split(' ').slice(0,2).map(w => w[0]).join('');
+}
+
+function formatDate(dt) {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleDateString('ar-EG', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+}
+
+function shortId(id) {
+  return id ? id.slice(0, 8) + '…' : '—';
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────
+function toast(msg, type = 'ok') {
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + type;
+  el.innerHTML = (type === 'ok' ? '✅ ' : '❌ ') + msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ── SIDEBAR (mobile) ──────────────────────────────────────────────
+function openSidebar()  {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('overlay').classList.add('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// ── PAGE NAVIGATION ───────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  closeSidebar();
+
+  if (name === 'requests') renderTable();
+}
+
+// ── FILTER ────────────────────────────────────────────────────────
+function setFilter(f) {
+  STATE.filter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('filter-' + f).classList.add('active');
+  renderTable();
+}
+
+// ── LOGOUT ────────────────────────────────────────────────────────
+async function doLogout() {
+  await sb.auth.signOut();
+  window.location.href = 'login.html';
+}
+
+// ── LOAD REQUESTS ─────────────────────────────────────────────────
+async function loadRequests() {
+  try {
+    // جلب طلبات الاشتراك مع بيانات المستخدم والكورس عبر join
+    const { data, error } = await sb
+      .from('subscription_requests')
+      .select(`
+        id, status, created_at, note,
+        user_id,
+        course_id,
+        profiles:user_id ( full_name, phone ),
+        courses:course_id ( name, icon )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    STATE.requests = data || [];
+    updateStats();
+    updateBadge();
+    renderOverview();
+    renderTable();
+  } catch (err) {
+    console.error('loadRequests:', err);
+    toast('فشل تحميل الطلبات: ' + err.message, 'err');
+  }
+}
+
+// ── STATS ─────────────────────────────────────────────────────────
+function updateStats() {
+  const all      = STATE.requests;
+  const pending  = all.filter(r => r.status === 'pending').length;
+  const approved = all.filter(r => r.status === 'approved').length;
+  const rejected = all.filter(r => r.status === 'rejected').length;
+
+  document.getElementById('stat-pending').textContent  = pending;
+  document.getElementById('stat-approved').textContent = approved;
+  document.getElementById('stat-rejected').textContent = rejected;
+}
+
+function updateBadge() {
+  const n = STATE.requests.filter(r => r.status === 'pending').length;
+  const badge = document.getElementById('pending-badge');
+  badge.textContent   = n;
+  badge.style.display = n > 0 ? 'inline-flex' : 'none';
+}
+
+// ── OVERVIEW QUICK LIST ───────────────────────────────────────────
+function renderOverview() {
+  const list = STATE.requests.filter(r => r.status === 'pending').slice(0, 5);
+  const el   = document.getElementById('overview-list');
+
+  if (!list.length) {
+    el.innerHTML = `
+      <div class="empty-box">
+        <div class="ei">🎉</div>
+        <div class="et">لا توجد طلبات معلقة</div>
+        <div class="ed">كل الطلبات تمت معالجتها</div>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <table class="req-table" style="margin:0">
+      <thead>
+        <tr>
+          <th>الطالب</th>
+          <th>الكورس</th>
+          <th>التاريخ</th>
+          <th>الإجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${list.map(r => quickRow(r)).join('')}
+      </tbody>
+    </table>`;
+}
+
+function quickRow(r) {
+  const name   = r.profiles?.full_name || 'غير معروف';
+  const course = r.courses?.name       || shortId(r.course_id);
+  const icon   = r.courses?.icon       || '📚';
+  return `
+    <tr>
+      <td>
+        <div class="student-info">
+          <div class="student-av">${initials(name)}</div>
+          <div class="student-name">${name}</div>
+        </div>
+      </td>
+      <td><span class="course-chip">${icon} ${course}</span></td>
+      <td class="date-cell">${formatDate(r.created_at)}</td>
+      <td>
+        <div class="actions">
+          <button class="btn-approve" onclick="openModal('${r.id}','approve')">✅ قبول</button>
+          <button class="btn-reject"  onclick="openModal('${r.id}','reject')">❌ رفض</button>
+        </div>
+      </td>
+    </tr>`;
+}
+
+// ── FULL TABLE ────────────────────────────────────────────────────
+function renderTable() {
+  const query  = (document.getElementById('search-box')?.value || '').trim().toLowerCase();
+  let   rows   = STATE.requests;
+
+  // فلتر الحالة
+  if (STATE.filter !== 'all') {
+    rows = rows.filter(r => r.status === STATE.filter);
+  }
+
+  // فلتر البحث
+  if (query) {
+    rows = rows.filter(r => {
+      const name   = (r.profiles?.full_name || '').toLowerCase();
+      const course = (r.courses?.name       || '').toLowerCase();
+      return name.includes(query) || course.includes(query);
+    });
+  }
+
+  const el = document.getElementById('requests-body');
+
+  if (!rows.length) {
+    el.innerHTML = `
+      <div class="empty-box">
+        <div class="ei">${STATE.filter === 'pending' ? '📭' : '🔍'}</div>
+        <div class="et">لا توجد طلبات</div>
+        <div class="ed">${query ? 'لا توجد نتائج للبحث' : 'لا توجد طلبات في هذه الحالة حالياً'}</div>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div style="overflow-x:auto">
+      <table class="req-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>الطالب</th>
+            <th>الكورس</th>
+            <th>الحالة</th>
+            <th>التاريخ</th>
+            <th>الإجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r, i) => fullRow(r, i + 1)).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function fullRow(r, idx) {
+  const name   = r.profiles?.full_name || 'غير معروف';
+  const course = r.courses?.name       || shortId(r.course_id);
+  const icon   = r.courses?.icon       || '📚';
+
+  const statusBadge = {
+    pending:  `<span class="badge badge-pending">⏳ معلق</span>`,
+    approved: `<span class="badge badge-approved">✅ مقبول</span>`,
+    rejected: `<span class="badge badge-rejected">❌ مرفوض</span>`,
+  }[r.status] || '';
+
+  const actionBtns = r.status === 'pending'
+    ? `<div class="actions">
+         <button class="btn-approve" onclick="openModal('${r.id}','approve')">✅ قبول</button>
+         <button class="btn-reject"  onclick="openModal('${r.id}','reject')">❌ رفض</button>
+       </div>`
+    : `<span class="btn-done">تمت المعالجة</span>`;
+
+  return `
+    <tr id="row-${r.id}">
+      <td style="color:var(--gray);font-size:.8rem">${idx}</td>
+      <td>
+        <div class="student-info">
+          <div class="student-av">${initials(name)}</div>
+          <div>
+            <div class="student-name">${name}</div>
+            <div class="student-email" title="${r.user_id}">${shortId(r.user_id)}</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="course-chip">${icon} ${course}</span></td>
+      <td>${statusBadge}</td>
+      <td class="date-cell">${formatDate(r.created_at)}</td>
+      <td>${actionBtns}</td>
+    </tr>`;
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────
+function openModal(requestId, action) {
+  STATE.pendingAction = { id: requestId, action };
+
+  const isApprove = action === 'approve';
+  document.getElementById('modal-icon').textContent    = isApprove ? '✅' : '❌';
+  document.getElementById('modal-title').textContent   = isApprove ? 'تأكيد القبول' : 'تأكيد الرفض';
+  document.getElementById('modal-sub').textContent     = isApprove
+    ? 'هل تريد قبول هذا الطلب وإضافة الطالب للكورس؟'
+    : 'هل تريد رفض هذا الطلب نهائياً؟';
+
+  const confirmBtn = document.getElementById('modal-confirm-btn');
+  confirmBtn.textContent = isApprove ? 'نعم، قبول' : 'نعم، رفض';
+  confirmBtn.className   = 'modal-confirm ' + (isApprove ? 'approve' : 'reject');
+
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  STATE.pendingAction = null;
+}
+
+// ── CONFIRM ACTION ────────────────────────────────────────────────
+async function confirmAction() {
+  if (!STATE.pendingAction) return;
+  const { id, action } = STATE.pendingAction;
+  closeModal();
+
+  // تعطيل الأزرار مؤقتاً
+  const row = document.getElementById('row-' + id);
+  if (row) {
+    row.querySelectorAll('button').forEach(b => { b.disabled = true; b.style.opacity = '.5'; });
+  }
+
+  try {
+    if (action === 'approve') {
+      await approveRequest(id);
+    } else {
+      await rejectRequest(id);
+    }
+  } catch (err) {
+    toast('حدث خطأ: ' + err.message, 'err');
+    console.error('confirmAction:', err);
+    // إعادة تفعيل الأزرار
+    if (row) {
+      row.querySelectorAll('button').forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+    }
+  }
+}
+
+// ── APPROVE ───────────────────────────────────────────────────────
+async function approveRequest(requestId) {
+  // 1. جلب بيانات الطلب
+  const req = STATE.requests.find(r => r.id === requestId);
+  if (!req) throw new Error('الطلب غير موجود محلياً');
+
+  // 2. تحديث الحالة في subscription_requests
+  const { error: updErr } = await sb
+    .from('subscription_requests')
+    .update({ status: 'approved' })
+    .eq('id', requestId);
+
+  if (updErr) throw updErr;
+
+  // 3. إضافة سجل في enrollments
+  const { error: enrErr } = await sb
+    .from('enrollments')
+    .upsert(
+      { user_id: req.user_id, course_id: req.course_id },
+      { onConflict: 'user_id,course_id', ignoreDuplicates: true }
+    );
+
+  if (enrErr) throw enrErr;
+
+  // 4. تحديث state محلياً
+  req.status = 'approved';
+  updateStats();
+  updateBadge();
+  renderOverview();
+  renderTable();
+
+  toast('✅ تم قبول الطلب وإضافة الطالب للكورس');
+}
+
+// ── REJECT ────────────────────────────────────────────────────────
+async function rejectRequest(requestId) {
+  const { error } = await sb
+    .from('subscription_requests')
+    .update({ status: 'rejected' })
+    .eq('id', requestId);
+
+  if (error) throw error;
+
+  // تحديث state محلياً
+  const req = STATE.requests.find(r => r.id === requestId);
+  if (req) req.status = 'rejected';
+
+  updateStats();
+  updateBadge();
+  renderOverview();
+  renderTable();
+
+  toast('تم رفض الطلب', 'ok');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+(async () => {
+  try {
+    // 1. جلب السيشن
+    const { data: { session } } = await sb.auth.getSession();
+
+    if (!session?.user) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    STATE.user = session.user;
+
+    // 2. جلب profile + التحقق من الـ role
+    const { data: profile, error: profErr } = await sb
+      .from('profiles')
+      .select('full_name, role, phone')
+      .eq('id', session.user.id)
+      .single();
+
+    if (profErr || !profile) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    STATE.profile = profile;
+
+    // 3. لو مش teacher → ارجع للداشبورد
+    if (profile.role !== 'teacher') {
+      window.location.href = 'dashboard.html';
+      return;
+    }
+
+    // 4. تحديث الـ UI
+    const name  = profile.full_name || session.user.email.split('@')[0];
+    const fname = name.split(' ')[0];
+
+    document.getElementById('header-name').textContent  = fname;
+    document.getElementById('sidebar-name').textContent = name;
+    document.getElementById('sidebar-av').textContent   = initials(name);
+
+    // 5. تحميل الطلبات
+    await loadRequests();
+
+    // 6. إخفاء اللودر وإظهار الصفحة
+    document.getElementById('loader').style.display = 'none';
+
+  } catch (err) {
+    console.error('INIT ERROR:', err);
+    toast('حدث خطأ في التحميل: ' + err.message, 'err');
+    document.getElementById('loader').style.display = 'none';
+  }
+})();
+</script>
+</body>
+</html>

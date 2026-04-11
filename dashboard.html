@@ -580,6 +580,11 @@ async function fetchAllData(userId) {
   STATE.subscription  = sub.data;
   STATE.activity      = act.data || [];
   STATE.notifications = notif.data || [];
+
+  // ── لو المستخدم مدرس → حوّله لصفحة المدرس ──
+  if (STATE.profile?.role === 'teacher') {
+    window.location.href = 'admin.html';
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════

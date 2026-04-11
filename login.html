@@ -772,6 +772,22 @@ function showAlert(alertId, msgId, msg) {
   document.getElementById(alertId).classList.add('show');
 }
 
+// ── REDIRECT BY ROLE ──
+async function redirectByRole(userId) {
+  var dest = DASHBOARD_APP_URL;
+  try {
+    var { data: prof } = await _sb
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+    if (prof && prof.role === 'teacher') {
+      dest = 'admin.html';
+    }
+  } catch (e) { /* fallback to dashboard */ }
+  window.location.href = dest;
+}
+
 // ── LOGIN HANDLER ──
 async function handleLogin() {
   clearErrors();
@@ -789,7 +805,6 @@ async function handleLogin() {
 
   var email = id;
 
-  // لو مش email — ابحث عن الـ email بالهاتف من جدول profiles
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id)) {
     var { data: profileData, error: profileErr } = await _sb
       .from('profiles')
@@ -802,7 +817,6 @@ async function handleLogin() {
       showAlert('login-alert','login-alert-msg','رقم الهاتف غير مسجل');
       return;
     }
-    // مش ممكن نجيب الـ email من profiles مباشرة — نطلب منه يدخل الـ email
     btn.classList.remove('loading'); btn.disabled = false;
     showAlert('login-alert','login-alert-msg','من فضلك استخدم البريد الإلكتروني لتسجيل الدخول');
     return;
@@ -822,7 +836,8 @@ async function handleLogin() {
     if (error.message.includes('Invalid login'))       msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
     showAlert('login-alert','login-alert-msg', msg);
   } else {
-    window.location.href = DASHBOARD_APP_URL;
+    // ✅ حوّله للصفحة الصح حسب الـ role
+    await redirectByRole(data.user.id);
   }
 }
 
@@ -901,15 +916,22 @@ async function handleRegister() {
 }
 
 // ── GO TO DASHBOARD ──
-function goToDashboard() {
-  window.location.href = DASHBOARD_APP_URL;
+async function goToDashboard() {
+  // بعد التسجيل — حوّله للصفحة الصح حسب الـ role
+  var { data } = await _sb.auth.getSession();
+  if (data.session) {
+    await redirectByRole(data.session.user.id);
+  } else {
+    window.location.href = DASHBOARD_APP_URL;
+  }
 }
 
 // ── CHECK IF ALREADY LOGGED IN ──
 window.addEventListener('load', async function() {
   var { data } = await _sb.auth.getSession();
   if (data.session) {
-    window.location.href = DASHBOARD_APP_URL;
+    // ✅ حوّله للصفحة الصح حسب الـ role
+    await redirectByRole(data.session.user.id);
   }
 });
 </script>
