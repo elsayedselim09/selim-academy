@@ -711,14 +711,29 @@ body {
     <!-- ═══ SUCCESS SCREEN ═══ -->
     <div class="auth-panel" id="panel-success">
       <div class="success-screen show">
-        <div class="success-icon">🎉</div>
-        <div class="panel-title">تم إنشاء حسابك بنجاح!</div>
-        <p class="panel-sub" style="margin-bottom:24px;">
-          مرحباً بك في أكاديمية سليم.<br>
-          يمكنك الآن الوصول إلى كورساتك وحصصك.
+        <div class="success-icon" style="background:#EFF6FF;border-color:#BFDBFE;font-size:2rem">📧</div>
+        <div class="panel-title">تحقق من بريدك الإلكتروني!</div>
+        <p class="panel-sub" style="margin-bottom:8px;">
+          أرسلنا لك رابط تأكيد على البريد:
         </p>
-        <button class="btn-submit" onclick="goToDashboard()" style="margin-bottom:12px;">
-          <span class="btn-text">الانتقال إلى حسابي ←</span>
+        <div id="success-email-display" style="
+          background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;
+          padding:10px 16px;font-weight:700;color:#1A56DB;
+          margin-bottom:20px;font-size:.95rem;word-break:break-all;
+        ">—</div>
+        <p class="panel-sub" style="margin-bottom:24px;font-size:.83rem;">
+          افتح الإيميل واضغط على رابط التأكيد، ثم ارجع وسجّل دخولك.<br>
+          <span style="color:#6B7280">تأكد من مجلد الـ Spam لو مجاتكش</span>
+        </p>
+        <!-- زرار إعادة الإرسال -->
+        <button class="btn-submit" id="resend-btn" onclick="resendConfirmation()" style="margin-bottom:12px;background:#0E9F6E">
+          <span class="btn-text">🔄 إعادة إرسال رابط التأكيد</span>
+          <div class="spinner"></div>
+        </button>
+        <div id="resend-msg" style="margin-bottom:12px"></div>
+        <!-- زرار الذهاب لتسجيل الدخول -->
+        <button class="btn-submit" onclick="switchTab('login')" style="background:var(--gray-light);color:var(--dark);border:1px solid var(--gray-mid);">
+          <span class="btn-text">← العودة لتسجيل الدخول</span>
         </button>
       </div>
     </div>
@@ -873,7 +888,15 @@ async function handleLogin() {
 
   if (error) {
     var msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
-    if (error.message.includes('Email not confirmed')) msg = 'من فضلك تحقق من بريدك الإلكتروني أولاً';
+    if (error.message.includes('Email not confirmed')) {
+      // نحفظ الإيميل ونعرضه في شاشة التأكيد
+      window._pendingEmail = email;
+      document.getElementById('success-email-display').textContent = email;
+      document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.remove('active'); });
+      document.querySelectorAll('.auth-panel').forEach(function(p){ p.classList.remove('active'); });
+      document.getElementById('panel-success').classList.add('active');
+      return;
+    }
     if (error.message.includes('Invalid login'))       msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
     showAlert('login-alert','login-alert-msg', msg);
   } else {
@@ -961,15 +984,45 @@ async function handleRegister() {
   btn.classList.remove('loading');
   btn.disabled = false;
 
-  // ── Step 3: عرض شاشة النجاح ──
+  // ── Step 3: عرض شاشة النجاح مع الإيميل ──
+  // نحفظ الإيميل عشان زرار الـ resend يعرفه
+  window._pendingEmail = em;
+  document.getElementById('success-email-display').textContent = em;
+
   document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.remove('active'); });
   document.querySelectorAll('.auth-panel').forEach(function(p){ p.classList.remove('active'); });
   document.getElementById('panel-success').classList.add('active');
 }
 
+// ── RESEND CONFIRMATION EMAIL ──
+async function resendConfirmation() {
+  var email = window._pendingEmail;
+  if (!email) return;
+
+  var btn = document.getElementById('resend-btn');
+  var msg = document.getElementById('resend-msg');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  var { error } = await _sb.auth.resend({
+    type: 'signup',
+    email: email
+  });
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+
+  if (error) {
+    msg.innerHTML = '<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;font-size:.83rem;color:#EF4444">❌ ' + error.message + '</div>';
+  } else {
+    msg.innerHTML = '<div style="background:#ECFDF5;border:1px solid #6EE7B7;border-radius:8px;padding:10px 14px;font-size:.83rem;color:#0E9F6E">✅ تم إرسال الرابط مرة أخرى، تحقق من بريدك</div>';
+    // إخفاء الرسالة بعد 5 ثواني
+    setTimeout(function(){ msg.innerHTML = ''; }, 5000);
+  }
+}
+
 // ── GO TO DASHBOARD ──
 async function goToDashboard() {
-  // بعد التسجيل — حوّله للصفحة الصح حسب الـ role
   var { data } = await _sb.auth.getSession();
   if (data.session) {
     await redirectByRole(data.session.user.id);
