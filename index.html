@@ -1135,7 +1135,8 @@ footer{background:var(--dark);padding:60px 5% 30px;}
     <h2 class="section-title">احجز درسك في <span>دقيقة واحدة</span></h2>
     <p class="section-sub">اختار المرحلة والمادة، وحدد الأيام والأوقات المناسبة — تقدر تضيف أكتر من يوم.</p>
   </div>
-  <div class="booking-box">
+  <div id="booking-container"></div>
+  <div style="display:none"><!-- OLD BOOKING BOX REMOVED -->
 
     <!-- STEP 1: المنهج -->
     <div style="margin-bottom:28px;">
@@ -1274,7 +1275,6 @@ footer{background:var(--dark);padding:60px 5% 30px;}
       <div class="success-msg" id="successMsg">
         🎉 تم استلام طلبك! جاري فتح واتساب لإرسال تفاصيل حجزك لـ م. السيد سليم...
       </div>
-    </div>
   </div>
 </section>
 
@@ -1888,6 +1888,8 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<script src="booking.js"></script>
+<script>window.addEventListener('DOMContentLoaded', function(){ renderBooking('booking-container'); });</script>
 <script src="/selim-academy/pwa-register.js" defer></script>
 </body>
 </html>

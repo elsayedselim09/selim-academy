@@ -270,6 +270,17 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dar
   .stats-grid{grid-template-columns:1fr 1fr}.main-content{padding:16px}
   .main-header{padding:0 16px}
 }
+
+/* ── BOOKING MODAL ── */
+#bk-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+#bk-modal-overlay.show{display:flex}
+#bk-modal-box{background:#fff;border-radius:20px;padding:0;width:100%;max-width:900px;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.bk-modal-header{padding:20px 28px;border-bottom:1px solid var(--gray-mid);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1}
+.bk-modal-header h3{font-size:1.1rem;font-weight:900;color:var(--dark)}
+.bk-modal-close{width:36px;height:36px;border-radius:50%;background:var(--gray-light);border:1px solid var(--gray-mid);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.bk-modal-close:hover{background:var(--red);color:#fff}
+#bk-modal-content{padding:28px}
+
 </style>
 </head>
 <body>
@@ -1091,5 +1102,44 @@ let _authHandled = false;
 })();
 </script>
 <script src="/selim-academy/pwa-register.js" defer></script>
+
+<!-- ══ BOOKING MODAL ══ -->
+<div id="bk-modal-overlay" onclick="if(event.target===this)closeBkModal()">
+  <div id="bk-modal-box">
+    <div class="bk-modal-header">
+      <h3>📅 احجز حصتك</h3>
+      <button class="bk-modal-close" onclick="closeBkModal()">✕</button>
+    </div>
+    <div id="bk-modal-content">
+      <div id="booking-container"></div>
+    </div>
+  </div>
+</div>
+<script src="booking.js"></script>
+<script>
+function openBkModal() {
+  var overlay = document.getElementById('bk-modal-overlay');
+  overlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+  // render component فقط أول مرة
+  if (!window._bk_rendered) {
+    renderBooking('booking-container');
+    window._bk_rendered = true;
+  }
+}
+function closeBkModal() {
+  document.getElementById('bk-modal-overlay').classList.remove('show');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeBkModal();
+});
+
+// ── OPEN BOOKING FROM SUBSCRIPTION PAGE ──
+function openBookingModal() {
+  if (typeof openBkModal === 'function') openBkModal();
+}
+</script>
+
 </body>
 </html>
