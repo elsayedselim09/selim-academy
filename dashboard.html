@@ -270,17 +270,6 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dar
   .stats-grid{grid-template-columns:1fr 1fr}.main-content{padding:16px}
   .main-header{padding:0 16px}
 }
-
-/* ── BOOKING MODAL ── */
-#bk-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
-#bk-modal-overlay.show{display:flex}
-#bk-modal-box{background:#fff;border-radius:20px;padding:0;width:100%;max-width:900px;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.2)}
-.bk-modal-header{padding:20px 28px;border-bottom:1px solid var(--gray-mid);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1}
-.bk-modal-header h3{font-size:1.1rem;font-weight:900;color:var(--dark)}
-.bk-modal-close{width:36px;height:36px;border-radius:50%;background:var(--gray-light);border:1px solid var(--gray-mid);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.bk-modal-close:hover{background:var(--red);color:#fff}
-#bk-modal-content{padding:28px}
-
 </style>
 </head>
 <body>
@@ -817,11 +806,24 @@ function subscription() {
   const sub = STATE.subscription;
   if (!sub) return `
     <div class="page-title">الاشتراك 💳</div>
-    <p class="page-sub">تفاصيل اشتراكك الحالي</p>
-    <div class="empty-box">
-      <div class="ei">💳</div>
-      <div class="et">لا يوجد اشتراك نشط</div>
-      <div class="ed">تواصل معنا لتفعيل اشتراكك</div>
+    <p class="page-sub">تفاصيل اشتراكك الحالي وخيارات الاشتراك</p>
+    <div class="section-card" style="margin-bottom:24px">
+      <div class="section-body" style="text-align:center;padding:40px 24px">
+        <div style="font-size:3rem;margin-bottom:16px">🎓</div>
+        <div style="font-size:1.1rem;font-weight:900;color:var(--dark);margin-bottom:8px">لا يوجد اشتراك نشط</div>
+        <div style="font-size:.88rem;color:var(--gray);margin-bottom:28px;line-height:1.7">
+          سجّل اشتراكك الآن واحجز حصصك مع م. السيد سليم<br>
+          واختار الكورس والأيام والأوقات المناسبة لك
+        </div>
+        <button
+          onclick="openBookingModal()"
+          style="padding:14px 36px;background:var(--blue);color:#fff;border:none;border-radius:50px;font-family:'Cairo',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:10px;box-shadow:0 6px 24px rgba(26,86,219,.3)"
+          onmouseover="this.style.background='var(--blue-dark)';this.style.transform='translateY(-2px)'"
+          onmouseout="this.style.background='var(--blue)';this.style.transform='translateY(0)'"
+        >
+          📅 اشترك الآن
+        </button>
+      </div>
     </div>`;
   const rem = daysLeft(sub.expires_at);
   return `
@@ -834,9 +836,15 @@ function subscription() {
       <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.15);border-radius:10px;padding:10px 18px;font-weight:700">
         📅 متبقي ${rem} يوماً على انتهاء الاشتراك
       </div>
-      <div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
         <button class="btn-renew" onclick="window.open('https://wa.me/201012142749?text=${encodeURIComponent('أريد تجديد اشتراكي في أكاديمية سليم')}','_blank')">
           🔄 تجديد الاشتراك الآن
+        </button>
+        <button
+          onclick="openBookingModal()"
+          style="padding:12px 24px;background:var(--green);color:#fff;border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:8px;margin-top:20px"
+        >
+          ➕ احجز كورس جديد
         </button>
       </div>
     </div>
@@ -1104,10 +1112,21 @@ let _authHandled = false;
 <script src="/selim-academy/pwa-register.js" defer></script>
 
 <!-- ══ BOOKING MODAL ══ -->
+<style>
+#bk-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+#bk-modal-overlay.show{display:flex}
+#bk-modal-box{background:#fff;border-radius:20px;width:100%;max-width:880px;margin:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:bkSlideIn .3s ease}
+@keyframes bkSlideIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+.bk-modal-header{padding:18px 26px;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1;border-radius:20px 20px 0 0}
+.bk-modal-header h3{font-size:1.05rem;font-weight:900;color:#111928;font-family:'Cairo',sans-serif}
+.bk-modal-close{width:34px;height:34px;border-radius:50%;background:#F9FAFB;border:1px solid #E5E7EB;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .2s;font-family:'Cairo',sans-serif}
+.bk-modal-close:hover{background:#EF4444;color:#fff;border-color:#EF4444}
+#bk-modal-content{padding:24px}
+</style>
 <div id="bk-modal-overlay" onclick="if(event.target===this)closeBkModal()">
   <div id="bk-modal-box">
     <div class="bk-modal-header">
-      <h3>📅 احجز حصتك</h3>
+      <h3>📅 احجز حصتك مع أكاديمية سليم</h3>
       <button class="bk-modal-close" onclick="closeBkModal()">✕</button>
     </div>
     <div id="bk-modal-content">
@@ -1117,11 +1136,10 @@ let _authHandled = false;
 </div>
 <script src="booking.js"></script>
 <script>
-function openBkModal() {
+function openBookingModal() {
   var overlay = document.getElementById('bk-modal-overlay');
   overlay.classList.add('show');
   document.body.style.overflow = 'hidden';
-  // render component فقط أول مرة
   if (!window._bk_rendered) {
     renderBooking('booking-container');
     window._bk_rendered = true;
@@ -1131,15 +1149,9 @@ function closeBkModal() {
   document.getElementById('bk-modal-overlay').classList.remove('show');
   document.body.style.overflow = '';
 }
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function(e){
   if (e.key === 'Escape') closeBkModal();
 });
-
-// ── OPEN BOOKING FROM SUBSCRIPTION PAGE ──
-function openBookingModal() {
-  if (typeof openBkModal === 'function') openBkModal();
-}
 </script>
-
 </body>
 </html>
