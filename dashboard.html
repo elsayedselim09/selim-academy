@@ -11,11 +11,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="أكاديمية سليم">
-<link rel="apple-touch-icon" href="/selim-academy/icons/icon-192x192.png">
-<link rel="apple-touch-icon" sizes="152x152" href="/selim-academy/icons/icon-152x152.png">
-<link rel="apple-touch-icon" sizes="192x192" href="/selim-academy/icons/icon-192x192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/selim-academy/icons/icon-192x192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="/selim-academy/icons/icon-512x512.png">
+<link rel="apple-touch-icon" href="/selim-academy/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="/selim-academy/icon-192x192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/selim-academy/icon-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/selim-academy/icon-512x512.png">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <!-- Supabase SDK من CDN — لا يحتاج npm -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -406,7 +405,7 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dar
 const { createClient } = supabase;
 const sb = createClient(
   'https://hjhoudwknwnxfndrgpfe.supabase.co',
-  'sb_publishable_-xoyE94ZfvhCb4uS2D_l9w_G-QWuvAJ'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s'
 );
 
 // ══════════════════════════════════════════════════════════════════
@@ -1153,5 +1152,6 @@ document.addEventListener('keydown', function(e){
   if (e.key === 'Escape') closeBkModal();
 });
 </script>
+<script src="pwa-register.js" defer></script>
 </body>
 </html>

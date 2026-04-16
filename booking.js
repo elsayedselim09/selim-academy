@@ -32,11 +32,15 @@
   // ══════════════════════════════════════════════════════════
   function getSb() {
     if (!window._bk_sb) {
-      var client = window.supabase || (window._sb ? null : null);
-      if (client && client.createClient) {
-        window._bk_sb = client.createClient(SUPABASE_URL, SUPABASE_KEY);
-      } else if (window._sb) {
+      // Supabase JS v2: window.supabase is the module, .createClient is the factory
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        window._bk_sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      } else if (window._sb && typeof window._sb.from === 'function') {
+        // Already-initialised singleton passed from parent page
         window._bk_sb = window._sb;
+      } else {
+        console.error('booking.js: Supabase JS v2 not found. Make sure supabase-js is loaded before booking.js.');
+        return null;
       }
     }
     return window._bk_sb;
@@ -444,104 +448,210 @@
     },
 
     submit: async function(cid) {
-      var name    = document.getElementById(cid + '-fname').value.trim();
-      var phone   = document.getElementById(cid + '-fphone').value.trim();
-      var school  = document.getElementById(cid + '-fschool').value.trim();
+
+      // ══════════════════════════════════════════════
+      // 1. HELPERS
+      // ══════════════════════════════════════════════
+      var errEl     = document.getElementById(cid + '-err');
+      var successEl = document.getElementById(cid + '-success');
+      var btn       = document.getElementById(cid + '-submit-btn');
+
+      function showErr(msg) {
+        errEl.textContent = msg;
+        errEl.classList.add('show');
+        successEl.classList.remove('show');
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+
+      function setLoading(on) {
+        btn.classList.toggle('loading', on);
+        btn.disabled = on;
+      }
+
+      // ══════════════════════════════════════════════
+      // 2. COLLECT FORM VALUES
+      // ══════════════════════════════════════════════
+      var name     = document.getElementById(cid + '-fname').value.trim();
+      var phone    = document.getElementById(cid + '-fphone').value.trim();
+      var school   = document.getElementById(cid + '-fschool').value.trim();
+      var grade    = document.getElementById(cid + '-grade').value;
+      var subject  = document.getElementById(cid + '-subject').value;
+      var type     = document.getElementById(cid + '-type').value;
+      var curric   = document.getElementById(cid + '-curriculum').value;
       var courseEl = document.getElementById(cid + '-fcourse');
-      var courseId = courseEl ? courseEl.value : '';
-      if (!name || !phone || !school) { alert('من فضلك اكمل كل البيانات المطلوبة.'); return; }
+      var courseId = (courseEl && courseEl.value) ? courseEl.value : null;
 
-      var grade   = document.getElementById(cid + '-grade').value;
-      var subject = document.getElementById(cid + '-subject').value;
-      var type    = document.getElementById(cid + '-type').value;
-      var curric  = document.getElementById(cid + '-curriculum').value;
-      var rows    = document.querySelectorAll('#' + cid + '-days .bk-day-row');
-
-      var daysText = '';
-      rows.forEach(function(r, i) {
+      var rows = document.querySelectorAll('#' + cid + '-days .bk-day-row');
+      var daysArr = [];
+      rows.forEach(function(r) {
         var sels = r.querySelectorAll('select');
-        daysText += '\n   • اليوم ' + (i + 1) + ': ' + sels[0].value + ' — ' + sels[1].value;
+        if (sels[0] && sels[1]) daysArr.push(sels[0].value + ' — ' + sels[1].value);
       });
+      var daysText = daysArr.map(function(d, i) { return '\n   • اليوم ' + (i + 1) + ': ' + d; }).join('');
 
-      // ── زر Loading ──
-      var btn = document.getElementById(cid + '-submit-btn');
-      btn.classList.add('loading');
-      btn.disabled = true;
-      document.getElementById(cid + '-err').classList.remove('show');
+      // ══════════════════════════════════════════════
+      // 3. VALIDATION
+      // ══════════════════════════════════════════════
+      errEl.classList.remove('show');
+      successEl.classList.remove('show');
 
-      // ── Supabase insert ──
+      // Name: at least 3 Arabic/Latin chars
+      if (!name || name.length < 3) {
+        showErr('⚠️ من فضلك أدخل الاسم كاملاً (٣ أحرف على الأقل).');
+        document.getElementById(cid + '-fname').focus();
+        return;
+      }
+
+      // Phone: strip spaces/dashes then validate
+      // Accepted formats: 05xxxxxxxx (SA/Gulf), +966xxxxxxxxx, 01xxxxxxxxx (EG), +20xxxxxxxxxx
+      var phoneClean = phone.replace(/[\s\-().]/g, '');
+      var phoneValid = /^(\+?\d{9,15})$/.test(phoneClean) &&
+                       (/^(05\d{8}|\+9665\d{8}|9665\d{8})$/.test(phoneClean) ||  // SA/Gulf 05xx
+                        /^(01\d{9}|\+201\d{9}|201\d{9})$/.test(phoneClean) ||    // Egypt 01x
+                        /^\+?\d{9,15}$/.test(phoneClean));                        // any intl
+      if (!phoneClean) {
+        showErr('⚠️ من فضلك أدخل رقم الهاتف.');
+        document.getElementById(cid + '-fphone').focus();
+        return;
+      }
+      if (!/^\+?\d{9,15}$/.test(phoneClean)) {
+        showErr('⚠️ رقم الهاتف غير صحيح — تأكد من إدخال أرقام فقط مع كود الدولة إذا لزم (مثال: 05xxxxxxxx أو +966xxxxxxxxx).');
+        document.getElementById(cid + '-fphone').focus();
+        return;
+      }
+
+      if (!school || school.length < 2) {
+        showErr('⚠️ من فضلك أدخل اسم المدرسة.');
+        document.getElementById(cid + '-fschool').focus();
+        return;
+      }
+
+      if (!curric) {
+        showErr('⚠️ من فضلك اختار المنهج الدراسي.');
+        return;
+      }
+      if (!grade || !subject || subject.startsWith('اختار')) {
+        showErr('⚠️ من فضلك اختار الصف والمادة.');
+        return;
+      }
+      if (!type) {
+        showErr('⚠️ من فضلك اختار نوع الحصة.');
+        return;
+      }
+      // Ensure all day rows have day + time selected
+      var daysOk = daysArr.every(function(d) { return !d.includes('اختار'); });
+      if (!daysOk || daysArr.length === 0) {
+        showErr('⚠️ من فضلك اختار اليوم والوقت لجميع الأيام.');
+        return;
+      }
+
+      // ══════════════════════════════════════════════
+      // 4. START LOADING
+      // ══════════════════════════════════════════════
+      setLoading(true);
+
+      // ══════════════════════════════════════════════
+      // 5. SUPABASE INSERT — يجب أن ينجح أولاً
+      // ══════════════════════════════════════════════
       var sb = getSb();
-      var userId = null;
-      if (sb) {
+
+      if (!sb) {
+        // Supabase غير متاح: نكمل بواتساب فقط مع تحذير
+        console.warn('booking.js: Supabase unavailable — skipping DB insert, opening WhatsApp only.');
+      } else {
         try {
-          var { data: sessionData } = await sb.auth.getSession();
-          if (sessionData && sessionData.session) {
-            userId = sessionData.session.user.id;
+          // الحصول على المستخدم المسجّل (إن وُجد)
+          var userId = null;
+          var sessionRes = await sb.auth.getSession();
+          if (sessionRes.data && sessionRes.data.session) {
+            userId = sessionRes.data.session.user.id;
           }
 
-          // حفظ في subscription_requests
-          var insertData = {
-            status: 'pending',
-            note: [
-              'الاسم: ' + name,
-              'الهاتف: ' + phone,
-              'المدرسة: ' + school,
-              'المنهج: ' + curric,
-              'الصف: ' + grade,
-              'المادة: ' + subject,
-              'النوع: ' + type,
-              'الأيام:' + daysText
+          // بناء الـ record — insert يتوقع array في v2
+          var record = {
+            status : 'pending',
+            note   : [
+              'الاسم: '    + name,
+              'الهاتف: '   + phoneClean,
+              'المدرسة: '  + school,
+              'المنهج: '   + curric,
+              'الصف: '     + grade,
+              'المادة: '   + subject,
+              'النوع: '    + type,
+              'الأيام: '   + daysArr.join(' / ')
             ].join(' | ')
           };
-          if (userId) insertData.user_id = userId;
-          if (courseId) insertData.course_id = courseId;
+          if (userId)   record.user_id   = userId;
+          if (courseId) record.course_id = courseId;
 
-          // لو مفيش user_id أو course_id نحط placeholder
-          if (!insertData.user_id) {
-            // guest — نحفظ ملاحظة فقط بدون user_id (لو الجدول يسمح)
-            delete insertData.user_id;
-          }
-          if (!insertData.course_id) {
-            delete insertData.course_id;
+          // ✅ insert كـ array — هذا هو الشكل الصحيح في Supabase JS v2
+          var insertRes = await sb.from('subscription_requests').insert([record]);
+
+          // v2 يُعيد { data, error, status, statusText }
+          var dbErr = insertRes.error;
+
+          if (dbErr) {
+            // ❌ فشل الحفظ — أوقف التنفيذ وأظهر الخطأ للمستخدم
+            console.error('Supabase insert error:', dbErr);
+            var userMsg = '❌ حدث خطأ أثناء حفظ طلبك. ';
+            if (dbErr.code === '23505') {
+              userMsg += 'يبدو أن هناك طلباً مشابهاً مسبقاً.';
+            } else if (dbErr.code === '42501' || dbErr.message.includes('permission')) {
+              userMsg += 'خطأ في الصلاحيات — تواصل معنا مباشرة عبر واتساب.';
+            } else if (dbErr.message) {
+              userMsg += '(' + dbErr.message + ')';
+            }
+            showErr(userMsg);
+            return; // ⛔ لا تفتح واتساب إذا فشل الحفظ
           }
 
-          var { error: dbErr } = await sb.from('subscription_requests').insert(insertData);
-          if (dbErr) console.warn('DB insert warning:', dbErr.message);
-        } catch (e) {
-          console.warn('Supabase error:', e);
+          // ✅ insert نجح
+          console.info('booking.js: Request saved to Supabase successfully.');
+
+        } catch (networkErr) {
+          // خطأ في الشبكة أو exception غير متوقع
+          console.error('booking.js: Unexpected error during insert:', networkErr);
+          showErr('❌ تعذّر الاتصال بالخادم. تحقق من الإنترنت وأعد المحاولة.');
+          return; // ⛔ لا تكمل
         }
       }
 
-      // ── WhatsApp fallback (دائماً) ──
-      var msg =
+      // ══════════════════════════════════════════════
+      // 6. SUCCESS → فتح واتساب (فقط بعد نجاح الحفظ)
+      // ══════════════════════════════════════════════
+      setLoading(false);
+      successEl.classList.add('show');
+      errEl.classList.remove('show');
+
+      var waMsg =
         '📚 *حجز جديد — أكاديمية سليم*\n' +
         '━━━━━━━━━━━━━━━\n' +
         '👤 *اسم الطالب:* ' + name + '\n' +
-        '📞 *رقم الهاتف:* ' + phone + '\n' +
-        '🏫 *المدرسة:* ' + school + '\n' +
+        '📞 *رقم الهاتف:* ' + phoneClean + '\n' +
+        '🏫 *المدرسة:* '    + school + '\n' +
         '━━━━━━━━━━━━━━━\n' +
-        '🌍 *المنهج:* ' + curric + '\n' +
-        '📖 *الصف:* ' + grade + '\n' +
-        '📝 *المادة:* ' + subject + '\n' +
-        '🎯 *نوع الحصة:* ' + type + '\n' +
+        '🌍 *المنهج:* '     + curric + '\n' +
+        '📖 *الصف:* '       + grade + '\n' +
+        '📝 *المادة:* '     + subject + '\n' +
+        '🎯 *نوع الحصة:* '  + type + '\n' +
         '📅 *الأيام والأوقات:*' + daysText + '\n' +
         '━━━━━━━━━━━━━━━\n' +
         '✅ أرجو تأكيد الحجز، شكراً!';
 
-      btn.classList.remove('loading');
-      btn.disabled = false;
-
-      document.getElementById(cid + '-success').classList.add('show');
-
-      // فتح واتساب بعد ثانية
+      // فتح واتساب بعد 900ms لإتاحة رؤية رسالة النجاح
       setTimeout(function() {
-        window.open('https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent(msg), '_blank');
+        window.open('https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent(waMsg), '_blank');
       }, 900);
 
-      // reset form
+      // ══════════════════════════════════════════════
+      // 7. RESET FORM FIELDS
+      // ══════════════════════════════════════════════
       document.getElementById(cid + '-fname').value   = '';
       document.getElementById(cid + '-fphone').value  = '';
       document.getElementById(cid + '-fschool').value = '';
+      if (courseEl) courseEl.value = '';
+      btn.disabled = true; // منع إعادة الإرسال بعد النجاح
     }
   };
 

@@ -18,8 +18,8 @@ const PRECACHE_URLS = [
   '/selim-academy/login.html',
   '/selim-academy/manifest.json',
   '/selim-academy/offline.html',
-  '/selim-academy/icons/icon-192x192.png',
-  '/selim-academy/icons/icon-512x512.png',
+  '/selim-academy/icon-192x192.png',
+  '/selim-academy/icon-512x512.png',
   // أضف أي ملفات CSS أو JS خارجية محلية هنا
 ];
 
