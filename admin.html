@@ -717,7 +717,7 @@ function refreshStats() {
 
   // حصص اليوم
   const today = new Date().toISOString().slice(0,10);
-  const todaySess = (S.allSessions||[]).filter(s => (s.session_date||'').slice(0,10) === today).length;
+  const todaySess = (S.allSessions||[]).filter(s => s.session_date === today).length;
   document.getElementById('s-today-sess').textContent = todaySess;
 
   // تاريخ اليوم في البانر
@@ -774,19 +774,17 @@ function renderOvSessions() {
   const el   = document.getElementById('ov-sessions');
   if(!el) return;
   const today = new Date().toISOString().slice(0,10);
-  const list  = (S.allSessions||[]).filter(s => (s.session_date||'').slice(0,10) === today).slice(0,5);
+  const list  = (S.allSessions||[]).filter(s => s.session_date === today).slice(0,5);
   if(!list.length) { el.innerHTML=`<div class="empty-box"><div class="ei">🗓️</div><div class="et">لا توجد حصص اليوم</div></div>`; return; }
   el.innerHTML = list.map(s => {
-    const grade   = s.teacher_grades;
-    const subject = grade?.teacher_subjects;
-    const teacher = subject?.profiles;
+    const teacher = s._profile;
     return `
     <div style="display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--gray-mid)">
       <div style="background:var(--blue-light);border-radius:9px;padding:6px 10px;text-align:center;min-width:54px">
-        <div style="font-size:.65rem;color:var(--blue);font-weight:700">${s.start_time?s.start_time.slice(0,5):'—'}</div>
+        <div style="font-size:.65rem;color:var(--blue);font-weight:700">${s.start_time||'—'}</div>
       </div>
       <div style="flex:1">
-        <div style="font-size:.87rem;font-weight:700">${subject?.name||'—'} — ${grade?.name||'—'}</div>
+        <div style="font-size:.87rem;font-weight:700">${s.subject_name||'—'} — ${s.grade_name||'—'}</div>
         <div style="font-size:.74rem;color:var(--gray)">👨‍🏫 ${teacher?.full_name||'—'}</div>
       </div>
       ${s.zoom_link ? `<a href="${s.zoom_link}" target="_blank" style="font-size:.8rem;color:var(--blue);font-weight:700;text-decoration:none">🔗 دخول</a>` : ''}
@@ -1071,36 +1069,38 @@ async function loadAdminSessions() {
   el.innerHTML = '<div style="padding:20px">' + '<div class="skel" style="height:58px;margin-bottom:10px;border-radius:8px"></div>'.repeat(4) + '</div>';
 
   try {
+    // teacher_sessions الأعمدة الحقيقية:
+    // id, teacher_id, grade_id, subject_name, grade_name, title,
+    // scheduled_at (timestamp), duration_min, zoom_link, video_url, status, created_at
     const { data, error } = await sb
       .from('teacher_sessions')
       .select(`
-        id, title, session_date, start_time, end_time, zoom_link,
-        status, notes, teacher_id,
-        teacher_grades ( id, name, description,
-          teacher_subjects ( id, name )
-        )
-      `)
-      .order('session_date', { ascending: true });
+        id, teacher_id, grade_id,
+        subject_name, grade_name, title,
+        scheduled_at, duration_min,
+        zoom_link, video_url, status, created_at
+      `);
 
     if(error) throw error;
 
+    // جلب بيانات المعلمين
     const tids = [...new Set((data||[]).map(d => d.teacher_id).filter(Boolean))];
-    const pr = await sb.from('profiles').select('id,full_name,avatar_url,specialization').in('id', tids);
-    const pm = {};
-    (pr.data||[]).forEach(p => pm[p.id] = p);
+    let pm = {};
+    if(tids.length) {
+      const pr = await sb.from('profiles').select('id,full_name,avatar_url,specialization').in('id', tids);
+      (pr.data||[]).forEach(p => pm[p.id] = p);
+    }
 
     S.allSessions = (data||[])
-      .map(d => {
-         if (d.teacher_grades && d.teacher_grades.teacher_subjects) {
-             d.teacher_grades.teacher_subjects.profiles = pm[d.teacher_id] || null;
-         }
-         return d;
-      })
-      .sort((a, b) => {
-        const dateCmp = (a.session_date||'').localeCompare(b.session_date||'');
-        if(dateCmp !== 0) return dateCmp;
-        return (a.start_time||'').localeCompare(b.start_time||'');
-      });
+      .map(d => ({
+        ...d,
+        _profile: pm[d.teacher_id] || null,
+        // نحسب session_date و start_time من scheduled_at
+        session_date: d.scheduled_at ? d.scheduled_at.slice(0,10) : '',
+        start_time:   d.scheduled_at ? d.scheduled_at.slice(11,16) : '',
+      }))
+      .sort((a, b) => (a.scheduled_at||'').localeCompare(b.scheduled_at||''));
+
     renderSessionStats();
     renderAdminSessions();
   } catch(e) {
@@ -1110,9 +1110,9 @@ async function loadAdminSessions() {
 
 function renderSessionStats() {
   const today   = new Date().toISOString().slice(0,10);
-  const todaySessions = S.allSessions.filter(s => (s.session_date||'').slice(0,10) === today);
-  const upcoming      = S.allSessions.filter(s => (s.session_date||'').slice(0,10) > today);
-  const live          = todaySessions.filter(s => s.status === 'live' || s.status === 'ongoing');
+  const todaySessions = S.allSessions.filter(s => s.session_date === today);
+  const upcoming      = S.allSessions.filter(s => s.session_date > today);
+  const live          = todaySessions.filter(s => s.status === 'live');
 
   document.getElementById('sess-stats-bar').innerHTML = `
     <div style="background:var(--blue-light);border:1px solid #BFDBFE;border-radius:12px;padding:16px;text-align:center">
@@ -1140,28 +1140,22 @@ function renderAdminSessions() {
   const el     = document.getElementById('sess-admin-body');
   const search = (document.getElementById('sess-search')?.value || '').toLowerCase();
   const today  = new Date().toISOString().slice(0,10);
-  const now    = new Date();
 
   let data = S.allSessions;
 
   if(S.sessionFilter === 'today') {
-    data = data.filter(s => (s.session_date||'').slice(0,10) === today);
+    data = data.filter(s => s.session_date === today);
   } else if(S.sessionFilter === 'upcoming') {
-    data = data.filter(s => (s.session_date||'') > today);
+    data = data.filter(s => s.session_date > today);
   }
 
   if(search) {
-    data = data.filter(s => {
-      const grade   = s.teacher_grades;
-      const subject = grade?.teacher_subjects;
-      const teacher = subject?.profiles;
-      return (
-        (teacher?.full_name||'').toLowerCase().includes(search) ||
-        (subject?.name||subject?.subject_name||'').toLowerCase().includes(search) ||
-        (grade?.name||grade?.grade_name||'').toLowerCase().includes(search) ||
-        (s.title||'').toLowerCase().includes(search)
-      );
-    });
+    data = data.filter(s =>
+      (s._profile?.full_name||'').toLowerCase().includes(search) ||
+      (s.subject_name||'').toLowerCase().includes(search) ||
+      (s.grade_name||'').toLowerCase().includes(search) ||
+      (s.title||'').toLowerCase().includes(search)
+    );
   }
 
   if(!data.length) {
@@ -1171,31 +1165,24 @@ function renderAdminSessions() {
   }
 
   const statusBadge = s => {
-    if(s.status === 'live' || s.status === 'ongoing')
-      return `<span class="badge" style="background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7">🟢 جارية</span>`;
-    if(s.status === 'completed')
-      return `<span class="badge b-gray">✅ منتهية</span>`;
+    if(s.status === 'live')      return `<span class="badge" style="background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7">🟢 جارية</span>`;
+    if(s.status === 'ended')     return `<span class="badge b-gray">✅ منتهية</span>`;
     return `<span class="badge b-blue">⏳ قادمة</span>`;
   };
 
   el.innerHTML = `<div class="tbl-wrap"><table class="data-table">
     <thead><tr>
-      <th>#</th>
-      <th>المعلم</th>
-      <th>المادة</th>
-      <th>الصف / المجموعة</th>
-      <th>التاريخ</th>
-      <th>الوقت</th>
-      <th>الحالة</th>
-      <th>Zoom</th>
+      <th>#</th><th>المعلم</th><th>المادة</th><th>الصف / المجموعة</th>
+      <th>التاريخ</th><th>الوقت</th><th>المدة</th><th>الحالة</th><th>Zoom</th>
     </tr></thead>
     <tbody>
     ${data.map((s,i) => {
-      const grade   = s.teacher_grades;
-      const subject = grade?.teacher_subjects;
-      const teacher = subject?.profiles;
-      const dateStr = s.session_date ? new Date(s.session_date).toLocaleDateString('ar-EG',{weekday:'short',day:'2-digit',month:'short'}) : '—';
-      const timeStr = s.start_time ? s.start_time.slice(0,5) + (s.end_time ? ' ← ' + s.end_time.slice(0,5) : '') : '—';
+      const teacher = s._profile;
+      const dateStr = s.scheduled_at
+        ? new Date(s.scheduled_at).toLocaleDateString('ar-EG',{weekday:'short',day:'2-digit',month:'short'})
+        : '—';
+      const timeStr = s.start_time || '—';
+      const durStr  = s.duration_min ? `${s.duration_min} د` : '—';
       return `<tr>
         <td style="color:var(--gray);font-size:.78rem">${i+1}</td>
         <td>
@@ -1207,10 +1194,11 @@ function renderAdminSessions() {
             </div>
           </div>
         </td>
-        <td><span class="badge b-blue">${subject?.name||'—'}</span></td>
-        <td style="font-size:.84rem;font-weight:600">${grade?.name||'—'}</td>
+        <td><span class="badge b-blue">${s.subject_name||'—'}</span></td>
+        <td style="font-size:.84rem;font-weight:600">${s.grade_name||'—'}</td>
         <td style="font-size:.8rem;color:var(--gray)">${dateStr}</td>
         <td><span style="background:var(--blue-light);color:var(--blue);padding:4px 10px;border-radius:6px;font-size:.8rem;font-weight:700;white-space:nowrap">⏰ ${timeStr}</span></td>
+        <td style="font-size:.8rem;color:var(--gray)">${durStr}</td>
         <td>${statusBadge(s)}</td>
         <td>${s.zoom_link
           ? `<a href="${s.zoom_link}" target="_blank" style="color:var(--blue);font-size:.8rem;font-weight:700;text-decoration:none">🔗 دخول</a>`
