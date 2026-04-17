@@ -1,0 +1,2749 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أكاديمية سليم | لوحة المعلم</title>
+<link rel="manifest" href="/selim-academy/manifest.json">
+<meta name="theme-color" content="#1A56DB">
+<link rel="apple-touch-icon" href="/selim-academy/icon-192x192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/selim-academy/icon-192x192.png">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+/* ══════════════════════════════════════════
+   ANIMATIONS
+══════════════════════════════════════════ */
+@keyframes fadeIn   { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideIn  { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+@keyframes spin     { to{transform:rotate(360deg)} }
+@keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:.4} }
+@keyframes shimmer  { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+@keyframes bounce   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+
+/* ══════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════ */
+:root {
+  --blue:#1A56DB; --blue-dark:#1342B0; --blue-light:#EBF5FF; --blue-mid:#3B82F6;
+  --green:#0E9F6E; --green-light:#ECFDF5;
+  --gold:#F59E0B;  --gold-light:#FFFBEB;
+  --red:#EF4444;   --red-light:#FEF2F2;
+  --purple:#8B5CF6;--purple-light:#F5F3FF;
+  --teal:#0891B2;  --teal-light:#ECFEFF;
+  --orange:#F97316;--orange-light:#FFF7ED;
+  --dark:#111928;  --gray:#6B7280; --gray-light:#F9FAFB; --gray-mid:#E5E7EB; --white:#fff;
+  --sidebar-w:268px; --header-h:64px; --radius:14px;
+  --shadow:0 2px 12px rgba(0,0,0,.07);
+  --shadow-md:0 4px 20px rgba(0,0,0,.10);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.13);
+}
+
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box }
+body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); direction:rtl; overflow-x:hidden }
+
+/* ══════════════════════════════════════════
+   LOADER
+══════════════════════════════════════════ */
+#loader {
+  position:fixed; inset:0;
+  background:linear-gradient(135deg,#0F172A 0%,#1E3A5F 100%);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:20px; z-index:9999;
+}
+.loader-logo {
+  width:72px; height:72px; border-radius:20px;
+  background:linear-gradient(135deg,var(--blue),var(--blue-mid));
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.8rem; font-weight:900; color:#fff;
+  box-shadow:0 8px 32px rgba(26,86,219,.5);
+  animation:bounce 1.5s ease-in-out infinite;
+}
+.spinner {
+  width:40px; height:40px; border:3px solid rgba(255,255,255,.15);
+  border-top-color:#fff; border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+.loader-text { font-size:.9rem; color:rgba(255,255,255,.6); font-weight:600 }
+
+/* ══════════════════════════════════════════
+   PENDING SCREEN  
+══════════════════════════════════════════ */
+#pending-screen {
+  min-height:100vh; display:none; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,#F1F5F9,#E8EFF7); padding:20px;
+}
+.pending-card {
+  background:#fff; border-radius:24px; padding:48px 40px;
+  max-width:480px; width:100%; text-align:center;
+  box-shadow:0 20px 60px rgba(0,0,0,.10); animation:fadeIn .5s ease;
+}
+.pending-icon { font-size:4rem; margin-bottom:16px; animation:bounce 2s ease-in-out infinite }
+.pending-title { font-size:1.6rem; font-weight:900; color:var(--dark); margin-bottom:10px }
+.pending-sub   { font-size:.9rem;  color:var(--gray); line-height:1.8; margin-bottom:28px }
+.pending-badge {
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--gold-light); color:#92400E;
+  border:1.5px solid #FCD34D; border-radius:50px;
+  padding:8px 20px; font-size:.85rem; font-weight:700; margin-bottom:20px;
+}
+.btn-logout-pending {
+  padding:12px 28px; background:var(--red-light); color:var(--red);
+  border:1.5px solid #FECACA; border-radius:10px;
+  font-family:'Cairo',sans-serif; font-size:.9rem; font-weight:700;
+  cursor:pointer; transition:all .2s;
+}
+.btn-logout-pending:hover { background:var(--red); color:#fff }
+
+/* ══════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════ */
+.sidebar {
+  position:fixed; top:0; right:0;
+  width:var(--sidebar-w); height:100vh;
+  background:linear-gradient(180deg,#0F172A 0%,#1E1B4B 100%);
+  display:flex; flex-direction:column; z-index:100; transition:transform .3s ease;
+}
+.sidebar-logo {
+  padding:20px 22px; display:flex; align-items:center; gap:12px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+  text-decoration:none; flex-shrink:0;
+}
+.logo-icon {
+  width:40px; height:40px; border-radius:10px;
+  background:linear-gradient(135deg,var(--blue),var(--blue-mid));
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-size:.95rem; font-weight:900; flex-shrink:0;
+  box-shadow:0 4px 12px rgba(26,86,219,.4);
+}
+.logo-text { font-size:1rem; font-weight:900; color:#fff; line-height:1.2 }
+.logo-sub  { font-size:.68rem; color:rgba(255,255,255,.35) }
+
+.sidebar-nav { flex:1; padding:14px 10px; overflow-y:auto }
+.sidebar-nav::-webkit-scrollbar { width:4px }
+.sidebar-nav::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:4px }
+
+.nav-group-label {
+  font-size:.62rem; color:rgba(255,255,255,.25); font-weight:700;
+  letter-spacing:1px; padding:16px 12px 6px; text-transform:uppercase;
+}
+.nav-item {
+  display:flex; align-items:center; gap:11px; padding:11px 12px;
+  border-radius:11px; color:rgba(255,255,255,.5); font-size:.88rem; font-weight:600;
+  cursor:pointer; transition:all .2s; margin-bottom:2px;
+  border:none; background:none; width:100%;
+  font-family:'Cairo',sans-serif; text-align:right; position:relative;
+}
+.nav-item:hover { background:rgba(255,255,255,.06); color:rgba(255,255,255,.85) }
+.nav-item.active {
+  background:linear-gradient(135deg,var(--blue),var(--blue-mid));
+  color:#fff; box-shadow:0 4px 16px rgba(26,86,219,.5);
+}
+.nav-icon { font-size:1.05rem; width:22px; text-align:center; flex-shrink:0 }
+.nav-badge {
+  margin-right:auto; background:var(--red); color:#fff;
+  font-size:.6rem; font-weight:900; padding:2px 7px; border-radius:50px;
+  animation:bounce .8s ease-in-out infinite;
+}
+
+.sidebar-bottom {
+  padding:14px 10px; border-top:1px solid rgba(255,255,255,.07); flex-shrink:0;
+}
+.user-mini {
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border-radius:11px; margin-bottom:8px;
+  background:rgba(255,255,255,.04);
+}
+.user-av {
+  width:38px; height:38px; border-radius:50%;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-size:.85rem; font-weight:900; flex-shrink:0;
+  overflow:hidden; border:2px solid rgba(255,255,255,.15);
+}
+.user-av img { width:100%; height:100%; object-fit:cover }
+.user-mini-name { font-size:.84rem; font-weight:700; color:#fff }
+.user-mini-role { font-size:.68rem; color:rgba(255,255,255,.35) }
+.btn-logout {
+  width:100%; padding:10px 16px;
+  background:rgba(239,68,68,.12); color:#FCA5A5;
+  border:1px solid rgba(239,68,68,.2); border-radius:10px;
+  font-family:'Cairo',sans-serif; font-size:.83rem; font-weight:700;
+  cursor:pointer; transition:all .2s;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn-logout:hover { background:var(--red); color:#fff; border-color:var(--red) }
+
+/* ══════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════ */
+.main-header {
+  position:fixed; top:0; left:0;
+  width:calc(100% - var(--sidebar-w)); height:var(--header-h);
+  background:rgba(255,255,255,.95); backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--gray-mid);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 28px; z-index:99; box-shadow:var(--shadow);
+}
+.header-welcome { font-size:.95rem; font-weight:700; color:var(--dark) }
+.header-welcome span { color:var(--blue) }
+.hamburger { display:none; background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--dark) }
+.teacher-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:linear-gradient(135deg,var(--purple-light),#EDE9FE);
+  color:var(--purple); border:1.5px solid #DDD6FE;
+  border-radius:50px; padding:5px 16px; font-size:.78rem; font-weight:700;
+}
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:99 }
+.overlay.show { display:block }
+
+/* ══════════════════════════════════════════
+   MAIN
+══════════════════════════════════════════ */
+#app {
+  margin-right:var(--sidebar-w); margin-top:var(--header-h);
+  padding:28px; min-height:calc(100vh - var(--header-h));
+}
+.page { display:none; animation:fadeIn .3s ease }
+.page.active { display:block }
+.page-title { font-size:1.45rem; font-weight:900; color:var(--dark); margin-bottom:4px }
+.page-sub   { font-size:.88rem; color:var(--gray); margin-bottom:24px }
+
+/* ══════════════════════════════════════════
+   STATS GRID
+══════════════════════════════════════════ */
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:28px }
+.stat-card {
+  background:#fff; border:1px solid var(--gray-mid);
+  border-radius:var(--radius); padding:22px;
+  display:flex; align-items:flex-start; gap:14px;
+  transition:all .25s; cursor:default; position:relative; overflow:hidden;
+}
+.stat-card::before {
+  content:''; position:absolute; inset:0; opacity:0;
+  transition:opacity .3s; border-radius:var(--radius);
+}
+.stat-card:hover { transform:translateY(-3px); box-shadow:var(--shadow-lg) }
+.stat-icon {
+  width:48px; height:48px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center; font-size:1.35rem; flex-shrink:0;
+}
+.si-blue   { background:var(--blue-light) }
+.si-green  { background:var(--green-light) }
+.si-gold   { background:var(--gold-light) }
+.si-purple { background:var(--purple-light) }
+.si-teal   { background:var(--teal-light) }
+.si-orange { background:var(--orange-light) }
+.stat-num  { font-size:1.8rem; font-weight:900; color:var(--dark); line-height:1 }
+.stat-label{ font-size:.78rem; color:var(--gray); margin-top:3px }
+.stat-delta{ font-size:.72rem; font-weight:700; margin-top:5px }
+.d-up  { color:var(--green) }
+.d-down{ color:var(--red) }
+
+/* ══════════════════════════════════════════
+   SECTION CARDS
+══════════════════════════════════════════ */
+.section-card {
+  background:#fff; border:1px solid var(--gray-mid);
+  border-radius:var(--radius); overflow:hidden; margin-bottom:20px;
+}
+.section-head {
+  padding:16px 22px; border-bottom:1px solid var(--gray-mid);
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+}
+.section-head h3 { font-size:1rem; font-weight:900; color:var(--dark) }
+.section-body { padding:20px 22px }
+.see-all { font-size:.8rem; color:var(--blue); font-weight:700; cursor:pointer; text-decoration:none }
+.see-all:hover { text-decoration:underline }
+
+/* ══════════════════════════════════════════
+   WELCOME BANNER
+══════════════════════════════════════════ */
+.banner {
+  background:linear-gradient(135deg,#1342B0 0%,#1A56DB 50%,#3B82F6 100%);
+  border-radius:20px; padding:28px 32px; color:#fff;
+  margin-bottom:26px; position:relative; overflow:hidden;
+}
+.banner::before {
+  content:''; position:absolute; width:280px; height:280px;
+  border-radius:50%; background:rgba(255,255,255,.06);
+  top:-100px; left:-60px;
+}
+.banner::after {
+  content:''; position:absolute; width:180px; height:180px;
+  border-radius:50%; background:rgba(255,255,255,.04);
+  bottom:-60px; right:20%;
+}
+.b-title { font-size:1.3rem; font-weight:900; margin-bottom:6px; position:relative; z-index:1 }
+.b-sub   { font-size:.88rem; opacity:.8; position:relative; z-index:1 }
+.b-chips { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; position:relative; z-index:1 }
+.b-chip  {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(255,255,255,.15); border-radius:50px;
+  padding:5px 14px; font-size:.78rem; font-weight:700;
+  border:1px solid rgba(255,255,255,.2);
+}
+
+/* ══════════════════════════════════════════
+   QUICK ACTIONS (Home)
+══════════════════════════════════════════ */
+.quick-actions { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:26px }
+.qa-card {
+  background:#fff; border:1px solid var(--gray-mid); border-radius:14px;
+  padding:20px; cursor:pointer; transition:all .25s; text-align:center;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+}
+.qa-card:hover { transform:translateY(-3px); box-shadow:var(--shadow-md); border-color:var(--blue) }
+.qa-icon { font-size:1.8rem }
+.qa-label { font-size:.85rem; font-weight:700; color:var(--dark) }
+.qa-sub   { font-size:.73rem; color:var(--gray) }
+
+/* ══════════════════════════════════════════
+   UPCOMING SESSIONS (minimal cards)
+══════════════════════════════════════════ */
+.sess-mini {
+  display:flex; align-items:center; gap:14px;
+  padding:13px 0; border-bottom:1px solid var(--gray-mid);
+}
+.sess-mini:last-child { border-bottom:none; padding-bottom:0 }
+.sess-time-box {
+  background:var(--blue-light); border:1px solid rgba(26,86,219,.15);
+  border-radius:10px; padding:8px 12px; text-align:center; flex-shrink:0; min-width:62px;
+}
+.sess-day { font-size:.64rem; color:var(--blue); font-weight:700 }
+.sess-hr  { font-size:.92rem; font-weight:900; color:var(--blue); line-height:1 }
+.sess-info { flex:1 }
+.sess-title { font-size:.88rem; font-weight:700; color:var(--dark); margin-bottom:2px }
+.sess-meta  { font-size:.74rem; color:var(--gray) }
+
+/* ══════════════════════════════════════════
+   MY COURSES (teacher view)
+══════════════════════════════════════════ */
+.subject-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:18px }
+.subject-card {
+  background:#fff; border:1.5px solid var(--gray-mid); border-radius:16px;
+  padding:22px; cursor:pointer; transition:all .28s; position:relative; overflow:hidden;
+}
+.subject-card::before {
+  content:''; position:absolute; top:0; right:0; width:4px; height:100%;
+  background:var(--blue); border-radius:0 16px 16px 0;
+  transition:width .3s;
+}
+.subject-card:hover::before { width:6px }
+.subject-card:hover { transform:translateY(-3px); box-shadow:var(--shadow-md); border-color:var(--blue-mid) }
+.subj-icon { font-size:2.2rem; margin-bottom:12px }
+.subj-name { font-size:1rem; font-weight:900; color:var(--dark); margin-bottom:4px }
+.subj-meta { font-size:.78rem; color:var(--gray); margin-bottom:14px }
+.subj-grades { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px }
+.grade-chip {
+  padding:4px 10px; border-radius:50px; font-size:.72rem; font-weight:700;
+  background:var(--blue-light); color:var(--blue); border:1px solid rgba(26,86,219,.15);
+  cursor:pointer; transition:all .2s;
+}
+.grade-chip:hover { background:var(--blue); color:#fff }
+.grade-chip.active { background:var(--blue); color:#fff }
+.subj-acts { display:flex; gap:8px }
+
+/* Add subject modal */
+.add-subject-btn {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:12px; background:none; border:2px dashed var(--gray-mid);
+  border-radius:16px; padding:30px; cursor:pointer;
+  transition:all .25s; min-height:180px; width:100%;
+}
+.add-subject-btn:hover { border-color:var(--blue); background:var(--blue-light) }
+.add-subject-btn .plus { font-size:2rem; color:var(--gray) }
+.add-subject-btn .txt  { font-size:.85rem; font-weight:700; color:var(--gray) }
+
+/* Subject detail view */
+.subj-detail { animation:fadeIn .3s ease }
+.breadcrumb  {
+  display:flex; align-items:center; gap:8px; margin-bottom:20px;
+  font-size:.85rem; color:var(--gray);
+}
+.breadcrumb-link { cursor:pointer; color:var(--blue); font-weight:700; text-decoration:none }
+.breadcrumb-link:hover { text-decoration:underline }
+.breadcrumb-sep { color:var(--gray-mid) }
+
+/* Grade selection cards */
+.grade-selection { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px }
+.grade-sel-card {
+  background:#fff; border:1.5px solid var(--gray-mid); border-radius:14px;
+  padding:20px; cursor:pointer; transition:all .25s; text-align:center;
+}
+.grade-sel-card:hover { border-color:var(--blue); transform:translateY(-2px); box-shadow:var(--shadow-md) }
+.grade-sel-card .gsc-icon { font-size:2rem; margin-bottom:8px }
+.grade-sel-card .gsc-name { font-size:.9rem; font-weight:700; color:var(--dark) }
+.grade-sel-card .gsc-count { font-size:.74rem; color:var(--gray); margin-top:3px }
+
+/* Content area (after grade selected) */
+.content-tabs  { display:flex; gap:0; border:1.5px solid var(--gray-mid); border-radius:10px; overflow:hidden; margin-bottom:20px; display:inline-flex }
+.content-tab   { padding:9px 22px; background:none; border:none; font-family:'Cairo',sans-serif; font-size:.85rem; font-weight:700; cursor:pointer; color:var(--gray); transition:all .2s }
+.content-tab.active { background:var(--blue); color:#fff }
+
+.content-actions { display:flex; gap:12px; margin-bottom:20px }
+.btn-upload {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:10px 22px; border:none; border-radius:10px;
+  font-family:'Cairo',sans-serif; font-size:.88rem; font-weight:700;
+  cursor:pointer; transition:all .25s;
+}
+.btn-upload-file  { background:var(--blue);  color:#fff }
+.btn-upload-file:hover  { background:var(--blue-dark) }
+.btn-upload-video { background:var(--purple); color:#fff }
+.btn-upload-video:hover { background:#7C3AED }
+
+/* File list */
+.files-list { display:flex; flex-direction:column; gap:10px }
+.file-item {
+  display:flex; align-items:center; gap:14px;
+  background:#fff; border:1px solid var(--gray-mid); border-radius:12px;
+  padding:14px 18px; transition:all .2s;
+}
+.file-item:hover { box-shadow:var(--shadow); border-color:var(--blue-mid) }
+.file-num {
+  width:32px; height:32px; border-radius:8px; flex-shrink:0;
+  background:var(--blue-light); color:var(--blue);
+  display:flex; align-items:center; justify-content:center;
+  font-size:.78rem; font-weight:900;
+}
+.file-icon { font-size:1.5rem; flex-shrink:0 }
+.file-info { flex:1 }
+.file-name { font-size:.88rem; font-weight:700; color:var(--dark) }
+.file-meta { font-size:.73rem; color:var(--gray); margin-top:2px }
+.file-date { font-size:.72rem; color:var(--gray) }
+.file-acts { display:flex; gap:6px }
+
+/* Video list */
+.videos-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:18px }
+.video-card {
+  background:#fff; border:1px solid var(--gray-mid); border-radius:14px;
+  overflow:hidden; transition:all .25s; cursor:pointer;
+}
+.video-card:hover { transform:translateY(-3px); box-shadow:var(--shadow-md) }
+.video-thumb {
+  height:130px; background:linear-gradient(135deg,#1E1B4B,#1A56DB);
+  display:flex; align-items:center; justify-content:center; position:relative;
+}
+.video-play {
+  width:52px; height:52px; border-radius:50%;
+  background:rgba(255,255,255,.2); backdrop-filter:blur(4px);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.4rem; border:2px solid rgba(255,255,255,.4);
+  transition:all .25s;
+}
+.video-card:hover .video-play { background:rgba(255,255,255,.35); transform:scale(1.1) }
+.video-num { position:absolute; top:8px; right:10px; background:rgba(0,0,0,.5); color:#fff; font-size:.68rem; font-weight:700; padding:3px 8px; border-radius:50px }
+.video-body { padding:14px }
+.video-title { font-size:.88rem; font-weight:700; color:var(--dark); margin-bottom:4px }
+.video-meta  { font-size:.73rem; color:var(--gray) }
+.video-acts  { display:flex; gap:6px; margin-top:10px }
+
+/* ══════════════════════════════════════════
+   EMPTY BOX
+══════════════════════════════════════════ */
+.empty-box { text-align:center; padding:48px 20px }
+.empty-box .ei { font-size:3rem; margin-bottom:12px }
+.empty-box .et { font-size:1rem; font-weight:700; color:var(--dark); margin-bottom:5px }
+.empty-box .ed { font-size:.84rem; color:var(--gray) }
+
+/* ══════════════════════════════════════════
+   SKELETON
+══════════════════════════════════════════ */
+.skel {
+  background:linear-gradient(90deg,var(--gray-mid) 25%,#F1F5F9 50%,var(--gray-mid) 75%);
+  background-size:200% 100%; border-radius:8px;
+  animation:shimmer 1.5s ease-in-out infinite; display:block;
+}
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+#toast-wrap { position:fixed; bottom:24px; left:24px; z-index:9999; display:flex; flex-direction:column; gap:10px }
+.toast {
+  padding:13px 20px; border-radius:12px; font-size:.87rem; font-weight:600;
+  display:flex; align-items:center; gap:10px; box-shadow:var(--shadow-lg);
+  animation:fadeIn .3s ease; min-width:240px;
+}
+.t-ok  { background:var(--green-light); color:#065F46; border:1px solid #6EE7B7 }
+.t-err { background:var(--red-light);   color:var(--red);   border:1px solid #FECACA }
+
+/* ══════════════════════════════════════════
+   MODALS
+══════════════════════════════════════════ */
+.mdl { position:fixed; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(4px); z-index:1000; display:none; align-items:center; justify-content:center; padding:20px }
+.mdl.show { display:flex }
+.mdl-box { background:#fff; border-radius:20px; padding:32px; max-width:480px; width:100%; box-shadow:0 24px 80px rgba(0,0,0,.2); animation:fadeIn .25s ease }
+.mdl-box.wide { max-width:560px }
+.mdl-title { font-size:1.1rem; font-weight:900; color:var(--dark); margin-bottom:20px }
+.mdl-btns  { display:flex; gap:12px; justify-content:flex-end; margin-top:20px }
+.mdl-close { position:absolute; top:20px; left:20px; background:var(--gray-light); border:none; border-radius:8px; padding:6px 12px; font-size:.8rem; cursor:pointer; color:var(--gray); font-family:'Cairo',sans-serif }
+
+/* ══════════════════════════════════════════
+   FORM ELEMENTS
+══════════════════════════════════════════ */
+.fg { display:flex; flex-direction:column; gap:6px; margin-bottom:14px }
+.fg label { font-size:.8rem; font-weight:700; color:var(--dark) }
+.fg input,.fg textarea,.fg select {
+  width:100%; background:var(--gray-light); border:1.5px solid var(--gray-mid);
+  border-radius:10px; padding:10px 14px; font-family:'Cairo',sans-serif;
+  font-size:.88rem; color:var(--dark); outline:none; transition:border-color .2s;
+  direction:rtl; resize:none;
+}
+.fg input:focus,.fg textarea:focus,.fg select:focus { border-color:var(--blue); background:#fff }
+.fg-row { display:grid; grid-template-columns:1fr 1fr; gap:12px }
+
+/* ══════════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════════ */
+.btn-primary {
+  padding:11px 26px; background:var(--blue); color:#fff; border:none;
+  border-radius:10px; font-family:'Cairo',sans-serif; font-size:.9rem; font-weight:700;
+  cursor:pointer; transition:all .25s; display:inline-flex; align-items:center; gap:8px;
+}
+.btn-primary:hover { background:var(--blue-dark); transform:translateY(-1px) }
+.btn-primary:disabled { opacity:.7; cursor:not-allowed; transform:none }
+.btn-secondary {
+  padding:11px 26px; background:var(--gray-light); color:var(--gray);
+  border:1.5px solid var(--gray-mid); border-radius:10px;
+  font-family:'Cairo',sans-serif; font-size:.9rem; font-weight:700;
+  cursor:pointer; transition:all .2s;
+}
+.btn-secondary:hover { background:var(--gray-mid) }
+.btn-sm { padding:7px 14px; border:none; border-radius:8px; font-family:'Cairo',sans-serif; font-size:.76rem; font-weight:700; cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:4px }
+.btn-edit { background:var(--blue-light); color:var(--blue); border:1px solid #BFDBFE }
+.btn-edit:hover { background:var(--blue); color:#fff }
+.btn-del  { background:var(--red-light);  color:var(--red); border:1px solid #FECACA }
+.btn-del:hover  { background:var(--red);  color:#fff }
+
+/* ══════════════════════════════════════════
+   BADGES
+══════════════════════════════════════════ */
+.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:50px; font-size:.73rem; font-weight:700 }
+.b-blue   { background:var(--blue-light);   color:var(--blue);   border:1px solid #BFDBFE }
+.b-green  { background:var(--green-light);  color:var(--green);  border:1px solid #6EE7B7 }
+.b-gold   { background:var(--gold-light);   color:#92400E; border:1px solid #FCD34D }
+.b-purple { background:var(--purple-light); color:var(--purple); border:1px solid #DDD6FE }
+
+/* ══════════════════════════════════════════
+   UPLOAD ZONE
+══════════════════════════════════════════ */
+.upload-zone {
+  border:2px dashed var(--gray-mid); border-radius:14px; padding:36px 20px;
+  text-align:center; cursor:pointer; transition:all .25s; background:var(--gray-light);
+}
+.upload-zone:hover,.upload-zone.drag-over { border-color:var(--blue); background:var(--blue-light) }
+.upload-zone .uz-icon { font-size:2.5rem; margin-bottom:10px }
+.upload-zone .uz-text { font-size:.88rem; font-weight:700; color:var(--dark); margin-bottom:4px }
+.upload-zone .uz-sub  { font-size:.78rem; color:var(--gray) }
+.upload-progress { background:var(--gray-mid); border-radius:50px; height:6px; overflow:hidden; margin-top:12px }
+.upload-progress-bar { height:100%; background:var(--blue); border-radius:50px; transition:width .3s }
+.msg-ok  { background:var(--green-light); border:1px solid #6EE7B7; color:#065F46; padding:10px 14px; border-radius:9px; font-size:.83rem; margin-top:10px }
+.msg-err { background:var(--red-light); border:1px solid #FECACA; color:var(--red); padding:10px 14px; border-radius:9px; font-size:.83rem; margin-top:10px }
+
+/* ══════════════════════════════════════════
+   SESSIONS PAGE
+══════════════════════════════════════════ */
+.sessions-filter { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px }
+.sf-btn {
+  padding:7px 18px; border-radius:50px; border:1.5px solid var(--gray-mid);
+  background:#fff; color:var(--gray); font-family:'Cairo',sans-serif;
+  font-size:.82rem; font-weight:700; cursor:pointer; transition:all .2s;
+}
+.sf-btn.active { background:var(--blue); color:#fff; border-color:var(--blue) }
+.session-card {
+  background:#fff; border:1px solid var(--gray-mid); border-radius:14px;
+  padding:18px 20px; margin-bottom:12px; display:flex; align-items:center;
+  gap:16px; transition:all .25s; position:relative; overflow:hidden;
+}
+.session-card::before { content:''; position:absolute; right:0; top:0; width:4px; height:100%; border-radius:14px 0 0 14px }
+.session-card.s-upcoming::before { background:var(--blue) }
+.session-card.s-live::before     { background:var(--green) }
+.session-card.s-ended::before    { background:var(--gray) }
+.session-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-md) }
+.sc-date {
+  min-width:68px; background:var(--blue-light); border:1px solid rgba(26,86,219,.15);
+  border-radius:12px; padding:10px 14px; text-align:center; flex-shrink:0;
+}
+.sc-date-day  { font-size:.65rem; color:var(--blue); font-weight:700 }
+.sc-date-num  { font-size:1.5rem; font-weight:900; color:var(--blue); line-height:1 }
+.sc-date-mon  { font-size:.62rem; color:var(--blue); font-weight:600 }
+.sc-info  { flex:1 }
+.sc-title { font-size:.95rem; font-weight:900; color:var(--dark); margin-bottom:4px }
+.sc-meta  { font-size:.78rem; color:var(--gray); display:flex; gap:12px; flex-wrap:wrap }
+.sc-meta span { display:flex; align-items:center; gap:4px }
+.sc-status { flex-shrink:0 }
+.sc-acts   { display:flex; gap:8px; flex-shrink:0 }
+.status-live     { background:var(--green-light); color:var(--green); border:1px solid #6EE7B7; padding:4px 12px; border-radius:50px; font-size:.73rem; font-weight:700 }
+.status-upcoming { background:var(--blue-light);  color:var(--blue);  border:1px solid #BFDBFE; padding:4px 12px; border-radius:50px; font-size:.73rem; font-weight:700 }
+.status-ended    { background:var(--gray-light);  color:var(--gray);  border:1px solid var(--gray-mid); padding:4px 12px; border-radius:50px; font-size:.73rem; font-weight:700 }
+.sessions-groups { display:flex; flex-direction:column; gap:24px }
+.sessions-group-title { font-size:.8rem; font-weight:700; color:var(--gray); text-transform:uppercase; letter-spacing:.6px; margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid var(--gray-mid) }
+/* calendar strip */
+.cal-strip { display:flex; gap:8px; overflow-x:auto; margin-bottom:24px; padding-bottom:6px }
+.cal-strip::-webkit-scrollbar { height:4px }
+.cal-day {
+  min-width:54px; padding:10px 8px; border-radius:12px;
+  text-align:center; cursor:pointer; transition:all .2s;
+  border:1.5px solid var(--gray-mid); background:#fff; flex-shrink:0;
+}
+.cal-day:hover { border-color:var(--blue); background:var(--blue-light) }
+.cal-day.active { background:var(--blue); border-color:var(--blue); color:#fff }
+.cal-day-name { font-size:.65rem; font-weight:700; opacity:.7 }
+.cal-day-num  { font-size:1.2rem; font-weight:900; line-height:1.2 }
+.cal-day-dot  { width:6px; height:6px; border-radius:50%; background:var(--gold); margin:3px auto 0 }
+.cal-day.active .cal-day-dot { background:#fff }
+
+/* ══════════════════════════════════════════
+   STUDENTS PAGE & ATTENDANCE
+══════════════════════════════════════════ */
+.stu-page-tabs { display:flex; gap:0; border:1.5px solid var(--gray-mid); border-radius:11px; overflow:hidden; margin-bottom:24px; display:inline-flex }
+.stu-tab { padding:9px 24px; background:none; border:none; font-family:'Cairo',sans-serif; font-size:.87rem; font-weight:700; cursor:pointer; color:var(--gray); transition:all .2s }
+.stu-tab.active { background:var(--blue); color:#fff }
+
+/* grade selector for students */
+.grade-selector-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; align-items:center }
+.grade-sel-btn {
+  padding:7px 18px; border:1.5px solid var(--gray-mid); border-radius:50px;
+  background:#fff; color:var(--gray); font-family:'Cairo',sans-serif;
+  font-size:.82rem; font-weight:700; cursor:pointer; transition:all .2s;
+}
+.grade-sel-btn.active { background:var(--blue); color:#fff; border-color:var(--blue) }
+
+/* student card */
+.stu-card {
+  background:#fff; border:1px solid var(--gray-mid); border-radius:12px;
+  padding:14px 18px; display:flex; align-items:center; gap:14px;
+  transition:all .2s; cursor:pointer;
+}
+.stu-card:hover { border-color:var(--blue); box-shadow:var(--shadow) }
+.stu-av {
+  width:44px; height:44px; border-radius:50%;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-size:.95rem; font-weight:900; flex-shrink:0;
+  overflow:hidden;
+}
+.stu-av img { width:100%; height:100%; object-fit:cover }
+.stu-info { flex:1 }
+.stu-name { font-size:.92rem; font-weight:700; color:var(--dark) }
+.stu-meta { font-size:.74rem; color:var(--gray); margin-top:2px }
+.stu-stats { display:flex; gap:10px }
+.stu-stat { text-align:center }
+.stu-stat-num { font-size:1rem; font-weight:900 }
+.stu-stat-lbl { font-size:.63rem; color:var(--gray) }
+.stu-present-num { color:var(--green) }
+.stu-absent-num  { color:var(--red) }
+
+/* attendance modal content */
+.att-student { display:flex; align-items:center; gap:14px; padding:16px 0; border-bottom:1px solid var(--gray-mid) }
+.att-student:last-child { border-bottom:none }
+.att-name { flex:1; font-size:.9rem; font-weight:700; color:var(--dark) }
+.att-btns { display:flex; gap:8px }
+.att-btn {
+  padding:7px 18px; border:2px solid var(--gray-mid); border-radius:50px;
+  font-family:'Cairo',sans-serif; font-size:.82rem; font-weight:700;
+  cursor:pointer; transition:all .2s; background:none;
+}
+.att-btn.present {
+  background:var(--green-light); color:var(--green); border-color:var(--green);
+}
+.att-btn.absent  {
+  background:var(--red-light);   color:var(--red);   border-color:var(--red);
+}
+.att-btn:not(.present):not(.absent):hover { border-color:var(--blue) }
+.att-summary { display:flex; gap:16px; padding:12px 0; border-bottom:1px solid var(--gray-mid); margin-bottom:8px }
+.att-sum-item { display:flex; align-items:center; gap:6px; font-size:.82rem; font-weight:700 }
+
+/* student detail modal */
+.sarec-row { display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--gray-mid) }
+.sarec-row:last-child { border-bottom:none }
+.sarec-date { font-size:.84rem; color:var(--dark); font-weight:600 }
+
+/* ══════════════════════════════════════════
+   PROFILE PAGE
+══════════════════════════════════════════ */
+.profile-header {
+  background:linear-gradient(135deg,#1342B0,#1A56DB,#3B82F6);
+  border-radius:20px; padding:36px 32px; margin-bottom:24px;
+  color:#fff; text-align:center; position:relative; overflow:hidden;
+}
+.profile-header::before { content:''; position:absolute; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.06); top:-80px; left:-50px }
+.av-circle {
+  width:100px; height:100px; border-radius:50%;
+  background:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.1));
+  border:3px solid rgba(255,255,255,.4);
+  display:flex; align-items:center; justify-content:center;
+  font-size:2.2rem; font-weight:900; color:#fff;
+  margin:0 auto 14px; overflow:hidden; position:relative; z-index:1;
+}
+.av-circle img { width:100%; height:100%; object-fit:cover }
+.av-upload-lbl {
+  display:inline-flex; align-items:center; gap:6px; padding:7px 18px;
+  background:rgba(255,255,255,.2); border:1.5px solid rgba(255,255,255,.4);
+  border-radius:50px; color:#fff; font-size:.8rem; font-weight:700;
+  cursor:pointer; transition:all .2s; position:relative; z-index:1;
+}
+.av-upload-lbl:hover { background:rgba(255,255,255,.3) }
+.prof-name { font-size:1.3rem; font-weight:900; margin:10px 0 4px; position:relative; z-index:1 }
+.prof-spec { font-size:.85rem; opacity:.8; position:relative; z-index:1 }
+.intro-video-wrap {
+  background:linear-gradient(135deg,#1E1B4B,#312E81); border-radius:16px;
+  padding:24px; margin-bottom:20px; display:flex; align-items:center; gap:16px;
+}
+.intro-video-icon { font-size:2.5rem; flex-shrink:0 }
+.intro-video-info { flex:1 }
+.intro-video-title { font-size:.95rem; font-weight:700; color:#fff; margin-bottom:4px }
+.intro-video-sub   { font-size:.78rem; color:rgba(255,255,255,.6) }
+.intro-video-btn {
+  padding:9px 20px; background:var(--purple); color:#fff; border:none;
+  border-radius:9px; font-family:'Cairo',sans-serif; font-size:.83rem; font-weight:700;
+  cursor:pointer; transition:all .2s; flex-shrink:0;
+}
+.intro-video-btn:hover { background:#7C3AED }
+
+/* ══════════════════════════════════════════
+   SETTINGS PAGE
+══════════════════════════════════════════ */
+.settings-section { background:#fff; border:1px solid var(--gray-mid); border-radius:var(--radius); overflow:hidden; margin-bottom:20px }
+.settings-head { padding:16px 22px; border-bottom:1px solid var(--gray-mid); background:var(--gray-light); font-size:.92rem; font-weight:700; color:var(--dark); display:flex; align-items:center; gap:8px }
+.settings-body { padding:24px 22px }
+
+/* ══════════════════════════════════════════
+   SUPPORT PAGE
+══════════════════════════════════════════ */
+.support-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:28px }
+.support-card {
+  background:#fff; border:1px solid var(--gray-mid); border-radius:var(--radius);
+  padding:28px 20px; text-align:center; cursor:pointer; transition:all .25s;
+}
+.support-card:hover { border-color:var(--blue); transform:translateY(-3px); box-shadow:var(--shadow-lg) }
+.support-card .s-icon { font-size:2.2rem; margin-bottom:10px }
+.support-card .s-title { font-size:.9rem; font-weight:700; color:var(--dark); margin-bottom:4px }
+.support-card .s-sub   { font-size:.78rem; color:var(--gray) }
+@media(max-width:700px) { .support-grid{grid-template-columns:1fr 1fr} }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+@media(max-width:1100px) { .stats-grid{grid-template-columns:repeat(2,1fr)} }
+@media(max-width:900px)  {
+  .sidebar{transform:translateX(100%)}.sidebar.open{transform:translateX(0)}
+  .main-header{width:100%}.hamburger{display:flex}
+  #app{margin-right:0}.stats-grid{grid-template-columns:1fr 1fr}
+  .quick-actions{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px)  {
+  #app{padding:16px}.main-header{padding:0 16px}
+  .stats-grid{grid-template-columns:1fr}.quick-actions{grid-template-columns:1fr}
+  .fg-row{grid-template-columns:1fr}.banner{padding:20px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ LOADER ══ -->
+<div id="loader">
+  <div class="loader-logo">أس</div>
+  <div class="spinner"></div>
+  <div class="loader-text">جاري التحقق من الصلاحيات...</div>
+</div>
+
+<!-- ══ PENDING SCREEN ══ -->
+<div id="pending-screen" style="display:none;min-height:100vh;align-items:center;justify-content:center;background:linear-gradient(135deg,#F1F5F9,#E8EFF7);padding:20px;flex-direction:column">
+  <div class="pending-card">
+    <div class="pending-icon">⏳</div>
+    <h1 class="pending-title">بانتظار الموافقة</h1>
+    <div class="pending-badge">🟡 طلبك قيد المراجعة</div>
+    <p class="pending-sub">
+      شكراً لتسجيلك في أكاديمية سليم كمعلم.<br>
+      طلبك قيد المراجعة من قِبل الإدارة. سيتم إشعارك قريباً بعد قبول الطلب.
+    </p>
+    <button class="btn-logout-pending" onclick="doLogout()">🚪 تسجيل الخروج</button>
+  </div>
+</div>
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar" id="sidebar">
+  <a class="sidebar-logo" href="index.html">
+    <div class="logo-icon">أس</div>
+    <div>
+      <div class="logo-text">أكاديمية سليم</div>
+      <div class="logo-sub">لوحة المعلم</div>
+    </div>
+  </a>
+  <nav class="sidebar-nav">
+    <div class="nav-group-label">القائمة الرئيسية</div>
+    <button class="nav-item active" id="nav-home"     onclick="goTo('home')">
+      <span class="nav-icon">🏠</span> الرئيسية
+    </button>
+    <button class="nav-item"        id="nav-courses"  onclick="goTo('courses')">
+      <span class="nav-icon">📚</span> كورساتي
+    </button>
+    <button class="nav-item"        id="nav-sessions" onclick="goTo('sessions')">
+      <span class="nav-icon">🗓️</span> الحصص
+    </button>
+    <button class="nav-item"        id="nav-students" onclick="goTo('students')">
+      <span class="nav-icon">👥</span> الطلاب
+    </button>
+    <div class="nav-group-label">الحساب</div>
+    <button class="nav-item"        id="nav-profile"  onclick="goTo('profile')">
+      <span class="nav-icon">👤</span> حسابي
+    </button>
+    <button class="nav-item"        id="nav-settings" onclick="goTo('settings')">
+      <span class="nav-icon">⚙️</span> الإعدادات
+    </button>
+    <button class="nav-item"        id="nav-support"  onclick="goTo('support')">
+      <span class="nav-icon">💬</span> الدعم
+    </button>
+    <div class="nav-group-label">الموقع</div>
+    <a class="nav-item" href="index.html">
+      <span class="nav-icon">🌐</span> العودة للموقع
+    </a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-mini">
+      <div class="user-av" id="sidebar-av">م</div>
+      <div>
+        <div class="user-mini-name" id="sidebar-name">...</div>
+        <div class="user-mini-role">👨‍🏫 معلم</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">🚪 تسجيل الخروج</button>
+  </div>
+</aside>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- HEADER -->
+<header class="main-header" id="main-header" style="display:none">
+  <div style="display:flex;align-items:center;gap:12px">
+    <button class="hamburger" onclick="openSidebar()">☰</button>
+    <div class="header-welcome">مرحباً، <span id="hdr-name">معلم</span> 👋</div>
+  </div>
+  <div class="teacher-badge">👨‍🏫 لوحة المعلم</div>
+</header>
+
+<!-- APP MAIN -->
+<main id="app" style="display:none">
+
+  <!-- ════ HOME ════ -->
+  <div class="page active" id="page-home">
+    <div class="banner">
+      <div class="b-title">أهلاً بك في لوحة التحكم 🎓</div>
+      <div class="b-sub">أدر كورساتك وطلابك وحصصك من مكان واحد</div>
+      <div class="b-chips" id="home-chips"></div>
+    </div>
+    <div class="stats-grid" id="home-stats">
+      <div class="stat-card"><div class="stat-icon si-blue">📚</div><div><div class="skel" style="width:60px;height:30px;margin-bottom:4px"></div><div class="stat-label">موادي</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-purple">🏫</div><div><div class="skel" style="width:60px;height:30px;margin-bottom:4px"></div><div class="stat-label">الصفوف</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-green">👥</div><div><div class="skel" style="width:60px;height:30px;margin-bottom:4px"></div><div class="stat-label">طلابي</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-gold">🗓️</div><div><div class="skel" style="width:60px;height:30px;margin-bottom:4px"></div><div class="stat-label">حصص قادمة</div></div></div>
+    </div>
+    <div class="quick-actions">
+      <div class="qa-card" onclick="goTo('courses')">
+        <div class="qa-icon">📚</div>
+        <div class="qa-label">إدارة الكورسات</div>
+        <div class="qa-sub">أضف مواد وصفوف جديدة</div>
+      </div>
+      <div class="qa-card" onclick="goTo('sessions')">
+        <div class="qa-icon">🗓️</div>
+        <div class="qa-label">الحصص القادمة</div>
+        <div class="qa-sub">عرض وإدارة مواعيدك</div>
+      </div>
+      <div class="qa-card" onclick="goTo('students')">
+        <div class="qa-icon">👥</div>
+        <div class="qa-label">طلابي</div>
+        <div class="qa-sub">متابعة الحضور والغياب</div>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-head">
+        <h3>🗓️ الحصص القادمة</h3>
+        <span class="see-all" onclick="goTo('sessions')">عرض الكل ←</span>
+      </div>
+      <div class="section-body" id="home-sessions-list">
+        <div class="skel" style="height:58px;margin-bottom:10px"></div>
+        <div class="skel" style="height:58px;margin-bottom:10px"></div>
+        <div class="skel" style="height:58px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ COURSES ════ -->
+  <div class="page" id="page-courses">
+    <div id="courses-main-view">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="page-title">كورساتي 📚</div>
+          <p class="page-sub" style="margin-bottom:0">إدارة موادك والصفوف الدراسية</p>
+        </div>
+        <button class="btn-primary" onclick="openSubjectModal()">➕ إضافة مادة</button>
+      </div>
+      <div class="subject-list" id="subjects-grid">
+        <div class="skel" style="height:200px;border-radius:16px"></div>
+        <div class="skel" style="height:200px;border-radius:16px"></div>
+        <div class="skel" style="height:200px;border-radius:16px"></div>
+      </div>
+    </div>
+    <!-- Subject Detail View -->
+    <div id="courses-detail-view" style="display:none">
+      <!-- Injected dynamically -->
+    </div>
+  </div>
+
+  <!-- ════ SESSIONS ════ -->
+  <div class="page" id="page-sessions">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="page-title">الحصص 🗓️</div>
+        <p class="page-sub" style="margin-bottom:0">جميع حصصك القادمة والسابقة</p>
+      </div>
+      <button class="btn-primary" onclick="openSessionModal()">➕ إضافة حصة</button>
+    </div>
+    <!-- Calendar Strip -->
+    <div class="cal-strip" id="cal-strip"></div>
+    <!-- Filter -->
+    <div class="sessions-filter">
+      <button class="sf-btn active" id="sf-all"      onclick="setSessFilter('all')">📋 الكل</button>
+      <button class="sf-btn"        id="sf-upcoming" onclick="setSessFilter('upcoming')">🔵 القادمة</button>
+      <button class="sf-btn"        id="sf-live"     onclick="setSessFilter('live')">🟢 مباشرة</button>
+      <button class="sf-btn"        id="sf-ended"    onclick="setSessFilter('ended')">✅ المنتهية</button>
+    </div>
+    <!-- List -->
+    <div id="sessions-list">
+      <div class="skel" style="height:90px;border-radius:14px;margin-bottom:12px"></div>
+      <div class="skel" style="height:90px;border-radius:14px;margin-bottom:12px"></div>
+      <div class="skel" style="height:90px;border-radius:14px"></div>
+    </div>
+  </div>
+
+  <!-- ════ STUDENTS ════ -->
+  <div class="page" id="page-students">
+    <div class="page-title">الطلاب 👥</div>
+    <p class="page-sub">إدارة طلابك وتسجيل الحضور والغياب</p>
+    <!-- Tabs: Students / Attendance -->
+    <div class="stu-page-tabs">
+      <button class="stu-tab active" id="stab-list"   onclick="switchStuTab('list')">👥 قائمة الطلاب</button>
+      <button class="stu-tab"        id="stab-attend" onclick="switchStuTab('attend')">✅ الحضور والغياب</button>
+    </div>
+    <!-- STUDENT LIST VIEW -->
+    <div id="stu-list-view">
+      <!-- Grade filter -->
+      <div class="grade-selector-bar" id="stu-grade-bar">
+        <span style="font-size:.82rem;font-weight:700;color:var(--gray)">الصف:</span>
+        <!-- injected -->
+      </div>
+      <div id="stu-list-content">
+        <div class="skel" style="height:72px;border-radius:12px;margin-bottom:10px"></div>
+        <div class="skel" style="height:72px;border-radius:12px;margin-bottom:10px"></div>
+        <div class="skel" style="height:72px;border-radius:12px"></div>
+      </div>
+    </div>
+    <!-- ATTENDANCE VIEW -->
+    <div id="stu-attend-view" style="display:none">
+      <div class="section-card">
+        <div class="section-head">
+          <h3>✅ تسجيل حضور وغياب</h3>
+          <div style="display:flex;gap:10px;align-items:center">
+            <input type="date" id="att-date" style="padding:6px 12px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:Cairo,sans-serif;font-size:.85rem;direction:ltr">
+            <button class="btn-sm btn-edit" onclick="loadAttendanceForDate()">🔄 تحديث</button>
+          </div>
+        </div>
+        <!-- grade filter for attendance -->
+        <div style="padding:14px 22px;border-bottom:1px solid var(--gray-mid)">
+          <div class="grade-selector-bar" id="att-grade-bar" style="margin-bottom:0">
+            <span style="font-size:.82rem;font-weight:700;color:var(--gray)">الصف:</span>
+          </div>
+        </div>
+        <div class="section-body">
+          <div id="att-summary" class="att-summary" style="display:none">
+            <div class="att-sum-item"><span style="color:var(--green)">✅</span> <span id="att-pres-count">0</span> حضر</div>
+            <div class="att-sum-item"><span style="color:var(--red)">❌</span> <span id="att-abs-count">0</span> غاب</div>
+            <div class="att-sum-item"><span style="color:var(--gray)">⬜</span> <span id="att-none-count">0</span> لم يُسجَّل</div>
+          </div>
+          <div id="att-list">
+            <div class="empty-box"><div class="ei">📋</div><div class="et">اختر الصف والتاريخ لتسجيل الحضور</div></div>
+          </div>
+          <div style="margin-top:16px;text-align:left">
+            <button class="btn-primary" id="save-att-btn" style="display:none" onclick="saveAttendance()">💾 حفظ الحضور</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ PROFILE ════ -->
+  <div class="page" id="page-profile">
+    <!-- Profile header card -->
+    <div class="profile-header">
+      <div class="av-circle" id="prof-av-circle">م</div>
+      <label class="av-upload-lbl">
+        📷 تغيير الصورة
+        <input type="file" id="prof-av-input" accept="image/*" style="display:none" onchange="handleAvatarChange(this)">
+      </label>
+      <div class="prof-name" id="prof-display-name">...</div>
+      <div class="prof-spec" id="prof-display-spec">...</div>
+    </div>
+    <!-- Intro video upload -->
+    <div class="intro-video-wrap">
+      <div class="intro-video-icon">🎬</div>
+      <div class="intro-video-info">
+        <div class="intro-video-title">فيديو التعريف بك</div>
+        <div class="intro-video-sub" id="intro-video-status">لم يتم رفع فيديو بعد</div>
+      </div>
+      <button class="intro-video-btn" onclick="openIntroVideoModal()">⬆️ رفع / تعديل</button>
+    </div>
+    <!-- Profile form -->
+    <div class="section-card">
+      <div class="section-head"><h3>👤 البيانات الشخصية</h3></div>
+      <div class="section-body">
+        <div class="fg-row">
+          <div class="fg"><label>الاسم الكامل</label><input type="text" id="prof-name" placeholder="اسمك الكامل"></div>
+          <div class="fg"><label>رقم الموبايل</label><input type="tel" id="prof-phone" placeholder="05xxxxxxxxx" style="direction:ltr"></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>التخصص</label><input type="text" id="prof-spec" placeholder="رياضيات، فيزياء..."></div>
+          <div class="fg"><label>سنوات الخبرة</label><input type="text" id="prof-exp" placeholder="مثال: 5 سنوات"></div>
+        </div>
+        <div class="fg"><label>نبذة عنك</label><textarea id="prof-bio" rows="4" placeholder="اكتب نبذة مختصرة عن نفسك وأسلوبك في التدريس..."></textarea></div>
+        <div id="prof-msg"></div>
+        <div class="mdl-btns" style="margin-top:0;justify-content:flex-start">
+          <button class="btn-primary" id="save-prof-btn" onclick="saveProfile()">💾 حفظ التغييرات</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ SETTINGS ════ -->
+  <div class="page" id="page-settings">
+    <div class="page-title">الإعدادات ⚙️</div>
+    <p class="page-sub">تعديل بياناتك وكلمة المرور</p>
+    <!-- Personal info -->
+    <div class="settings-section">
+      <div class="settings-head">👤 البيانات الشخصية</div>
+      <div class="settings-body">
+        <div class="fg-row">
+          <div class="fg"><label>الاسم الكامل</label><input type="text" id="sett-name" placeholder="الاسم الكامل"></div>
+          <div class="fg"><label>رقم الموبايل</label><input type="tel" id="sett-phone" placeholder="05xxxxxxxxx" style="direction:ltr"></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>التخصص</label><input type="text" id="sett-spec" placeholder="التخصص الدراسي"></div>
+          <div class="fg"><label>سنوات الخبرة</label><input type="text" id="sett-exp" placeholder="5 سنوات"></div>
+        </div>
+        <div class="fg"><label>نبذة عنك</label><textarea id="sett-bio" rows="3" placeholder="نبذة مختصرة..."></textarea></div>
+        <div id="sett-info-msg"></div>
+        <button class="btn-primary" onclick="saveSettingsInfo()">💾 حفظ البيانات</button>
+      </div>
+    </div>
+    <!-- Change password -->
+    <div class="settings-section">
+      <div class="settings-head">🔐 تغيير كلمة المرور</div>
+      <div class="settings-body">
+        <div class="fg"><label>كلمة المرور الجديدة</label><input type="password" id="sett-pw1" placeholder="8 أحرف على الأقل" style="direction:ltr"></div>
+        <div class="fg"><label>تأكيد كلمة المرور</label><input type="password" id="sett-pw2" placeholder="أعد كتابة كلمة المرور" style="direction:ltr"></div>
+        <div id="sett-pw-msg"></div>
+        <button class="btn-primary" onclick="changePassword()">🔐 تغيير كلمة المرور</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ SUPPORT ════ -->
+  <div class="page" id="page-support">
+    <div class="page-title">الدعم 💬</div>
+    <p class="page-sub">تواصل مع الإدارة أو أرسل تقرير مشكلة</p>
+    <div class="support-grid">
+      <div class="support-card" onclick="window.open('https://wa.me/966500000000','_blank')">
+        <div class="s-icon">💬</div>
+        <div class="s-title">واتساب</div>
+        <div class="s-sub">تواصل مباشر مع الإدارة</div>
+      </div>
+      <div class="support-card" onclick="window.location.href='mailto:support@selim-academy.com'">
+        <div class="s-icon">📧</div>
+        <div class="s-title">البريد الإلكتروني</div>
+        <div class="s-sub">support@selim-academy.com</div>
+      </div>
+      <div class="support-card" onclick="openSupportTicket()">
+        <div class="s-icon">🎫</div>
+        <div class="s-title">إرسال تذكرة</div>
+        <div class="s-sub">وصّف مشكلتك بالتفصيل</div>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-head"><h3>🎫 إرسال بلاغ / استفسار</h3></div>
+      <div class="section-body">
+        <div class="fg"><label>الموضوع</label><input type="text" id="ticket-subject" placeholder="وصف مختصر للمشكلة"></div>
+        <div class="fg"><label>التفاصيل</label><textarea id="ticket-body" rows="5" placeholder="اكتب تفاصيل مشكلتك هنا..."></textarea></div>
+        <div id="ticket-msg"></div>
+        <button class="btn-primary" onclick="sendSupportTicket()">📤 إرسال البلاغ</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══ MODAL: Add/Edit Session ══ -->
+<div class="mdl" id="mdl-session">
+  <div class="mdl-box wide" style="position:relative">
+    <div class="mdl-title" id="sess-mdl-title">➕ إضافة حصة</div>
+    <input type="hidden" id="sess-edit-id">
+    <div class="fg">
+      <label>عنوان الحصة *</label>
+      <input type="text" id="sess-title" placeholder="مثال: شرح درس المعادلات التربيعية">
+    </div>
+    <div class="fg-row">
+      <div class="fg">
+        <label>المادة</label>
+        <select id="sess-subject-sel">
+          <option value="">— اختر المادة —</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>الصف</label>
+        <select id="sess-grade-sel">
+          <option value="">— اختر الصف —</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg-row">
+      <div class="fg">
+        <label>تاريخ ووقت الحصة *</label>
+        <input type="datetime-local" id="sess-datetime" style="direction:ltr">
+      </div>
+      <div class="fg">
+        <label>مدة الحصة (دقيقة)</label>
+        <input type="number" id="sess-duration" placeholder="60" min="15" max="300" value="60">
+      </div>
+    </div>
+    <div class="fg">
+      <label>رابط Zoom / Google Meet (اختياري)</label>
+      <input type="url" id="sess-zoom" placeholder="https://zoom.us/j/..." style="direction:ltr">
+    </div>
+    <div id="sess-mdl-msg"></div>
+    <div class="mdl-btns">
+      <button class="btn-secondary" onclick="closeSessionModal()">إلغاء</button>
+      <button class="btn-primary" id="save-sess-btn" onclick="saveSession()">💾 حفظ الحصة</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Student Detail ══ -->
+<div class="mdl" id="mdl-student">
+  <div class="mdl-box wide" style="position:relative;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+      <div class="stu-av" id="stu-detail-av">م</div>
+      <div>
+        <div style="font-size:1.05rem;font-weight:900;color:var(--dark)" id="stu-detail-name">...</div>
+        <div style="font-size:.78rem;color:var(--gray)" id="stu-detail-grade">...</div>
+      </div>
+      <button class="btn-secondary" style="margin-right:auto;padding:7px 14px;font-size:.8rem" onclick="closeStudentDetail()">✕ إغلاق</button>
+    </div>
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+      <div style="background:var(--green-light);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:1.6rem;font-weight:900;color:var(--green)" id="det-present">0</div>
+        <div style="font-size:.74rem;color:var(--green)">✅ أيام حضور</div>
+      </div>
+      <div style="background:var(--red-light);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:1.6rem;font-weight:900;color:var(--red)" id="det-absent">0</div>
+        <div style="font-size:.74rem;color:var(--red)">❌ أيام غياب</div>
+      </div>
+      <div style="background:var(--blue-light);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:1.6rem;font-weight:900;color:var(--blue)" id="det-pct">0%</div>
+        <div style="font-size:.74rem;color:var(--blue)">📊 نسبة الحضور</div>
+      </div>
+    </div>
+    <div style="font-size:.85rem;font-weight:700;color:var(--dark);margin-bottom:12px">📋 سجل الحضور</div>
+    <div id="stu-att-records"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Intro Video ══ -->
+<div class="mdl" id="mdl-intro-video">
+  <div class="mdl-box" style="position:relative">
+    <div class="mdl-title">🎬 فيديو التعريف بك</div>
+    <p style="font-size:.84rem;color:var(--gray);margin-bottom:18px">أضف رابط فيديو تعريفي عنك ليشاهده الطلاب. يمكن أن يكون YouTube أو Google Drive.</p>
+    <div class="fg">
+      <label>رابط الفيديو *</label>
+      <input type="url" id="intro-video-url" placeholder="https://www.youtube.com/watch?v=..." style="direction:ltr">
+    </div>
+    <div id="intro-video-msg"></div>
+    <div class="mdl-btns">
+      <button class="btn-secondary" onclick="closeIntroVideoModal()">إلغاء</button>
+      <button class="btn-primary" id="save-intro-btn" onclick="saveIntroVideo()">💾 حفظ الرابط</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Add Subject ══ -->
+
+<div class="mdl" id="mdl-subject">
+  <div class="mdl-box" style="position:relative">
+    <div class="mdl-title">➕ إضافة مادة جديدة</div>
+    <input type="hidden" id="edit-subject-id">
+    <div class="fg">
+      <label>اسم المادة *</label>
+      <input type="text" id="subj-name" placeholder="مثال: الرياضيات، الفيزياء، اللغة العربية...">
+    </div>
+    <div class="fg-row">
+      <div class="fg">
+        <label>الأيقونة (emoji)</label>
+        <input type="text" id="subj-icon" placeholder="📐" style="text-align:center;font-size:1.3rem">
+      </div>
+      <div class="fg">
+        <label>المرحلة الدراسية</label>
+        <select id="subj-level">
+          <option value="">— اختر —</option>
+          <option>ابتدائي</option>
+          <option>إعدادي</option>
+          <option>ثانوي</option>
+          <option>جامعي</option>
+          <option>جميع المراحل</option>
+        </select>
+      </div>
+    </div>
+    <div id="subj-msg"></div>
+    <div class="mdl-btns">
+      <button class="btn-secondary" onclick="closeSubjectModal()">إلغاء</button>
+      <button class="btn-primary" id="save-subj-btn" onclick="saveSubject()">💾 حفظ المادة</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Add Grade ══ -->
+<div class="mdl" id="mdl-grade">
+  <div class="mdl-box" style="position:relative">
+    <div class="mdl-title" id="grade-modal-title">➕ إضافة صف دراسي</div>
+    <input type="hidden" id="edit-grade-subj-id">
+    <div class="fg">
+      <label>اسم الصف *</label>
+      <input type="text" id="grade-name" placeholder="مثال: الصف الأول المتوسط، الصف الثالث الإعدادي...">
+    </div>
+    <div class="fg">
+      <label>وصف مختصر (اختياري)</label>
+      <input type="text" id="grade-desc" placeholder="مثال: مجموعة صباحية — ٢٠ طالب">
+    </div>
+    <div id="grade-msg"></div>
+    <div class="mdl-btns">
+      <button class="btn-secondary" onclick="closeGradeModal()">إلغاء</button>
+      <button class="btn-primary" id="save-grade-btn" onclick="saveGrade()">💾 إضافة الصف</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Upload File ══ -->
+<div class="mdl" id="mdl-upload-file">
+  <div class="mdl-box wide" style="position:relative">
+    <div class="mdl-title">📎 رفع ملف</div>
+    <input type="hidden" id="upload-file-path">
+    <div class="fg">
+      <label>عنوان الملف</label>
+      <input type="text" id="file-title" placeholder="مثال: شرح المعادلات التربيعية — الدرس الأول">
+    </div>
+    <div
+      class="upload-zone"
+      id="file-drop-zone"
+      onclick="document.getElementById('file-input').click()"
+      ondragover="handleDragOver(event,'file-drop-zone')"
+      ondragleave="handleDragLeave('file-drop-zone')"
+      ondrop="handleFileDrop(event,'file')"
+    >
+      <div class="uz-icon">📎</div>
+      <div class="uz-text">اضغط لاختيار ملف أو اسحبه هنا</div>
+      <div class="uz-sub">PDF, Word, Excel, PowerPoint — حجم أقصى 50 MB</div>
+      <input type="file" id="file-input" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" onchange="handleFileSelected(this,'file')">
+      <div id="file-selected-name" style="margin-top:10px;font-size:.82rem;color:var(--blue);font-weight:700"></div>
+      <div class="upload-progress" id="file-upload-progress" style="display:none">
+        <div class="upload-progress-bar" id="file-upload-bar" style="width:0%"></div>
+      </div>
+    </div>
+    <div id="file-upload-msg"></div>
+    <div class="mdl-btns">
+      <button class="btn-secondary" onclick="closeUploadFileModal()">إلغاء</button>
+      <button class="btn-primary" id="upload-file-btn" onclick="uploadFile()">⬆️ رفع الملف</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Upload Video ══ -->
+<div class="mdl" id="mdl-upload-video">
+  <div class="mdl-box wide" style="position:relative">
+    <div class="mdl-title">🎬 إضافة فيديو</div>
+    <input type="hidden" id="upload-video-path">
+    <div class="fg">
+      <label>عنوان الفيديو *</label>
+      <input type="text" id="video-title" placeholder="مثال: شرح درس المثلثات — الجزء الأول">
+    </div>
+    <div class="fg">
+      <label>رابط الفيديو (YouTube / Google Drive / الرابط المباشر) *</label>
+      <input type="url" id="video-url" placeholder="https://www.youtube.com/watch?v=..." style="direction:ltr">
+    </div>
+    <div class="fg">
+      <label>ملاحظات (اختياري)</label>
+      <input type="text" id="video-note" placeholder="مثال: مدة الفيديو 45 دقيقة">
+    </div>
+    <div id="video-upload-msg"></div>
+    <div class="mdl-btns">
+      <button class="btn-secondary" onclick="closeUploadVideoModal()">إلغاء</button>
+      <button class="btn-primary" id="upload-video-btn" onclick="saveVideo()">💾 حفظ الفيديو</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONFIRM MODAL ══ -->
+<div class="mdl" id="mdl-confirm">
+  <div class="mdl-box">
+    <div style="font-size:2.2rem;text-align:center;margin-bottom:12px" id="confirm-icon">❓</div>
+    <div class="mdl-title" style="text-align:center" id="confirm-title">تأكيد</div>
+    <p style="text-align:center;color:var(--gray);font-size:.87rem;margin-bottom:20px" id="confirm-sub">هل أنت متأكد؟</p>
+    <div class="mdl-btns" style="justify-content:center">
+      <button class="btn-secondary" onclick="closeConfirm()">إلغاء</button>
+      <button class="btn-primary" id="confirm-do-btn" style="background:var(--red)" onclick="runConfirm()">تأكيد</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div id="toast-wrap"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// SUPABASE
+// ══════════════════════════════════════════════
+const sb = supabase.createClient(
+  'https://hjhoudwknwnxfndrgpfe.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s'
+);
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+const ST = {
+  user: null, profile: null,
+  subjects: [],       // teacher_subjects table
+  sessions: [],       // teacher sessions
+  currentPage: 'home',
+  curSubjectId: null,
+  curGradeId: null,
+  curContentTab: 'files',
+  files: [],
+  videos: [],
+  pendingConfirm: null
+};
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+const ini  = n => !n ? 'م' : n.trim().split(' ').slice(0,2).map(w=>w[0]).join('');
+const fds  = d => d ? new Date(d).toLocaleDateString('ar-EG',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const fhr  = d => d ? new Date(d).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}) : '—';
+const fday = d => d ? new Date(d).toLocaleDateString('ar-EG',{weekday:'long'}) : '—';
+const fsize= b => b < 1024*1024 ? (b/1024).toFixed(0)+' KB' : (b/1024/1024).toFixed(1)+' MB';
+
+function toast(msg, type='ok') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type==='ok' ? 't-ok' : 't-err');
+  el.innerHTML = (type==='ok' ? '✅ ' : '❌ ') + msg;
+  document.getElementById('toast-wrap').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+function setMsg(id, msg, type='ok') {
+  const el = document.getElementById(id); if(!el) return;
+  el.innerHTML = `<div class="msg-${type}">${type==='ok'?'✅':'❌'} ${msg}</div>`;
+  if(type==='ok') setTimeout(()=>{ el.innerHTML=''; }, 4000);
+}
+function getFileIcon(name) {
+  const ext = (name||'').split('.').pop().toLowerCase();
+  const map = {pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📊',pptx:'📊',txt:'📃'};
+  return map[ext] || '📎';
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function openSidebar()  { document.getElementById('sidebar').classList.add('open');  document.getElementById('overlay').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); }
+
+function goTo(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const navEl = document.getElementById('nav-'+name);
+  if(navEl) navEl.classList.add('active');
+  closeSidebar();
+  ST.currentPage = name;
+  window.scrollTo(0,0);
+
+  // Reset courses view if going back
+  if(name === 'courses') {
+    showCoursesMain();
+    loadSubjects();
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  window.location.href = 'login.html';
+}
+
+// ══════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════
+async function boot() {
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) { window.location.href = 'login.html'; return; }
+  ST.user = session.user;
+
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', ST.user.id).single();
+  ST.profile = profile;
+
+  // Check role
+  if(profile?.role !== 'teacher') {
+    // Not a teacher → redirect
+    window.location.href = 'dashboard.html';
+    return;
+  }
+
+  // Check approval status
+  const { data: req } = await sb.from('subscription_requests')
+    .select('status').eq('user_id', ST.user.id).eq('role','teacher')
+    .order('created_at',{ascending:false}).limit(1).maybeSingle();
+
+  // If admin explicitly approved this teacher
+  const approved = profile?.teacher_approved === true;
+  const rejected = profile?.teacher_approved === false; // explicit false = rejected
+
+  document.getElementById('loader').style.display = 'none';
+
+  if(approved) {
+    // Fall through to show dashboard
+  } else {
+    // Show pending/rejected screen
+    const pendingEl = document.getElementById('pending-screen');
+    pendingEl.style.display = 'flex';
+    pendingEl.style.flexDirection = 'column';
+
+    if(rejected) {
+      // Update UI to show rejection
+      pendingEl.querySelector('.pending-icon').textContent = '❌';
+      pendingEl.querySelector('.pending-title').textContent = 'تم رفض طلبك';
+      pendingEl.querySelector('.pending-badge').innerHTML = '🔴 طلبك مرفوض';
+      pendingEl.querySelector('.pending-badge').style.background = 'var(--red-light)';
+      pendingEl.querySelector('.pending-badge').style.color = 'var(--red)';
+      pendingEl.querySelector('.pending-badge').style.borderColor = '#FECACA';
+      pendingEl.querySelector('.pending-sub').innerHTML = `
+        نأسف، تم رفض طلب تسجيلك كمعلم في أكاديمية سليم.<br>
+        يمكنك التواصل مع الإدارة لمعرفة السبب أو تقديم طلب جديد.
+        <br><br>
+        <a href="https://wa.me/966500000000" target="_blank" style="color:var(--blue);font-weight:700;text-decoration:none">💬 تواصل مع الإدارة</a>
+      `;
+    }
+    return;
+  }
+
+  // Setup UI
+  const name = profile?.full_name || 'معلم';
+  const nameFirst = name.split(' ')[0];
+  document.getElementById('hdr-name').textContent = nameFirst;
+  document.getElementById('sidebar-name').textContent = name;
+  const av = document.getElementById('sidebar-av');
+  if(profile?.avatar_url) {
+    av.innerHTML = `<img src="${profile.avatar_url}" alt="">`;
+  } else {
+    av.textContent = ini(name);
+  }
+
+  document.getElementById('main-header').style.display = 'flex';
+  document.getElementById('app').style.display = 'block';
+
+  await Promise.all([ loadHomeData(), loadSubjects() ]);
+}
+
+// ══════════════════════════════════════════════
+// HOME DATA
+// ══════════════════════════════════════════════
+async function loadHomeData() {
+  try {
+    const [subjRes, sessRes] = await Promise.all([
+      sb.from('teacher_subjects').select('*, teacher_grades(*)').eq('teacher_id', ST.user.id),
+      sb.from('teacher_sessions').select('*').eq('teacher_id', ST.user.id)
+        .gte('scheduled_at', new Date().toISOString()).order('scheduled_at',{ascending:true}).limit(5)
+    ]);
+
+    const subjects  = subjRes.data || [];
+    const sessions  = sessRes.data || [];
+    ST.sessions = sessions;
+
+    // Count grades
+    const gradeCount = subjects.reduce((s,sub) => s + (sub.teacher_grades?.length||0), 0);
+
+    // Get student count (enrollments linked to teacher)
+    const { count: stuCount } = await sb.from('teacher_enrollments')
+      .select('*',{count:'exact',head:true}).eq('teacher_id', ST.user.id);
+
+    // Render stats
+    document.getElementById('home-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-icon si-blue">📚</div><div><div class="stat-num">${subjects.length}</div><div class="stat-label">موادي</div><div class="stat-delta d-up">↑ ${subjects.length} مادة</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-purple">🏫</div><div><div class="stat-num">${gradeCount}</div><div class="stat-label">الصفوف الدراسية</div><div class="stat-delta d-up">↑ ${gradeCount} صف</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-green">👥</div><div><div class="stat-num">${stuCount||0}</div><div class="stat-label">طلابي</div><div class="stat-delta d-up">↑ نشطون</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-gold">🗓️</div><div><div class="stat-num">${sessions.length}</div><div class="stat-label">حصص قادمة</div><div class="stat-delta ${sessions.length>0?'d-up':''}">↑ هذا الأسبوع</div></div></div>
+    `;
+
+    // Render chips
+    const spec = ST.profile?.specialization || '';
+    const exp  = ST.profile?.experience_years ? ST.profile.experience_years + ' سنوات خبرة' : '';
+    document.getElementById('home-chips').innerHTML = 
+      (spec ? `<div class="b-chip">📖 ${spec}</div>` : '') +
+      (exp  ? `<div class="b-chip">⭐ ${exp}</div>`  : '') +
+      `<div class="b-chip">📚 ${subjects.length} مادة</div>`;
+
+    // Render sessions
+    renderHomeSessions(sessions);
+  } catch(e) {
+    console.error(e);
+    toast('خطأ في تحميل البيانات: '+e.message,'err');
+  }
+}
+
+function renderHomeSessions(sessions) {
+  const el = document.getElementById('home-sessions-list');
+  if(!sessions.length) {
+    el.innerHTML = `<div class="empty-box"><div class="ei">🗓️</div><div class="et">لا توجد حصص قادمة</div><div class="ed">أضف حصتك الأولى من صفحة الحصص</div></div>`;
+    return;
+  }
+  el.innerHTML = sessions.map(s => `
+    <div class="sess-mini">
+      <div class="sess-time-box">
+        <div class="sess-day">${fday(s.scheduled_at).slice(0,3)}</div>
+        <div class="sess-hr">${fhr(s.scheduled_at)}</div>
+      </div>
+      <div class="sess-info">
+        <div class="sess-title">${s.title||'حصة'}</div>
+        <div class="sess-meta">${s.subject_name||''} ${s.grade_name?'· '+s.grade_name:''} · ${fds(s.scheduled_at)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+// SUBJECTS (MY COURSES)
+// ══════════════════════════════════════════════
+async function loadSubjects() {
+  const el = document.getElementById('subjects-grid');
+  el.innerHTML = [1,2,3].map(()=>`<div class="skel" style="height:200px;border-radius:16px"></div>`).join('');
+  try {
+    const { data, error } = await sb.from('teacher_subjects')
+      .select('*, teacher_grades(*)')
+      .eq('teacher_id', ST.user.id)
+      .order('created_at',{ascending:false});
+    if(error) throw error;
+    ST.subjects = data || [];
+    renderSubjectsGrid();
+  } catch(e) {
+    console.error(e);
+    el.innerHTML = `<div class="empty-box" style="grid-column:1/-1"><div class="ei">⚠️</div><div class="et">خطأ في التحميل</div><div class="ed">${e.message}</div></div>`;
+  }
+}
+
+function renderSubjectsGrid() {
+  const el = document.getElementById('subjects-grid');
+  const subjects = ST.subjects;
+  
+  let html = subjects.map(s => {
+    const grades = s.teacher_grades || [];
+    return `
+      <div class="subject-card" id="sc-${s.id}">
+        <div class="subj-icon">${s.icon||'📚'}</div>
+        <div class="subj-name">${s.name}</div>
+        <div class="subj-meta">${s.level||''} ${grades.length ? '· '+grades.length+' صف' : ''}</div>
+        <div class="subj-grades">
+          ${grades.slice(0,3).map(g=>`<span class="grade-chip" onclick="event.stopPropagation();openGradeContent('${s.id}','${g.id}')">${g.name}</span>`).join('')}
+          ${grades.length > 3 ? `<span class="grade-chip">+${grades.length-3}</span>` : ''}
+        </div>
+        <div class="subj-acts">
+          <button class="btn-sm btn-edit" onclick="event.stopPropagation();openAddGradeModal('${s.id}')">➕ صف جديد</button>
+          <button class="btn-sm btn-del"  onclick="event.stopPropagation();confirmDelete('subject','${s.id}','${s.name.replace(/'/g,'')}')">🗑️</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Add button
+  html += `
+    <button class="add-subject-btn" onclick="openSubjectModal()">
+      <div class="plus">➕</div>
+      <div class="txt">إضافة مادة جديدة</div>
+    </button>
+  `;
+  el.innerHTML = html;
+}
+
+function showCoursesMain() {
+  document.getElementById('courses-main-view').style.display = 'block';
+  document.getElementById('courses-detail-view').style.display = 'none';
+  ST.curSubjectId = null;
+  ST.curGradeId   = null;
+}
+
+// ── Open Grade Content (files/videos) ──
+async function openGradeContent(subjId, gradeId) {
+  ST.curSubjectId = subjId;
+  ST.curGradeId   = gradeId;
+
+  const subj  = ST.subjects.find(s => s.id === subjId);
+  const grade = subj?.teacher_grades?.find(g => g.id === gradeId);
+
+  document.getElementById('courses-main-view').style.display  = 'none';
+  document.getElementById('courses-detail-view').style.display = 'block';
+
+  renderDetailView(subj, grade);
+  await loadContent('files');
+}
+
+function renderDetailView(subj, grade) {
+  const el = document.getElementById('courses-detail-view');
+  el.innerHTML = `
+    <div class="subj-detail">
+      <div class="breadcrumb">
+        <span class="breadcrumb-link" onclick="showCoursesMain()">📚 كورساتي</span>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-link" onclick="showSubjectGrades('${subj?.id}')">${subj?.icon||'📚'} ${subj?.name}</span>
+        <span class="breadcrumb-sep">›</span>
+        <span style="color:var(--dark);font-weight:700">🏫 ${grade?.name||'الصف'}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="page-title">${subj?.icon||'📚'} ${subj?.name} — ${grade?.name}</div>
+          <p class="page-sub" style="margin-bottom:0">المحتوى التعليمي لهذا الصف</p>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+        <div class="content-tabs">
+          <button class="content-tab active" id="tab-files"  onclick="switchContentTab('files')">📎 الملفات</button>
+          <button class="content-tab"        id="tab-videos" onclick="switchContentTab('videos')">🎬 الفيديوهات</button>
+        </div>
+        <div class="content-actions" id="content-actions-bar">
+          <button class="btn-upload btn-upload-file"  onclick="openUploadFileModal()">📎 رفع ملف</button>
+          <button class="btn-upload btn-upload-video" onclick="openUploadVideoModal()">🎬 إضافة فيديو</button>
+        </div>
+      </div>
+      <div id="content-area">
+        <div class="skel" style="height:60px;margin-bottom:10px"></div>
+        <div class="skel" style="height:60px;margin-bottom:10px"></div>
+        <div class="skel" style="height:60px"></div>
+      </div>
+    </div>
+  `;
+}
+
+function showSubjectGrades(subjId) {
+  const subj = ST.subjects.find(s => s.id === subjId);
+  if(!subj) { showCoursesMain(); return; }
+
+  const grades = subj.teacher_grades || [];
+  document.getElementById('courses-main-view').style.display  = 'none';
+  document.getElementById('courses-detail-view').style.display = 'block';
+  document.getElementById('courses-detail-view').innerHTML = `
+    <div class="subj-detail">
+      <div class="breadcrumb">
+        <span class="breadcrumb-link" onclick="showCoursesMain()">📚 كورساتي</span>
+        <span class="breadcrumb-sep">›</span>
+        <span style="color:var(--dark);font-weight:700">${subj.icon||'📚'} ${subj.name}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="page-title">${subj.icon||'📚'} ${subj.name}</div>
+          <p class="page-sub" style="margin-bottom:0">اختر الصف لإدارة محتواه</p>
+        </div>
+        <button class="btn-primary" onclick="openAddGradeModal('${subj.id}')">➕ إضافة صف</button>
+      </div>
+      <div class="grade-selection">
+        ${grades.map(g => `
+          <div class="grade-sel-card" onclick="openGradeContent('${subj.id}','${g.id}')">
+            <div class="gsc-icon">🏫</div>
+            <div class="gsc-name">${g.name}</div>
+            <div class="gsc-count">${g.description||'انقر لعرض المحتوى'}</div>
+          </div>
+        `).join('')}
+        <div class="grade-sel-card" style="border-style:dashed;cursor:pointer" onclick="openAddGradeModal('${subj.id}')">
+          <div class="gsc-icon">➕</div>
+          <div class="gsc-name">إضافة صف جديد</div>
+          <div class="gsc-count">أضف صفاً دراسياً جديداً</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Content Tabs ──
+async function switchContentTab(tab) {
+  ST.curContentTab = tab;
+  document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
+  const el = document.getElementById('tab-'+tab);
+  if(el) el.classList.add('active');
+  await loadContent(tab);
+}
+
+async function loadContent(tab) {
+  const area = document.getElementById('content-area');
+  if(!area) return;
+  area.innerHTML = `<div class="skel" style="height:60px;margin-bottom:10px"></div><div class="skel" style="height:60px;margin-bottom:10px"></div><div class="skel" style="height:60px"></div>`;
+  try {
+    if(tab === 'files') {
+      const { data, error } = await sb.from('teacher_materials')
+        .select('*')
+        .eq('grade_id', ST.curGradeId)
+        .eq('type','file')
+        .order('created_at',{ascending:true});
+      if(error) throw error;
+      ST.files = data || [];
+      renderFiles();
+    } else {
+      const { data, error } = await sb.from('teacher_materials')
+        .select('*')
+        .eq('grade_id', ST.curGradeId)
+        .eq('type','video')
+        .order('created_at',{ascending:true});
+      if(error) throw error;
+      ST.videos = data || [];
+      renderVideos();
+    }
+  } catch(e) {
+    area.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ في التحميل</div><div class="ed">${e.message}</div></div>`;
+  }
+}
+
+function renderFiles() {
+  const area = document.getElementById('content-area');
+  if(!area) return;
+  if(!ST.files.length) {
+    area.innerHTML = `<div class="empty-box"><div class="ei">📎</div><div class="et">لا توجد ملفات بعد</div><div class="ed">اضغط "رفع ملف" لإضافة أول ملف لهذا الصف</div></div>`;
+    return;
+  }
+  area.innerHTML = `<div class="files-list">` +
+    ST.files.map((f,i) => `
+      <div class="file-item" id="fi-${f.id}">
+        <div class="file-num">${i+1}</div>
+        <div class="file-icon">${getFileIcon(f.file_name||f.url)}</div>
+        <div class="file-info">
+          <div class="file-name">${f.title||f.file_name||'ملف'}</div>
+          <div class="file-meta">${f.file_size ? fsize(f.file_size) : ''} ${f.file_name ? '· '+f.file_name : ''}</div>
+        </div>
+        <div class="file-date">${fds(f.created_at)}</div>
+        <div class="file-acts">
+          <a class="btn-sm btn-edit" href="${f.url}" target="_blank" download>⬇️ تحميل</a>
+          <button class="btn-sm btn-del" onclick="confirmDelete('material','${f.id}','${(f.title||'الملف').replace(/'/g,'')}')">🗑️</button>
+        </div>
+      </div>
+    `).join('') +
+  `</div>`;
+}
+
+function renderVideos() {
+  const area = document.getElementById('content-area');
+  if(!area) return;
+  if(!ST.videos.length) {
+    area.innerHTML = `<div class="empty-box"><div class="ei">🎬</div><div class="et">لا توجد فيديوهات بعد</div><div class="ed">اضغط "إضافة فيديو" لإضافة أول فيديو لهذا الصف</div></div>`;
+    return;
+  }
+  area.innerHTML = `<div class="videos-grid">` +
+    ST.videos.map((v,i) => {
+      const thumb = getVideoThumb(v.url);
+      return `
+        <div class="video-card" id="vi-${v.id}">
+          <div class="video-thumb" style="${thumb?'background:none':''}">
+            ${thumb ? `<img src="${thumb}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0">` : ''}
+            <div class="video-num">${i+1}</div>
+            <div class="video-play" onclick="window.open('${v.url}','_blank')">▶️</div>
+          </div>
+          <div class="video-body">
+            <div class="video-title">${v.title||'فيديو'}</div>
+            <div class="video-meta">${v.note||''} · ${fds(v.created_at)}</div>
+            <div class="video-acts">
+              <a class="btn-sm btn-edit" href="${v.url}" target="_blank">🔗 فتح</a>
+              <button class="btn-sm btn-del" onclick="confirmDelete('material','${v.id}','${(v.title||'الفيديو').replace(/'/g,'')}')">🗑️</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('') +
+  `</div>`;
+}
+
+function getVideoThumb(url) {
+  if(!url) return '';
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if(ytMatch) return `https://img.youtube.com/vi/${ytMatch[1]}/mqdefault.jpg`;
+  return '';
+}
+
+// ══════════════════════════════════════════════
+// SUBJECT MODAL
+// ══════════════════════════════════════════════
+function openSubjectModal(id) {
+  const s = id ? ST.subjects.find(x => x.id === id) : null;
+  document.getElementById('edit-subject-id').value = s?.id || '';
+  document.getElementById('subj-name').value = s?.name || '';
+  document.getElementById('subj-icon').value = s?.icon || '📚';
+  document.getElementById('subj-level').value = s?.level || '';
+  document.getElementById('subj-msg').innerHTML = '';
+  document.getElementById('mdl-subject').classList.add('show');
+  setTimeout(() => document.getElementById('subj-name').focus(), 100);
+}
+function closeSubjectModal() { document.getElementById('mdl-subject').classList.remove('show'); }
+
+async function saveSubject() {
+  const id   = document.getElementById('edit-subject-id').value;
+  const name = document.getElementById('subj-name').value.trim();
+  if(!name) { setMsg('subj-msg','اسم المادة مطلوب','err'); return; }
+
+  const payload = {
+    teacher_id: ST.user.id,
+    name,
+    icon:  document.getElementById('subj-icon').value.trim() || '📚',
+    level: document.getElementById('subj-level').value,
+  };
+
+  const btn = document.getElementById('save-subj-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+
+  try {
+    if(id) {
+      const { error } = await sb.from('teacher_subjects').update(payload).eq('id',id);
+      if(error) throw error;
+      toast('✅ تم تعديل المادة بنجاح');
+    } else {
+      const { error } = await sb.from('teacher_subjects').insert(payload);
+      if(error) throw error;
+      toast('✅ تم إضافة المادة بنجاح');
+    }
+    closeSubjectModal();
+    await loadSubjects();
+  } catch(e) { setMsg('subj-msg', e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '💾 حفظ المادة'; }
+}
+
+// ══════════════════════════════════════════════
+// GRADE MODAL
+// ══════════════════════════════════════════════
+function openAddGradeModal(subjId) {
+  ST.curSubjectId = subjId;
+  const subj = ST.subjects.find(s => s.id === subjId);
+  document.getElementById('grade-modal-title').textContent = `➕ إضافة صف لـ ${subj?.name||'المادة'}`;
+  document.getElementById('edit-grade-subj-id').value = subjId;
+  document.getElementById('grade-name').value = '';
+  document.getElementById('grade-desc').value = '';
+  document.getElementById('grade-msg').innerHTML = '';
+  document.getElementById('mdl-grade').classList.add('show');
+  setTimeout(() => document.getElementById('grade-name').focus(), 100);
+}
+function closeGradeModal() { document.getElementById('mdl-grade').classList.remove('show'); }
+
+async function saveGrade() {
+  const subjId = document.getElementById('edit-grade-subj-id').value;
+  const name   = document.getElementById('grade-name').value.trim();
+  if(!name) { setMsg('grade-msg','اسم الصف مطلوب','err'); return; }
+
+  const btn = document.getElementById('save-grade-btn');
+  btn.disabled = true; btn.textContent = '⏳...';
+
+  try {
+    const { error } = await sb.from('teacher_grades').insert({
+      subject_id: subjId,
+      teacher_id: ST.user.id,
+      name,
+      description: document.getElementById('grade-desc').value.trim() || null,
+    });
+    if(error) throw error;
+    toast('✅ تم إضافة الصف بنجاح');
+    closeGradeModal();
+    await loadSubjects();
+  } catch(e) { setMsg('grade-msg', e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '💾 إضافة الصف'; }
+}
+
+// ══════════════════════════════════════════════
+// UPLOAD FILE
+// ══════════════════════════════════════════════
+function openUploadFileModal() {
+  document.getElementById('file-title').value = '';
+  document.getElementById('file-selected-name').textContent = '';
+  document.getElementById('file-upload-msg').innerHTML = '';
+  document.getElementById('file-upload-progress').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  document.getElementById('mdl-upload-file').classList.add('show');
+}
+function closeUploadFileModal() { document.getElementById('mdl-upload-file').classList.remove('show'); }
+
+function handleDragOver(e, zoneId) {
+  e.preventDefault();
+  document.getElementById(zoneId).classList.add('drag-over');
+}
+function handleDragLeave(zoneId) {
+  document.getElementById(zoneId).classList.remove('drag-over');
+}
+function handleFileDrop(e, type) {
+  e.preventDefault();
+  document.getElementById('file-drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if(file) {
+    document.getElementById('file-input').files = e.dataTransfer.files;
+    document.getElementById('file-selected-name').textContent = '📎 ' + file.name + ' (' + fsize(file.size) + ')';
+  }
+}
+function handleFileSelected(input) {
+  const file = input.files[0];
+  if(!file) return;
+  document.getElementById('file-selected-name').textContent = '📎 ' + file.name + ' (' + fsize(file.size) + ')';
+}
+
+async function uploadFile() {
+  const input = document.getElementById('file-input');
+  const file  = input.files[0];
+  const title = document.getElementById('file-title').value.trim();
+  if(!file) { setMsg('file-upload-msg','الرجاء اختيار ملف أولاً','err'); return; }
+
+  const btn = document.getElementById('upload-file-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الرفع...';
+  document.getElementById('file-upload-progress').style.display = 'block';
+
+  try {
+    const ext  = file.name.split('.').pop();
+    const path = `teacher_materials/${ST.user.id}/${ST.curGradeId}/${Date.now()}_${file.name.replace(/\s+/g,'_')}`;
+
+    const { error: upErr } = await sb.storage.from('teacher-content').upload(path, file, { upsert:false });
+    if(upErr) throw upErr;
+
+    document.getElementById('file-upload-bar').style.width = '70%';
+    const { data: urlData } = sb.storage.from('teacher-content').getPublicUrl(path);
+
+    const { error: dbErr } = await sb.from('teacher_materials').insert({
+      teacher_id: ST.user.id,
+      grade_id:   ST.curGradeId,
+      type:       'file',
+      title:      title || file.name,
+      url:        urlData.publicUrl,
+      file_name:  file.name,
+      file_size:  file.size,
+      storage_path: path,
+    });
+    if(dbErr) throw dbErr;
+
+    document.getElementById('file-upload-bar').style.width = '100%';
+    toast('✅ تم رفع الملف بنجاح');
+    closeUploadFileModal();
+    await loadContent('files');
+  } catch(e) {
+    setMsg('file-upload-msg', e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '⬆️ رفع الملف';
+    document.getElementById('file-upload-progress').style.display = 'none';
+    document.getElementById('file-upload-bar').style.width = '0%';
+  }
+}
+
+// ══════════════════════════════════════════════
+// UPLOAD VIDEO (link only)
+// ══════════════════════════════════════════════
+function openUploadVideoModal() {
+  document.getElementById('video-title').value = '';
+  document.getElementById('video-url').value = '';
+  document.getElementById('video-note').value = '';
+  document.getElementById('video-upload-msg').innerHTML = '';
+  document.getElementById('mdl-upload-video').classList.add('show');
+  setTimeout(() => document.getElementById('video-title').focus(), 100);
+}
+function closeUploadVideoModal() { document.getElementById('mdl-upload-video').classList.remove('show'); }
+
+async function saveVideo() {
+  const title = document.getElementById('video-title').value.trim();
+  const url   = document.getElementById('video-url').value.trim();
+  if(!title) { setMsg('video-upload-msg','عنوان الفيديو مطلوب','err'); return; }
+  if(!url)   { setMsg('video-upload-msg','رابط الفيديو مطلوب','err'); return; }
+
+  const btn = document.getElementById('upload-video-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+
+  try {
+    const { error } = await sb.from('teacher_materials').insert({
+      teacher_id: ST.user.id,
+      grade_id:   ST.curGradeId,
+      type:       'video',
+      title,
+      url,
+      note: document.getElementById('video-note').value.trim() || null,
+    });
+    if(error) throw error;
+    toast('✅ تم إضافة الفيديو بنجاح');
+    closeUploadVideoModal();
+    await loadContent('videos');
+  } catch(e) { setMsg('video-upload-msg', e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '💾 حفظ الفيديو'; }
+}
+
+// ══════════════════════════════════════════════
+// CONFIRM DELETE
+// ══════════════════════════════════════════════
+function confirmDelete(type, id, name) {
+  ST.pendingConfirm = { type, id };
+  document.getElementById('confirm-icon').textContent  = '🗑️';
+  document.getElementById('confirm-title').textContent = 'تأكيد الحذف';
+  document.getElementById('confirm-sub').textContent   = `هل تريد حذف "${name}" نهائياً؟`;
+  document.getElementById('mdl-confirm').classList.add('show');
+}
+function closeConfirm() { document.getElementById('mdl-confirm').classList.remove('show'); ST.pendingConfirm = null; }
+
+async function runConfirm() {
+  if(!ST.pendingConfirm) return;
+  const { type, id } = ST.pendingConfirm;
+  closeConfirm();
+  try {
+    if(type === 'subject') {
+      const { error } = await sb.from('teacher_subjects').delete().eq('id',id);
+      if(error) throw error;
+      toast('✅ تم حذف المادة');
+      await loadSubjects();
+    } else if(type === 'grade') {
+      const { error } = await sb.from('teacher_grades').delete().eq('id',id);
+      if(error) throw error;
+      toast('✅ تم حذف الصف');
+      await loadSubjects();
+    } else if(type === 'material') {
+      const { data } = await sb.from('teacher_materials').select('storage_path,type').eq('id',id).single();
+      if(data?.storage_path) await sb.storage.from('teacher-content').remove([data.storage_path]);
+      const { error } = await sb.from('teacher_materials').delete().eq('id',id);
+      if(error) throw error;
+      toast('✅ تم الحذف بنجاح');
+      await loadContent(ST.curContentTab);
+    }
+  } catch(e) { toast('خطأ: '+e.message,'err'); }
+}
+
+// ══════════════════════════════════════════════
+// KEYBOARD
+// ══════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') {
+    document.querySelectorAll('.mdl.show').forEach(m => m.classList.remove('show'));
+    ST.pendingConfirm = null;
+  }
+});
+
+// ══════════════════════════════════════════════
+// SESSIONS PAGE
+// ══════════════════════════════════════════════
+let sessFilter   = 'all';
+let sessAllData  = [];
+
+async function loadSessions() {
+  const el = document.getElementById('sessions-list');
+  if(!el) return;
+  el.innerHTML = [1,2,3].map(()=>`<div class="skel" style="height:90px;border-radius:14px;margin-bottom:12px"></div>`).join('');
+  try {
+    const { data, error } = await sb.from('teacher_sessions')
+      .select('*').eq('teacher_id', ST.user.id)
+      .order('scheduled_at', { ascending: true });
+    if(error) throw error;
+    sessAllData = data || [];
+    renderCalStrip();
+    renderSessions();
+  } catch(e) { el.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`; }
+}
+
+function renderCalStrip() {
+  const strip = document.getElementById('cal-strip');
+  if(!strip) return;
+  const days = [];
+  const today = new Date();
+  for(let i = -3; i <= 18; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    days.push(d);
+  }
+  const dayNames = ['أح','إث','ثل','أر','خم','جم','سب'];
+  const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const hasSession = date => sessAllData.some(s => {
+    const sd = new Date(s.scheduled_at);
+    return sd.toDateString() === date.toDateString();
+  });
+  strip.innerHTML = days.map((d,i) => {
+    const isToday = d.toDateString() === today.toDateString();
+    const dot = hasSession(d) ? '<div class="cal-day-dot"></div>' : '';
+    return `<div class="cal-day ${isToday?'active':''}" onclick="filterByDay('${d.toISOString().slice(0,10)}')">
+      <div class="cal-day-name">${dayNames[d.getDay()]}</div>
+      <div class="cal-day-num">${d.getDate()}</div>
+      ${dot}
+    </div>`;
+  }).join('');
+  // Scroll to today
+  setTimeout(() => {
+    const active = strip.querySelector('.cal-day.active');
+    if(active) strip.scrollLeft = active.offsetLeft - strip.offsetWidth/2 + active.offsetWidth/2;
+  }, 50);
+}
+
+function filterByDay(dateStr) {
+  document.querySelectorAll('.cal-day').forEach(d => d.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const filtered = sessAllData.filter(s => s.scheduled_at?.slice(0,10) === dateStr);
+  renderSessionsData(filtered);
+}
+
+function setSessFilter(f) {
+  sessFilter = f;
+  document.querySelectorAll('.sf-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sf-'+f).classList.add('active');
+  renderSessions();
+}
+
+function sessStatus(s) {
+  if(s.status === 'ended') return 'ended';
+  const now = Date.now();
+  const t = new Date(s.scheduled_at).getTime();
+  const diff = (t - now) / 60000;
+  if(s.status === 'live') return 'live';
+  if(diff > 0) return 'upcoming';
+  if(diff >= -90) return 'live';
+  return 'ended';
+}
+
+function renderSessions() {
+  let data = sessAllData;
+  if(sessFilter !== 'all') data = data.filter(s => sessStatus(s) === sessFilter);
+  renderSessionsData(data);
+}
+
+function renderSessionsData(data) {
+  const el = document.getElementById('sessions-list');
+  if(!el) return;
+  if(!data.length) {
+    el.innerHTML = `<div class="empty-box"><div class="ei">🗓️</div><div class="et">لا توجد حصص</div><div class="ed">اضغط "إضافة حصة" لإنشاء حصتك الأولى</div></div>`;
+    return;
+  }
+
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const dayNames = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+
+  el.innerHTML = data.map(s => {
+    const dt   = new Date(s.scheduled_at);
+    const st   = sessStatus(s);
+    const stateMap = {
+      live:     `<span class="status-live">🟢 مباشر الآن</span>`,
+      upcoming: `<span class="status-upcoming">🔵 قادمة</span>`,
+      ended:    `<span class="status-ended">✅ منتهية</span>`,
+    };
+    const mins = s.duration_min || 60;
+
+    return `
+      <div class="session-card s-${st}" id="sc-${s.id}">
+        <div class="sc-date">
+          <div class="sc-date-day">${dayNames[dt.getDay()].slice(0,3)}</div>
+          <div class="sc-date-num">${dt.getDate()}</div>
+          <div class="sc-date-mon">${months[dt.getMonth()]}</div>
+        </div>
+        <div class="sc-info">
+          <div class="sc-title">${s.title}</div>
+          <div class="sc-meta">
+            <span>🕐 ${fhr(s.scheduled_at)}</span>
+            <span>⏱️ ${mins} دقيقة</span>
+            ${s.subject_name ? `<span>📚 ${s.subject_name}</span>` : ''}
+            ${s.grade_name   ? `<span>🏫 ${s.grade_name}</span>` : ''}
+            ${s.zoom_link    ? `<span><a href="${s.zoom_link}" target="_blank" style="color:var(--blue)">🔗 انضم</a></span>` : ''}
+          </div>
+        </div>
+        <div class="sc-status">${stateMap[st]||''}</div>
+        <div class="sc-acts">
+          <button class="btn-sm btn-edit" onclick="editSession('${s.id}')">✏️</button>
+          <button class="btn-sm btn-del"  onclick="confirmDelete('session','${s.id}','${s.title.replace(/'/g,'')}')">🗑️</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Session Modal
+function openSessionModal(id) {
+  const s = id ? sessAllData.find(x => x.id === id) : null;
+  document.getElementById('sess-mdl-title').textContent = s ? '✏️ تعديل الحصة' : '➕ إضافة حصة';
+  document.getElementById('sess-edit-id').value = s?.id || '';
+  document.getElementById('sess-title').value = s?.title || '';
+  document.getElementById('sess-datetime').value = s?.scheduled_at ? new Date(s.scheduled_at).toISOString().slice(0,16) : '';
+  document.getElementById('sess-duration').value = s?.duration_min || 60;
+  document.getElementById('sess-zoom').value = s?.zoom_link || '';
+  document.getElementById('sess-mdl-msg').innerHTML = '';
+
+  // Populate subject dropdown
+  const subjSel = document.getElementById('sess-subject-sel');
+  subjSel.innerHTML = '<option value="">— اختر المادة —</option>' +
+    ST.subjects.map(sub => `<option value="${sub.id}" ${s?.subject_id===sub.id?'selected':''}>${sub.icon||'📚'} ${sub.name}</option>`).join('');
+  
+  // Sync grade dropdown
+  const gradeSel = document.getElementById('sess-grade-sel');
+  if(s?.subject_id) updateSessionGradeDropdown(s.subject_id, s?.grade_id);
+  else gradeSel.innerHTML = '<option value="">— اختر الصف —</option>';
+
+  subjSel.onchange = () => updateSessionGradeDropdown(subjSel.value);
+  document.getElementById('mdl-session').classList.add('show');
+  setTimeout(() => document.getElementById('sess-title').focus(), 100);
+}
+
+function updateSessionGradeDropdown(subjId, selectedGradeId) {
+  const subj = ST.subjects.find(s => s.id === subjId);
+  const grades = subj?.teacher_grades || [];
+  const sel = document.getElementById('sess-grade-sel');
+  sel.innerHTML = '<option value="">— اختر الصف —</option>' +
+    grades.map(g => `<option value="${g.id}" ${g.id===selectedGradeId?'selected':''}>${g.name}</option>`).join('');
+}
+
+function closeSessionModal() { document.getElementById('mdl-session').classList.remove('show'); }
+
+function editSession(id) { openSessionModal(id); }
+
+async function saveSession() {
+  const id    = document.getElementById('sess-edit-id').value;
+  const title = document.getElementById('sess-title').value.trim();
+  const dt    = document.getElementById('sess-datetime').value;
+  if(!title) { setMsg('sess-mdl-msg','عنوان الحصة مطلوب','err'); return; }
+  if(!dt)    { setMsg('sess-mdl-msg','تاريخ الحصة مطلوب','err');  return; }
+
+  const subjId  = document.getElementById('sess-subject-sel').value;
+  const gradeId = document.getElementById('sess-grade-sel').value;
+  const subj    = ST.subjects.find(s => s.id === subjId);
+  const grade   = subj?.teacher_grades?.find(g => g.id === gradeId);
+
+  const payload = {
+    teacher_id:   ST.user.id,
+    title,
+    scheduled_at: new Date(dt).toISOString(),
+    duration_min: parseInt(document.getElementById('sess-duration').value) || 60,
+    zoom_link:    document.getElementById('sess-zoom').value.trim() || null,
+    subject_id:   subjId || null,
+    subject_name: subj?.name || null,
+    grade_id:     gradeId || null,
+    grade_name:   grade?.name || null,
+  };
+
+  const btn = document.getElementById('save-sess-btn');
+  btn.disabled = true; btn.textContent = '⏳ حفظ...';
+
+  try {
+    if(id) {
+      const { error } = await sb.from('teacher_sessions').update(payload).eq('id',id);
+      if(error) throw error;
+      toast('✅ تم تعديل الحصة');
+    } else {
+      const { error } = await sb.from('teacher_sessions').insert(payload);
+      if(error) throw error;
+      toast('✅ تم إضافة الحصة');
+    }
+    closeSessionModal();
+    await loadSessions();
+  } catch(e) { setMsg('sess-mdl-msg', e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '💾 حفظ الحصة'; }
+}
+
+// ══════════════════════════════════════════════
+// STUDENTS PAGE
+// ══════════════════════════════════════════════
+let stuData      = [];   // enrollments
+let attRecords   = {};   // { studentId: 'present'|'absent' }
+let curGradeForAtt = null;
+let stuCurrentGrade = 'all';
+
+function switchStuTab(tab) {
+  document.querySelectorAll('.stu-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('stab-'+tab).classList.add('active');
+  if(tab === 'list') {
+    document.getElementById('stu-list-view').style.display = 'block';
+    document.getElementById('stu-attend-view').style.display = 'none';
+  } else {
+    document.getElementById('stu-list-view').style.display = 'none';
+    document.getElementById('stu-attend-view').style.display = 'block';
+    initAttendanceView();
+  }
+}
+
+async function loadStudents() {
+  buildGradeFilters();
+  await loadStudentsList('all');
+}
+
+function buildGradeFilters() {
+  // Collect all grades from subjects
+  const grades = [];
+  ST.subjects.forEach(subj => {
+    (subj.teacher_grades||[]).forEach(g => {
+      if(!grades.find(x => x.id === g.id)) grades.push({ ...g, subj_name: subj.name });
+    });
+  });
+
+  const bar = document.getElementById('stu-grade-bar');
+  bar.innerHTML = `<span style="font-size:.82rem;font-weight:700;color:var(--gray)">الصف:</span>
+    <button class="grade-sel-btn active" onclick="filterStudentsByGrade('all',this)">📋 الكل</button>` +
+    grades.map(g => `<button class="grade-sel-btn" onclick="filterStudentsByGrade('${g.id}',this)">${g.name}</button>`).join('');
+
+  // Attendance grade bar
+  const attBar = document.getElementById('att-grade-bar');
+  attBar.innerHTML = `<span style="font-size:.82rem;font-weight:700;color:var(--gray)">الصف:</span>` +
+    grades.map(g => `<button class="grade-sel-btn ${!curGradeForAtt?'':''}${curGradeForAtt===g.id?'active':''}" onclick="selectAttGrade('${g.id}','${g.name}',this)">${g.name}</button>`).join('');
+}
+
+async function filterStudentsByGrade(gradeId, btn) {
+  stuCurrentGrade = gradeId;
+  document.querySelectorAll('#stu-grade-bar .grade-sel-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  await loadStudentsList(gradeId);
+}
+
+async function loadStudentsList(gradeId) {
+  const el = document.getElementById('stu-list-content');
+  el.innerHTML = [1,2,3].map(()=>`<div class="skel" style="height:72px;border-radius:12px;margin-bottom:10px"></div>`).join('');
+  try {
+    let q = sb.from('teacher_enrollments')
+      .select('*, profiles:student_id(id,full_name,phone,avatar_url)')
+      .eq('teacher_id', ST.user.id);
+    if(gradeId && gradeId !== 'all') q = q.eq('grade_id', gradeId);
+    const { data, error } = await q.order('enrolled_at',{ascending:false});
+    if(error) throw error;
+    stuData = data || [];
+
+    // Get attendance counts
+    const ids = stuData.map(s => s.student_id);
+    let attMap = {};
+    if(ids.length) {
+      const { data: attData } = await sb.from('teacher_attendance')
+        .select('student_id,status').eq('teacher_id', ST.user.id)
+        .in('student_id', ids);
+      (attData||[]).forEach(r => {
+        if(!attMap[r.student_id]) attMap[r.student_id] = { present:0, absent:0 };
+        attMap[r.student_id][r.status]++;
+      });
+    }
+
+    if(!stuData.length) {
+      el.innerHTML = `<div class="empty-box"><div class="ei">👥</div><div class="et">لا يوجد طلاب في هذا الصف</div><div class="ed">سيظهر الطلاب هنا بعد إضافتهم من صفحة الإدارة</div></div>`;
+      return;
+    }
+
+    el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">` +
+      stuData.map(en => {
+        const p = en.profiles || {};
+        const att = attMap[en.student_id] || { present:0, absent:0 };
+        const total = att.present + att.absent;
+        const pct = total ? Math.round(att.present/total*100) : 0;
+        return `
+          <div class="stu-card" onclick="openStudentDetail('${en.student_id}','${(p.full_name||'').replace(/'/g,'')}','${en.grade_name||''}')">
+            <div class="stu-av">${p.avatar_url ? `<img src="${p.avatar_url}">` : ini(p.full_name)}</div>
+            <div class="stu-info">
+              <div class="stu-name">${p.full_name||'—'}</div>
+              <div class="stu-meta">${en.grade_name||''} ${p.phone?'· '+p.phone:''}</div>
+            </div>
+            <div class="stu-stats">
+              <div class="stu-stat"><div class="stu-stat-num stu-present-num">${att.present}</div><div class="stu-stat-lbl">حضر</div></div>
+              <div class="stu-stat"><div class="stu-stat-num stu-absent-num">${att.absent}</div><div class="stu-stat-lbl">غاب</div></div>
+              <div class="stu-stat"><div class="stu-stat-num" style="color:var(--blue)">${pct}%</div><div class="stu-stat-lbl">نسبة</div></div>
+            </div>
+          </div>
+        `;
+      }).join('') + `</div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`;
+  }
+}
+
+// ── Student Detail Modal ──
+async function openStudentDetail(studentId, name, gradeName) {
+  document.getElementById('stu-detail-av').textContent = ini(name);
+  document.getElementById('stu-detail-name').textContent = name;
+  document.getElementById('stu-detail-grade').textContent = gradeName || '—';
+  document.getElementById('stu-att-records').innerHTML = `<div class="skel" style="height:40px;margin-bottom:8px"></div>`.repeat(5);
+  document.getElementById('mdl-student').classList.add('show');
+
+  try {
+    const { data, error } = await sb.from('teacher_attendance')
+      .select('*').eq('teacher_id', ST.user.id).eq('student_id', studentId)
+      .order('session_date', { ascending: false });
+    if(error) throw error;
+
+    const records = data || [];
+    const present = records.filter(r => r.status === 'present').length;
+    const absent  = records.filter(r => r.status === 'absent').length;
+    const total   = present + absent;
+    const pct     = total ? Math.round(present/total*100) : 0;
+
+    document.getElementById('det-present').textContent = present;
+    document.getElementById('det-absent').textContent  = absent;
+    document.getElementById('det-pct').textContent     = pct + '%';
+
+    if(!records.length) {
+      document.getElementById('stu-att-records').innerHTML = `<div class="empty-box"><div class="ei">📋</div><div class="et">لا يوجد سجل حضور بعد</div></div>`;
+      return;
+    }
+
+    document.getElementById('stu-att-records').innerHTML = records.map(r => `
+      <div class="sarec-row">
+        <div class="sarec-date">📅 ${fds(r.session_date)}</div>
+        <div>
+          ${r.status === 'present'
+            ? `<span class="badge b-green">✅ حضر</span>`
+            : `<span class="badge" style="background:var(--red-light);color:var(--red);border:1px solid #FECACA">❌ غاب</span>`}
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('stu-att-records').innerHTML = `<div class="msg-err">خطأ: ${e.message}</div>`;
+  }
+}
+function closeStudentDetail() { document.getElementById('mdl-student').classList.remove('show'); }
+
+// ── Attendance ──
+function initAttendanceView() {
+  const dateEl = document.getElementById('att-date');
+  if(!dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
+  buildGradeFilters();
+}
+
+function selectAttGrade(gradeId, gradeName, btn) {
+  curGradeForAtt = gradeId;
+  document.querySelectorAll('#att-grade-bar .grade-sel-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadAttendanceForDate();
+}
+
+async function loadAttendanceForDate() {
+  if(!curGradeForAtt) { toast('اختر الصف أولاً','err'); return; }
+  const date = document.getElementById('att-date').value;
+  if(!date) { toast('اختر التاريخ أولاً','err'); return; }
+
+  const el = document.getElementById('att-list');
+  el.innerHTML = `<div class="skel" style="height:56px;margin-bottom:8px"></div>`.repeat(4);
+  attRecords = {};
+
+  try {
+    // Load students in this grade
+    const { data: enData } = await sb.from('teacher_enrollments')
+      .select('student_id, profiles:student_id(id,full_name,avatar_url)')
+      .eq('teacher_id', ST.user.id).eq('grade_id', curGradeForAtt);
+
+    // Load existing attendance
+    const { data: attData } = await sb.from('teacher_attendance')
+      .select('student_id, status')
+      .eq('teacher_id', ST.user.id)
+      .eq('grade_id', curGradeForAtt)
+      .eq('session_date', date);
+
+    (attData||[]).forEach(r => { attRecords[r.student_id] = r.status; });
+
+    const students = enData || [];
+    if(!students.length) {
+      el.innerHTML = `<div class="empty-box"><div class="ei">👥</div><div class="et">لا يوجد طلاب في هذا الصف</div></div>`;
+      document.getElementById('att-summary').style.display = 'none';
+      document.getElementById('save-att-btn').style.display = 'none';
+      return;
+    }
+
+    el.innerHTML = students.map(en => {
+      const p     = en.profiles || {};
+      const cur   = attRecords[en.student_id] || '';
+      return `
+        <div class="att-student" id="att-row-${en.student_id}">
+          <div class="stu-av" style="width:36px;height:36px;font-size:.78rem">${ini(p.full_name)}</div>
+          <div class="att-name">${p.full_name||'—'}</div>
+          <div class="att-btns">
+            <button class="att-btn ${cur==='present'?'present':''}" id="btn-pres-${en.student_id}"
+              onclick="markAtt('${en.student_id}','present')">✅ حضر</button>
+            <button class="att-btn ${cur==='absent'?'absent':''}"  id="btn-abs-${en.student_id}"
+              onclick="markAtt('${en.student_id}','absent')">❌ غاب</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('save-att-btn').style.display = 'inline-flex';
+    updateAttSummary(students.length);
+  } catch(e) {
+    el.innerHTML = `<div class="msg-err">خطأ: ${e.message}</div>`;
+  }
+}
+
+function markAtt(studentId, status) {
+  attRecords[studentId] = status;
+  // Update button states
+  const pBtn = document.getElementById('btn-pres-'+studentId);
+  const aBtn = document.getElementById('btn-abs-'+studentId);
+  if(pBtn) { pBtn.className = 'att-btn' + (status==='present'?' present':''); }
+  if(aBtn) { aBtn.className = 'att-btn' + (status==='absent'?' absent':''); }
+  // Count all students
+  const rows = document.querySelectorAll('[id^="att-row-"]').length;
+  updateAttSummary(rows);
+}
+
+function updateAttSummary(total) {
+  const present = Object.values(attRecords).filter(s => s==='present').length;
+  const absent  = Object.values(attRecords).filter(s => s==='absent').length;
+  const none    = total - present - absent;
+  document.getElementById('att-pres-count').textContent = present;
+  document.getElementById('att-abs-count').textContent  = absent;
+  document.getElementById('att-none-count').textContent = none;
+  document.getElementById('att-summary').style.display  = 'flex';
+}
+
+async function saveAttendance() {
+  const date = document.getElementById('att-date').value;
+  if(!date || !curGradeForAtt) return;
+
+  const btn = document.getElementById('save-att-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+
+  try {
+    const rows = Object.entries(attRecords).map(([studentId, status]) => ({
+      teacher_id:   ST.user.id,
+      student_id:   studentId,
+      grade_id:     curGradeForAtt,
+      session_date: date,
+      status,
+    }));
+
+    if(!rows.length) { toast('لم يتم تسجيل أي حضور بعد','err'); return; }
+
+    const { error } = await sb.from('teacher_attendance')
+      .upsert(rows, { onConflict: 'teacher_id,student_id,grade_id,session_date' });
+    if(error) throw error;
+    toast('✅ تم حفظ الحضور بنجاح');
+  } catch(e) {
+    toast('خطأ: '+e.message,'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 حفظ الحضور';
+  }
+}
+
+// ══════════════════════════════════════════════
+// PROFILE PAGE
+// ══════════════════════════════════════════════
+async function loadProfile() {
+  if(!ST.profile) return;
+  const p = ST.profile;
+  // Avatar
+  const avEl = document.getElementById('prof-av-circle');
+  if(p.avatar_url) avEl.innerHTML = `<img src="${p.avatar_url}">`;
+  else avEl.textContent = ini(p.full_name);
+  // Names
+  const nameEl = document.getElementById('prof-display-name');
+  if(nameEl) nameEl.textContent = p.full_name || '...';
+  const specEl = document.getElementById('prof-display-spec');
+  if(specEl) specEl.textContent = (p.specialization || '') + (p.experience_years ? ' · ' + p.experience_years + ' سنوات خبرة' : '');
+  // Intro video
+  const vsEl = document.getElementById('intro-video-status');
+  if(vsEl) vsEl.textContent = p.intro_video_url ? '🎬 فيديو مرفوع — انقر للتعديل' : 'لم يتم رفع فيديو بعد';
+  // Fill form
+  const fill = (id, val) => { const el=document.getElementById(id); if(el) el.value=val||''; };
+  fill('prof-name',  p.full_name);
+  fill('prof-phone', p.phone);
+  fill('prof-spec',  p.specialization);
+  fill('prof-exp',   p.experience_years);
+  fill('prof-bio',   p.bio);
+  // Also fill settings fields
+  fill('sett-name',  p.full_name);
+  fill('sett-phone', p.phone);
+  fill('sett-spec',  p.specialization);
+  fill('sett-exp',   p.experience_years);
+  fill('sett-bio',   p.bio);
+}
+
+async function handleAvatarChange(input) {
+  if(!input.files||!input.files[0]) return;
+  const file = input.files[0];
+  // Preview
+  const avEl = document.getElementById('prof-av-circle');
+  const reader = new FileReader();
+  reader.onload = e => { avEl.innerHTML = `<img src="${e.target.result}">`; };
+  reader.readAsDataURL(file);
+  try {
+    const path = `${ST.user.id}/avatar.${file.name.split('.').pop()}`;
+    const { error: e1 } = await sb.storage.from('avatars').upload(path, file, { upsert:true });
+    if(e1) throw e1;
+    const { data } = sb.storage.from('avatars').getPublicUrl(path);
+    const url = data.publicUrl + '?t=' + Date.now();
+    const { error: e2 } = await sb.from('profiles').update({ avatar_url: url }).eq('id', ST.user.id);
+    if(e2) throw e2;
+    ST.profile = { ...ST.profile, avatar_url: url };
+    // Update sidebar avatar
+    const sav = document.getElementById('sidebar-av');
+    if(sav) sav.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    toast('✅ تم تحديث الصورة');
+  } catch(e) { toast('خطأ في رفع الصورة: '+e.message,'err'); }
+}
+
+async function saveProfile() {
+  const btn = document.getElementById('save-prof-btn');
+  btn.disabled = true; btn.textContent = '⏳...';
+  const payload = {
+    full_name:        document.getElementById('prof-name')?.value.trim(),
+    phone:            document.getElementById('prof-phone')?.value.trim(),
+    specialization:   document.getElementById('prof-spec')?.value.trim(),
+    experience_years: document.getElementById('prof-exp')?.value.trim(),
+    bio:              document.getElementById('prof-bio')?.value.trim(),
+  };
+  try {
+    const { error } = await sb.from('profiles').update(payload).eq('id', ST.user.id);
+    if(error) throw error;
+    ST.profile = { ...ST.profile, ...payload };
+    updateHeaderUI();
+    loadProfile();
+    setMsg('prof-msg','تم حفظ بياناتك بنجاح','ok');
+  } catch(e) { setMsg('prof-msg', e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '💾 حفظ التغييرات'; }
+}
+
+// Intro video
+function openIntroVideoModal() {
+  document.getElementById('intro-video-url').value = ST.profile?.intro_video_url || '';
+  document.getElementById('intro-video-msg').innerHTML = '';
+  document.getElementById('mdl-intro-video').classList.add('show');
+}
+function closeIntroVideoModal() { document.getElementById('mdl-intro-video').classList.remove('show'); }
+async function saveIntroVideo() {
+  const url = document.getElementById('intro-video-url').value.trim();
+  if(!url) { setMsg('intro-video-msg','الرجاء إدخال الرابط','err'); return; }
+  const btn = document.getElementById('save-intro-btn');
+  btn.disabled = true; btn.textContent = '⏳...';
+  try {
+    const { error } = await sb.from('profiles').update({ intro_video_url: url }).eq('id', ST.user.id);
+    if(error) throw error;
+    ST.profile = { ...ST.profile, intro_video_url: url };
+    const vsEl = document.getElementById('intro-video-status');
+    if(vsEl) vsEl.textContent = '🎬 فيديو مرفوع — انقر للتعديل';
+    closeIntroVideoModal();
+    toast('✅ تم حفظ الفيديو التعريفي');
+  } catch(e) { setMsg('intro-video-msg', e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '💾 حفظ الرابط'; }
+}
+
+function updateHeaderUI() {
+  const name = ST.profile?.full_name || 'معلم';
+  document.getElementById('hdr-name').textContent     = name.split(' ')[0];
+  document.getElementById('sidebar-name').textContent = name;
+}
+
+// ══════════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════════
+async function saveSettingsInfo() {
+  const payload = {
+    full_name:        document.getElementById('sett-name')?.value.trim(),
+    phone:            document.getElementById('sett-phone')?.value.trim(),
+    specialization:   document.getElementById('sett-spec')?.value.trim(),
+    experience_years: document.getElementById('sett-exp')?.value.trim(),
+    bio:              document.getElementById('sett-bio')?.value.trim(),
+  };
+  const btn = document.querySelector('#page-settings .btn-primary');
+  if(btn) { btn.disabled=true; btn.textContent='⏳...'; }
+  try {
+    const { error } = await sb.from('profiles').update(payload).eq('id', ST.user.id);
+    if(error) throw error;
+    ST.profile = { ...ST.profile, ...payload };
+    updateHeaderUI();
+    setMsg('sett-info-msg','تم حفظ البيانات','ok');
+    toast('✅ تم تحديث بياناتك');
+  } catch(e) { setMsg('sett-info-msg', e.message, 'err'); }
+  finally { if(btn) { btn.disabled=false; btn.textContent='💾 حفظ البيانات'; } }
+}
+
+async function changePassword() {
+  const pw1 = document.getElementById('sett-pw1').value;
+  const pw2 = document.getElementById('sett-pw2').value;
+  if(!pw1) { setMsg('sett-pw-msg','أدخل كلمة المرور الجديدة','err'); return; }
+  if(pw1.length < 8) { setMsg('sett-pw-msg','يجب أن تكون 8 أحرف على الأقل','err'); return; }
+  if(pw1 !== pw2) { setMsg('sett-pw-msg','كلمتا المرور غير متطابقتين','err'); return; }
+  try {
+    const { error } = await sb.auth.updateUser({ password: pw1 });
+    if(error) throw error;
+    setMsg('sett-pw-msg','تم تغيير كلمة المرور بنجاح','ok');
+    document.getElementById('sett-pw1').value = '';
+    document.getElementById('sett-pw2').value = '';
+    toast('✅ تم تغيير كلمة المرور');
+  } catch(e) { setMsg('sett-pw-msg', e.message, 'err'); }
+}
+
+// ══════════════════════════════════════════════
+// SUPPORT
+// ══════════════════════════════════════════════
+function openSupportTicket() {
+  document.getElementById('ticket-subject').focus();
+  document.querySelector('#page-support .section-card').scrollIntoView({ behavior:'smooth' });
+}
+
+async function sendSupportTicket() {
+  const subj = document.getElementById('ticket-subject').value.trim();
+  const body = document.getElementById('ticket-body').value.trim();
+  if(!subj || !body) { setMsg('ticket-msg','الرجاء ملء جميع الحقول','err'); return; }
+  try {
+    const { error } = await sb.from('support_tickets').insert({
+      user_id: ST.user.id,
+      subject: subj,
+      body,
+      role: 'teacher',
+    });
+    if(error) throw error;
+    setMsg('ticket-msg','تم إرسال البلاغ بنجاح. سيتواصل معك الدعم قريباً.','ok');
+    document.getElementById('ticket-subject').value = '';
+    document.getElementById('ticket-body').value = '';
+  } catch(e) {
+    // If table doesn't exist, show WhatsApp fallback
+    const msg = `بلاغ من ${ST.profile?.full_name||'معلم'}: ${subj}\n${body}`;
+    window.open(`https://wa.me/966500000000?text=${encodeURIComponent(msg)}`,'_blank');
+    setMsg('ticket-msg','تم توجيهك لواتساب لإرسال البلاغ','ok');
+  }
+}
+
+// ══════════════════════════════════════════════
+// OVERRIDE goTo to trigger page loads
+// ══════════════════════════════════════════════
+const _goTo = goTo;
+// Monkey-patch goTo to add page-specific loaders
+const goToOrig = goTo;
+window.goTo = async function(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pageEl = document.getElementById('page-'+name);
+  if(pageEl) pageEl.classList.add('active');
+  const navEl = document.getElementById('nav-'+name);
+  if(navEl) navEl.classList.add('active');
+  closeSidebar();
+  ST.currentPage = name;
+  window.scrollTo(0,0);
+
+  if(name === 'courses')  { showCoursesMain(); await loadSubjects(); }
+  if(name === 'sessions') await loadSessions();
+  if(name === 'students') await loadStudents();
+  if(name === 'profile')  await loadProfile();
+  if(name === 'settings') await loadProfile();
+};
+
+// ══════════════════════════════════════════════
+// CONFIRM DELETE — extend for sessions
+// ══════════════════════════════════════════════
+const runConfirmOrig = runConfirm;
+window.runConfirm = async function() {
+  if(!ST.pendingConfirm) return;
+  const { type, id } = ST.pendingConfirm;
+  closeConfirm();
+  try {
+    if(type === 'session') {
+      const { error } = await sb.from('teacher_sessions').delete().eq('id',id);
+      if(error) throw error;
+      toast('✅ تم حذف الحصة');
+      await loadSessions();
+    } else {
+      await runConfirmOrig();
+    }
+  } catch(e) { toast('خطأ: '+e.message,'err'); }
+};
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+boot();
+
+</script>
+</body>
+</html>

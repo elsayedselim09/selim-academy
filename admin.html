@@ -197,6 +197,30 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
 .b-title{font-size:1.25rem;font-weight:900;margin-bottom:5px}
 .b-sub{font-size:.85rem;opacity:.8}
 
+/* TEACHER CARDS */
+.teacher-row { display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--gray-mid);transition:background .15s }
+.teacher-row:last-child { border-bottom:none }
+.teacher-row:hover { background:var(--gray-light) }
+.t-av { width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#8B5CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;font-weight:900;flex-shrink:0;overflow:hidden }
+.t-av img { width:100%;height:100%;object-fit:cover }
+.t-info { flex:1 }
+.t-name { font-size:.9rem;font-weight:700;color:var(--dark) }
+.t-sub  { font-size:.74rem;color:var(--gray);margin-top:2px }
+.t-acts { display:flex;gap:8px;flex-shrink:0 }
+.btn-approve { background:var(--green);color:#fff;padding:7px 16px;border:none;border-radius:8px;font-family:'Cairo',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px }
+.btn-approve:hover { background:#0B8A5F }
+.btn-reject  { background:var(--red-light);color:var(--red);border:1px solid #FECACA;padding:7px 16px;border-radius:8px;font-family:'Cairo',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px }
+.btn-reject:hover  { background:var(--red);color:#fff;border-color:var(--red) }
+.btn-revoke  { background:var(--gold-light);color:#92400E;border:1px solid #FCD34D;padding:7px 14px;border-radius:8px;font-family:'Cairo',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s }
+.btn-revoke:hover  { background:var(--gold);color:#fff }
+.b-teacher-approved { background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7;padding:4px 12px;border-radius:50px;font-size:.73rem;font-weight:700 }
+.b-teacher-pending  { background:var(--gold-light);color:#92400E;border:1px solid #FCD34D;padding:4px 12px;border-radius:50px;font-size:.73rem;font-weight:700 }
+.b-teacher-rejected { background:var(--red-light);color:var(--red);border:1px solid #FECACA;padding:4px 12px;border-radius:50px;font-size:.73rem;font-weight:700 }
+.teacher-stat-bar { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px 20px;border-bottom:1px solid var(--gray-mid);background:linear-gradient(135deg,#F8FAFF,#EFF6FF) }
+.t-stat { text-align:center;padding:10px;border-radius:10px;background:#fff;border:1px solid var(--gray-mid) }
+.t-stat-num  { font-size:1.4rem;font-weight:900 }
+.t-stat-lbl  { font-size:.72rem;color:var(--gray);margin-top:2px }
+
 /* RESPONSIVE */
 @media(max-width:1024px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){
@@ -234,6 +258,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <button class="nav-item"        id="nav-courses"   onclick="goTo('courses')"><span class="nav-icon">📚</span> الكورسات</button>
     <button class="nav-item"        id="nav-sessions"  onclick="goTo('sessions')"><span class="nav-icon">🎥</span> الحصص</button>
     <div class="nav-label">المستخدمون</div>
+    <button class="nav-item"        id="nav-teachers"  onclick="goTo('teachers')"><span class="nav-icon">👨‍🏫</span> المعلمون<span class="nav-badge" id="teacher-badge" style="display:none">0</span></button>
     <button class="nav-item"        id="nav-students"  onclick="goTo('students')"><span class="nav-icon">👥</span> الطلاب</button>
     <div class="nav-label">الحساب</div>
     <button class="nav-item"        id="nav-profile"   onclick="goTo('profile')"><span class="nav-icon">👤</span> حسابي</button>
@@ -329,6 +354,26 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
         <div class="section-head"><h3 id="sess-course-title">حصص الكورس</h3><button class="btn-refresh" onclick="loadSessions()">🔄 تحديث</button></div>
         <div class="section-body" id="sess-list"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- TEACHERS -->
+  <div class="page" id="page-teachers">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="page-title">👨‍🏫 المعلمون</div>
+        <p class="page-sub" style="margin-bottom:0">مراجعة طلبات انضمام المعلمين وإدارة حساباتهم</p>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="filter-bar">
+        <button class="filter-btn active" id="tf-pending"  onclick="setTeacherFilter('pending')">⏳ بانتظار الموافقة</button>
+        <button class="filter-btn"        id="tf-approved" onclick="setTeacherFilter('approved')">✅ معتمدون</button>
+        <button class="filter-btn"        id="tf-rejected" onclick="setTeacherFilter('rejected')">❌ مرفوضون</button>
+        <button class="filter-btn"        id="tf-all"      onclick="setTeacherFilter('all')">📋 الكل</button>
+        <input class="search-input" id="teacher-search" type="text" placeholder="🔍 بحث بالاسم..." oninput="renderTeachersTable()">
+      </div>
+      <div id="teachers-body"></div>
     </div>
   </div>
 
@@ -444,6 +489,7 @@ const sb = supabase.createClient(
 const S = {
   user:null, profile:null,
   requests:[], courses:[], sessions:[], students:[],
+  teachers:[], teacherFilter:'pending',
   filter:'pending', pendingAction:null, curCourseId:null
 };
 
@@ -483,7 +529,7 @@ function goTo(name) {
   document.getElementById('page-'+name).classList.add('active');
   document.getElementById('nav-'+name).classList.add('active');
   closeSidebar();
-  const loaders = {courses:loadCourses, sessions:initSessions, students:loadStudents, profile:loadProfile};
+  const loaders = {courses:loadCourses, sessions:initSessions, students:loadStudents, profile:loadProfile, teachers:loadTeachers};
   if(loaders[name]) loaders[name]();
   if(name==='requests') renderReqTable();
 }
@@ -925,6 +971,217 @@ function updateHdr() {
     : ini(name);
 }
 
+// ══════════════════════════════════════════════════
+// TEACHERS MANAGEMENT
+// ══════════════════════════════════════════════════
+async function loadTeachers() {
+  const el = document.getElementById('teachers-body');
+  el.innerHTML = `<div style="padding:20px">${[1,2,3].map(()=>`<div class="skel" style="height:72px;margin-bottom:10px;border-radius:10px"></div>`).join('')}</div>`;
+
+  try {
+    const { data, error } = await sb
+      .from('profiles')
+      .select('id,full_name,phone,avatar_url,specialization,experience_years,bio,teacher_approved,created_at,role')
+      .eq('role','teacher')
+      .order('created_at', { ascending:false });
+    if(error) throw error;
+
+    S.teachers = data || [];
+
+    // Show pending count in badge
+    const pendingCount = S.teachers.filter(t => t.teacher_approved === null || t.teacher_approved === false).length;
+    const badge = document.getElementById('teacher-badge');
+    if(pendingCount > 0) { badge.textContent = pendingCount; badge.style.display = 'inline-flex'; }
+    else badge.style.display = 'none';
+
+    renderTeachersTable();
+  } catch(e) {
+    el.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`;
+  }
+}
+
+function setTeacherFilter(f) {
+  S.teacherFilter = f;
+  document.querySelectorAll('[id^="tf-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('tf-'+f).classList.add('active');
+  renderTeachersTable();
+}
+
+function teacherStatus(t) {
+  if(t.teacher_approved === true)  return 'approved';
+  if(t.teacher_approved === false && t.teacher_approved !== null) {
+    // null = never set (pending), false = rejected
+    return 'rejected';
+  }
+  return 'pending'; // null = never approved
+}
+
+// More precise: use a dedicated column or logic
+function getTeacherStatus(t) {
+  // teacher_approved: true=approved, false=rejected, null=pending
+  if(t.teacher_approved === true)  return 'approved';
+  if(t.teacher_approved === false) return 'rejected';
+  return 'pending';
+}
+
+function renderTeachersTable() {
+  const el = document.getElementById('teachers-body');
+  const search = (document.getElementById('teacher-search')?.value || '').toLowerCase();
+
+  let data = S.teachers;
+  if(S.teacherFilter !== 'all') {
+    data = data.filter(t => getTeacherStatus(t) === S.teacherFilter);
+  }
+  if(search) {
+    data = data.filter(t => (t.full_name||'').toLowerCase().includes(search) || (t.phone||'').includes(search) || (t.specialization||'').toLowerCase().includes(search));
+  }
+
+  // Stats bar
+  const total    = S.teachers.length;
+  const approved = S.teachers.filter(t => getTeacherStatus(t) === 'approved').length;
+  const pending  = S.teachers.filter(t => getTeacherStatus(t) === 'pending').length;
+  const rejected = S.teachers.filter(t => getTeacherStatus(t) === 'rejected').length;
+
+  const statsHTML = `
+    <div class="teacher-stat-bar">
+      <div class="t-stat">
+        <div class="t-stat-num" style="color:var(--blue)">${total}</div>
+        <div class="t-stat-lbl">📋 إجمالي المعلمين</div>
+      </div>
+      <div class="t-stat">
+        <div class="t-stat-num" style="color:var(--green)">${approved}</div>
+        <div class="t-stat-lbl">✅ معتمدون</div>
+      </div>
+      <div class="t-stat">
+        <div class="t-stat-num" style="color:var(--gold)">${pending}</div>
+        <div class="t-stat-lbl">⏳ بانتظار الموافقة</div>
+      </div>
+    </div>`;
+
+  if(!data.length) {
+    el.innerHTML = statsHTML + `<div class="empty-box"><div class="ei">👨‍🏫</div><div class="et">لا يوجد معلمون في هذه الفئة</div></div>`;
+    return;
+  }
+
+  const statusBadge = {
+    approved: `<span class="b-teacher-approved">✅ معتمد</span>`,
+    pending:  `<span class="b-teacher-pending">⏳ بانتظار الموافقة</span>`,
+    rejected: `<span class="b-teacher-rejected">❌ مرفوض</span>`,
+  };
+
+  const actionBtns = t => {
+    const st = getTeacherStatus(t);
+    if(st === 'pending') return `
+      <button class="btn-approve" onclick="approveTeacher('${t.id}')">✅ قبول</button>
+      <button class="btn-reject"  onclick="rejectTeacher('${t.id}')">❌ رفض</button>`;
+    if(st === 'approved') return `
+      <button class="btn-revoke" onclick="revokeTeacher('${t.id}')">🔄 سحب الاعتماد</button>`;
+    if(st === 'rejected') return `
+      <button class="btn-approve" onclick="approveTeacher('${t.id}')">✅ إعادة قبول</button>`;
+    return '';
+  };
+
+  el.innerHTML = statsHTML + `<div>` + data.map(t => `
+    <div class="teacher-row" id="trow-${t.id}">
+      <div class="t-av">${t.avatar_url ? `<img src="${t.avatar_url}">` : ini(t.full_name)}</div>
+      <div class="t-info">
+        <div class="t-name">${t.full_name || '—'}</div>
+        <div class="t-sub">
+          ${t.specialization ? `📚 ${t.specialization}` : ''}
+          ${t.experience_years ? ` · ${t.experience_years} خبرة` : ''}
+          ${t.phone ? ` · 📱 ${t.phone}` : ''}
+          · 📅 ${fds(t.created_at)}
+        </div>
+        ${t.bio ? `<div style="font-size:.74rem;color:var(--gray);margin-top:3px;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"${t.bio}"</div>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        ${statusBadge[getTeacherStatus(t)] || ''}
+        <div class="t-acts" id="tacts-${t.id}">${actionBtns(t)}</div>
+      </div>
+    </div>`).join('') + `</div>`;
+}
+
+async function approveTeacher(teacherId) {
+  const row = document.getElementById('trow-'+teacherId);
+  const acts = document.getElementById('tacts-'+teacherId);
+  if(acts) acts.innerHTML = `<span style="font-size:.8rem;color:var(--gray)">⏳ جاري...</span>`;
+
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .update({ teacher_approved: true })
+      .eq('id', teacherId);
+    if(error) throw error;
+
+    // Update local state
+    const idx = S.teachers.findIndex(t => t.id === teacherId);
+    if(idx !== -1) S.teachers[idx].teacher_approved = true;
+
+    toast('✅ تم قبول المعلم بنجاح');
+    renderTeachersTable();
+
+    // Update badge
+    const pending = S.teachers.filter(t => getTeacherStatus(t) === 'pending').length;
+    const badge = document.getElementById('teacher-badge');
+    if(pending > 0) { badge.textContent = pending; badge.style.display = 'inline-flex'; }
+    else badge.style.display = 'none';
+  } catch(e) {
+    toast('خطأ: '+e.message, 'err');
+    renderTeachersTable();
+  }
+}
+
+async function rejectTeacher(teacherId) {
+  const acts = document.getElementById('tacts-'+teacherId);
+  if(acts) acts.innerHTML = `<span style="font-size:.8rem;color:var(--gray)">⏳ جاري...</span>`;
+
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .update({ teacher_approved: false })
+      .eq('id', teacherId);
+    if(error) throw error;
+
+    const idx = S.teachers.findIndex(t => t.id === teacherId);
+    if(idx !== -1) S.teachers[idx].teacher_approved = false;
+
+    toast('تم رفض طلب المعلم');
+    renderTeachersTable();
+
+    const pending = S.teachers.filter(t => getTeacherStatus(t) === 'pending').length;
+    const badge = document.getElementById('teacher-badge');
+    if(pending > 0) { badge.textContent = pending; badge.style.display = 'inline-flex'; }
+    else badge.style.display = 'none';
+  } catch(e) {
+    toast('خطأ: '+e.message, 'err');
+    renderTeachersTable();
+  }
+}
+
+async function revokeTeacher(teacherId) {
+  if(!confirm('هل تريد سحب اعتماد هذا المعلم؟ لن يتمكن من الدخول للوحة التحكم.')) return;
+
+  const acts = document.getElementById('tacts-'+teacherId);
+  if(acts) acts.innerHTML = `<span style="font-size:.8rem;color:var(--gray)">⏳ جاري...</span>`;
+
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .update({ teacher_approved: null })
+      .eq('id', teacherId);
+    if(error) throw error;
+
+    const idx = S.teachers.findIndex(t => t.id === teacherId);
+    if(idx !== -1) S.teachers[idx].teacher_approved = null;
+
+    toast('تم سحب اعتماد المعلم');
+    renderTeachersTable();
+  } catch(e) {
+    toast('خطأ: '+e.message, 'err');
+    renderTeachersTable();
+  }
+}
+
 // ══════════════════════════════════
 // INIT
 // ══════════════════════════════════
@@ -937,10 +1194,19 @@ function updateHdr() {
     const {data:prof,error:pe}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
     if(pe||!prof){ window.location.href='login.html'; return; }
     S.profile=prof;
-    if(prof.role!=='teacher'){ window.location.href='dashboard.html'; return; }
+    // ← changed from 'teacher' to 'admin' — this is the ADMIN panel
+    if(prof.role!=='admin'){ window.location.href='dashboard.html'; return; }
 
     updateHdr();
     await Promise.all([loadRequests(), loadCourses()]);
+
+    // Load teacher pending badge in background
+    sb.from('profiles').select('id,teacher_approved').eq('role','teacher').then(({data})=>{
+      const pending = (data||[]).filter(t => t.teacher_approved === null || t.teacher_approved === false).length;
+      const badge = document.getElementById('teacher-badge');
+      if(badge && pending > 0) { badge.textContent = pending; badge.style.display = 'inline-flex'; }
+    });
+
     document.getElementById('loader').style.display='none';
   } catch(e){
     console.error('INIT:',e);

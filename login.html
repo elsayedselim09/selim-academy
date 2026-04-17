@@ -852,10 +852,12 @@ async function redirectByRole(userId) {
   try {
     var { data: prof } = await _sb
       .from('profiles')
-      .select('role')
+      .select('role, teacher_approved')
       .eq('id', userId)
       .single();
     if (prof && prof.role === 'teacher') {
+      dest = 'teacher.html';   // ← تصحيح: كان admin.html
+    } else if (prof && prof.role === 'admin') {
       dest = 'admin.html';
     }
   } catch (e) { /* fallback to dashboard */ }
@@ -1039,12 +1041,17 @@ async function handleRegister() {
 
   // ── Step 2: حفظ بيانات كاملة في profiles ──
   if (data.user) {
-    await _sb.from('profiles').upsert({
+    var profilePayload = {
       id:        data.user.id,
       full_name: fn + ' ' + ln,
       phone:     ph,
       role:      role
-    });
+    };
+    // لو كان التسجيل كمعلم → أضف teacher_approved = null (بانتظار الموافقة)
+    if (role === 'teacher') {
+      profilePayload.teacher_approved = null;
+    }
+    await _sb.from('profiles').upsert(profilePayload);
   }
 
   btn.classList.remove('loading');
