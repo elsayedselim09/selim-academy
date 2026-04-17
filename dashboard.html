@@ -606,9 +606,13 @@ async function fetchAllData(userId) {
   STATE.activity      = act.data || [];
   STATE.notifications = notif.data || [];
 
-  // ── لو المستخدم مدرس → حوّله لصفحة المدرس ──
+  // ── التوجيه حسب الدور (منع المعلمين والأدمن من رؤية لوحة الطالب) ──
   if (STATE.profile?.role === 'teacher') {
     window.location.href = 'teacher.html';
+    return;
+  } else if (STATE.profile?.role === 'admin') {
+    window.location.href = 'admin.html';
+    return;
   }
 }
 

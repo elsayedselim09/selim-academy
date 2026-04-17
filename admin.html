@@ -166,15 +166,17 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
 .msg-ok{background:var(--green-light);border:1px solid #6EE7B7;color:#065F46;padding:10px 14px;border-radius:8px;font-size:.83rem;margin-top:10px}
 .msg-err{background:var(--red-light);border:1px solid #FECACA;color:var(--red);padding:10px 14px;border-radius:8px;font-size:.83rem;margin-top:10px}
 
-/* COURSES GRID */
-.courses-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
-.course-card{background:var(--white);border:1px solid var(--gray-mid);border-radius:var(--radius);padding:20px;transition:all .25s}
-.course-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
-.c-icon{width:52px;height:52px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:1.7rem;margin-bottom:12px}
-.c-name{font-size:.95rem;font-weight:900;color:var(--dark);margin-bottom:4px}
-.c-desc{font-size:.8rem;color:var(--gray);margin-bottom:12px;line-height:1.6;min-height:36px}
-.c-meta{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap}
-.c-acts{display:flex;gap:8px}
+/* COURSES GRID — teacher subjects */
+.subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}
+.subj-card{background:var(--white);border:1px solid var(--gray-mid);border-radius:var(--radius);padding:22px;transition:all .25s;position:relative;cursor:pointer}
+.subj-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.subj-card-head{display:flex;align-items:center;gap:13px;margin-bottom:14px}
+.subj-emoji{width:52px;height:52px;border-radius:13px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;font-size:1.7rem;flex-shrink:0}
+.subj-name{font-size:.97rem;font-weight:900;color:var(--dark)}
+.subj-teacher{font-size:.76rem;color:var(--gray);margin-top:2px}
+.subj-meta{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap}
+.subj-acts{display:flex;gap:8px}
+.subj-status-ribbon{position:absolute;top:14px;left:14px}
 
 /* SESSIONS */
 .sess-item{display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid var(--gray-mid)}
@@ -197,7 +199,15 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
 .b-title{font-size:1.25rem;font-weight:900;margin-bottom:5px}
 .b-sub{font-size:.85rem;opacity:.8}
 
-/* TEACHER CARDS */
+/* TEACHER DETAIL MODAL */
+.t-mdl-av{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#8B5CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.8rem;font-weight:900;margin:0 auto 10px;overflow:hidden;border:3px solid var(--blue-light);flex-shrink:0}
+.t-mdl-av img{width:100%;height:100%;object-fit:cover}
+.t-mdl-name{font-size:1.1rem;font-weight:900;color:var(--dark);text-align:center}
+.t-mdl-spec{font-size:.82rem;color:var(--gray);text-align:center;margin-top:4px}
+.t-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.t-info-item{background:var(--gray-light);border-radius:9px;padding:11px 13px}
+.t-info-lbl{font-size:.7rem;color:var(--gray);margin-bottom:3px}
+.t-info-val{font-size:.87rem;font-weight:700;color:var(--dark)}
 .teacher-row { display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--gray-mid);transition:background .15s }
 .teacher-row:last-child { border-bottom:none }
 .teacher-row:hover { background:var(--gray-light) }
@@ -291,17 +301,104 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   <div class="page active" id="page-overview">
     <div class="banner">
       <div class="b-title">أهلاً بك في لوحة التحكم 🎓</div>
-      <div class="b-sub">إدارة كورساتك وطلابك وطلبات الاشتراك من مكان واحد</div>
+      <div class="b-sub" id="banner-date">تحميل البيانات...</div>
     </div>
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-icon si-gold">⏳</div><div><div class="stat-num" id="s-pending">—</div><div class="stat-label">طلبات معلقة</div></div></div>
-      <div class="stat-card"><div class="stat-icon si-green">✅</div><div><div class="stat-num" id="s-approved">—</div><div class="stat-label">طلبات مقبولة</div></div></div>
-      <div class="stat-card"><div class="stat-icon si-red">❌</div><div><div class="stat-num" id="s-rejected">—</div><div class="stat-label">طلبات مرفوضة</div></div></div>
-      <div class="stat-card"><div class="stat-icon si-blue">📚</div><div><div class="stat-num" id="s-courses">—</div><div class="stat-label">كورسات</div></div></div>
+
+    <!-- Stats Row 1: Requests -->
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+      <div class="stat-card" style="cursor:pointer" onclick="goTo('requests');setFilter('pending')">
+        <div class="stat-icon si-gold">⏳</div>
+        <div><div class="stat-num" id="s-pending">—</div><div class="stat-label">طلبات اشتراك معلقة</div></div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="goTo('requests');setFilter('approved')">
+        <div class="stat-icon si-green">✅</div>
+        <div><div class="stat-num" id="s-approved">—</div><div class="stat-label">طلبات مقبولة</div></div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="goTo('requests');setFilter('rejected')">
+        <div class="stat-icon si-red">❌</div>
+        <div><div class="stat-num" id="s-rejected">—</div><div class="stat-label">طلبات مرفوضة</div></div>
+      </div>
     </div>
-    <div class="section-card">
-      <div class="section-head"><h3>⏳ آخر الطلبات المعلقة</h3><span style="font-size:.8rem;color:var(--blue);cursor:pointer;font-weight:700" onclick="goTo('requests')">عرض الكل ←</span></div>
-      <div id="ov-list"><div style="padding:20px"><div class="skel" style="height:46px;margin-bottom:10px"></div><div class="skel" style="height:46px;margin-bottom:10px"></div><div class="skel" style="height:46px"></div></div></div>
+
+    <!-- Stats Row 2: Platform -->
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
+      <div class="stat-card" style="cursor:pointer" onclick="goTo('teachers');setTeacherFilter('pending')">
+        <div class="stat-icon si-purple">👨‍🏫</div>
+        <div><div class="stat-num" id="s-teacher-pending">—</div><div class="stat-label">معلمون بانتظار الموافقة</div></div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="goTo('students')">
+        <div class="stat-icon si-blue">👥</div>
+        <div><div class="stat-num" id="s-students">—</div><div class="stat-label">إجمالي الطلاب</div></div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="goTo('sessions')">
+        <div class="stat-icon si-green">🗓️</div>
+        <div><div class="stat-num" id="s-today-sess">—</div><div class="stat-label">حصص اليوم</div></div>
+      </div>
+    </div>
+
+    <!-- Quick Navigation Cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px">
+      <div onclick="goTo('requests')" style="background:var(--white);border:1px solid var(--gray-mid);border-radius:12px;padding:18px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
+        <div style="font-size:1.8rem;margin-bottom:8px">📋</div>
+        <div style="font-size:.85rem;font-weight:700;color:var(--dark)">طلبات الاشتراك</div>
+      </div>
+      <div onclick="goTo('courses')" style="background:var(--white);border:1px solid var(--gray-mid);border-radius:12px;padding:18px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
+        <div style="font-size:1.8rem;margin-bottom:8px">📚</div>
+        <div style="font-size:.85rem;font-weight:700;color:var(--dark)">كورسات المعلمين</div>
+      </div>
+      <div onclick="goTo('sessions')" style="background:var(--white);border:1px solid var(--gray-mid);border-radius:12px;padding:18px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
+        <div style="font-size:1.8rem;margin-bottom:8px">🗓️</div>
+        <div style="font-size:.85rem;font-weight:700;color:var(--dark)">حصص اليوم</div>
+      </div>
+      <div onclick="goTo('teachers')" style="background:var(--white);border:1px solid var(--gray-mid);border-radius:12px;padding:18px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
+        <div style="font-size:1.8rem;margin-bottom:8px">👨‍🏫</div>
+        <div style="font-size:.85rem;font-weight:700;color:var(--dark)">المعلمون</div>
+      </div>
+      <div onclick="goTo('students')" style="background:var(--white);border:1px solid var(--gray-mid);border-radius:12px;padding:18px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
+        <div style="font-size:1.8rem;margin-bottom:8px">👥</div>
+        <div style="font-size:.85rem;font-weight:700;color:var(--dark)">الطلاب</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+
+      <!-- Pending Subscription Requests -->
+      <div class="section-card">
+        <div class="section-head">
+          <h3>⏳ آخر طلبات الاشتراك المعلقة</h3>
+          <span style="font-size:.8rem;color:var(--blue);cursor:pointer;font-weight:700" onclick="goTo('requests')">عرض الكل ←</span>
+        </div>
+        <div id="ov-list"><div style="padding:20px">
+          <div class="skel" style="height:46px;margin-bottom:8px;border-radius:8px"></div>
+          <div class="skel" style="height:46px;margin-bottom:8px;border-radius:8px"></div>
+          <div class="skel" style="height:46px;border-radius:8px"></div>
+        </div></div>
+      </div>
+
+      <!-- Pending Teacher Requests -->
+      <div class="section-card">
+        <div class="section-head">
+          <h3>👨‍🏫 طلبات انضمام المعلمين</h3>
+          <span style="font-size:.8rem;color:var(--blue);cursor:pointer;font-weight:700" onclick="goTo('teachers')">عرض الكل ←</span>
+        </div>
+        <div id="ov-teachers"><div style="padding:20px">
+          <div class="skel" style="height:46px;margin-bottom:8px;border-radius:8px"></div>
+          <div class="skel" style="height:46px;border-radius:8px"></div>
+        </div></div>
+      </div>
+
+    </div>
+
+    <!-- Today Sessions -->
+    <div class="section-card" style="margin-top:18px">
+      <div class="section-head">
+        <h3>🗓️ حصص اليوم</h3>
+        <span style="font-size:.8rem;color:var(--blue);cursor:pointer;font-weight:700" onclick="goTo('sessions')">عرض الكل ←</span>
+      </div>
+      <div id="ov-sessions"><div style="padding:20px">
+        <div class="skel" style="height:46px;margin-bottom:8px;border-radius:8px"></div>
+        <div class="skel" style="height:46px;border-radius:8px"></div>
+      </div></div>
     </div>
   </div>
 
@@ -322,38 +419,47 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     </div>
   </div>
 
-  <!-- COURSES -->
+  <!-- COURSES (teacher subjects) -->
   <div class="page" id="page-courses">
-    <div class="page-title">📚 الكورسات</div>
-    <p class="page-sub">إدارة الكورسات المتاحة في المنصة</p>
-    <div style="margin-bottom:20px"><button class="btn-primary" onclick="openCourseForm()">➕ إضافة كورس</button></div>
-    <div id="courses-grid" class="courses-grid">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:10px">
+      <div class="page-title">📚 كورسات المعلمين</div>
+      <button class="btn-refresh" onclick="loadCourses()">🔄 تحديث</button>
+    </div>
+    <p class="page-sub">المواد التي أضافها المعلمون — يمكنك الموافقة عليها أو حذفها</p>
+    <div class="section-card" style="margin-bottom:20px">
+      <div class="filter-bar">
+        <button class="filter-btn active" id="cf-all"      onclick="setCourseFilter('all')">📋 الكل</button>
+        <button class="filter-btn"        id="cf-pending"  onclick="setCourseFilter('pending')">⏳ بانتظار الموافقة</button>
+        <button class="filter-btn"        id="cf-approved" onclick="setCourseFilter('approved')">✅ معتمدة</button>
+        <input class="search-input" id="course-search" type="text" placeholder="🔍 بحث بالاسم أو المعلم..." oninput="renderCoursesGrid()">
+      </div>
+    </div>
+    <div id="courses-grid" class="subj-grid">
       <div class="skel" style="height:190px;border-radius:12px"></div>
       <div class="skel" style="height:190px;border-radius:12px"></div>
       <div class="skel" style="height:190px;border-radius:12px"></div>
     </div>
   </div>
 
-  <!-- SESSIONS -->
+  <!-- SESSIONS — Today's teacher sessions -->
   <div class="page" id="page-sessions">
-    <div class="page-title">🎥 الحصص</div>
-    <p class="page-sub">إدارة حصص الكورسات</p>
-    <div class="section-card" style="margin-bottom:20px">
-      <div class="section-body" style="padding:16px 22px">
-        <div class="fg" style="margin-bottom:0">
-          <label>اختر الكورس أولاً</label>
-          <select id="sess-course-sel" onchange="loadSessions()">
-            <option value="">— اختر كورس —</option>
-          </select>
-        </div>
-      </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:10px">
+      <div class="page-title">📅 حصص المعلمين</div>
+      <button class="btn-refresh" onclick="loadAdminSessions()">🔄 تحديث</button>
     </div>
-    <div id="sess-wrap" style="display:none">
-      <div style="margin-bottom:16px"><button class="btn-primary" onclick="openSessionForm()">➕ إضافة حصة</button></div>
-      <div class="section-card">
-        <div class="section-head"><h3 id="sess-course-title">حصص الكورس</h3><button class="btn-refresh" onclick="loadSessions()">🔄 تحديث</button></div>
-        <div class="section-body" id="sess-list"></div>
+    <p class="page-sub">متابعة جميع حصص المعلمين — المادة والصف ووقت الحصة</p>
+
+    <!-- Today stats banner -->
+    <div id="sess-stats-bar" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px"></div>
+
+    <div class="section-card">
+      <div class="filter-bar">
+        <button class="filter-btn active" id="sf-today"    onclick="setSessionFilter('today')">🗓️ حصص اليوم</button>
+        <button class="filter-btn"        id="sf-upcoming" onclick="setSessionFilter('upcoming')">⏰ القادمة</button>
+        <button class="filter-btn"        id="sf-all"      onclick="setSessionFilter('all')">📋 الكل</button>
+        <input class="search-input" id="sess-search" type="text" placeholder="🔍 بحث بالمعلم أو المادة..." oninput="renderAdminSessions()">
       </div>
+      <div id="sess-admin-body"></div>
     </div>
   </div>
 
@@ -431,23 +537,47 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   </div>
 </div>
 
-<!-- COURSE MODAL -->
-<div class="mdl" id="mdl-course">
+<!-- STUDENT DETAIL MODAL -->
+<div class="mdl" id="mdl-student-detail">
+  <div class="mdl-box wide" style="max-width:520px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="mdl-title" style="margin-bottom:0">👥 تفاصيل الطالب</div>
+      <button onclick="document.getElementById('mdl-student-detail').classList.remove('show')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
+    </div>
+    <div id="student-detail-body" style="max-height:520px;overflow-y:auto">
+      <div class="skel" style="height:180px;border-radius:12px"></div>
+    </div>
+    <div class="mdl-btns" style="margin-top:18px">
+      <button class="mdl-cancel" onclick="document.getElementById('mdl-student-detail').classList.remove('show')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEACHER DETAIL MODAL -->
+<div class="mdl" id="mdl-teacher-detail">
+  <div class="mdl-box wide" style="max-width:520px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="mdl-title" style="margin-bottom:0">👨‍🏫 تفاصيل المعلم</div>
+      <button onclick="document.getElementById('mdl-teacher-detail').classList.remove('show')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
+    </div>
+    <div id="teacher-detail-body" style="max-height:520px;overflow-y:auto">
+      <div class="skel" style="height:180px;border-radius:12px"></div>
+    </div>
+    <div class="mdl-btns" id="teacher-detail-acts" style="margin-top:18px"></div>
+  </div>
+</div>
+
+<!-- SUBJECT DETAIL MODAL -->
+<div class="mdl" id="mdl-subject">
   <div class="mdl-box wide">
-    <div class="mdl-title" id="c-mdl-title">➕ إضافة كورس</div>
-    <div style="margin-bottom:16px"></div>
-    <input type="hidden" id="c-edit-id">
-    <div class="fg"><label>اسم الكورس *</label><input type="text" id="c-name" placeholder="مثال: رياضيات الثانوية"></div>
-    <div class="fg"><label>الوصف</label><textarea id="c-desc" rows="3" placeholder="وصف مختصر للكورس..."></textarea></div>
-    <div class="fg-row">
-      <div class="fg"><label>الأيقونة (emoji)</label><input type="text" id="c-icon" placeholder="📚" style="text-align:center;font-size:1.3rem"></div>
-      <div class="fg"><label>إجمالي الساعات</label><input type="number" id="c-hours" placeholder="0" min="0"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="mdl-title" style="margin-bottom:0" id="subj-mdl-title">📚 تفاصيل المادة</div>
+      <button onclick="document.getElementById('mdl-subject').classList.remove('show')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
     </div>
-    <div class="mdl-btns">
-      <button class="mdl-cancel" onclick="closeCourseModal()">إلغاء</button>
-      <button class="mdl-confirm mc-save" id="c-save-btn" onclick="saveCourse()">💾 حفظ</button>
+    <div id="subj-mdl-body" style="max-height:480px;overflow-y:auto">
+      <div class="skel" style="height:120px;border-radius:10px"></div>
     </div>
-    <div id="c-msg"></div>
+    <div class="mdl-btns" id="subj-mdl-acts" style="margin-top:18px"></div>
   </div>
 </div>
 
@@ -568,10 +698,32 @@ async function loadRequests() {
 
 function refreshStats() {
   const all = S.requests;
-  document.getElementById('s-pending').textContent  = all.filter(r=>r.status==='pending').length;
-  document.getElementById('s-approved').textContent = all.filter(r=>r.status==='approved').length;
-  document.getElementById('s-rejected').textContent = all.filter(r=>r.status==='rejected').length;
-  document.getElementById('s-courses').textContent  = S.courses.length||'—';
+  document.getElementById('s-pending').textContent  = all.filter(r => r.status==='pending').length;
+  document.getElementById('s-approved').textContent = all.filter(r => r.status==='approved').length;
+  document.getElementById('s-rejected').textContent = all.filter(r => r.status==='rejected').length;
+  document.getElementById('s-courses').textContent  = S.teacherSubjects?.length ?? '—';
+
+  // معلمون بانتظار الموافقة
+  const teacherPending = S.teachers.filter(t => getTeacherStatus(t) === 'pending').length;
+  document.getElementById('s-teacher-pending').textContent = teacherPending;
+
+  // إجمالي الطلاب
+  document.getElementById('s-students').textContent = S.students.length || '—';
+
+  // حصص اليوم
+  const today = new Date().toISOString().slice(0,10);
+  const todaySess = (S.allSessions||[]).filter(s => (s.session_date||'').slice(0,10) === today).length;
+  document.getElementById('s-today-sess').textContent = todaySess;
+
+  // تاريخ اليوم في البانر
+  const now = new Date();
+  document.getElementById('banner-date').textContent =
+    now.toLocaleDateString('ar-EG', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+  // تحديث بطاقة المعلمين المعلقين
+  renderOvTeachers();
+  // تحديث حصص اليوم
+  renderOvSessions();
 }
 
 function updateBadge() {
@@ -581,7 +733,7 @@ function updateBadge() {
 }
 
 function renderOvList() {
-  const list = S.requests.filter(r=>r.status==='pending').slice(0,5);
+  const list = S.requests.filter(r => r.status==='pending').slice(0,5);
   const el   = document.getElementById('ov-list');
   if(!list.length){ el.innerHTML=`<div class="empty-box"><div class="ei">🎉</div><div class="et">لا توجد طلبات معلقة</div></div>`; return; }
   el.innerHTML=`<div class="tbl-wrap"><table class="data-table"><thead><tr><th>الطالب</th><th>الهاتف</th><th>الصف / المادة</th><th>التاريخ</th><th>الإجراء</th></tr></thead><tbody>
@@ -592,6 +744,49 @@ function renderOvList() {
     <td style="font-size:.76rem;color:var(--gray)">${fds(r.created_at)}</td>
     <td><div class="acts"><button class="btn-ok" onclick="openConfirm('${r.id}','approve')">✅ قبول</button><button class="btn-no" onclick="openConfirm('${r.id}','reject')">❌ رفض</button></div></td>
   </tr>`).join('')}</tbody></table></div>`;
+}
+
+function renderOvTeachers() {
+  const el   = document.getElementById('ov-teachers');
+  if(!el) return;
+  const list = S.teachers.filter(t => getTeacherStatus(t) === 'pending').slice(0,4);
+  if(!list.length) { el.innerHTML=`<div class="empty-box"><div class="ei">🎉</div><div class="et">لا توجد طلبات معلقة</div></div>`; return; }
+  el.innerHTML = list.map(t => `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--gray-mid)">
+      <div class="u-av" style="background:linear-gradient(135deg,var(--blue),#8B5CF6)">${ini(t.full_name)}</div>
+      <div style="flex:1">
+        <div style="font-size:.87rem;font-weight:700">${t.full_name||'—'}</div>
+        <div style="font-size:.74rem;color:var(--gray)">${t.specialization||'لا يوجد تخصص'} · ${fds(t.created_at)}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-approve" onclick="approveTeacher('${t.id}')" >✅ قبول</button>
+        <button class="btn-reject"  onclick="rejectTeacher('${t.id}')"  >❌ رفض</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderOvSessions() {
+  const el   = document.getElementById('ov-sessions');
+  if(!el) return;
+  const today = new Date().toISOString().slice(0,10);
+  const list  = (S.allSessions||[]).filter(s => (s.session_date||'').slice(0,10) === today).slice(0,5);
+  if(!list.length) { el.innerHTML=`<div class="empty-box"><div class="ei">🗓️</div><div class="et">لا توجد حصص اليوم</div></div>`; return; }
+  el.innerHTML = list.map(s => {
+    const grade   = s.teacher_grades;
+    const subject = grade?.teacher_subjects;
+    const teacher = subject?.profiles;
+    return `
+    <div style="display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--gray-mid)">
+      <div style="background:var(--blue-light);border-radius:9px;padding:6px 10px;text-align:center;min-width:54px">
+        <div style="font-size:.65rem;color:var(--blue);font-weight:700">${s.start_time?s.start_time.slice(0,5):'—'}</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:.87rem;font-weight:700">${subject?.subject_name||'—'} — ${grade?.grade_name||'—'}</div>
+        <div style="font-size:.74rem;color:var(--gray)">👨‍🏫 ${teacher?.full_name||'—'}</div>
+      </div>
+      ${s.zoom_link ? `<a href="${s.zoom_link}" target="_blank" style="font-size:.8rem;color:var(--blue);font-weight:700;text-decoration:none">🔗 دخول</a>` : ''}
+    </div>`;
+  }).join('');
 }
 
 function setFilter(f) {
@@ -662,10 +857,10 @@ async function runConfirm() {
   const {id, action, type} = S.pendingAction;
   closeConfirm();
   try {
-    if(action==='approve')        { await approveReq(id); return; }
-    if(action==='reject')         { await rejectReq(id);  return; }
-    if(type==='deleteCourse')     { await delCourse(id);  return; }
-    if(type==='deleteSession')    { await delSession(id); return; }
+    if(action==='approve')        { await approveReq(id);    return; }
+    if(action==='reject')         { await rejectReq(id);     return; }
+    if(type==='deleteSubject')    { await delCourse(id);     return; }
+    if(type==='deleteSession')    { await delSession(id);    return; }
   } catch(e) { toast('حدث خطأ: '+e.message,'err'); }
 }
 
@@ -711,191 +906,447 @@ async function rejectReq(id) {
   toast('تم رفض الطلب');
 }
 
-// ══════════════════════════════════
-// COURSES
-// ══════════════════════════════════
+// ══════════════════════════════════════════════════
+// COURSES — Teacher Subjects
+// ══════════════════════════════════════════════════
+S.courseFilter = 'all';
+S.teacherSubjects = [];
+
 async function loadCourses() {
   const el = document.getElementById('courses-grid');
-  el.innerHTML='<div class="skel" style="height:190px;border-radius:12px"></div>'.repeat(3);
+  el.innerHTML = '<div class="skel" style="height:190px;border-radius:12px"></div>'.repeat(3);
   try {
-    const {data,error} = await sb.from('courses').select('*').order('created_at',{ascending:false});
+    // جلب المواد مع اسم المعلم
+    const { data, error } = await sb
+      .from('teacher_subjects')
+      .select('*, profiles(id,full_name,avatar_url,specialization), teacher_grades(id,grade_name,grade_level)')
+      .order('created_at', { ascending: false });
     if(error) throw error;
-    S.courses = data||[];
-    document.getElementById('s-courses').textContent = S.courses.length;
+
+    S.teacherSubjects = data || [];
+    document.getElementById('s-courses').textContent = S.teacherSubjects.length;
     renderCoursesGrid();
-  } catch(e) { toast('فشل تحميل الكورسات: '+e.message,'err'); }
+  } catch(e) {
+    el.innerHTML = `<div class="empty-box" style="grid-column:1/-1"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`;
+  }
+}
+
+function setCourseFilter(f) {
+  S.courseFilter = f;
+  document.querySelectorAll('[id^="cf-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('cf-'+f).classList.add('active');
+  renderCoursesGrid();
 }
 
 function renderCoursesGrid() {
-  const el = document.getElementById('courses-grid');
-  if(!S.courses.length){
-    el.innerHTML=`<div class="empty-box" style="grid-column:1/-1"><div class="ei">📚</div><div class="et">لا توجد كورسات</div><div class="ed">اضغط "إضافة كورس" لإنشاء أول كورس</div></div>`;
+  const el     = document.getElementById('courses-grid');
+  const search = (document.getElementById('course-search')?.value || '').toLowerCase();
+  const subjectEmojis = { 'رياضيات':'🔢', 'فيزياء':'⚛️', 'كيمياء':'🧪', 'أحياء':'🧬', 'عربي':'📖', 'انجليزي':'🇬🇧', 'تاريخ':'📜', 'جغرافيا':'🌍', 'دين':'☪️' };
+
+  let data = S.teacherSubjects;
+  if(S.courseFilter !== 'all') {
+    const isApproved = S.courseFilter === 'approved';
+    data = data.filter(s => (s.is_approved === true) === isApproved);
+  }
+  if(search) {
+    data = data.filter(s =>
+      (s.subject_name||'').toLowerCase().includes(search) ||
+      (s.profiles?.full_name||'').toLowerCase().includes(search)
+    );
+  }
+
+  if(!data.length) {
+    el.innerHTML = `<div class="empty-box" style="grid-column:1/-1"><div class="ei">📚</div><div class="et">لا توجد مواد</div><div class="ed">لم يضف المعلمون أي مادة بعد</div></div>`;
     return;
   }
-  el.innerHTML = S.courses.map(c=>`
-    <div class="course-card" id="cc-${c.id}">
-      <div class="c-icon" style="background:${c.icon_bg||'#EBF5FF'}">${c.icon||'📚'}</div>
-      <div class="c-name">${c.name||'—'}</div>
-      <div class="c-desc">${c.description||'لا يوجد وصف'}</div>
-      <div class="c-meta">
-        <span class="badge b-blue">⏱ ${c.total_hours||0} ساعة</span>
-        <span class="badge b-gray">📖 ${c.total_lessons||0} درس</span>
+
+  el.innerHTML = data.map(s => {
+    const emoji    = subjectEmojis[s.subject_name] || '📚';
+    const teacher  = s.profiles?.full_name || '—';
+    const approved = s.is_approved === true;
+    const grades   = (s.teacher_grades || []).map(g => g.grade_name).join(' · ') || 'لا توجد صفوف';
+    const statusBadge = approved
+      ? `<span class="badge b-approved">✅ معتمدة</span>`
+      : `<span class="badge b-pending">⏳ بانتظار الموافقة</span>`;
+    return `
+    <div class="subj-card" onclick="openSubjectDetail('${s.id}')">
+      <div class="subj-status-ribbon">${statusBadge}</div>
+      <div class="subj-card-head" style="margin-top:28px">
+        <div class="subj-emoji">${emoji}</div>
+        <div>
+          <div class="subj-name">${s.subject_name||'—'}</div>
+          <div class="subj-teacher">👨‍🏫 ${teacher}</div>
+        </div>
       </div>
-      <div class="c-acts">
-        <button class="btn-ed" onclick="openCourseForm('${c.id}')">✏️ تعديل</button>
-        <button class="btn-rm" onclick="openConfirm('${c.id}','delete','deleteCourse')">🗑️ حذف</button>
+      <div class="subj-meta">
+        <span class="badge b-blue">🏫 ${grades}</span>
       </div>
-    </div>`).join('');
+      <div class="subj-acts" onclick="event.stopPropagation()">
+        ${!approved ? `<button class="btn-ok" onclick="approveSubject('${s.id}')">✅ موافقة</button>` : ''}
+        <button class="btn-rm" onclick="openConfirm('${s.id}','delete','deleteSubject')">🗑️ حذف</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
-function openCourseForm(id) {
-  const c = id ? S.courses.find(x=>x.id===id) : null;
-  document.getElementById('c-mdl-title').textContent = c?'✏️ تعديل الكورس':'➕ إضافة كورس';
-  document.getElementById('c-edit-id').value = c?.id||'';
-  document.getElementById('c-name').value    = c?.name||'';
-  document.getElementById('c-desc').value    = c?.description||'';
-  document.getElementById('c-icon').value    = c?.icon||'📚';
-  document.getElementById('c-hours').value   = c?.total_hours||'';
-  document.getElementById('c-msg').innerHTML ='';
-  document.getElementById('mdl-course').classList.add('show');
-}
-function closeCourseModal() { document.getElementById('mdl-course').classList.remove('show'); }
+function openSubjectDetail(id) {
+  const s = S.teacherSubjects.find(x => x.id === id);
+  if(!s) return;
+  const teacher  = s.profiles?.full_name || '—';
+  const spec     = s.profiles?.specialization || '—';
+  const grades   = (s.teacher_grades || []);
+  const approved = s.is_approved === true;
 
-async function saveCourse() {
-  const id    = document.getElementById('c-edit-id').value;
-  const name  = document.getElementById('c-name').value.trim();
-  if(!name){ setMsg('c-msg','اسم الكورس مطلوب','err'); return; }
-  const payload={name, description:document.getElementById('c-desc').value.trim()||null, icon:document.getElementById('c-icon').value.trim()||'📚', total_hours:parseInt(document.getElementById('c-hours').value)||0};
-  const btn = document.getElementById('c-save-btn');
-  btn.disabled=true; btn.textContent='⏳...';
+  document.getElementById('subj-mdl-title').textContent = `📚 ${s.subject_name||'مادة'}` ;
+  document.getElementById('subj-mdl-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+      <div style="background:var(--blue-light);border-radius:10px;padding:14px">
+        <div style="font-size:.72rem;color:var(--gray);margin-bottom:4px">المادة</div>
+        <div style="font-weight:900;font-size:1.1rem">${s.subject_name||'—'}</div>
+      </div>
+      <div style="background:var(--green-light);border-radius:10px;padding:14px">
+        <div style="font-size:.72rem;color:var(--gray);margin-bottom:4px">المعلم</div>
+        <div style="font-weight:700">${teacher}</div>
+        <div style="font-size:.72rem;color:var(--gray)">${spec}</div>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">📋 الصفوف الدراسية (${grades.length})</div>
+      ${grades.length
+        ? grades.map(g => `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray-light);border-radius:8px;margin-bottom:6px"><span>🏫</span><span style="font-size:.85rem;font-weight:600">${g.grade_name||'—'}</span><span style="font-size:.72rem;color:var(--gray);margin-right:auto">${g.grade_level||''}</span></div>`).join('')
+        : '<div style="color:var(--gray);font-size:.83rem">لا توجد صفوف مضافة</div>'
+      }
+    </div>
+    <div style="padding:12px 14px;border-radius:8px;background:${approved?'var(--green-light)':'var(--gold-light)'}">
+      الحالة: ${approved ? '✅ معتمدة من الأدمين' : '⏳ بانتظار موافقة الأدمين'}
+    </div>`;
+
+  document.getElementById('subj-mdl-acts').innerHTML = `
+    ${!approved ? `<button class="mdl-confirm mc-approve" onclick="approveSubject('${s.id}');document.getElementById('mdl-subject').classList.remove('show')">✅ موافقة على المادة</button>` : ''}
+    <button class="mdl-confirm mc-danger" onclick="openConfirm('${s.id}','delete','deleteSubject');document.getElementById('mdl-subject').classList.remove('show')">🗑️ حذف</button>
+    <button class="mdl-cancel" onclick="document.getElementById('mdl-subject').classList.remove('show')">إغلاق</button>`;
+
+  document.getElementById('mdl-subject').classList.add('show');
+}
+
+async function approveSubject(id) {
   try {
-    if(id){ const {error}=await sb.from('courses').update(payload).eq('id',id); if(error) throw error; toast('✅ تم تعديل الكورس'); }
-    else  { const {error}=await sb.from('courses').insert(payload);              if(error) throw error; toast('✅ تم إضافة الكورس'); }
-    closeCourseModal(); await loadCourses();
-  } catch(e){ setMsg('c-msg',e.message,'err'); }
-  finally { btn.disabled=false; btn.textContent='💾 حفظ'; }
+    const { error } = await sb.from('teacher_subjects').update({ is_approved: true }).eq('id', id);
+    if(error) throw error;
+    const idx = S.teacherSubjects.findIndex(s => s.id === id);
+    if(idx !== -1) S.teacherSubjects[idx].is_approved = true;
+    toast('✅ تمت الموافقة على المادة');
+    renderCoursesGrid();
+  } catch(e) { toast('خطأ: '+e.message, 'err'); }
 }
 
 async function delCourse(id) {
-  const {error} = await sb.from('courses').delete().eq('id',id);
+  // حذف المادة والصفوف والمواد المرتبطة بها
+  await sb.from('teacher_grades').delete().eq('subject_id', id);
+  const { error } = await sb.from('teacher_subjects').delete().eq('id', id);
   if(error) throw error;
-  toast('✅ تم حذف الكورس');
+  toast('✅ تم حذف المادة');
   await loadCourses();
 }
 
-// ══════════════════════════════════
-// SESSIONS
-// ══════════════════════════════════
-async function initSessions() {
-  if(!S.courses.length) await loadCourses();
-  const sel = document.getElementById('sess-course-sel');
-  sel.innerHTML='<option value="">— اختر كورس —</option>'+S.courses.map(c=>`<option value="${c.id}">${c.icon||'📚'} ${c.name}</option>`).join('');
-  document.getElementById('sess-wrap').style.display='none';
-}
+// ══════════════════════════════════════════════════
+// SESSIONS — Admin view of teacher_sessions
+// ══════════════════════════════════════════════════
+S.sessionFilter = 'today';
+S.allSessions   = [];
 
-async function loadSessions() {
-  const cid = document.getElementById('sess-course-sel').value;
-  if(!cid){ document.getElementById('sess-wrap').style.display='none'; return; }
-  S.curCourseId = cid;
-  const course  = S.courses.find(c=>c.id===cid);
-  document.getElementById('sess-course-title').textContent=(course?.icon||'📚')+' '+(course?.name||'الكورس');
-  document.getElementById('sess-wrap').style.display='block';
-  const el = document.getElementById('sess-list');
-  el.innerHTML='<div class="skel" style="height:58px;margin-bottom:10px"></div>'.repeat(3);
+async function loadAdminSessions() {
+  const el = document.getElementById('sess-admin-body');
+  el.innerHTML = '<div style="padding:20px">' + '<div class="skel" style="height:58px;margin-bottom:10px;border-radius:8px"></div>'.repeat(4) + '</div>';
+
   try {
-    const {data,error}=await sb.from('sessions').select('*').eq('course_id',cid).order('scheduled_at',{ascending:true});
+    const { data, error } = await sb
+      .from('teacher_sessions')
+      .select(`
+        id, title, session_date, start_time, end_time, zoom_link,
+        status, notes, teacher_id,
+        teacher_grades ( id, grade_name, grade_level,
+          teacher_subjects ( id, subject_name,
+            profiles ( id, full_name, avatar_url, specialization )
+          )
+        )
+      `)
+      .order('session_date', { ascending: true })
+      .order('start_time',   { ascending: true });
+
     if(error) throw error;
-    S.sessions=data||[];
-    renderSessions();
-  } catch(e){ toast('فشل تحميل الحصص: '+e.message,'err'); }
+    S.allSessions = data || [];
+    renderSessionStats();
+    renderAdminSessions();
+  } catch(e) {
+    el.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`;
+  }
 }
 
-function renderSessions() {
-  const el=document.getElementById('sess-list');
-  if(!S.sessions.length){ el.innerHTML=`<div class="empty-box"><div class="ei">🎥</div><div class="et">لا توجد حصص</div><div class="ed">اضغط "إضافة حصة" لإنشاء أول حصة</div></div>`; return; }
-  el.innerHTML=S.sessions.map(s=>`
-    <div class="sess-item" id="si-${s.id}">
-      <div class="sess-time">
-        <div class="sess-day">${fday(s.scheduled_at)}</div>
-        <div class="sess-hr">${fhr(s.scheduled_at)}</div>
-      </div>
-      <div class="sess-info">
-        <div class="sess-title">${s.subject||'—'}</div>
-        <div class="sess-sub">${s.zoom_link?'🔗 Zoom متاح':'لا يوجد Zoom'} · ${fds(s.scheduled_at)}</div>
-      </div>
-      <div class="acts">
-        <button class="btn-ed" onclick="openSessionForm('${s.id}')">✏️</button>
-        <button class="btn-rm" onclick="openConfirm('${s.id}','delete','deleteSession')">🗑️</button>
-      </div>
-    </div>`).join('');
+function renderSessionStats() {
+  const today   = new Date().toISOString().slice(0,10);
+  const todaySessions = S.allSessions.filter(s => (s.session_date||'').slice(0,10) === today);
+  const upcoming      = S.allSessions.filter(s => (s.session_date||'').slice(0,10) > today);
+  const live          = todaySessions.filter(s => s.status === 'live' || s.status === 'ongoing');
+
+  document.getElementById('sess-stats-bar').innerHTML = `
+    <div style="background:var(--blue-light);border:1px solid #BFDBFE;border-radius:12px;padding:16px;text-align:center">
+      <div style="font-size:1.5rem;font-weight:900;color:var(--blue)">${todaySessions.length}</div>
+      <div style="font-size:.76rem;color:var(--gray);margin-top:3px">🗓️ حصص اليوم</div>
+    </div>
+    <div style="background:var(--green-light);border:1px solid #6EE7B7;border-radius:12px;padding:16px;text-align:center">
+      <div style="font-size:1.5rem;font-weight:900;color:var(--green)">${live.length}</div>
+      <div style="font-size:.76rem;color:var(--gray);margin-top:3px">🟢 جارية الآن</div>
+    </div>
+    <div style="background:var(--gold-light);border:1px solid #FCD34D;border-radius:12px;padding:16px;text-align:center">
+      <div style="font-size:1.5rem;font-weight:900;color:var(--gold)">${upcoming.length}</div>
+      <div style="font-size:.76rem;color:var(--gray);margin-top:3px">⏰ قادمة</div>
+    </div>`;
 }
 
-function openSessionForm(id) {
-  const s=id?S.sessions.find(x=>x.id===id):null;
-  document.getElementById('s-mdl-title').textContent=s?'✏️ تعديل الحصة':'➕ إضافة حصة';
-  document.getElementById('s-edit-id').value=s?.id||'';
-  document.getElementById('s-title').value=s?.subject||'';
-  document.getElementById('s-zoom').value=s?.zoom_link||'';
-  document.getElementById('s-video').value=s?.video_url||'';
-  document.getElementById('s-date').value=s?.scheduled_at?new Date(s.scheduled_at).toISOString().slice(0,16):'';
-  document.getElementById('s-msg').innerHTML='';
-  document.getElementById('mdl-session').classList.add('show');
-}
-function closeSessionModal() { document.getElementById('mdl-session').classList.remove('show'); }
-
-async function saveSession() {
-  const id    = document.getElementById('s-edit-id').value;
-  const title = document.getElementById('s-title').value.trim();
-  if(!title){ setMsg('s-msg','عنوان الحصة مطلوب','err'); return; }
-  const payload={subject:title, zoom_link:document.getElementById('s-zoom').value.trim()||null, video_url:document.getElementById('s-video').value.trim()||null, scheduled_at:document.getElementById('s-date').value||null, course_id:S.curCourseId};
-  const btn=document.getElementById('s-save-btn');
-  btn.disabled=true; btn.textContent='⏳...';
-  try {
-    if(id){ const {error}=await sb.from('sessions').update(payload).eq('id',id); if(error) throw error; toast('✅ تم تعديل الحصة'); }
-    else  { const {error}=await sb.from('sessions').insert(payload);              if(error) throw error; toast('✅ تم إضافة الحصة'); }
-    closeSessionModal(); await loadSessions();
-  } catch(e){ setMsg('s-msg',e.message,'err'); }
-  finally { btn.disabled=false; btn.textContent='💾 حفظ'; }
+function setSessionFilter(f) {
+  S.sessionFilter = f;
+  document.querySelectorAll('[id^="sf-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('sf-'+f).classList.add('active');
+  renderAdminSessions();
 }
 
-async function delSession(id) {
-  const {error}=await sb.from('sessions').delete().eq('id',id);
-  if(error) throw error;
-  toast('✅ تم حذف الحصة');
-  await loadSessions();
+function renderAdminSessions() {
+  const el     = document.getElementById('sess-admin-body');
+  const search = (document.getElementById('sess-search')?.value || '').toLowerCase();
+  const today  = new Date().toISOString().slice(0,10);
+  const now    = new Date();
+
+  let data = S.allSessions;
+
+  if(S.sessionFilter === 'today') {
+    data = data.filter(s => (s.session_date||'').slice(0,10) === today);
+  } else if(S.sessionFilter === 'upcoming') {
+    data = data.filter(s => (s.session_date||'') > today);
+  }
+
+  if(search) {
+    data = data.filter(s => {
+      const grade   = s.teacher_grades;
+      const subject = grade?.teacher_subjects;
+      const teacher = subject?.profiles;
+      return (
+        (teacher?.full_name||'').toLowerCase().includes(search) ||
+        (subject?.subject_name||'').toLowerCase().includes(search) ||
+        (grade?.grade_name||'').toLowerCase().includes(search) ||
+        (s.title||'').toLowerCase().includes(search)
+      );
+    });
+  }
+
+  if(!data.length) {
+    const msg = S.sessionFilter === 'today' ? 'لا توجد حصص لليوم' : 'لا توجد حصص';
+    el.innerHTML = `<div class="empty-box"><div class="ei">🎥</div><div class="et">${msg}</div><div class="ed">لم يضف المعلمون حصصاً بعد</div></div>`;
+    return;
+  }
+
+  const statusBadge = s => {
+    if(s.status === 'live' || s.status === 'ongoing')
+      return `<span class="badge" style="background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7">🟢 جارية</span>`;
+    if(s.status === 'completed')
+      return `<span class="badge b-gray">✅ منتهية</span>`;
+    return `<span class="badge b-blue">⏳ قادمة</span>`;
+  };
+
+  el.innerHTML = `<div class="tbl-wrap"><table class="data-table">
+    <thead><tr>
+      <th>#</th>
+      <th>المعلم</th>
+      <th>المادة</th>
+      <th>الصف / المجموعة</th>
+      <th>التاريخ</th>
+      <th>الوقت</th>
+      <th>الحالة</th>
+      <th>Zoom</th>
+    </tr></thead>
+    <tbody>
+    ${data.map((s,i) => {
+      const grade   = s.teacher_grades;
+      const subject = grade?.teacher_subjects;
+      const teacher = subject?.profiles;
+      const dateStr = s.session_date ? new Date(s.session_date).toLocaleDateString('ar-EG',{weekday:'short',day:'2-digit',month:'short'}) : '—';
+      const timeStr = s.start_time ? s.start_time.slice(0,5) + (s.end_time ? ' ← ' + s.end_time.slice(0,5) : '') : '—';
+      return `<tr>
+        <td style="color:var(--gray);font-size:.78rem">${i+1}</td>
+        <td>
+          <div class="u-info">
+            <div class="u-av" style="background:linear-gradient(135deg,#8B5CF6,#1A56DB)">${ini(teacher?.full_name)}</div>
+            <div>
+              <div class="u-name">${teacher?.full_name||'—'}</div>
+              <div class="u-sub">${teacher?.specialization||''}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="badge b-blue">${subject?.subject_name||'—'}</span></td>
+        <td style="font-size:.84rem;font-weight:600">${grade?.grade_name||'—'}</td>
+        <td style="font-size:.8rem;color:var(--gray)">${dateStr}</td>
+        <td><span style="background:var(--blue-light);color:var(--blue);padding:4px 10px;border-radius:6px;font-size:.8rem;font-weight:700;white-space:nowrap">⏰ ${timeStr}</span></td>
+        <td>${statusBadge(s)}</td>
+        <td>${s.zoom_link
+          ? `<a href="${s.zoom_link}" target="_blank" style="color:var(--blue);font-size:.8rem;font-weight:700;text-decoration:none">🔗 دخول</a>`
+          : `<span style="color:var(--gray);font-size:.76rem">—</span>`
+        }</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table></div>`;
 }
+
+// Legacy stubs (kept so goTo mapping doesn't break)
+function initSessions() { loadAdminSessions(); }
+function loadSessions() {}
+function renderSessions() {}
+function openSessionForm() { toast('لإضافة حصص جديدة اذهب للجة المعلم وأضفها من هناك', 'ok'); }
+function closeSessionModal() {}
+async function saveSession() {}
+async function delSession(id) {}
 
 // ══════════════════════════════════
 // STUDENTS
 // ══════════════════════════════════
 async function loadStudents() {
-  const el=document.getElementById('stu-body');
-  el.innerHTML='<div style="padding:20px"><div class="skel" style="height:46px;margin-bottom:10px"></div><div class="skel" style="height:46px;margin-bottom:10px"></div><div class="skel" style="height:46px"></div></div>';
+  const el = document.getElementById('stu-body');
+  el.innerHTML = '<div style="padding:20px"><div class="skel" style="height:46px;margin-bottom:10px"></div><div class="skel" style="height:46px;margin-bottom:10px"></div><div class="skel" style="height:46px"></div></div>';
   try {
-    const {data,error}=await sb.from('profiles').select('id,full_name,phone,created_at').eq('role','student').order('created_at',{ascending:false});
+    const {data,error} = await sb.from('profiles').select('id,full_name,phone,avatar_url,created_at,bio').eq('role','student').order('created_at',{ascending:false});
     if(error) throw error;
-    S.students=data||[];
-    document.getElementById('stu-count').textContent='إجمالي: '+S.students.length+' طالب';
+    S.students = data || [];
+    document.getElementById('stu-count').textContent = 'إجمالي: ' + S.students.length + ' طالب';
 
-    // عدد الكورسات
-    const sids=S.students.map(s=>s.id);
-    let em={};
-    if(sids.length){
-      const {data:enr}=await sb.from('enrollments').select('user_id').in('user_id',sids);
-      (enr||[]).forEach(e=>{ em[e.user_id]=(em[e.user_id]||0)+1; });
+    // عدد طلبات الاشتراك لكل طالب
+    const sids = S.students.map(s => s.id);
+    let em = {}, rm = {};
+    if(sids.length) {
+      const [{data:enr}, {data:reqs}] = await Promise.all([
+        sb.from('enrollments').select('user_id').in('user_id', sids),
+        sb.from('subscription_requests').select('user_id,status').in('user_id', sids)
+      ]);
+      (enr||[]).forEach(e  => { em[e.user_id] = (em[e.user_id]||0)+1; });
+      (reqs||[]).forEach(r => { if(!rm[r.user_id]) rm[r.user_id]=[]; rm[r.user_id].push(r.status); });
     }
 
-    if(!S.students.length){ el.innerHTML=`<div class="empty-box"><div class="ei">👥</div><div class="et">لا يوجد طلاب بعد</div></div>`; return; }
-    el.innerHTML=`<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>الطالب</th><th>الهاتف</th><th>الكورسات</th><th>تاريخ التسجيل</th></tr></thead><tbody>
-    ${S.students.map((s,i)=>`<tr>
-      <td style="color:var(--gray);font-size:.78rem">${i+1}</td>
-      <td><div class="u-info"><div class="u-av">${ini(s.full_name)}</div><div><div class="u-name">${s.full_name||'—'}</div><div class="u-sub">${sid(s.id)}</div></div></div></td>
-      <td style="font-size:.84rem">${s.phone||'—'}</td>
-      <td><span class="badge b-blue">📚 ${em[s.id]||0}</span></td>
-      <td style="font-size:.76rem;color:var(--gray)">${fds(s.created_at)}</td>
-    </tr>`).join('')}
+    if(!S.students.length) { el.innerHTML = `<div class="empty-box"><div class="ei">👥</div><div class="et">لا يوجد طلاب بعد</div></div>`; return; }
+
+    el.innerHTML = `<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>الطالب</th><th>الهاتف</th><th>طلبات الاشتراك</th><th>تاريخ التسجيل</th></tr></thead><tbody>
+    ${S.students.map((s,i) => `
+      <tr onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
+        <td style="color:var(--gray);font-size:.78rem">${i+1}</td>
+        <td>
+          <div class="u-info">
+            <div class="u-av">${s.avatar_url ? `<img src="${s.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : ini(s.full_name)}</div>
+            <div>
+              <div class="u-name">${s.full_name||'—'}</div>
+              <div class="u-sub">📧 ${s.id.slice(0,8)}…</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-size:.84rem">${s.phone||'—'}</td>
+        <td>
+          ${(rm[s.id]||[]).length === 0
+            ? '<span class="badge b-gray">لا يوجد</span>'
+            : `<span class="badge b-blue">📤 ${(rm[s.id]||[]).length} طلب</span>`
+          }
+          ${(rm[s.id]||[]).includes('approved') ? '<span class="badge b-approved" style="margin-right:4px">✅ مقبول</span>' : ''}
+        </td>
+        <td style="font-size:.76rem;color:var(--gray)">${fds(s.created_at)}</td>
+      </tr>`).join('')}
     </tbody></table></div>`;
-  } catch(e){ toast('فشل تحميل الطلاب: '+e.message,'err'); }
+  } catch(e) { toast('فشل تحميل الطلاب: '+e.message,'err'); }
+}
+
+async function openStudentDetail(studentId) {
+  const s = S.students.find(x => x.id === studentId);
+  if(!s) return;
+
+  const modal = document.getElementById('mdl-student-detail');
+  const body  = document.getElementById('student-detail-body');
+  modal.classList.add('show');
+  body.innerHTML = '<div class="skel" style="height:200px;border-radius:12px"></div>';
+
+  // جلب طلبات الاشتراك والتسجيلات معاً
+  const [reqRes, enrRes] = await Promise.all([
+    sb.from('subscription_requests')
+      .select('id,status,subject,grade,session_type,days_info,created_at')
+      .eq('user_id', studentId)
+      .order('created_at', {ascending: false}),
+    sb.from('teacher_enrollments')
+      .select('id,enrolled_at,teacher_subjects(subject_name),teacher_grades(grade_name)')
+      .eq('student_id', studentId)
+  ]);
+
+  const reqs = reqRes.data || [];
+  const enrs = enrRes.data || [];
+
+  const statusBadge = st => ({
+    approved: '<span class="badge b-approved">✅ مقبول</span>',
+    pending:  '<span class="badge b-pending">⏳ معلق</span>',
+    rejected: '<span class="badge b-rejected">❌ مرفوض</span>'
+  })[st] || '<span class="badge b-gray">'+st+'</span>';
+
+  body.innerHTML = `
+    <!-- Avatar + Name -->
+    <div style="text-align:center;padding:10px 0 16px">
+      <div class="t-mdl-av" style="background:linear-gradient(135deg,var(--green),#0B8A5F)">
+        ${s.avatar_url ? `<img src="${s.avatar_url}">` : ini(s.full_name)}
+      </div>
+      <div class="t-mdl-name">${s.full_name || '—'}</div>
+      <div class="t-mdl-spec">🎓 طالب</div>
+    </div>
+
+    <!-- Info Grid -->
+    <div class="t-info-grid">
+      <div class="t-info-item">
+        <div class="t-info-lbl">📱 رقم الهاتف</div>
+        <div class="t-info-val">${s.phone || '—'}</div>
+      </div>
+      <div class="t-info-item">
+        <div class="t-info-lbl">📅 تاريخ التسجيل</div>
+        <div class="t-info-val">${fds(s.created_at)}</div>
+      </div>
+      <div class="t-info-item">
+        <div class="t-info-lbl">📤 طلبات الاشتراك</div>
+        <div class="t-info-val">${reqs.length} طلب</div>
+      </div>
+      <div class="t-info-item">
+        <div class="t-info-lbl">✅ الطلبات المقبولة</div>
+        <div class="t-info-val">${reqs.filter(r=>r.status==='approved').length}</div>
+      </div>
+    </div>
+
+    <!-- Subscription Requests -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">📤 سجل طلبات الاشتراك (${reqs.length})</div>
+      ${reqs.length
+        ? reqs.map(r => `
+          <div style="padding:10px 12px;background:var(--gray-light);border-radius:8px;margin-bottom:7px;border-right:3px solid ${r.status==='approved'?'var(--green)':r.status==='rejected'?'var(--red)':'var(--gold)'}">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:.85rem;font-weight:700">${r.subject||'—'}</span>
+              ${statusBadge(r.status)}
+            </div>
+            <div style="font-size:.74rem;color:var(--gray)">
+              ${r.grade ? `🏫 ${r.grade} · ` : ''}${r.session_type || ''} · ${fds(r.created_at)}
+            </div>
+            ${r.days_info ? `<div style="font-size:.72rem;color:var(--gray);margin-top:2px">📅 ${r.days_info}</div>` : ''}
+          </div>`).join('')
+        : '<div style="color:var(--gray);font-size:.83rem">لم يقدم أي طلب بعد</div>'
+      }
+    </div>
+
+    <!-- Teacher Enrollments -->
+    ${enrs.length ? `
+    <div>
+      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">👨‍🏫 مسجل مع معلمين (${enrs.length})</div>
+      ${enrs.map(e => `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--green-light);border-radius:8px;margin-bottom:5px">
+          <span>📚</span>
+          <span style="font-size:.84rem;font-weight:600;flex:1">${e.teacher_subjects?.subject_name||'—'}</span>
+          <span style="font-size:.74rem;color:var(--gray)">${e.teacher_grades?.grade_name||''}</span>
+        </div>`).join('')}
+    </div>` : ''}`;
 }
 
 // ══════════════════════════════════
@@ -1082,7 +1533,7 @@ function renderTeachersTable() {
   };
 
   el.innerHTML = statsHTML + `<div>` + data.map(t => `
-    <div class="teacher-row" id="trow-${t.id}">
+    <div class="teacher-row" id="trow-${t.id}" onclick="openTeacherDetail('${t.id}')" style="cursor:pointer">
       <div class="t-av">${t.avatar_url ? `<img src="${t.avatar_url}">` : ini(t.full_name)}</div>
       <div class="t-info">
         <div class="t-name">${t.full_name || '—'}</div>
@@ -1096,9 +1547,113 @@ function renderTeachersTable() {
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
         ${statusBadge[getTeacherStatus(t)] || ''}
-        <div class="t-acts" id="tacts-${t.id}">${actionBtns(t)}</div>
+        <div class="t-acts" id="tacts-${t.id}" onclick="event.stopPropagation()">${actionBtns(t)}</div>
       </div>
     </div>`).join('') + `</div>`;
+}
+
+async function openTeacherDetail(teacherId) {
+  const t = S.teachers.find(x => x.id === teacherId);
+  if(!t) return;
+
+  const modal = document.getElementById('mdl-teacher-detail');
+  const body  = document.getElementById('teacher-detail-body');
+  const acts  = document.getElementById('teacher-detail-acts');
+  const st    = getTeacherStatus(t);
+
+  modal.classList.add('show');
+
+  // جلب مواد المعلم وحصصه من قاعدة البيانات
+  body.innerHTML = '<div class="skel" style="height:220px;border-radius:12px"></div>';
+
+  const [subjRes, sessRes] = await Promise.all([
+    sb.from('teacher_subjects')
+      .select('id,subject_name,is_approved,teacher_grades(id,grade_name)')
+      .eq('teacher_id', teacherId),
+    sb.from('teacher_sessions')
+      .select('id,session_date')
+      .eq('teacher_id', teacherId)
+      .gte('session_date', new Date().toISOString().slice(0,10))
+      .limit(5)
+  ]);
+
+  const subjects = subjRes.data || [];
+  const sessions = sessRes.data || [];
+
+  const statusColor = { approved:'var(--green)', pending:'var(--gold)', rejected:'var(--red)' };
+  const statusLabel = { approved:'✅ معتمد', pending:'⏳ بانتظار', rejected:'❌ مرفوض' };
+
+  body.innerHTML = `
+    <!-- Avatar + Name -->
+    <div style="text-align:center;padding:10px 0 16px">
+      <div class="t-mdl-av">${t.avatar_url ? `<img src="${t.avatar_url}">` : ini(t.full_name)}</div>
+      <div class="t-mdl-name">${t.full_name || '—'}</div>
+      <div class="t-mdl-spec">${t.specialization || 'لا يوجد تخصص'}</div>
+      <div style="margin-top:8px">
+        <span style="background:${statusColor[st]}22;color:${statusColor[st]};border:1px solid ${statusColor[st]}44;padding:4px 14px;border-radius:50px;font-size:.78rem;font-weight:700">${statusLabel[st]}</span>
+      </div>
+    </div>
+
+    <!-- Info Grid -->
+    <div class="t-info-grid">
+      <div class="t-info-item">
+        <div class="t-info-lbl">📱 رقم الهاتف</div>
+        <div class="t-info-val">${t.phone || '—'}</div>
+      </div>
+      <div class="t-info-item">
+        <div class="t-info-lbl">📅 تاريخ الانضمام</div>
+        <div class="t-info-val">${fds(t.created_at)}</div>
+      </div>
+      <div class="t-info-item">
+        <div class="t-info-lbl">⭐ سنوات الخبرة</div>
+        <div class="t-info-val">${t.experience_years || '—'}</div>
+      </div>
+      <div class="t-info-item">
+        <div class="t-info-lbl">📚 عدد المواد</div>
+        <div class="t-info-val">${subjects.length} مادة</div>
+      </div>
+    </div>
+
+    <!-- Bio -->
+    ${t.bio ? `
+    <div style="background:var(--blue-light);border-radius:9px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:.72rem;color:var(--gray);margin-bottom:5px">📝 نبذة عن المعلم</div>
+      <div style="font-size:.85rem;color:var(--dark);line-height:1.7">${t.bio}</div>
+    </div>` : ''}
+
+    <!-- Subjects -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">📚 المواد التي يدرسها (${subjects.length})</div>
+      ${subjects.length
+        ? subjects.map(s => `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray-light);border-radius:8px;margin-bottom:6px">
+            <span>📚</span>
+            <span style="font-size:.85rem;font-weight:600;flex:1">${s.subject_name||'—'}</span>
+            <span style="font-size:.72rem;color:var(--gray)">${(s.teacher_grades||[]).map(g=>g.grade_name).join(' · ')}</span>
+            ${s.is_approved ? '<span class="badge b-approved" style="font-size:.65rem">✅</span>' : '<span class="badge b-pending" style="font-size:.65rem">⏳</span>'}
+          </div>`).join('')
+        : '<div style="color:var(--gray);font-size:.83rem">لم يضف مواد بعد</div>'
+      }
+    </div>
+
+    <!-- Upcoming sessions -->
+    ${sessions.length ? `
+    <div>
+      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">📅 الحصص القادمة (${sessions.length})</div>
+      ${sessions.map(s => `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--green-light);border-radius:8px;margin-bottom:5px">
+          <span>🗓️</span>
+          <span style="font-size:.82rem;font-weight:600">${fds(s.session_date)}</span>
+        </div>`).join('')}
+    </div>` : ''}`;
+
+  // Action buttons
+  acts.innerHTML = `
+    ${st === 'pending'  ? `<button class="mdl-confirm mc-approve" onclick="approveTeacher('${t.id}');document.getElementById('mdl-teacher-detail').classList.remove('show')">✅ قبول</button>` : ''}
+    ${st === 'pending'  ? `<button class="mdl-confirm mc-reject"  onclick="rejectTeacher('${t.id}');document.getElementById('mdl-teacher-detail').classList.remove('show')">❌ رفض</button>` : ''}
+    ${st === 'approved' ? `<button class="mdl-confirm" style="background:var(--gold);color:#fff" onclick="revokeTeacher('${t.id}');document.getElementById('mdl-teacher-detail').classList.remove('show')">🔄 سحب الاعتماد</button>` : ''}
+    ${st === 'rejected' ? `<button class="mdl-confirm mc-approve" onclick="approveTeacher('${t.id}');document.getElementById('mdl-teacher-detail').classList.remove('show')">✅ إعادة قبول</button>` : ''}
+    <button class="mdl-cancel" onclick="document.getElementById('mdl-teacher-detail').classList.remove('show')">إغلاق</button>`;
 }
 
 async function approveTeacher(teacherId) {
@@ -1194,18 +1749,18 @@ async function revokeTeacher(teacherId) {
     const {data:prof,error:pe}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
     if(pe||!prof){ window.location.href='login.html'; return; }
     S.profile=prof;
-    // ← changed from 'teacher' to 'admin' — this is the ADMIN panel
     if(prof.role!=='admin'){ window.location.href='dashboard.html'; return; }
 
     updateHdr();
-    await Promise.all([loadRequests(), loadCourses()]);
 
-    // Load teacher pending badge in background
-    sb.from('profiles').select('id,teacher_approved').eq('role','teacher').then(({data})=>{
-      const pending = (data||[]).filter(t => t.teacher_approved === null || t.teacher_approved === false).length;
-      const badge = document.getElementById('teacher-badge');
-      if(badge && pending > 0) { badge.textContent = pending; badge.style.display = 'inline-flex'; }
-    });
+    // تحميل كل البيانات معاً في وقت واحد لتعبئة النظرة العامة
+    await Promise.all([
+      loadRequests(),
+      loadCourses(),
+      loadTeachers(),
+      loadStudents(),
+      loadAdminSessions()
+    ]);
 
     document.getElementById('loader').style.display='none';
   } catch(e){
