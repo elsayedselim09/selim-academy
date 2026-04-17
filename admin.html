@@ -626,13 +626,26 @@ async function runConfirm() {
 async function approveReq(id) {
   const req = S.requests.find(r=>r.id===id);
   if(!req) throw new Error('الطلب غير موجود');
+
+  // ✅ الخطوة 1: تحديث حالة الطلب إلى "مقبول"
   const {error:e1} = await sb.from('subscription_requests').update({status:'approved'}).eq('id',id);
   if(e1) throw e1;
-  const {error:e2} = await sb.from('enrollments').upsert({user_id:req.user_id,course_id:req.course_id},{onConflict:'user_id,course_id',ignoreDuplicates:true});
-  if(e2) throw e2;
-  req.status='approved';
+
+  // ✅ الخطوة 2: إضافة التسجيل في جدول enrollments (فقط إذا توفّر user_id و course_id)
+  if(req.user_id && req.course_id) {
+    const {error:e2} = await sb.from('enrollments').upsert(
+      {user_id: req.user_id, course_id: req.course_id},
+      {onConflict: 'user_id,course_id', ignoreDuplicates: true}
+    );
+    if(e2) throw e2;
+    toast('✅ تم القبول وإضافة الطالب للكورس تلقائياً');
+  } else {
+    // الطالب حجز بدون حساب أو بدون تحديد كورس → القبول يتم يدوياً عبر واتساب
+    toast('✅ تم قبول الطلب — الطالب غير مسجل في المنصة، تواصل معه عبر واتساب لإكمال التسجيل');
+  }
+
+  req.status = 'approved';
   refreshStats(); updateBadge(); renderOvList(); renderReqTable();
-  toast('✅ تم القبول وإضافة الطالب للكورس');
 }
 
 async function rejectReq(id) {
