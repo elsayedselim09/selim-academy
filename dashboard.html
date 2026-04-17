@@ -601,6 +601,7 @@ async function fetchAllData(userId) {
     }));
 
   STATE.enrollments   = [...enrollments, ...extraFromRequests];
+  STATE.approvedReqs  = approved; // Save for subscriptions page
   STATE.sessions      = ses.data || [];
   STATE.subscription  = sub.data;
   STATE.activity      = act.data || [];
@@ -832,17 +833,18 @@ function progress() {
 
 // ── SUBSCRIPTION ─────────────────────────────────────────────────
 function subscription() {
-  const sub = STATE.subscription;
-  if (!sub) return `
+  const reqs = STATE.approvedReqs || [];
+  
+  if (reqs.length === 0) return `
     <div class="page-title">الاشتراك 💳</div>
-    <p class="page-sub">تفاصيل اشتراكك الحالي وخيارات الاشتراك</p>
+    <p class="page-sub">تفاصيل اشتراكاتك الحالية وخيارات التجديد</p>
     <div class="section-card" style="margin-bottom:24px">
       <div class="section-body" style="text-align:center;padding:40px 24px">
         <div style="font-size:3rem;margin-bottom:16px">🎓</div>
-        <div style="font-size:1.1rem;font-weight:900;color:var(--dark);margin-bottom:8px">لا يوجد اشتراك نشط</div>
+        <div style="font-size:1.1rem;font-weight:900;color:var(--dark);margin-bottom:8px">لا يوجد أي اشتراك نشط</div>
         <div style="font-size:.88rem;color:var(--gray);margin-bottom:28px;line-height:1.7">
-          سجّل اشتراكك الآن واحجز حصصك مع م. السيد سليم<br>
-          واختار الكورس والأيام والأوقات المناسبة لك
+          سجّل اشتراكك الآن واحجز حصصك مع المعلمين<br>
+          واختار المادة والأيام والأوقات المناسبة لك
         </div>
         <button
           onclick="openBookingModal()"
@@ -854,44 +856,67 @@ function subscription() {
         </button>
       </div>
     </div>`;
-  const rem = daysLeft(sub.expires_at);
+
+  // توليد كروت الاشتراكات للمواد
+  const subsHtml = reqs.map(req => {
+    // حساب تواريخ الاشتراك
+    const startDate = new Date(req.created_at);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 30); // الاشتراك مدته شهر (30 يوم)
+    
+    // المتبقي
+    const today = new Date();
+    const diffTime = endDate - today;
+    const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    const statusColor = daysLeft <= 0 ? 'var(--red)' : daysLeft <= 5 ? 'var(--gold)' : 'var(--green)';
+    const statusText  = daysLeft < 0 ? 'منتهي' : daysLeft === 0 ? 'ينتهي اليوم' : `متبقي ${daysLeft} يوم`;
+
+    return `
+    <div class="sub-card" style="margin-bottom:20px; border-top:4px solid ${statusColor}; background:var(--white); box-shadow:0 4px 15px rgba(0,0,0,0.04); border-radius:12px; padding:20px; border-left:1px solid var(--gray-mid); border-right:1px solid var(--gray-mid); border-bottom:1px solid var(--gray-mid);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+        <div class="sub-badge" style="background:var(--blue-light); color:var(--blue); padding:6px 14px; border-radius:50px; font-weight:900; font-size:.9rem; display:inline-block;">📚 ${req.subject}</div>
+        <div style="display:inline-flex; align-items:center; gap:8px; background:${daysLeft <= 5 ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)'}; color:${statusColor}; border-radius:10px; padding:8px 16px; font-weight:700; font-size:.85rem;">
+          📅 ${statusText}
+        </div>
+      </div>
+      
+      <div class="sub-plan" style="font-size:1.1rem; font-weight:800; color:var(--dark); margin-bottom:16px;">
+        ${req.grade || ''} — ${req.session_type || 'حصص'}
+      </div>
+      
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px; background:var(--gray-light); padding:15px; border-radius:10px;">
+        <div>
+          <div style="font-size:.76rem; color:var(--gray); margin-bottom:4px;">تاريخ البدء</div>
+          <div style="font-size:.9rem; font-weight:700; color:var(--dark);">${formatDate(req.created_at)}</div>
+        </div>
+        <div>
+          <div style="font-size:.76rem; color:var(--gray); margin-bottom:4px;">تاريخ التجديد/الانتهاء</div>
+          <div style="font-size:.9rem; font-weight:700; color:${daysLeft <= 5 ? 'var(--red)' : 'var(--dark)'};">${formatDate(endDate.toISOString())}</div>
+        </div>
+      </div>
+      
+      <div style="display:flex; gap:12px; flex-wrap:wrap">
+        <button class="btn-renew" style="flex:1; min-width:200px; padding:12px; border:none; border-radius:10px; background:var(--dark); color:#fff; font-weight:700; cursor:pointer;" onclick="window.open('https://wa.me/201012142749?text=${encodeURIComponent('أريد تجديد اشتراكي في مادة ' + req.subject)}','_blank')">
+          🔄 طلب تجديد الاشتراك
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
   return `
-    <div class="page-title">الاشتراك 💳</div>
-    <p class="page-sub">تفاصيل اشتراكك الحالي وخيارات التجديد</p>
-    <div class="sub-card">
-      <div class="sub-badge">⭐ ${sub.plan_name}</div>
-      <div class="sub-plan">${sub.plan_detail} — ${sub.sessions_total} حصة شهرياً</div>
-      <div class="sub-exp">تاريخ الانتهاء: ${formatDate(sub.expires_at)}</div>
-      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.15);border-radius:10px;padding:10px 18px;font-weight:700">
-        📅 متبقي ${rem} يوماً على انتهاء الاشتراك
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <div class="page-title">الاشتراكات 💳</div>
+        <p class="page-sub" style="margin-bottom:0;">تفاصيل اشتراكاتك الحالية وصلاحياتها</p>
       </div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <button class="btn-renew" onclick="window.open('https://wa.me/201012142749?text=${encodeURIComponent('أريد تجديد اشتراكي في أكاديمية سليم')}','_blank')">
-          🔄 تجديد الاشتراك الآن
-        </button>
-        <button
-          onclick="openBookingModal()"
-          style="padding:12px 24px;background:var(--green);color:#fff;border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:8px;margin-top:20px"
-        >
-          ➕ احجز كورس جديد
-        </button>
-      </div>
+      <button onclick="openBookingModal()" style="padding:10px 20px; background:var(--green); color:#fff; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+        ➕ إضافة اشتراك جديد
+      </button>
     </div>
-    <div class="section-card">
-      <div class="section-head"><h3>تفاصيل الاشتراك الحالي</h3></div>
-      <div class="section-body">
-        ${[
-          ['نوع الاشتراك', `${sub.plan_detail} — ${sub.sessions_total} حصة`],
-          ['المادة',       sub.subjects||'—'],
-          ['تاريخ البدء',  formatDate(sub.starts_at)],
-          ['تاريخ الانتهاء', formatDate(sub.expires_at), rem < 7],
-          ['الحصص المستهلكة', `${sub.sessions_used} من ${sub.sessions_total}`],
-        ].map(([l,v,red]) => `
-          <div class="detail-row">
-            <span style="font-size:.88rem;color:var(--gray)">${l}</span>
-            <span style="font-size:.88rem;font-weight:700${red?';color:var(--red)':''}">${v}</span>
-          </div>`).join('')}
-      </div>
+    
+    <div style="margin-top:24px;">
+      ${subsHtml}
     </div>`;
 }
 
