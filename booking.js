@@ -570,8 +570,15 @@
 
           // بناء الـ record — insert يتوقع array في v2
           var record = {
-            status : 'pending',
-            note   : [
+            status       : 'pending',
+            student_name : name,
+            student_phone: phoneClean,
+            grade        : grade,
+            subject      : subject,
+            session_type : type,
+            days_info    : daysArr.join(' / '),
+            curriculum   : curric,
+            note         : [
               'الاسم: '    + name,
               'الهاتف: '   + phoneClean,
               'المدرسة: '  + school,

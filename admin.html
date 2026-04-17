@@ -499,12 +499,12 @@ async function doLogout() {
 async function loadRequests() {
   try {
     const {data:reqs, error} = await sb.from('subscription_requests')
-      .select('id,status,created_at,note,user_id,course_id')
+      .select('id,status,created_at,note,user_id,course_id,student_name,student_phone,grade,subject,session_type,days_info,curriculum')
       .order('created_at',{ascending:false});
     if(error) throw error;
 
-    const uids = [...new Set(reqs.map(r=>r.user_id))];
-    const cids = [...new Set(reqs.map(r=>r.course_id))];
+    const uids = [...new Set(reqs.map(r=>r.user_id).filter(Boolean))];
+    const cids = [...new Set(reqs.map(r=>r.course_id).filter(Boolean))];
 
     const [pr,cr] = await Promise.all([
       uids.length ? sb.from('profiles').select('id,full_name,phone').in('id',uids) : {data:[]},
@@ -538,10 +538,11 @@ function renderOvList() {
   const list = S.requests.filter(r=>r.status==='pending').slice(0,5);
   const el   = document.getElementById('ov-list');
   if(!list.length){ el.innerHTML=`<div class="empty-box"><div class="ei">🎉</div><div class="et">لا توجد طلبات معلقة</div></div>`; return; }
-  el.innerHTML=`<div class="tbl-wrap"><table class="data-table"><thead><tr><th>الطالب</th><th>الكورس</th><th>التاريخ</th><th>الإجراء</th></tr></thead><tbody>
+  el.innerHTML=`<div class="tbl-wrap"><table class="data-table"><thead><tr><th>الطالب</th><th>الهاتف</th><th>الصف / المادة</th><th>التاريخ</th><th>الإجراء</th></tr></thead><tbody>
   ${list.map(r=>`<tr id="ov-row-${r.id}">
-    <td><div class="u-info"><div class="u-av">${ini(r.profiles?.full_name)}</div><div class="u-name">${r.profiles?.full_name||sid(r.user_id)}</div></div></td>
-    <td><span class="badge b-blue">${r.courses?.icon||'📚'} ${r.courses?.name||sid(r.course_id)}</span></td>
+    <td><div class="u-info"><div class="u-av">${ini(r.student_name||r.profiles?.full_name)}</div><div class="u-name">${r.student_name||r.profiles?.full_name||'—'}</div></div></td>
+    <td style="font-size:.8rem">${r.student_phone||r.profiles?.phone||'—'}</td>
+    <td><span class="badge b-blue">${r.subject||'—'}</span><br><span style="font-size:.72rem;color:var(--gray)">${r.grade||''}</span></td>
     <td style="font-size:.76rem;color:var(--gray)">${fds(r.created_at)}</td>
     <td><div class="acts"><button class="btn-ok" onclick="openConfirm('${r.id}','approve')">✅ قبول</button><button class="btn-no" onclick="openConfirm('${r.id}','reject')">❌ رفض</button></div></td>
   </tr>`).join('')}</tbody></table></div>`;
@@ -558,17 +559,26 @@ function renderReqTable() {
   const q    = (document.getElementById('req-search')?.value||'').toLowerCase();
   let   rows = S.requests;
   if(S.filter!=='all') rows=rows.filter(r=>r.status===S.filter);
-  if(q) rows=rows.filter(r=>(r.profiles?.full_name||'').toLowerCase().includes(q)||(r.courses?.name||'').toLowerCase().includes(q));
+  if(q) rows=rows.filter(r=>
+    (r.student_name||r.profiles?.full_name||'').toLowerCase().includes(q) ||
+    (r.subject||'').toLowerCase().includes(q) ||
+    (r.grade||'').toLowerCase().includes(q) ||
+    (r.courses?.name||'').toLowerCase().includes(q)
+  );
 
   const el = document.getElementById('req-body');
   if(!rows.length){ el.innerHTML=`<div class="empty-box"><div class="ei">📭</div><div class="et">لا توجد طلبات</div><div class="ed">${q?'لا توجد نتائج':'لا توجد طلبات في هذه الحالة'}</div></div>`; return; }
 
   const bmap={pending:`<span class="badge b-pending">⏳ معلق</span>`,approved:`<span class="badge b-approved">✅ مقبول</span>`,rejected:`<span class="badge b-rejected">❌ مرفوض</span>`};
-  el.innerHTML=`<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>الطالب</th><th>الكورس</th><th>الحالة</th><th>التاريخ</th><th>الإجراء</th></tr></thead><tbody>
+  el.innerHTML=`<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>الطالب</th><th>الهاتف</th><th>الصف</th><th>المادة</th><th>نوع الحصة</th><th>الأيام</th><th>الحالة</th><th>التاريخ</th><th>الإجراء</th></tr></thead><tbody>
   ${rows.map((r,i)=>`<tr id="req-row-${r.id}">
     <td style="color:var(--gray);font-size:.78rem">${i+1}</td>
-    <td><div class="u-info"><div class="u-av">${ini(r.profiles?.full_name)}</div><div><div class="u-name">${r.profiles?.full_name||'غير معروف'}</div><div class="u-sub">${sid(r.user_id)}</div></div></div></td>
-    <td><span class="badge b-blue">${r.courses?.icon||'📚'} ${r.courses?.name||sid(r.course_id)}</span></td>
+    <td><div class="u-info"><div class="u-av">${ini(r.student_name||r.profiles?.full_name)}</div><div><div class="u-name">${r.student_name||r.profiles?.full_name||'—'}</div></div></div></td>
+    <td style="font-size:.8rem">${r.student_phone||r.profiles?.phone||'—'}</td>
+    <td style="font-size:.8rem">${r.grade||'—'}</td>
+    <td><span class="badge b-blue">${r.subject||'—'}</span></td>
+    <td style="font-size:.78rem;color:var(--gray)">${r.session_type||'—'}</td>
+    <td style="font-size:.75rem;color:var(--gray);max-width:160px">${r.days_info||'—'}</td>
     <td>${bmap[r.status]||''}</td>
     <td style="font-size:.76rem;color:var(--gray)">${fdt(r.created_at)}</td>
     <td>${r.status==='pending'
