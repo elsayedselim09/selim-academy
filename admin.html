@@ -924,7 +924,7 @@ async function loadCourses() {
     // جلب المواد والصفوف ثم دمج المعلمين يدوياً (لحل مشكلة العلاقة في Supabase)
     const { data, error } = await sb
       .from('teacher_subjects')
-      .select('*, teacher_grades(id,grade_name,grade_level)')
+      .select('*, teacher_grades(id,name,description)')
       .order('created_at', { ascending: false });
     if(error) throw error;
 
@@ -1075,8 +1075,8 @@ async function loadAdminSessions() {
       .select(`
         id, title, session_date, start_time, end_time, zoom_link,
         status, notes, teacher_id,
-        teacher_grades ( id, grade_name, grade_level,
-          teacher_subjects ( id, subject_name )
+        teacher_grades ( id, name, description,
+          teacher_subjects ( id, name )
         )
       `)
       .order('session_date', { ascending: true })
