@@ -697,11 +697,16 @@ async function loadRequests() {
 }
 
 function refreshStats() {
-  const all = S.requests;
-  document.getElementById('s-pending').textContent  = all.filter(r => r.status==='pending').length;
-  document.getElementById('s-approved').textContent = all.filter(r => r.status==='approved').length;
-  document.getElementById('s-rejected').textContent = all.filter(r => r.status==='rejected').length;
-  document.getElementById('s-courses').textContent  = S.teacherSubjects?.length ?? '—';
+  const all = S.requests || [];
+  const elPending  = document.getElementById('s-pending');
+  const elApproved = document.getElementById('s-approved');
+  const elRejected = document.getElementById('s-rejected');
+  const elCourses  = document.getElementById('s-courses');
+
+  if (elPending)  elPending.textContent  = all.filter(r => r.status === 'pending').length;
+  if (elApproved) elApproved.textContent = all.filter(r => r.status === 'approved').length;
+  if (elRejected) elRejected.textContent = all.filter(r => r.status === 'rejected').length;
+  if (elCourses)  elCourses.textContent  = S.teacherSubjects?.length ?? '—';
 
   // معلمون بانتظار الموافقة
   const teacherPending = S.teachers.filter(t => getTeacherStatus(t) === 'pending').length;
