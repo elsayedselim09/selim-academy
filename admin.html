@@ -921,14 +921,19 @@ async function loadCourses() {
   const el = document.getElementById('courses-grid');
   el.innerHTML = '<div class="skel" style="height:190px;border-radius:12px"></div>'.repeat(3);
   try {
-    // جلب المواد مع اسم المعلم
+    // جلب المواد والصفوف ثم دمج المعلمين يدوياً (لحل مشكلة العلاقة في Supabase)
     const { data, error } = await sb
       .from('teacher_subjects')
-      .select('*, profiles(id,full_name,avatar_url,specialization), teacher_grades(id,grade_name,grade_level)')
+      .select('*, teacher_grades(id,grade_name,grade_level)')
       .order('created_at', { ascending: false });
     if(error) throw error;
 
-    S.teacherSubjects = data || [];
+    const tids = [...new Set((data||[]).map(d => d.teacher_id).filter(Boolean))];
+    const pr = await sb.from('profiles').select('id,full_name,avatar_url,specialization').in('id', tids);
+    const pm = {};
+    (pr.data||[]).forEach(p => pm[p.id] = p);
+
+    S.teacherSubjects = data.map(d => ({...d, profiles: pm[d.teacher_id] || null}));
     document.getElementById('s-courses').textContent = S.teacherSubjects.length;
     renderCoursesGrid();
   } catch(e) {
@@ -1071,16 +1076,25 @@ async function loadAdminSessions() {
         id, title, session_date, start_time, end_time, zoom_link,
         status, notes, teacher_id,
         teacher_grades ( id, grade_name, grade_level,
-          teacher_subjects ( id, subject_name,
-            profiles ( id, full_name, avatar_url, specialization )
-          )
+          teacher_subjects ( id, subject_name )
         )
       `)
       .order('session_date', { ascending: true })
       .order('start_time',   { ascending: true });
 
     if(error) throw error;
-    S.allSessions = data || [];
+
+    const tids = [...new Set((data||[]).map(d => d.teacher_id).filter(Boolean))];
+    const pr = await sb.from('profiles').select('id,full_name,avatar_url,specialization').in('id', tids);
+    const pm = {};
+    (pr.data||[]).forEach(p => pm[p.id] = p);
+
+    S.allSessions = (data||[]).map(d => {
+       if (d.teacher_grades && d.teacher_grades.teacher_subjects) {
+           d.teacher_grades.teacher_subjects.profiles = pm[d.teacher_id] || null;
+       }
+       return d;
+    });
     renderSessionStats();
     renderAdminSessions();
   } catch(e) {
