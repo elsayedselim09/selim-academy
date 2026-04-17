@@ -934,7 +934,8 @@ async function loadCourses() {
     (pr.data||[]).forEach(p => pm[p.id] = p);
 
     S.teacherSubjects = data.map(d => ({...d, profiles: pm[d.teacher_id] || null}));
-    document.getElementById('s-courses').textContent = S.teacherSubjects.length;
+    const sCoursesEl = document.getElementById('s-courses');
+    if(sCoursesEl) sCoursesEl.textContent = S.teacherSubjects.length;
     renderCoursesGrid();
   } catch(e) {
     el.innerHTML = `<div class="empty-box" style="grid-column:1/-1"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`;
@@ -1076,11 +1077,10 @@ async function loadAdminSessions() {
         id, title, session_date, start_time, end_time, zoom_link,
         status, notes, teacher_id,
         teacher_grades ( id, name, description,
-          teacher_subjects ( id, name )
+          teacher_subjects ( id, name, subject_name )
         )
       `)
-      .order('session_date', { ascending: true })
-      .order('start_time',   { ascending: true });
+      .order('session_date', { ascending: true });
 
     if(error) throw error;
 
@@ -1089,12 +1089,18 @@ async function loadAdminSessions() {
     const pm = {};
     (pr.data||[]).forEach(p => pm[p.id] = p);
 
-    S.allSessions = (data||[]).map(d => {
-       if (d.teacher_grades && d.teacher_grades.teacher_subjects) {
-           d.teacher_grades.teacher_subjects.profiles = pm[d.teacher_id] || null;
-       }
-       return d;
-    });
+    S.allSessions = (data||[])
+      .map(d => {
+         if (d.teacher_grades && d.teacher_grades.teacher_subjects) {
+             d.teacher_grades.teacher_subjects.profiles = pm[d.teacher_id] || null;
+         }
+         return d;
+      })
+      .sort((a, b) => {
+        const dateCmp = (a.session_date||'').localeCompare(b.session_date||'');
+        if(dateCmp !== 0) return dateCmp;
+        return (a.start_time||'').localeCompare(b.start_time||'');
+      });
     renderSessionStats();
     renderAdminSessions();
   } catch(e) {
@@ -1201,7 +1207,7 @@ function renderAdminSessions() {
             </div>
           </div>
         </td>
-        <td><span class="badge b-blue">${subject?.name||subject?.subject_name||'—'}</span></td>
+        <td><span class="badge b-blue">${subject?.subject_name||subject?.name||'—'}</span></td>
         <td style="font-size:.84rem;font-weight:600">${grade?.name||grade?.grade_name||'—'}</td>
         <td style="font-size:.8rem;color:var(--gray)">${dateStr}</td>
         <td><span style="background:var(--blue-light);color:var(--blue);padding:4px 10px;border-radius:6px;font-size:.8rem;font-weight:700;white-space:nowrap">⏰ ${timeStr}</span></td>
