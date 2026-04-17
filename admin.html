@@ -631,17 +631,25 @@ async function approveReq(id) {
   const {error:e1} = await sb.from('subscription_requests').update({status:'approved'}).eq('id',id);
   if(e1) throw e1;
 
-  // ✅ الخطوة 2: إضافة التسجيل في جدول enrollments (فقط إذا توفّر user_id و course_id)
-  if(req.user_id && req.course_id) {
-    const {error:e2} = await sb.from('enrollments').upsert(
-      {user_id: req.user_id, course_id: req.course_id},
-      {onConflict: 'user_id,course_id', ignoreDuplicates: true}
-    );
+  // ✅ الخطوة 2: إنشاء enrollment إذا كان الطالب مسجلاً في المنصة
+  if(req.user_id) {
+    const enrollPayload = { user_id: req.user_id, enrolled_at: new Date().toISOString(), progress_pct: 0 };
+    if(req.course_id) enrollPayload.course_id = req.course_id;
+
+    // نستخدم insert بدلاً من upsert إذا لم يكن course_id موجوداً
+    let e2;
+    if(req.course_id) {
+      const res = await sb.from('enrollments').upsert(enrollPayload, {onConflict:'user_id,course_id', ignoreDuplicates:true});
+      e2 = res.error;
+    } else {
+      const res = await sb.from('enrollments').insert(enrollPayload);
+      e2 = res.error;
+    }
     if(e2) throw e2;
-    toast('✅ تم القبول وإضافة الطالب للكورس تلقائياً');
+    toast('✅ تم القبول وإضافة الطالب — سيجد طلبه في لوحة التحكم');
   } else {
-    // الطالب حجز بدون حساب أو بدون تحديد كورس → القبول يتم يدوياً عبر واتساب
-    toast('✅ تم قبول الطلب — الطالب غير مسجل في المنصة، تواصل معه عبر واتساب لإكمال التسجيل');
+    // الطالب حجز بدون حساب في المنصة
+    toast('✅ تم قبول الطلب — تواصل مع الطالب عبر واتساب لإكمال التسجيل');
   }
 
   req.status = 'approved';

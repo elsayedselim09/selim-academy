@@ -565,16 +565,42 @@ async function handleLogout() {
 // DATA FETCHING
 // ══════════════════════════════════════════════════════════════════
 async function fetchAllData(userId) {
-  const [p, e, ses, sub, act, notif] = await Promise.all([
+  const [p, e, approvedReqs, ses, sub, act, notif] = await Promise.all([
     sb.from('profiles').select('*').eq('id', userId).single(),
     sb.from('enrollments').select('*, courses(*)').eq('user_id', userId).order('enrolled_at', { ascending: false }),
+    sb.from('subscription_requests').select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id').eq('user_id', userId).eq('status','approved').order('created_at', { ascending: false }),
     sb.from('sessions').select('*').eq('user_id', userId).order('scheduled_at', { ascending: true }).limit(50),
     sb.from('subscriptions').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     sb.from('activity_log').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(8),
     sb.from('notifications').select('*').eq('user_id', userId).order('is_read', { ascending: true }).order('created_at', { ascending: false }).limit(20),
   ]);
   STATE.profile       = p.data;
-  STATE.enrollments   = e.data || [];
+
+  // دمج enrollments مع subscription_requests المقبولة
+  // (حتى لو لم يكن course_id محدداً، يرى الطالب اشتراكاته)
+  const enrollments = e.data || [];
+  const approved    = approvedReqs.data || [];
+  const enrolledIds = new Set(enrollments.map(en => en.id));
+
+  // لكل طلب مقبول غير مرتبط بـ enrollment موجود → نضيفه كـ "enrollment مؤقت"
+  const extraFromRequests = approved
+    .filter(r => !enrollments.some(en => en.course_id && en.course_id === r.course_id))
+    .map(r => ({
+      id          : 'req-' + r.id,
+      user_id     : userId,
+      course_id   : r.course_id || null,
+      enrolled_at : r.created_at,
+      progress_pct: 0,
+      completed_lessons: 0,
+      courses: r.course_id ? null : {
+        name       : r.subject || 'اشتراك مقبول',
+        icon       : '📘',
+        icon_bg    : '#EBF5FF',
+        total_lessons: 0
+      }
+    }));
+
+  STATE.enrollments   = [...enrollments, ...extraFromRequests];
   STATE.sessions      = ses.data || [];
   STATE.subscription  = sub.data;
   STATE.activity      = act.data || [];
