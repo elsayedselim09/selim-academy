@@ -786,7 +786,7 @@ function renderOvSessions() {
         <div style="font-size:.65rem;color:var(--blue);font-weight:700">${s.start_time?s.start_time.slice(0,5):'—'}</div>
       </div>
       <div style="flex:1">
-        <div style="font-size:.87rem;font-weight:700">${subject?.subject_name||'—'} — ${grade?.grade_name||'—'}</div>
+        <div style="font-size:.87rem;font-weight:700">${subject?.name||'—'} — ${grade?.name||'—'}</div>
         <div style="font-size:.74rem;color:var(--gray)">👨‍🏫 ${teacher?.full_name||'—'}</div>
       </div>
       ${s.zoom_link ? `<a href="${s.zoom_link}" target="_blank" style="font-size:.8rem;color:var(--blue);font-weight:700;text-decoration:none">🔗 دخول</a>` : ''}
@@ -1077,7 +1077,7 @@ async function loadAdminSessions() {
         id, title, session_date, start_time, end_time, zoom_link,
         status, notes, teacher_id,
         teacher_grades ( id, name, description,
-          teacher_subjects ( id, name, subject_name )
+          teacher_subjects ( id, name )
         )
       `)
       .order('session_date', { ascending: true });
@@ -1207,8 +1207,8 @@ function renderAdminSessions() {
             </div>
           </div>
         </td>
-        <td><span class="badge b-blue">${subject?.subject_name||subject?.name||'—'}</span></td>
-        <td style="font-size:.84rem;font-weight:600">${grade?.name||grade?.grade_name||'—'}</td>
+        <td><span class="badge b-blue">${subject?.name||'—'}</span></td>
+        <td style="font-size:.84rem;font-weight:600">${grade?.name||'—'}</td>
         <td style="font-size:.8rem;color:var(--gray)">${dateStr}</td>
         <td><span style="background:var(--blue-light);color:var(--blue);padding:4px 10px;border-radius:6px;font-size:.8rem;font-weight:700;white-space:nowrap">⏰ ${timeStr}</span></td>
         <td>${statusBadge(s)}</td>
