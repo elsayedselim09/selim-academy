@@ -434,6 +434,20 @@ function timeAgo(iso) {
   if (d < 2880) return 'أمس';
   return `منذ ${Math.floor(d/1440)} أيام`;
 }
+
+function openZoomLink(rawUrl) {
+  if (!rawUrl) return;
+  const url = rawUrl.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+  const finalUrl = url.startsWith('http') ? url : 'https://' + url;
+  
+  const a = document.createElement('a');
+  a.href = finalUrl;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 function formatDate(iso) {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('ar-EG', { year:'numeric', month:'long', day:'numeric' });
@@ -1093,9 +1107,8 @@ function renderSessionItem(s) {
   const tbStyle = ended ? 'background:var(--gray-light);border-color:var(--gray-mid)' : '';
   const txStyle = ended ? 'color:var(--gray)' : '';
   let btn = '';
-  let formattingLink = s.zoom_link ? (s.zoom_link.startsWith('http') ? s.zoom_link : 'https://' + s.zoom_link) : '';
-  if (st === 'live' && formattingLink)
-    btn = `<a href="${formattingLink}" target="_top" class="btn-join btn-live" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none">🎥 ادخل</a>`;
+  if (st === 'live' && s.zoom_link)
+    btn = `<button class="btn-join btn-live" onclick="openZoomLink('${s.zoom_link}')" style="display:inline-flex;align-items:center;justify-content:center;">🎥 ادخل</button>`;
   else if (st === 'soon')     btn = `<button class="btn-join btn-soon" disabled>قريباً</button>`;
   else if (st === 'upcoming') btn = `<button class="btn-join btn-dis"  disabled>لم يبدأ</button>`;
   else                        btn = `<button class="btn-join btn-end"  disabled>انتهت</button>`;

@@ -740,6 +740,19 @@ async function loadRequests() {
     refreshStats(); updateBadge(); renderOvList(); renderReqTable();
   } catch(e) { console.error(e); toast('فشل تحميل الطلبات: '+e.message,'err'); }
 }
+function openZoomLink(rawUrl) {
+  if (!rawUrl) return;
+  const url = rawUrl.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+  const finalUrl = url.startsWith('http') ? url : 'https://' + url;
+  
+  const a = document.createElement('a');
+  a.href = finalUrl;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 
 function refreshStats() {
   const all = S.requests || [];
@@ -1261,7 +1274,7 @@ function renderAdminSessions() {
         <td style="font-size:.8rem;color:var(--gray)">${durStr}</td>
         <td>${statusBadge(s)}</td>
         <td>${s.zoom_link
-          ? `<a href="${s.zoom_link.startsWith('http') ? s.zoom_link : 'https://' + s.zoom_link}" target="_top" style="color:var(--blue);font-size:.8rem;font-weight:700;text-decoration:none">🔗 دخول</a>`
+          ? `<button onclick="openZoomLink('${s.zoom_link}')" style="background:none;border:none;cursor:pointer;color:var(--blue);font-size:.8rem;font-weight:700;text-decoration:none">🔗 دخول</button>`
           : `<span style="color:var(--gray);font-size:.76rem">—</span>`
         }</td>
       </tr>`;

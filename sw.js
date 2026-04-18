@@ -87,6 +87,11 @@ self.addEventListener('fetch', (event) => {
   // تجاهل طلبات غير HTTP/HTTPS (مثلاً chrome-extension://)
   if (!request.url.startsWith('http')) return;
 
+  // استثناء هام: لا تعترض الروابط الخارجية عند الانتقال
+  if (request.mode === 'navigate' && url.origin !== location.origin) {
+    return;
+  }
+
   // تجاهل طلبات POST وغير GET (لا نكاش الـ API calls)
   if (request.method !== 'GET') return;
 

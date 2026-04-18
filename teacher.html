@@ -1341,6 +1341,20 @@ const fhr  = d => d ? new Date(d).toLocaleTimeString('ar-EG',{hour:'2-digit',min
 const fday = d => d ? new Date(d).toLocaleDateString('ar-EG',{weekday:'long'}) : '—';
 const fsize= b => b < 1024*1024 ? (b/1024).toFixed(0)+' KB' : (b/1024/1024).toFixed(1)+' MB';
 
+function openZoomLink(rawUrl) {
+  if (!rawUrl) return;
+  const url = rawUrl.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+  const finalUrl = url.startsWith('http') ? url : 'https://' + url;
+  
+  const a = document.createElement('a');
+  a.href = finalUrl;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 function toast(msg, type='ok') {
   const el = document.createElement('div');
   el.className = 'toast ' + (type==='ok' ? 't-ok' : 't-err');
@@ -2150,7 +2164,7 @@ function renderSessionsData(data) {
             <span>⏱️ ${mins} دقيقة</span>
             ${s.subject_name ? `<span>📚 ${s.subject_name}</span>` : ''}
             ${s.grade_name   ? `<span>🏫 ${s.grade_name}</span>` : ''}
-            ${s.zoom_link    ? `<span><a href="${s.zoom_link.startsWith('http') ? s.zoom_link : 'https://' + s.zoom_link}" target="_top" style="color:var(--blue)">🔗 انضم</a></span>` : ''}
+            ${s.zoom_link    ? `<span><button onclick="openZoomLink('${s.zoom_link}')" style="background:none;border:none;cursor:pointer;color:var(--blue)">🔗 انضم</button></span>` : ''}
           </div>
         </div>
         <div class="sc-status">${stateMap[st]||''}</div>

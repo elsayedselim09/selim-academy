@@ -5,6 +5,7 @@
   "start_url": "/selim-academy/",
   "scope": "/selim-academy/",
   "display": "standalone",
+  "display_override": ["browser"],
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
   "theme_color": "#1A56DB",
