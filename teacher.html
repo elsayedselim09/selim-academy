@@ -2150,7 +2150,7 @@ function renderSessionsData(data) {
             <span>⏱️ ${mins} دقيقة</span>
             ${s.subject_name ? `<span>📚 ${s.subject_name}</span>` : ''}
             ${s.grade_name   ? `<span>🏫 ${s.grade_name}</span>` : ''}
-            ${s.zoom_link    ? `<span><a href="${s.zoom_link}" target="_blank" style="color:var(--blue)">🔗 انضم</a></span>` : ''}
+            ${s.zoom_link    ? `<span><a href="${s.zoom_link.startsWith('http') ? s.zoom_link : 'https://' + s.zoom_link}" target="_blank" style="color:var(--blue)">🔗 انضم</a></span>` : ''}
           </div>
         </div>
         <div class="sc-status">${stateMap[st]||''}</div>

@@ -1093,8 +1093,9 @@ function renderSessionItem(s) {
   const tbStyle = ended ? 'background:var(--gray-light);border-color:var(--gray-mid)' : '';
   const txStyle = ended ? 'color:var(--gray)' : '';
   let btn = '';
-  if (st === 'live' && s.zoom_link)
-    btn = `<button class="btn-join btn-live" onclick="window.open('${s.zoom_link}','_blank')">🎥 ادخل</button>`;
+  let formattingLink = s.zoom_link ? (s.zoom_link.startsWith('http') ? s.zoom_link : 'https://' + s.zoom_link) : '';
+  if (st === 'live' && formattingLink)
+    btn = `<a href="${formattingLink}" target="_blank" class="btn-join btn-live" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none">🎥 ادخل</a>`;
   else if (st === 'soon')     btn = `<button class="btn-join btn-soon" disabled>قريباً</button>`;
   else if (st === 'upcoming') btn = `<button class="btn-join btn-dis"  disabled>لم يبدأ</button>`;
   else                        btn = `<button class="btn-join btn-end"  disabled>انتهت</button>`;

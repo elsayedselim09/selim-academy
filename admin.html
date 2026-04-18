@@ -1261,7 +1261,7 @@ function renderAdminSessions() {
         <td style="font-size:.8rem;color:var(--gray)">${durStr}</td>
         <td>${statusBadge(s)}</td>
         <td>${s.zoom_link
-          ? `<a href="${s.zoom_link}" target="_blank" style="color:var(--blue);font-size:.8rem;font-weight:700;text-decoration:none">🔗 دخول</a>`
+          ? `<a href="${s.zoom_link.startsWith('http') ? s.zoom_link : 'https://' + s.zoom_link}" target="_blank" style="color:var(--blue);font-size:.8rem;font-weight:700;text-decoration:none">🔗 دخول</a>`
           : `<span style="color:var(--gray);font-size:.76rem">—</span>`
         }</td>
       </tr>`;
