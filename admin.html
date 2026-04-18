@@ -1180,11 +1180,21 @@ async function loadAdminSessions() {
   }
 }
 
+function getSessionStatus(s) {
+  if (!s.scheduled_at) return 'upcoming';
+  const now   = Date.now();
+  const start = new Date(s.scheduled_at).getTime();
+  const dur   = (s.duration_min || 60) * 60 * 1000;
+  if (now >= start && now < start + dur) return 'live';
+  if (now >= start + dur)                return 'ended';
+  return 'upcoming';
+}
+
 function renderSessionStats() {
-  const today   = new Date().toISOString().slice(0,10);
+  const today         = new Date().toISOString().slice(0,10);
   const todaySessions = S.allSessions.filter(s => s.session_date === today);
-  const upcoming      = S.allSessions.filter(s => s.session_date > today);
-  const live          = todaySessions.filter(s => s.status === 'live');
+  const live          = S.allSessions.filter(s => getSessionStatus(s) === 'live');
+  const upcoming      = S.allSessions.filter(s => getSessionStatus(s) === 'upcoming' && s.session_date >= today);
 
   document.getElementById('sess-stats-bar').innerHTML = `
     <div style="background:var(--blue-light);border:1px solid #BFDBFE;border-radius:12px;padding:16px;text-align:center">
@@ -1237,8 +1247,9 @@ function renderAdminSessions() {
   }
 
   const statusBadge = s => {
-    if(s.status === 'live')      return `<span class="badge" style="background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7">🟢 جارية</span>`;
-    if(s.status === 'ended')     return `<span class="badge b-gray">✅ منتهية</span>`;
+    const st = getSessionStatus(s);
+    if(st === 'live')   return `<span class="badge" style="background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7">🟢 جارية</span>`;
+    if(st === 'ended')  return `<span class="badge b-gray">✅ منتهية</span>`;
     return `<span class="badge b-blue">⏳ قادمة</span>`;
   };
 
