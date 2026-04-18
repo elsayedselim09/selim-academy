@@ -743,16 +743,15 @@ async function loadRequests() {
 }
 function openZoomLink(rawUrl) {
   if (!rawUrl) return;
-  const url = rawUrl.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
-  const finalUrl = url.startsWith('http') ? url : 'https://' + url;
-  
-  const a = document.createElement('a');
-  a.href = finalUrl;
-  a.target = '_blank';
-  a.rel = 'noopener noreferrer';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  const cleaned = rawUrl.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+  const match = cleaned.match(/https?:\/\/[^\s\n\r"'<>]+/);
+  const finalUrl = match ? match[0] : (cleaned.startsWith('http') ? cleaned : 'https://' + cleaned);
+  try {
+    new URL(finalUrl);
+    window.open(finalUrl, '_blank', 'noopener,noreferrer');
+  } catch(e) {
+    alert('رابط الحصة غير صالح. يرجى التواصل مع المعلم.');
+  }
 }
 
 function refreshStats() {
@@ -1164,7 +1163,7 @@ async function loadAdminSessions() {
         ...d,
         _profile: pm[d.teacher_id] || null,
         session_date: d.scheduled_at ? d.scheduled_at.slice(0,10) : '',
-        start_time:   d.scheduled_at ? d.scheduled_at.slice(11,16) : '',
+        start_time:   d.scheduled_at ? new Date(d.scheduled_at).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit',hour12:true}) : '',
       }))
       .sort((a, b) => (a.scheduled_at||'').localeCompare(b.scheduled_at||''));
 
@@ -1182,11 +1181,21 @@ async function loadAdminSessions() {
   }
 }
 
+function getSessionStatus(s) {
+  if (!s.scheduled_at) return 'upcoming';
+  const now   = Date.now();
+  const start = new Date(s.scheduled_at).getTime();
+  const dur   = (s.duration_min || 60) * 60 * 1000;
+  if (now >= start && now < start + dur) return 'live';
+  if (now >= start + dur)                return 'ended';
+  return 'upcoming';
+}
+
 function renderSessionStats() {
-  const today   = new Date().toISOString().slice(0,10);
+  const today         = new Date().toISOString().slice(0,10);
   const todaySessions = S.allSessions.filter(s => s.session_date === today);
-  const upcoming      = S.allSessions.filter(s => s.session_date > today);
-  const live          = todaySessions.filter(s => s.status === 'live');
+  const live          = S.allSessions.filter(s => getSessionStatus(s) === 'live');
+  const upcoming      = S.allSessions.filter(s => getSessionStatus(s) === 'upcoming' && s.session_date >= today);
 
   document.getElementById('sess-stats-bar').innerHTML = `
     <div style="background:var(--blue-light);border:1px solid #BFDBFE;border-radius:12px;padding:16px;text-align:center">
@@ -1239,8 +1248,9 @@ function renderAdminSessions() {
   }
 
   const statusBadge = s => {
-    if(s.status === 'live')      return `<span class="badge" style="background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7">🟢 جارية</span>`;
-    if(s.status === 'ended')     return `<span class="badge b-gray">✅ منتهية</span>`;
+    const st = getSessionStatus(s);
+    if(st === 'live')   return `<span class="badge" style="background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7">🟢 جارية</span>`;
+    if(st === 'ended')  return `<span class="badge b-gray">✅ منتهية</span>`;
     return `<span class="badge b-blue">⏳ قادمة</span>`;
   };
 
@@ -1275,7 +1285,7 @@ function renderAdminSessions() {
         <td style="font-size:.8rem;color:var(--gray)">${durStr}</td>
         <td>${statusBadge(s)}</td>
         <td>${s.zoom_link
-          ? `<button onclick="openZoomLink('${s.zoom_link}')" style="background:none;border:none;cursor:pointer;color:var(--blue);font-size:.8rem;font-weight:700;text-decoration:none">🔗 دخول</button>`
+          ? `<button data-zoom="${s.zoom_link.replace(/"/g,'&quot;')}" onclick="openZoomLink(this.dataset.zoom)" style="background:none;border:none;cursor:pointer;color:var(--blue);font-size:.8rem;font-weight:700;text-decoration:none">🔗 دخول</button>`
           : `<span style="color:var(--gray);font-size:.76rem">—</span>`
         }</td>
       </tr>`;
