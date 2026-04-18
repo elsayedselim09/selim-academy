@@ -1562,7 +1562,8 @@ function renderSubjectsGrid() {
           ${grades.length > 3 ? `<span class="grade-chip">+${grades.length-3}</span>` : ''}
         </div>
         <div class="subj-acts">
-          <button class="btn-sm btn-edit" onclick="event.stopPropagation();openAddGradeModal('${s.id}')">➕ صف جديد</button>
+          <button class="btn-sm btn-edit" onclick="event.stopPropagation();openSubjectModal('${s.id}')">✏️ تعديل</button>
+          <button class="btn-sm btn-edit" onclick="event.stopPropagation();openAddGradeModal('${s.id}')">➕ صف</button>
           <button class="btn-sm btn-del"  onclick="event.stopPropagation();confirmDelete('subject','${s.id}','${s.name.replace(/'/g,'')}')">🗑️</button>
         </div>
       </div>
@@ -2300,13 +2301,24 @@ async function loadStudentsList(gradeId) {
   const el = document.getElementById('stu-list-content');
   el.innerHTML = [1,2,3].map(()=>`<div class="skel" style="height:72px;border-radius:12px;margin-bottom:10px"></div>`).join('');
   try {
+    // جلب التسجيلات بدون join (student_id مرتبط بـ auth.users مش profiles)
     let q = sb.from('teacher_enrollments')
-      .select('*, profiles:student_id(id,full_name,phone,avatar_url)')
+      .select('*')
       .eq('teacher_id', ST.user.id);
     if(gradeId && gradeId !== 'all') q = q.eq('grade_id', gradeId);
     const { data, error } = await q.order('enrolled_at',{ascending:false});
     if(error) throw error;
     stuData = data || [];
+
+    // جلب بيانات الطلاب من profiles بشكل منفصل
+    const studentIds = [...new Set(stuData.map(e => e.student_id).filter(Boolean))];
+    let profilesMap = {};
+    if(studentIds.length) {
+      const { data: profs } = await sb.from('profiles')
+        .select('id,full_name,phone,avatar_url')
+        .in('id', studentIds);
+      (profs||[]).forEach(p => profilesMap[p.id] = p);
+    }
 
     // Get attendance counts
     const ids = stuData.map(s => s.student_id);
@@ -2328,7 +2340,7 @@ async function loadStudentsList(gradeId) {
 
     el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">` +
       stuData.map(en => {
-        const p = en.profiles || {};
+        const p = profilesMap[en.student_id] || {};
         const att = attMap[en.student_id] || { present:0, absent:0 };
         const total = att.present + att.absent;
         const pct = total ? Math.round(att.present/total*100) : 0;
@@ -2420,10 +2432,20 @@ async function loadAttendanceForDate() {
   attRecords = {};
 
   try {
-    // Load students in this grade
+    // جلب الطلاب المسجلين في هذا الصف بدون join (student_id مرتبط بـ auth.users)
     const { data: enData } = await sb.from('teacher_enrollments')
-      .select('student_id, profiles:student_id(id,full_name,avatar_url)')
+      .select('student_id')
       .eq('teacher_id', ST.user.id).eq('grade_id', curGradeForAtt);
+
+    // جلب بيانات الطلاب من profiles بشكل منفصل
+    const studentIds = (enData||[]).map(e => e.student_id).filter(Boolean);
+    let profilesMap = {};
+    if(studentIds.length) {
+      const { data: profs } = await sb.from('profiles')
+        .select('id,full_name,avatar_url').in('id', studentIds);
+      (profs||[]).forEach(p => profilesMap[p.id] = p);
+    }
+    const students = (enData||[]).map(e => ({ student_id: e.student_id, profiles: profilesMap[e.student_id] || {} }));
 
     // Load existing attendance
     const { data: attData } = await sb.from('teacher_attendance')
@@ -2722,7 +2744,6 @@ window.goTo = async function(name) {
 // ══════════════════════════════════════════════
 // CONFIRM DELETE — extend for sessions
 // ══════════════════════════════════════════════
-const runConfirmOrig = runConfirm;
 window.runConfirm = async function() {
   if(!ST.pendingConfirm) return;
   const { type, id } = ST.pendingConfirm;
@@ -2733,8 +2754,25 @@ window.runConfirm = async function() {
       if(error) throw error;
       toast('✅ تم حذف الحصة');
       await loadSessions();
-    } else {
-      await runConfirmOrig();
+    } else if(type === 'subject') {
+      // حذف الصفوف أولاً ثم المادة
+      await sb.from('teacher_grades').delete().eq('subject_id', id);
+      const { error } = await sb.from('teacher_subjects').delete().eq('id',id);
+      if(error) throw error;
+      toast('✅ تم حذف المادة');
+      await loadSubjects();
+    } else if(type === 'grade') {
+      const { error } = await sb.from('teacher_grades').delete().eq('id',id);
+      if(error) throw error;
+      toast('✅ تم حذف الصف');
+      await loadSubjects();
+    } else if(type === 'material') {
+      const { data } = await sb.from('teacher_materials').select('storage_path,type').eq('id',id).single();
+      if(data?.storage_path) await sb.storage.from('teacher-content').remove([data.storage_path]);
+      const { error } = await sb.from('teacher_materials').delete().eq('id',id);
+      if(error) throw error;
+      toast('✅ تم الحذف بنجاح');
+      await loadContent(ST.curContentTab);
     }
   } catch(e) { toast('خطأ: '+e.message,'err'); }
 };
