@@ -743,18 +743,13 @@ async function loadRequests() {
 function openZoomLink(rawUrl) {
   if (!rawUrl) return;
   const cleaned = rawUrl.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
-
-  // استخراج أول رابط https من النص (في حال كان نص دعوة كامل)
   const match = cleaned.match(/https?:\/\/[^\s\n\r"'<>]+/);
   const finalUrl = match ? match[0] : (cleaned.startsWith('http') ? cleaned : 'https://' + cleaned);
-
-  // التحقق من صحة الرابط قبل الانتقال
   try {
     new URL(finalUrl);
-    window.location.href = finalUrl;
+    window.open(finalUrl, '_blank', 'noopener,noreferrer');
   } catch(e) {
     alert('رابط الحصة غير صالح. يرجى التواصل مع المعلم.');
-    console.error('Invalid zoom URL:', finalUrl);
   }
 }
 

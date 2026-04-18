@@ -437,16 +437,15 @@ function timeAgo(iso) {
 
 function openZoomLink(rawUrl) {
   if (!rawUrl) return;
-  const url = rawUrl.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
-  const finalUrl = url.startsWith('http') ? url : 'https://' + url;
-  
-  const a = document.createElement('a');
-  a.href = finalUrl;
-  a.target = '_blank';
-  a.rel = 'noopener noreferrer';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  const cleaned = rawUrl.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+  const match = cleaned.match(/https?:\/\/[^\s\n\r"'<>]+/);
+  const finalUrl = match ? match[0] : (cleaned.startsWith('http') ? cleaned : 'https://' + cleaned);
+  try {
+    new URL(finalUrl);
+    window.open(finalUrl, '_blank', 'noopener,noreferrer');
+  } catch(e) {
+    alert('رابط الحصة غير صالح. يرجى التواصل مع المعلم.');
+  }
 }
 function formatDate(iso) {
   if (!iso) return '—';
@@ -1108,7 +1107,7 @@ function renderSessionItem(s) {
   const txStyle = ended ? 'color:var(--gray)' : '';
   let btn = '';
   if (st === 'live' && s.zoom_link)
-    btn = `<button class="btn-join btn-live" onclick="openZoomLink('${s.zoom_link}')" style="display:inline-flex;align-items:center;justify-content:center;">🎥 ادخل</button>`;
+    btn = `<button class="btn-join btn-live" data-zoom="${s.zoom_link.replace(/"/g,'&quot;')}" onclick="openZoomLink(this.dataset.zoom)" style="display:inline-flex;align-items:center;justify-content:center;">🎥 ادخل</button>`;
   else if (st === 'soon')     btn = `<button class="btn-join btn-soon" disabled>قريباً</button>`;
   else if (st === 'upcoming') btn = `<button class="btn-join btn-dis"  disabled>لم يبدأ</button>`;
   else                        btn = `<button class="btn-join btn-end"  disabled>انتهت</button>`;
