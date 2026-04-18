@@ -696,6 +696,7 @@ function goTo(name) {
   document.getElementById('page-'+name).classList.add('active');
   document.getElementById('nav-'+name).classList.add('active');
   closeSidebar();
+  if (name !== 'sessions' && _sessInterval) { clearInterval(_sessInterval); _sessInterval = null; }
   const loaders = {courses:loadCourses, sessions:initSessions, students:loadStudents, profile:loadProfile, teachers:loadTeachers};
   if(loaders[name]) loaders[name]();
   if(name==='requests') renderReqTable();
@@ -1163,7 +1164,7 @@ async function loadAdminSessions() {
         ...d,
         _profile: pm[d.teacher_id] || null,
         session_date: d.scheduled_at ? d.scheduled_at.slice(0,10) : '',
-        start_time:   d.scheduled_at ? new Date(d.scheduled_at).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit',hour12:true}) : '',
+        start_time:   d.scheduled_at ? d.scheduled_at.slice(11,16) : '',
       }))
       .sort((a, b) => (a.scheduled_at||'').localeCompare(b.scheduled_at||''));
 
@@ -1320,7 +1321,15 @@ function renderStudentSchedules() {
 }
 
 // Legacy stubs (kept so goTo mapping doesn't break)
-function initSessions() { loadAdminSessions(); }
+let _sessInterval = null;
+function initSessions() {
+  loadAdminSessions();
+  if (_sessInterval) clearInterval(_sessInterval);
+  _sessInterval = setInterval(() => {
+    renderSessionStats();
+    renderAdminSessions();
+  }, 60000);
+}
 function loadSessions() {}
 function renderSessions() {}
 function openSessionForm() { toast('لإضافة حصص جديدة اذهب للجة المعلم وأضفها من هناك', 'ok'); }
