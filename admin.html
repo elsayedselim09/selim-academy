@@ -1274,7 +1274,7 @@ function renderAdminSessions() {
         <td style="font-size:.8rem;color:var(--gray)">${durStr}</td>
         <td>${statusBadge(s)}</td>
         <td>${s.zoom_link
-          ? `<button onclick="openZoomLink('${s.zoom_link}')" style="background:none;border:none;cursor:pointer;color:var(--blue);font-size:.8rem;font-weight:700;text-decoration:none">🔗 دخول</button>`
+          ? `<button data-zoom="${s.zoom_link.replace(/"/g,'&quot;')}" onclick="openZoomLink(this.dataset.zoom)" style="background:none;border:none;cursor:pointer;color:var(--blue);font-size:.8rem;font-weight:700;text-decoration:none">🔗 دخول</button>`
           : `<span style="color:var(--gray);font-size:.76rem">—</span>`
         }</td>
       </tr>`;
