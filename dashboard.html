@@ -1095,7 +1095,7 @@ function renderSessionItem(s) {
   let btn = '';
   let formattingLink = s.zoom_link ? (s.zoom_link.startsWith('http') ? s.zoom_link : 'https://' + s.zoom_link) : '';
   if (st === 'live' && formattingLink)
-    btn = `<a href="${formattingLink}" target="_blank" rel="noopener noreferrer" class="btn-join btn-live" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none">🎥 ادخل</a>`;
+    btn = `<a href="${formattingLink}" target="_top" class="btn-join btn-live" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none">🎥 ادخل</a>`;
   else if (st === 'soon')     btn = `<button class="btn-join btn-soon" disabled>قريباً</button>`;
   else if (st === 'upcoming') btn = `<button class="btn-join btn-dis"  disabled>لم يبدأ</button>`;
   else                        btn = `<button class="btn-join btn-end"  disabled>انتهت</button>`;
