@@ -1553,7 +1553,7 @@ function renderSubjectsGrid() {
   let html = subjects.map(s => {
     const grades = s.teacher_grades || [];
     return `
-      <div class="subject-card" id="sc-${s.id}">
+      <div class="subject-card" id="sc-${s.id}" onclick="showSubjectGrades('${s.id}')" style="cursor:pointer">
         <div class="subj-icon">${s.icon||'📚'}</div>
         <div class="subj-name">${s.name}</div>
         <div class="subj-meta">${s.level||''} ${grades.length ? '· '+grades.length+' صف' : ''}</div>
@@ -2219,7 +2219,7 @@ async function saveSession() {
     scheduled_at: new Date(dt).toISOString(),
     duration_min: parseInt(document.getElementById('sess-duration').value) || 60,
     zoom_link:    document.getElementById('sess-zoom').value.trim() || null,
-    subject_id:   subjId || null,
+    // subject_id محذوف لأنه غير موجود في عمود teacher_sessions
     subject_name: subj?.name || null,
     grade_id:     gradeId || null,
     grade_name:   grade?.name || null,
@@ -2373,12 +2373,29 @@ async function openStudentDetail(studentId, name, gradeName) {
   document.getElementById('mdl-student').classList.add('show');
 
   try {
-    const { data, error } = await sb.from('teacher_attendance')
-      .select('*').eq('teacher_id', ST.user.id).eq('student_id', studentId)
-      .order('session_date', { ascending: false });
-    if(error) throw error;
+    // جلب تفاصيل التسجيل وسجل الحضور معاً
+    const [enrRes, attRes] = await Promise.all([
+      sb.from('teacher_enrollments')
+        .select('subject_name,grade_name,enrolled_at')
+        .eq('teacher_id', ST.user.id)
+        .eq('student_id', studentId)
+        .limit(5),
+      sb.from('teacher_attendance')
+        .select('*').eq('teacher_id', ST.user.id).eq('student_id', studentId)
+        .order('session_date', { ascending: false }),
+    ]);
 
-    const records = data || [];
+    // عرض تفاصيل الاشتراك
+    const enrollments = enrRes.data || [];
+    if (enrollments.length) {
+      const detGradeEl = document.getElementById('stu-detail-grade');
+      const enrInfo = enrollments.map(e =>
+        [e.subject_name, e.grade_name].filter(Boolean).join(' — ')
+      ).join(' | ');
+      if (detGradeEl) detGradeEl.textContent = enrInfo || gradeName || '—';
+    }
+
+    const records = attRes.data || [];
     const present = records.filter(r => r.status === 'present').length;
     const absent  = records.filter(r => r.status === 'absent').length;
     const total   = present + absent;

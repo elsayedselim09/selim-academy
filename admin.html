@@ -461,6 +461,15 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       </div>
       <div id="sess-admin-body"></div>
     </div>
+
+    <!-- جداول الطلاب -->
+    <div class="section-card" style="margin-top:20px">
+      <div class="section-head">
+        <h3>📆 جداول الطلاب المقبولين</h3>
+        <span style="font-size:.78rem;color:var(--gray)">مواعيد طلبها الطلاب عند التسجيل</span>
+      </div>
+      <div id="student-schedules-body"></div>
+    </div>
   </div>
 
   <!-- TEACHERS -->
@@ -601,8 +610,39 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   </div>
 </div>
 
+<!-- ASSIGN TEACHER MODAL -->
+<div class="mdl" id="mdl-assign-teacher">
+  <div class="mdl-box" style="position:relative;max-width:480px">
+    <div class="mdl-title">👨‍🏫 تعيين معلم للطالب</div>
+    <p style="font-size:.84rem;color:var(--gray);margin-bottom:16px">
+      اختر المعلم المناسب للمادة: <strong id="assign-mdl-subject">—</strong>
+    </p>
+    <div class="fg" style="margin-bottom:14px">
+      <label>المعلم *</label>
+      <select id="assign-teacher-sel" style="width:100%;padding:10px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:'Cairo',sans-serif">
+        <option value="">— اختر المعلم —</option>
+      </select>
+    </div>
+    <div class="fg" style="margin-bottom:16px">
+      <label>الصف الدراسي (اختياري)</label>
+      <select id="assign-grade-sel" style="width:100%;padding:10px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:'Cairo',sans-serif">
+        <option value="">— اختر صف المعلم —</option>
+      </select>
+    </div>
+    <div id="assign-msg"></div>
+    <div class="mdl-btns">
+      <button class="mdl-cancel" onclick="document.getElementById('mdl-assign-teacher').classList.remove('show')">إلغاء</button>
+      <button class="mdl-confirm mc-approve" id="assign-save-btn" onclick="saveAssignTeacher()">💾 تعيين المعلم</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast-wrap"></div>
+<style>
+.btn-assign{padding:6px 12px;background:linear-gradient(135deg,var(--blue-light),#EDE9FE);color:var(--blue);border:1.5px solid #BFDBFE;border-radius:8px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-assign:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+</style>
 
 <script>
 // ══════════════════════════════════
@@ -647,9 +687,6 @@ function setMsg(id, msg, type='ok') {
   if(type==='ok') setTimeout(()=>{el.innerHTML='';},4000);
 }
 
-// ══════════════════════════════════
-// NAV
-// ══════════════════════════════════
 function openSidebar()  { document.getElementById('sidebar').classList.add('open');  document.getElementById('overlay').classList.add('show'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); }
 
@@ -675,23 +712,31 @@ async function doLogout() {
 async function loadRequests() {
   try {
     const {data:reqs, error} = await sb.from('subscription_requests')
-      .select('id,status,created_at,note,user_id,course_id,student_name,student_phone,grade,subject,session_type,days_info,curriculum')
+      .select('id,status,created_at,note,user_id,course_id,student_name,student_phone,grade,subject,session_type,days_info,curriculum,assigned_teacher_id')
       .order('created_at',{ascending:false});
     if(error) throw error;
 
     const uids = [...new Set(reqs.map(r=>r.user_id).filter(Boolean))];
     const cids = [...new Set(reqs.map(r=>r.course_id).filter(Boolean))];
+    const tids = [...new Set(reqs.map(r=>r.assigned_teacher_id).filter(Boolean))];
 
-    const [pr,cr] = await Promise.all([
+    const [pr,cr,tr] = await Promise.all([
       uids.length ? sb.from('profiles').select('id,full_name,phone').in('id',uids) : {data:[]},
-      cids.length ? sb.from('courses').select('id,name,icon').in('id',cids)        : {data:[]}
+      cids.length ? sb.from('courses').select('id,name,icon').in('id',cids)        : {data:[]},
+      tids.length ? sb.from('profiles').select('id,full_name').in('id',tids)       : {data:[]},
     ]);
 
-    const pm={}, cm={};
+    const pm={}, cm={}, tm={};
     (pr.data||[]).forEach(p=>pm[p.id]=p);
     (cr.data||[]).forEach(c=>cm[c.id]=c);
+    (tr.data||[]).forEach(t=>tm[t.id]=t);
 
-    S.requests = reqs.map(r=>({...r, profiles:pm[r.user_id]||null, courses:cm[r.course_id]||null}));
+    S.requests = reqs.map(r=>({
+      ...r,
+      profiles: pm[r.user_id]||null,
+      courses:  cm[r.course_id]||null,
+      assigned_teacher_name: r.assigned_teacher_id ? (tm[r.assigned_teacher_id]?.full_name||'معين') : null,
+    }));
     refreshStats(); updateBadge(); renderOvList(); renderReqTable();
   } catch(e) { console.error(e); toast('فشل تحميل الطلبات: '+e.message,'err'); }
 }
@@ -880,7 +925,6 @@ async function approveReq(id) {
     const enrollPayload = { user_id: req.user_id, enrolled_at: new Date().toISOString(), progress_pct: 0 };
     if(req.course_id) enrollPayload.course_id = req.course_id;
 
-    // نستخدم insert بدلاً من upsert إذا لم يكن course_id موجوداً
     let e2;
     if(req.course_id) {
       const res = await sb.from('enrollments').upsert(enrollPayload, {onConflict:'user_id,course_id', ignoreDuplicates:true});
@@ -889,10 +933,9 @@ async function approveReq(id) {
       const res = await sb.from('enrollments').insert(enrollPayload);
       e2 = res.error;
     }
-    if(e2) throw e2;
-    toast('✅ تم القبول وإضافة الطالب — سيجد طلبه في لوحة التحكم');
+    if(e2) console.warn('تحذير enrollment:', e2.message);
+    toast('✅ تم القبول — يمكنك الآن تعيين معلم للطالب');
   } else {
-    // الطالب حجز بدون حساب في المنصة
     toast('✅ تم قبول الطلب — تواصل مع الطالب عبر واتساب لإكمال التسجيل');
   }
 
@@ -919,7 +962,6 @@ async function loadCourses() {
   const el = document.getElementById('courses-grid');
   el.innerHTML = '<div class="skel" style="height:190px;border-radius:12px"></div>'.repeat(3);
   try {
-    // جلب المواد والصفوف ثم دمج المعلمين يدوياً (لحل مشكلة العلاقة في Supabase)
     const { data, error } = await sb
       .from('teacher_subjects')
       .select('*, teacher_grades(id,name,description)')
@@ -927,11 +969,13 @@ async function loadCourses() {
     if(error) throw error;
 
     const tids = [...new Set((data||[]).map(d => d.teacher_id).filter(Boolean))];
-    const pr = await sb.from('profiles').select('id,full_name,avatar_url,specialization').in('id', tids);
-    const pm = {};
-    (pr.data||[]).forEach(p => pm[p.id] = p);
+    let pm = {};
+    if (tids.length) {
+      const pr = await sb.from('profiles').select('id,full_name,avatar_url,specialization').in('id', tids);
+      (pr.data||[]).forEach(p => pm[p.id] = p);
+    }
 
-    S.teacherSubjects = data.map(d => ({...d, profiles: pm[d.teacher_id] || null}));
+    S.teacherSubjects = (data||[]).map(d => ({...d, profiles: pm[d.teacher_id] || null}));
     const sCoursesEl = document.getElementById('s-courses');
     if(sCoursesEl) sCoursesEl.textContent = S.teacherSubjects.length;
     renderCoursesGrid();
@@ -1069,40 +1113,52 @@ async function loadAdminSessions() {
   el.innerHTML = '<div style="padding:20px">' + '<div class="skel" style="height:58px;margin-bottom:10px;border-radius:8px"></div>'.repeat(4) + '</div>';
 
   try {
-    // teacher_sessions الأعمدة الحقيقية:
-    // id, teacher_id, grade_id, subject_name, grade_name, title,
-    // scheduled_at (timestamp), duration_min, zoom_link, video_url, status, created_at
-    const { data, error } = await sb
-      .from('teacher_sessions')
-      .select(`
+    // ── جلب حصص المعلمين وجداول الطلاب بالتوازي ──
+    const [sessRes, reqRes] = await Promise.all([
+      sb.from('teacher_sessions').select(`
         id, teacher_id, grade_id,
         subject_name, grade_name, title,
         scheduled_at, duration_min,
         zoom_link, video_url, status, created_at
-      `);
+      `),
+      sb.from('subscription_requests')
+        .select('id,student_name,student_phone,subject,grade,session_type,days_info,created_at,assigned_teacher_id')
+        .eq('status','approved')
+        .order('created_at', { ascending: false })
+        .limit(50),
+    ]);
 
-    if(error) throw error;
+    if(sessRes.error) throw sessRes.error;
 
     // جلب بيانات المعلمين
-    const tids = [...new Set((data||[]).map(d => d.teacher_id).filter(Boolean))];
+    const allTids = [...new Set([
+      ...(sessRes.data||[]).map(d => d.teacher_id),
+      ...(reqRes.data||[]).map(d => d.assigned_teacher_id),
+    ].filter(Boolean))];
     let pm = {};
-    if(tids.length) {
-      const pr = await sb.from('profiles').select('id,full_name,avatar_url,specialization').in('id', tids);
+    if(allTids.length) {
+      const pr = await sb.from('profiles').select('id,full_name,avatar_url,specialization').in('id', allTids);
       (pr.data||[]).forEach(p => pm[p.id] = p);
     }
 
-    S.allSessions = (data||[])
+    S.allSessions = (sessRes.data||[])
       .map(d => ({
         ...d,
         _profile: pm[d.teacher_id] || null,
-        // نحسب session_date و start_time من scheduled_at
         session_date: d.scheduled_at ? d.scheduled_at.slice(0,10) : '',
         start_time:   d.scheduled_at ? d.scheduled_at.slice(11,16) : '',
       }))
       .sort((a, b) => (a.scheduled_at||'').localeCompare(b.scheduled_at||''));
 
+    // حفظ جداول الطلاب المقبولين
+    S.approvedReqSchedules = (reqRes.data||[]).map(r => ({
+      ...r,
+      _teacher: pm[r.assigned_teacher_id] || null,
+    }));
+
     renderSessionStats();
     renderAdminSessions();
+    renderStudentSchedules();
   } catch(e) {
     el.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`;
   }
@@ -1209,6 +1265,43 @@ function renderAdminSessions() {
     </tbody></table></div>`;
 }
 
+function renderStudentSchedules() {
+  const el = document.getElementById('student-schedules-body');
+  if (!el) return;
+  const data = S.approvedReqSchedules || [];
+
+  if (!data.length) {
+    el.innerHTML = `<div class="empty-box"><div class="ei">📅</div><div class="et">لا توجد طلبات مقبولة بعد</div><div class="ed">ستظهر هنا جداول الطلاب بعد قبول طلباتهم</div></div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="tbl-wrap"><table class="data-table">
+    <thead><tr>
+      <th>#</th><th>الطالب</th><th>الهاتف</th>
+      <th>المادة</th><th>الصف</th><th>نوع الحصة</th>
+      <th>المواعيد المطلوبة</th><th>المعلم المعين</th>
+    </tr></thead>
+    <tbody>
+    ${data.map((r, i) => `<tr>
+      <td style="color:var(--gray);font-size:.78rem">${i+1}</td>
+      <td><div class="u-info"><div class="u-av">${ini(r.student_name)}</div><div class="u-name">${r.student_name||'—'}</div></div></td>
+      <td style="font-size:.8rem">${r.student_phone||'—'}</td>
+      <td><span class="badge b-blue">${r.subject||'—'}</span></td>
+      <td style="font-size:.82rem">${r.grade||'—'}</td>
+      <td style="font-size:.78rem;color:var(--gray)">${r.session_type||'—'}</td>
+      <td style="font-size:.76rem;max-width:200px;white-space:pre-line;line-height:1.6">
+        ${(r.days_info||'—').split(' / ').map(d => `📅 ${d}`).join('<br>')}
+      </td>
+      <td style="font-size:.8rem;font-weight:600">
+        ${r._teacher
+          ? `<span style="color:var(--green)">✅ ${r._teacher.full_name}</span>`
+          : `<span style="color:var(--gold)">⏳ لم يُعيّن بعد</span>`}
+      </td>
+    </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
 // Legacy stubs (kept so goTo mapping doesn't break)
 function initSessions() { loadAdminSessions(); }
 function loadSessions() {}
@@ -1217,6 +1310,87 @@ function openSessionForm() { toast('لإضافة حصص جديدة اذهب لل
 function closeSessionModal() {}
 async function saveSession() {}
 async function delSession(id) {}
+
+// ══════════════════════════════════
+// ASSIGN TEACHER TO STUDENT
+// ══════════════════════════════════
+let _assignCtx = null;
+
+function openAssignTeacher(reqId, studentId, subject) {
+  _assignCtx = { reqId, studentId, subject };
+  const approvedTeachers = (S.teachers || []).filter(t => t.teacher_approved === true);
+
+  document.getElementById('assign-mdl-subject').textContent = subject || 'المادة';
+  const sel = document.getElementById('assign-teacher-sel');
+  sel.innerHTML = '<option value="">— اختر المعلم —</option>' +
+    approvedTeachers.map(t =>
+      `<option value="${t.id}">${t.full_name || '—'} ${t.specialization ? '(‫'+t.specialization+'‬)' : ''}</option>`
+    ).join('');
+
+  document.getElementById('assign-grade-sel').innerHTML = '<option value="">— اختر صف المعلم —</option>';
+  document.getElementById('assign-msg').innerHTML = '';
+
+  // عند تغيير المعلم جلب صفوفه
+  sel.onchange = async function() {
+    const tid = sel.value;
+    if (!tid) { document.getElementById('assign-grade-sel').innerHTML = '<option value="">— اختر صف المعلم —</option>'; return; }
+    const { data: grades } = await sb.from('teacher_grades').select('id,name').eq('teacher_id', tid);
+    document.getElementById('assign-grade-sel').innerHTML =
+      '<option value="">— اختر صف —</option>' +
+      (grades || []).map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+  };
+
+  document.getElementById('mdl-assign-teacher').classList.add('show');
+}
+
+async function saveAssignTeacher() {
+  if (!_assignCtx) return;
+  const teacherId  = document.getElementById('assign-teacher-sel').value;
+  const gradeId    = document.getElementById('assign-grade-sel').value;
+  if (!teacherId) { document.getElementById('assign-msg').innerHTML = '<div class="msg-err">❌ اختر معلمًا</div>'; return; }
+
+  const btn = document.getElementById('assign-save-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري...';
+
+  try {
+    // 1. حفظ المعلم المعين في طلب الاشتراك
+    const { error: e1 } = await sb.from('subscription_requests')
+      .update({ assigned_teacher_id: teacherId })
+      .eq('id', _assignCtx.reqId);
+    if (e1) throw e1;
+
+    // 2. تدوين الطالب مع المعلم في teacher_enrollments
+    const teacherSub = await sb.from('teacher_subjects')
+      .select('id').eq('teacher_id', teacherId)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+
+    const enrollPayload = {
+      teacher_id  : teacherId,
+      student_id  : _assignCtx.studentId,
+      grade_id    : gradeId || null,
+      subject_name: _assignCtx.subject || null,
+      grade_name  : gradeId ? document.getElementById('assign-grade-sel').selectedOptions[0]?.text : null,
+      enrolled_at : new Date().toISOString(),
+    };
+    if (teacherSub.data?.id) enrollPayload.subject_id = teacherSub.data.id;
+
+    const { error: e2 } = await sb.from('teacher_enrollments').insert(enrollPayload);
+    if (e2 && !e2.message.includes('duplicate')) throw e2;
+
+    // 3. تحديث العرض محليًا
+    const teacher = S.teachers.find(t => t.id === teacherId);
+    const req = S.requests.find(r => r.id === _assignCtx.reqId);
+    if (req) req.assigned_teacher_name = teacher?.full_name || 'معين';
+
+    toast('✅ تم تعيين المعلم بنجاح — سيظهر اسمه في لوحة الطالب');
+    document.getElementById('mdl-assign-teacher').classList.remove('show');
+    renderReqTable();
+  } catch(e) {
+    document.getElementById('assign-msg').innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 تعيين المعلم';
+  }
+}
 
 // ══════════════════════════════════
 // STUDENTS
@@ -1581,12 +1755,13 @@ async function openTeacherDetail(teacherId) {
 
   const [subjRes, sessRes] = await Promise.all([
     sb.from('teacher_subjects')
-      .select('id,subject_name,is_approved,teacher_grades(id,grade_name)')
+      .select('id,name,is_approved,teacher_grades(id,name)')
       .eq('teacher_id', teacherId),
     sb.from('teacher_sessions')
-      .select('id,session_date')
+      .select('id,scheduled_at,subject_name,grade_name')
       .eq('teacher_id', teacherId)
-      .gte('session_date', new Date().toISOString().slice(0,10))
+      .gte('scheduled_at', new Date().toISOString())
+      .order('scheduled_at', { ascending: true })
       .limit(5)
   ]);
 
@@ -1641,8 +1816,8 @@ async function openTeacherDetail(teacherId) {
         ? subjects.map(s => `
           <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray-light);border-radius:8px;margin-bottom:6px">
             <span>📚</span>
-            <span style="font-size:.85rem;font-weight:600;flex:1">${s.subject_name||'—'}</span>
-            <span style="font-size:.72rem;color:var(--gray)">${(s.teacher_grades||[]).map(g=>g.grade_name).join(' · ')}</span>
+            <span style="font-size:.85rem;font-weight:600;flex:1">${s.name||'—'}</span>
+            <span style="font-size:.72rem;color:var(--gray)">${(s.teacher_grades||[]).map(g=>g.name).join(' · ')}</span>
             ${s.is_approved ? '<span class="badge b-approved" style="font-size:.65rem">✅</span>' : '<span class="badge b-pending" style="font-size:.65rem">⏳</span>'}
           </div>`).join('')
         : '<div style="color:var(--gray);font-size:.83rem">لم يضف مواد بعد</div>'
@@ -1656,7 +1831,8 @@ async function openTeacherDetail(teacherId) {
       ${sessions.map(s => `
         <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--green-light);border-radius:8px;margin-bottom:5px">
           <span>🗓️</span>
-          <span style="font-size:.82rem;font-weight:600">${fds(s.session_date)}</span>
+          <span style="font-size:.82rem;font-weight:600;flex:1">${s.subject_name||''}</span>
+          <span style="font-size:.76rem;color:var(--gray)">${fdt(s.scheduled_at)}</span>
         </div>`).join('')}
     </div>` : ''}`;
 

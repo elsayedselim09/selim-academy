@@ -565,49 +565,85 @@ async function handleLogout() {
 // DATA FETCHING
 // ══════════════════════════════════════════════════════════════════
 async function fetchAllData(userId) {
-  const [p, e, approvedReqs, ses, sub, act, notif] = await Promise.all([
+  // ── جلب البيانات الأساسية بالتوازي ──
+  const [p, approvedReqs, act, notif, teEnrRes] = await Promise.all([
     sb.from('profiles').select('*').eq('id', userId).single(),
-    sb.from('enrollments').select('*, courses(*)').eq('user_id', userId).order('enrolled_at', { ascending: false }),
-    sb.from('subscription_requests').select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id').eq('user_id', userId).eq('status','approved').order('created_at', { ascending: false }),
-    sb.from('sessions').select('*').eq('user_id', userId).order('scheduled_at', { ascending: true }).limit(50),
-    sb.from('subscriptions').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    sb.from('subscription_requests')
+      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id')
+      .eq('user_id', userId).eq('status','approved')
+      .order('created_at', { ascending: false }),
     sb.from('activity_log').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(8),
     sb.from('notifications').select('*').eq('user_id', userId).order('is_read', { ascending: true }).order('created_at', { ascending: false }).limit(20),
+    sb.from('teacher_enrollments').select('teacher_id,grade_id,subject_name,grade_name').eq('student_id', userId),
   ]);
-  STATE.profile       = p.data;
 
-  // دمج enrollments مع subscription_requests المقبولة
-  // (حتى لو لم يكن course_id محدداً، يرى الطالب اشتراكاته)
-  const enrollments = e.data || [];
-  const approved    = approvedReqs.data || [];
-  const enrolledIds = new Set(enrollments.map(en => en.id));
+  STATE.profile = p.data;
+  const approved = approvedReqs.data || [];
+  const teEnr    = teEnrRes.data    || [];
 
-  // لكل طلب مقبول غير مرتبط بـ enrollment موجود → نضيفه كـ "enrollment مؤقت"
-  const extraFromRequests = approved
-    .filter(r => !enrollments.some(en => en.course_id && en.course_id === r.course_id))
-    .map(r => ({
-      id          : 'req-' + r.id,
-      user_id     : userId,
-      course_id   : r.course_id || null,
-      enrolled_at : r.created_at,
-      progress_pct: 0,
-      completed_lessons: 0,
-      courses: r.course_id ? null : {
-        name       : r.subject || 'اشتراك مقبول',
-        icon       : '📘',
-        icon_bg    : '#EBF5FF',
-        total_lessons: 0
-      }
-    }));
+  // ── جلب أسماء المعلمين المعينين للطلبات ──
+  const assignedTIds = [...new Set(approved.map(r => r.assigned_teacher_id).filter(Boolean))];
+  const assignedTeachers = {};
+  if (assignedTIds.length) {
+    const { data: tProfs } = await sb.from('profiles').select('id,full_name').in('id', assignedTIds);
+    (tProfs || []).forEach(p => { assignedTeachers[p.id] = p; });
+  }
 
-  STATE.enrollments   = [...enrollments, ...extraFromRequests];
-  STATE.approvedReqs  = approved; // Save for subscriptions page
-  STATE.sessions      = ses.data || [];
-  STATE.subscription  = sub.data;
+  // ── بناء قائمة الكورسات من الطلبات المقبولة (بدون تكرار) ──
+  STATE.approvedReqs = approved;
+  STATE.enrollments  = approved.map(r => ({
+    id               : 'req-' + r.id,
+    user_id          : userId,
+    course_id        : r.course_id || null,
+    enrolled_at      : r.created_at,
+    progress_pct     : 0,
+    completed_lessons: 0,
+    courses: {
+      name        : r.subject || 'اشتراك مقبول',
+      icon        : '📘',
+      icon_bg     : '#EBF5FF',
+      total_lessons: 0,
+      teacher_name: assignedTeachers[r.assigned_teacher_id]?.full_name || '',
+    },
+    _request: r,
+  }));
+
+  // ── جلب الحصص من teacher_sessions عبر teacher_enrollments ──
+  let teacherSessions = [];
+  if (teEnr.length > 0) {
+    const teacherIds = [...new Set(teEnr.map(e => e.teacher_id).filter(Boolean))];
+    const gradeIds   = [...new Set(teEnr.map(e => e.grade_id).filter(Boolean))];
+
+    // أسماء المعلمين
+    const teacherProfiles = {};
+    if (teacherIds.length) {
+      const { data: profs } = await sb.from('profiles').select('id,full_name').in('id', teacherIds);
+      (profs || []).forEach(tp => { teacherProfiles[tp.id] = tp; });
+    }
+
+    // جلب الحصص المرتبطة بصفوف الطالب
+    if (gradeIds.length) {
+      const { data: tsess } = await sb.from('teacher_sessions')
+        .select('*')
+        .in('grade_id', gradeIds)
+        .order('scheduled_at', { ascending: true })
+        .limit(50);
+      teacherSessions = (tsess || []).map(s => {
+        const enr = teEnr.find(e => e.grade_id === s.grade_id);
+        return {
+          ...s,
+          subject     : s.subject_name || enr?.subject_name || '—',
+          teacher_name: teacherProfiles[s.teacher_id || enr?.teacher_id]?.full_name || '—',
+        };
+      });
+    }
+  }
+
+  STATE.sessions      = teacherSessions;
   STATE.activity      = act.data || [];
   STATE.notifications = notif.data || [];
 
-  // ── التوجيه حسب الدور (منع المعلمين والأدمن من رؤية لوحة الطالب) ──
+  // ── التوجيه حسب الدور ──
   if (STATE.profile?.role === 'teacher') {
     window.location.href = 'teacher.html';
     return;
@@ -777,13 +813,16 @@ function sessions() {
   const upcoming = STATE.sessions.filter(s => sessionStatus(s) !== 'ended');
   const ended    = STATE.sessions.filter(s => sessionStatus(s) === 'ended');
   return `
-    <div class="page-title">الحصص 🎥</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+      <div class="page-title">الحصص 🎥</div>
+      <button onclick="requestScheduleChange()" style="padding:9px 18px;background:var(--blue-light);color:var(--blue);border:1.5px solid #BFDBFE;border-radius:9px;font-family:'Cairo',sans-serif;font-size:.83rem;font-weight:700;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:7px" onmouseover="this.style.background='var(--blue)';this.style.color='#fff'" onmouseout="this.style.background='var(--blue-light)';this.style.color='var(--blue)'">📅 طلب تعديل موعد</button>
+    </div>
     <p class="page-sub">جميع حصصك القادمة والسابقة</p>
     <div class="section-card" style="margin-bottom:20px">
       <div class="section-head"><h3>🟢 الحصص القادمة</h3></div>
       <div class="section-body">
         ${upcoming.length === 0
-          ? `<div class="empty-box"><div class="ei">🎥</div><div class="et">لا توجد حصص قادمة</div></div>`
+          ? `<div class="empty-box"><div class="ei">🎥</div><div class="et">لا توجد حصص قادمة</div><div class="ed">ستظهر هنا حصصك بعد تأكيد المعلم للمواعيد</div></div>`
           : upcoming.map(renderSessionItem).join('')}
       </div>
     </div>
@@ -792,6 +831,11 @@ function sessions() {
       <div class="section-head"><h3>✅ الحصص المنتهية</h3></div>
       <div class="section-body">${ended.map(renderSessionItem).join('')}</div>
     </div>` : ''}`;
+}
+function requestScheduleChange() {
+  const name = STATE.profile?.full_name || 'الطالب';
+  const msg  = encodeURIComponent(`طلب تعديل موعد من الطالب: ${name}\n\nأود تعديل موعد حصصي. يرجى التواصل معي.`);
+  window.open(`https://wa.me/201012142749?text=${msg}`, '_blank');
 }
 
 // ── PROGRESS ─────────────────────────────────────────────────────
@@ -1073,13 +1117,18 @@ function renderSessionItem(s) {
 
 function renderCourseItem(e) {
   const c = e.courses || {};
+  const r = e._request;
   const p = e.progress_pct || 0;
+  // عرض اسم المعلم إن وجد، وإلا الصف الدراسي
+  const metaLine = c.teacher_name
+    ? `👨‍🏫 ${c.teacher_name}`
+    : (r?.grade ? `🏫 ${r.grade}` : '');
   return `
     <div class="course-item">
       <div class="course-thumb" style="background:${c.icon_bg||'#EBF5FF'}">${c.icon||'📚'}</div>
       <div class="course-info">
         <div class="course-name">${c.name||'—'}</div>
-        <div class="course-meta">${c.teacher_name||''} · ${c.total_hours||0} ساعة</div>
+        ${metaLine ? `<div class="course-meta">${metaLine}</div>` : ''}
         <div class="pw">
           <div class="pb"><div class="pf" style="width:${p}%;background:${pgGradient(p)}"></div></div>
           <div class="pp" style="color:${pgColor(p)}">${p}%</div>
@@ -1140,6 +1189,9 @@ let _authHandled = false;
   // بعد ما تحققنا من الحالة الأولى، نسمع للتغييرات (login/logout)
   sb.auth.onAuthStateChange(async (event, session) => {
     if (!['SIGNED_IN', 'SIGNED_OUT'].includes(event)) return;
+
+    // ── منع إعادة التحميل عند تبديل التطبيقات (يمنع الصفحة البيضاء) ──
+    if (event === 'SIGNED_IN' && STATE.user?.id && STATE.user.id === session?.user?.id) return;
 
     if (session?.user) {
       STATE.user = session.user;
