@@ -744,14 +744,7 @@ function openZoomLink(rawUrl) {
   if (!rawUrl) return;
   const url = rawUrl.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
   const finalUrl = url.startsWith('http') ? url : 'https://' + url;
-  
-  const a = document.createElement('a');
-  a.href = finalUrl;
-  a.target = '_blank';
-  a.rel = 'noopener noreferrer';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  window.location.href = finalUrl;
 }
 
 function refreshStats() {
