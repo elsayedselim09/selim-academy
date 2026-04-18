@@ -1420,10 +1420,6 @@ async function boot() {
   }
 
   // Check approval status
-  const { data: req } = await sb.from('subscription_requests')
-    .select('status').eq('user_id', ST.user.id).eq('role','teacher')
-    .order('created_at',{ascending:false}).limit(1).maybeSingle();
-
   // If admin explicitly approved this teacher
   const approved = profile?.teacher_approved === true;
   const rejected = profile?.teacher_approved === false; // explicit false = rejected
