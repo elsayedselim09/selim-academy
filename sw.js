@@ -89,6 +89,7 @@ self.addEventListener('fetch', (event) => {
 
   // استثناء هام: لا تعترض الروابط الخارجية عند الانتقال
   if (request.mode === 'navigate' && url.origin !== location.origin) {
+    event.respondWith(fetch(request));
     return;
   }
 
