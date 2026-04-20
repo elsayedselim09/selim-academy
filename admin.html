@@ -1155,11 +1155,25 @@ async function approveSubject(id) {
 }
 
 async function delCourse(id) {
-  // حذف المادة والصفوف والمواد المرتبطة بها
-  await sb.from('teacher_grades').delete().eq('subject_id', id);
+  // 1) جلب كل الصفوف المرتبطة بالمادة
+  const { data: grades } = await sb.from('teacher_grades').select('id').eq('subject_id', id);
+  const gradeIds = (grades || []).map(g => g.id);
+
+  // 2) حذف المحتوى (ملفات وفيديوهات) أولاً قبل الصفوف
+  if (gradeIds.length) {
+    const { error: matErr } = await sb.from('teacher_materials').delete().in('grade_id', gradeIds);
+    if (matErr) throw matErr;
+  }
+
+  // 3) حذف الصفوف
+  const { error: gradeErr } = await sb.from('teacher_grades').delete().eq('subject_id', id);
+  if (gradeErr) throw gradeErr;
+
+  // 4) حذف المادة نفسها
   const { error } = await sb.from('teacher_subjects').delete().eq('id', id);
-  if(error) throw error;
-  toast('✅ تم حذف المادة');
+  if (error) throw error;
+
+  toast('✅ تم حذف المادة وكل محتواها');
   await loadCourses();
 }
 
