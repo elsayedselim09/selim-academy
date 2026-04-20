@@ -1955,6 +1955,7 @@ async function uploadFile() {
     const { error: dbErr } = await sb.from('teacher_materials').insert({
       teacher_id: ST.user.id,
       grade_id:   ST.curGradeId,
+      subject_id: ST.curSubjectId,
       type:       'file',
       title:      title || file.name,
       url:        urlData.publicUrl,
@@ -2003,6 +2004,7 @@ async function saveVideo() {
     const { error } = await sb.from('teacher_materials').insert({
       teacher_id: ST.user.id,
       grade_id:   ST.curGradeId,
+      subject_id: ST.curSubjectId,
       type:       'video',
       title,
       url,

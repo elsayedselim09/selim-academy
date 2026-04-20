@@ -764,8 +764,8 @@ function renderPage() {
 
 // ── SUBJECT MATERIALS LOGIC ───────────────────────────────────────────────
 async function openSubjectMaterials(teacher_id, grade_id, subject_name) {
-  if (!teacher_id || !grade_id) {
-    alert("لا تتوفر بيانات لهذه المادة في الوقت الحالي.");
+  if (!teacher_id || !grade_id || teacher_id === 'null' || grade_id === 'null' || teacher_id === 'undefined' || grade_id === 'undefined') {
+    alert("لا تتوفر بيانات لهذه المادة في الوقت الحالي، قد يكون المعلم لم يضف المحتوى بعد أو لم يتم تعيين الصف.");
     return;
   }
   STATE.currentPage = 'subjectMaterials';
