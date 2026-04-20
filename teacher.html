@@ -1216,6 +1216,7 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
   <div class="mdl-box" style="position:relative">
     <div class="mdl-title" id="grade-modal-title">➕ إضافة صف دراسي</div>
     <input type="hidden" id="edit-grade-subj-id">
+    <input type="hidden" id="edit-grade-id">
     <div class="fg">
       <label>اسم الصف *</label>
       <input type="text" id="grade-name" placeholder="مثال: الصف الأول المتوسط، الصف الثالث الإعدادي...">
@@ -1695,6 +1696,10 @@ function showSubjectGrades(subjId) {
             <div class="gsc-icon">🏫</div>
             <div class="gsc-name">${g.name}</div>
             <div class="gsc-count">${g.description||'انقر لعرض المحتوى'}</div>
+            <div class="grade-acts" style="margin-top:14px;display:flex;gap:6px;justify-content:center" onclick="event.stopPropagation()">
+              <button class="btn-sm btn-edit" onclick="openEditGradeModal('${subj.id}', '${g.id}')">✏️ تعديل</button>
+              <button class="btn-sm btn-del" onclick="confirmDelete('grade', '${g.id}', '${(g.name||'').replace(/'/g,"\\'").trim()}')">🗑️ حذف</button>
+            </div>
           </div>
         `).join('')}
         <div class="grade-sel-card" style="border-style:dashed;cursor:pointer" onclick="openAddGradeModal('${subj.id}')">
@@ -1865,35 +1870,64 @@ function openAddGradeModal(subjId) {
   const subj = ST.subjects.find(s => s.id === subjId);
   document.getElementById('grade-modal-title').textContent = `➕ إضافة صف لـ ${subj?.name||'المادة'}`;
   document.getElementById('edit-grade-subj-id').value = subjId;
+  document.getElementById('edit-grade-id').value = '';
   document.getElementById('grade-name').value = '';
   document.getElementById('grade-desc').value = '';
   document.getElementById('grade-msg').innerHTML = '';
   document.getElementById('mdl-grade').classList.add('show');
   setTimeout(() => document.getElementById('grade-name').focus(), 100);
 }
+
+function openEditGradeModal(subjId, gradeId) {
+  ST.curSubjectId = subjId;
+  const subj = ST.subjects.find(s => s.id === subjId);
+  const grade = subj?.teacher_grades?.find(g => g.id === gradeId);
+  if(!grade) return;
+  document.getElementById('grade-modal-title').textContent = `✏️ تعديل صف في ${subj?.name||'المادة'}`;
+  document.getElementById('edit-grade-subj-id').value = subjId;
+  document.getElementById('edit-grade-id').value = gradeId;
+  document.getElementById('grade-name').value = grade.name || '';
+  document.getElementById('grade-desc').value = grade.description || '';
+  document.getElementById('grade-msg').innerHTML = '';
+  document.getElementById('mdl-grade').classList.add('show');
+  setTimeout(() => document.getElementById('grade-name').focus(), 100);
+}
+
 function closeGradeModal() { document.getElementById('mdl-grade').classList.remove('show'); }
 
 async function saveGrade() {
-  const subjId = document.getElementById('edit-grade-subj-id').value;
-  const name   = document.getElementById('grade-name').value.trim();
+  const subjId  = document.getElementById('edit-grade-subj-id').value;
+  const gradeId = document.getElementById('edit-grade-id').value;
+  const name    = document.getElementById('grade-name').value.trim();
   if(!name) { setMsg('grade-msg','اسم الصف مطلوب','err'); return; }
 
   const btn = document.getElementById('save-grade-btn');
-  btn.disabled = true; btn.textContent = '⏳...';
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
 
   try {
-    const { error } = await sb.from('teacher_grades').insert({
-      subject_id: subjId,
-      teacher_id: ST.user.id,
+    const payload = {
       name,
       description: document.getElementById('grade-desc').value.trim() || null,
-    });
-    if(error) throw error;
-    toast('✅ تم إضافة الصف بنجاح');
+    };
+
+    if(gradeId) {
+      // Edit exist
+      const { error } = await sb.from('teacher_grades').update(payload).eq('id', gradeId);
+      if(error) throw error;
+      toast('✅ تم تعديل الصف بنجاح');
+    } else {
+      // Add new
+      payload.subject_id = subjId;
+      payload.teacher_id = ST.user.id;
+      const { error } = await sb.from('teacher_grades').insert(payload);
+      if(error) throw error;
+      toast('✅ تم إضافة الصف بنجاح');
+    }
+
     closeGradeModal();
     await loadSubjects();
   } catch(e) { setMsg('grade-msg', e.message, 'err'); }
-  finally { btn.disabled = false; btn.textContent = '💾 إضافة الصف'; }
+  finally { btn.disabled = false; btn.textContent = gradeId ? '💾 حفظ التعديلات' : '💾 إضافة الصف'; }
 }
 
 // ══════════════════════════════════════════════
@@ -2085,14 +2119,52 @@ async function runConfirm() {
   closeConfirm();
   try {
     if(type === 'subject') {
+      // Fetch grades to delete files safely
+      const { data: grades } = await sb.from('teacher_grades').select('id').eq('subject_id', id);
+      const gradeIds = (grades || []).map(g => g.id);
+
+      if(gradeIds.length > 0) {
+        // Find materials with files to remove from storage
+        const { data: mats } = await sb.from('teacher_materials').select('storage_path').in('grade_id', gradeIds);
+        const paths = (mats || []).map(m => m.storage_path).filter(Boolean);
+        if(paths.length > 0) await sb.storage.from('teacher-content').remove(paths);
+
+        // Delete materials
+        const { error: errMats } = await sb.from('teacher_materials').delete().in('grade_id', gradeIds);
+        if(errMats) throw errMats;
+      }
+
+      // Delete grades
+      const { error: errGrades } = await sb.from('teacher_grades').delete().eq('subject_id', id);
+      if(errGrades) throw errGrades;
+
+      // Delete subject
       const { error } = await sb.from('teacher_subjects').delete().eq('id',id);
       if(error) throw error;
-      toast('✅ تم حذف المادة');
+      toast('✅ تم حذف المادة وكل محتوياتها نهائياً');
+      
+      // If we were viewing this subject's grades, go back to main courses view
+      if(ST.curSubjectId === id) showCoursesMain();
+      
       await loadSubjects();
     } else if(type === 'grade') {
+      // Find materials to delete storage files
+      const { data: mats } = await sb.from('teacher_materials').select('storage_path').eq('grade_id', id);
+      const paths = (mats || []).map(m => m.storage_path).filter(Boolean);
+      if(paths.length > 0) await sb.storage.from('teacher-content').remove(paths);
+
+      // Delete materials
+      const { error: errMats } = await sb.from('teacher_materials').delete().eq('grade_id', id);
+      if(errMats) throw errMats;
+
+      // Delete grade itself
       const { error } = await sb.from('teacher_grades').delete().eq('id',id);
       if(error) throw error;
-      toast('✅ تم حذف الصف');
+      toast('✅ تم حذف الصف وكل محتوياته');
+      
+      // Check if we are viewing this specific grade
+      if(ST.curGradeId === id) showSubjectGrades(ST.curSubjectId);
+      
       await loadSubjects();
     } else if(type === 'material') {
       const { data } = await sb.from('teacher_materials').select('storage_path,type').eq('id',id).single();
