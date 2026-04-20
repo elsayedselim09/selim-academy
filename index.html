@@ -895,18 +895,8 @@ footer{background:var(--dark);padding:60px 5% 30px;}
   <div class="pricing-intro">
     <div class="section-tag">الأسعار والباقات</div>
     <h2 class="section-title">اجمع أصحابك... وتعلّم بذكاء... وادفع أقل!</h2>
-    <p class="pricing-tagline">اختار منهجك وعدد الحصص المناسب لك</p>
-    <div class="pricing-save-badge" id="saveBadge">💰 وفّر حتى 200 ريال سعودي!</div>
-  </div>
-
-  <!-- Session Toggle -->
-  <div class="session-toggle">
-    <button class="session-btn active" onclick="switchSession('12')">
-      <span class="badge-sessions">12</span> حصة شهرياً
-    </button>
-    <button class="session-btn" onclick="switchSession('8')">
-      <span class="badge-sessions">8</span> حصص شهرياً
-    </button>
+    <p class="pricing-tagline">اختار منهجك والباقة المناسبة لك</p>
+    <div class="pricing-save-badge" id="saveBadge">💰 أسعار مميزة وشاملة!</div>
   </div>
 
   <!-- Curriculum Tabs -->
@@ -921,36 +911,18 @@ footer{background:var(--dark);padding:60px 5% 30px;}
 
   <!-- ══ SA ══ -->
   <div class="curr-content active" id="curr-sa">
-    <!-- 12 حصة -->
-    <div class="prices-12">
-      <div class="pricing-solo">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:720px;margin:0 auto 40px;">
+      <div class="pricing-solo" style="max-width:100%;margin:0;">
         <div class="solo-label">🎯 اشتراك فردي</div>
-        <div class="solo-price">150 <span>ريال سعودي</span></div>
-        <div class="solo-desc">حصة خاصة لطالب واحد — اهتمام كامل وشرح مخصص</div>
+        <div class="solo-price">20 <span>ريال سعودي</span></div>
+        <div class="solo-desc">للحصة الواحدة — اهتمام كامل وشرح مخصص لطالب واحد</div>
         <a href="#booking" class="btn-primary" style="margin-top:20px;display:inline-block;border-radius:50px;">📅 احجز الآن</a>
       </div>
-      <p class="pricing-group-title">👥 باقات <span>المجموعات</span></p>
-      <div class="pricing-cards">
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">3<span>طلاب</span></div><div class="price-amount">120<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">4<span>طلاب</span></div><div class="price-amount">100<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card featured"><div class="featured-badge">⭐ الأكثر طلباً</div><div class="price-max">حد أقصى</div><div class="price-students">5<span>طلاب</span></div><div class="price-amount">80<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-accent" style="font-size:.82rem;padding:9px 18px;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;">📅 احجز الآن</a></div>
-        <div class="price-card"><div class="price-students">10<span>طلاب</span></div><div class="price-amount">50<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-      </div>
-    </div>
-    <!-- 8 حصص -->
-    <div class="prices-8">
-      <div class="pricing-solo">
-        <div class="solo-label">🎯 اشتراك فردي</div>
-        <div class="solo-price">120 <span>ريال سعودي</span></div>
-        <div class="solo-desc">حصة خاصة لطالب واحد — اهتمام كامل وشرح مخصص</div>
-        <a href="#booking" class="btn-primary" style="margin-top:20px;display:inline-block;border-radius:50px;">📅 احجز الآن</a>
-      </div>
-      <p class="pricing-group-title">👥 باقات <span>المجموعات</span></p>
-      <div class="pricing-cards">
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">3<span>طلاب</span></div><div class="price-amount">96<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">4<span>طلاب</span></div><div class="price-amount">80<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card featured"><div class="featured-badge">⭐ الأكثر طلباً</div><div class="price-max">حد أقصى</div><div class="price-students">5<span>طلاب</span></div><div class="price-amount">64<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-accent" style="font-size:.82rem;padding:9px 18px;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;">📅 احجز الآن</a></div>
-        <div class="price-card"><div class="price-students">10<span>طلاب</span></div><div class="price-amount">50<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
+      <div class="pricing-solo" style="max-width:100%;margin:0;border-color:var(--gold);box-shadow:0 8px 40px rgba(245,158,11,.2);">
+        <div class="solo-label" style="color:#E65100;">👥 اشتراك جماعي</div>
+        <div class="solo-price" style="color:#E65100;">100 <span>ريال سعودي</span></div>
+        <div class="solo-desc">في الشهر — اشترك مع مجموعة وتعلّم بسعر أقل</div>
+        <a href="#booking" class="btn-accent" style="margin-top:20px;display:inline-block;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;padding:13px 28px;font-weight:700;font-size:.95rem;text-decoration:none;">📅 احجز الآن</a>
       </div>
     </div>
     <div class="pricing-savings"><div class="savings-icon">🔥</div><div class="savings-text">احجز قبل اكتمال المجموعات!</div><div class="savings-icon">🔥</div></div>
@@ -962,34 +934,18 @@ footer{background:var(--dark);padding:60px 5% 30px;}
 
   <!-- ══ AE ══ -->
   <div class="curr-content" id="curr-ae">
-    <div class="prices-12">
-      <div class="pricing-solo">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:720px;margin:0 auto 40px;">
+      <div class="pricing-solo" style="max-width:100%;margin:0;">
         <div class="solo-label">🎯 اشتراك فردي</div>
-        <div class="solo-price">150 <span>درهم إماراتي</span></div>
-        <div class="solo-desc">حصة خاصة لطالب واحد — اهتمام كامل وشرح مخصص</div>
+        <div class="solo-price">20 <span>درهم إماراتي</span></div>
+        <div class="solo-desc">للحصة الواحدة — اهتمام كامل وشرح مخصص لطالب واحد</div>
         <a href="#booking" class="btn-primary" style="margin-top:20px;display:inline-block;border-radius:50px;">📅 احجز الآن</a>
       </div>
-      <p class="pricing-group-title">👥 باقات <span>المجموعات</span></p>
-      <div class="pricing-cards">
-        <div class="price-card"><div class="price-students">3<span>طلاب</span></div><div class="price-amount">140<sub> درهم</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">4<span>طلاب</span></div><div class="price-amount">100<sub> درهم</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card featured"><div class="featured-badge">⭐ الأكثر طلباً</div><div class="price-max">حد أقصى</div><div class="price-students">5<span>طلاب</span></div><div class="price-amount">80<sub> درهم</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-accent" style="font-size:.82rem;padding:9px 18px;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;">📅 احجز الآن</a></div>
-        <div class="price-card"><div class="price-students">10<span>طلاب</span></div><div class="price-amount">50<sub> درهم</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-      </div>
-    </div>
-    <div class="prices-8">
-      <div class="pricing-solo">
-        <div class="solo-label">🎯 اشتراك فردي</div>
-        <div class="solo-price">120 <span>درهم إماراتي</span></div>
-        <div class="solo-desc">حصة خاصة لطالب واحد — اهتمام كامل وشرح مخصص</div>
-        <a href="#booking" class="btn-primary" style="margin-top:20px;display:inline-block;border-radius:50px;">📅 احجز الآن</a>
-      </div>
-      <p class="pricing-group-title">👥 باقات <span>المجموعات</span></p>
-      <div class="pricing-cards">
-        <div class="price-card"><div class="price-students">3<span>طلاب</span></div><div class="price-amount">112<sub> درهم</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">4<span>طلاب</span></div><div class="price-amount">80<sub> درهم</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card featured"><div class="featured-badge">⭐ الأكثر طلباً</div><div class="price-max">حد أقصى</div><div class="price-students">5<span>طلاب</span></div><div class="price-amount">64<sub> درهم</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-accent" style="font-size:.82rem;padding:9px 18px;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;">📅 احجز الآن</a></div>
-        <div class="price-card"><div class="price-students">10<span>طلاب</span></div><div class="price-amount">50<sub> درهم</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
+      <div class="pricing-solo" style="max-width:100%;margin:0;border-color:var(--gold);box-shadow:0 8px 40px rgba(245,158,11,.2);">
+        <div class="solo-label" style="color:#E65100;">👥 اشتراك جماعي</div>
+        <div class="solo-price" style="color:#E65100;">100 <span>درهم إماراتي</span></div>
+        <div class="solo-desc">في الشهر — اشترك مع مجموعة وتعلّم بسعر أقل</div>
+        <a href="#booking" class="btn-accent" style="margin-top:20px;display:inline-block;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;padding:13px 28px;font-weight:700;font-size:.95rem;text-decoration:none;">📅 احجز الآن</a>
       </div>
     </div>
     <div class="pricing-savings"><div class="savings-icon">🔥</div><div class="savings-text">احجز قبل اكتمال المجموعات!</div><div class="savings-icon">🔥</div></div>
@@ -1001,34 +957,18 @@ footer{background:var(--dark);padding:60px 5% 30px;}
 
   <!-- ══ QA ══ -->
   <div class="curr-content" id="curr-qa">
-    <div class="prices-12">
-      <div class="pricing-solo">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:720px;margin:0 auto 40px;">
+      <div class="pricing-solo" style="max-width:100%;margin:0;">
         <div class="solo-label">🎯 اشتراك فردي</div>
-        <div class="solo-price">150 <span>ريال قطري</span></div>
-        <div class="solo-desc">حصة خاصة لطالب واحد — اهتمام كامل وشرح مخصص</div>
+        <div class="solo-price">20 <span>ريال قطري</span></div>
+        <div class="solo-desc">للحصة الواحدة — اهتمام كامل وشرح مخصص لطالب واحد</div>
         <a href="#booking" class="btn-primary" style="margin-top:20px;display:inline-block;border-radius:50px;">📅 احجز الآن</a>
       </div>
-      <p class="pricing-group-title">👥 باقات <span>المجموعات</span></p>
-      <div class="pricing-cards">
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">3<span>طلاب</span></div><div class="price-amount">120<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">4<span>طلاب</span></div><div class="price-amount">100<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card featured"><div class="featured-badge">⭐ الأكثر طلباً</div><div class="price-max">حد أقصى</div><div class="price-students">5<span>طلاب</span></div><div class="price-amount">80<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-accent" style="font-size:.82rem;padding:9px 18px;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;">📅 احجز الآن</a></div>
-        <div class="price-card"><div class="price-students">10<span>طلاب</span></div><div class="price-amount">50<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-      </div>
-    </div>
-    <div class="prices-8">
-      <div class="pricing-solo">
-        <div class="solo-label">🎯 اشتراك فردي</div>
-        <div class="solo-price">120 <span>ريال قطري</span></div>
-        <div class="solo-desc">حصة خاصة لطالب واحد — اهتمام كامل وشرح مخصص</div>
-        <a href="#booking" class="btn-primary" style="margin-top:20px;display:inline-block;border-radius:50px;">📅 احجز الآن</a>
-      </div>
-      <p class="pricing-group-title">👥 باقات <span>المجموعات</span></p>
-      <div class="pricing-cards">
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">3<span>طلاب</span></div><div class="price-amount">96<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">4<span>طلاب</span></div><div class="price-amount">80<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card featured"><div class="featured-badge">⭐ الأكثر طلباً</div><div class="price-max">حد أقصى</div><div class="price-students">5<span>طلاب</span></div><div class="price-amount">64<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-accent" style="font-size:.82rem;padding:9px 18px;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;">📅 احجز الآن</a></div>
-        <div class="price-card"><div class="price-students">10<span>طلاب</span></div><div class="price-amount">50<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
+      <div class="pricing-solo" style="max-width:100%;margin:0;border-color:var(--gold);box-shadow:0 8px 40px rgba(245,158,11,.2);">
+        <div class="solo-label" style="color:#E65100;">👥 اشتراك جماعي</div>
+        <div class="solo-price" style="color:#E65100;">100 <span>ريال قطري</span></div>
+        <div class="solo-desc">في الشهر — اشترك مع مجموعة وتعلّم بسعر أقل</div>
+        <a href="#booking" class="btn-accent" style="margin-top:20px;display:inline-block;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;padding:13px 28px;font-weight:700;font-size:.95rem;text-decoration:none;">📅 احجز الآن</a>
       </div>
     </div>
     <div class="pricing-savings"><div class="savings-icon">🔥</div><div class="savings-text">احجز قبل اكتمال المجموعات!</div><div class="savings-icon">🔥</div></div>
@@ -1040,34 +980,18 @@ footer{background:var(--dark);padding:60px 5% 30px;}
 
   <!-- ══ OM ══ -->
   <div class="curr-content" id="curr-om">
-    <div class="prices-12">
-      <div class="pricing-solo">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:720px;margin:0 auto 40px;">
+      <div class="pricing-solo" style="max-width:100%;margin:0;">
         <div class="solo-label">🎯 اشتراك فردي</div>
-        <div class="solo-price">15 <span>ريال عماني</span></div>
-        <div class="solo-desc">حصة خاصة لطالب واحد — اهتمام كامل وشرح مخصص</div>
+        <div class="solo-price">20 <span>ريال عماني</span></div>
+        <div class="solo-desc">للحصة الواحدة — اهتمام كامل وشرح مخصص لطالب واحد</div>
         <a href="#booking" class="btn-primary" style="margin-top:20px;display:inline-block;border-radius:50px;">📅 احجز الآن</a>
       </div>
-      <p class="pricing-group-title">👥 باقات <span>المجموعات</span></p>
-      <div class="pricing-cards">
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">3<span>طلاب</span></div><div class="price-amount">12<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">4<span>طلاب</span></div><div class="price-amount">10<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card featured"><div class="featured-badge">⭐ الأكثر طلباً</div><div class="price-max">حد أقصى</div><div class="price-students">5<span>طلاب</span></div><div class="price-amount">8<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-accent" style="font-size:.82rem;padding:9px 18px;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;">📅 احجز الآن</a></div>
-        <div class="price-card"><div class="price-students">10<span>طلاب</span></div><div class="price-amount">5<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-      </div>
-    </div>
-    <div class="prices-8">
-      <div class="pricing-solo">
-        <div class="solo-label">🎯 اشتراك فردي</div>
-        <div class="solo-price">12 <span>ريال عماني</span></div>
-        <div class="solo-desc">حصة خاصة لطالب واحد — اهتمام كامل وشرح مخصص</div>
-        <a href="#booking" class="btn-primary" style="margin-top:20px;display:inline-block;border-radius:50px;">📅 احجز الآن</a>
-      </div>
-      <p class="pricing-group-title">👥 باقات <span>المجموعات</span></p>
-      <div class="pricing-cards">
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">3<span>طلاب</span></div><div class="price-amount">10<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">4<span>طلاب</span></div><div class="price-amount">8<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card featured"><div class="featured-badge">⭐ الأكثر طلباً</div><div class="price-max">حد أقصى</div><div class="price-students">5<span>طلاب</span></div><div class="price-amount">6<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-accent" style="font-size:.82rem;padding:9px 18px;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;">📅 احجز الآن</a></div>
-        <div class="price-card"><div class="price-students">10<span>طلاب</span></div><div class="price-amount">5<sub> ريال</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
+      <div class="pricing-solo" style="max-width:100%;margin:0;border-color:var(--gold);box-shadow:0 8px 40px rgba(245,158,11,.2);">
+        <div class="solo-label" style="color:#E65100;">👥 اشتراك جماعي</div>
+        <div class="solo-price" style="color:#E65100;">100 <span>ريال عماني</span></div>
+        <div class="solo-desc">في الشهر — اشترك مع مجموعة وتعلّم بسعر أقل</div>
+        <a href="#booking" class="btn-accent" style="margin-top:20px;display:inline-block;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;padding:13px 28px;font-weight:700;font-size:.95rem;text-decoration:none;">📅 احجز الآن</a>
       </div>
     </div>
     <div class="pricing-savings"><div class="savings-icon">🔥</div><div class="savings-text">احجز قبل اكتمال المجموعات!</div><div class="savings-icon">🔥</div></div>
@@ -1079,34 +1003,18 @@ footer{background:var(--dark);padding:60px 5% 30px;}
 
   <!-- ══ KW ══ -->
   <div class="curr-content" id="curr-kw">
-    <div class="prices-12">
-      <div class="pricing-solo">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:720px;margin:0 auto 40px;">
+      <div class="pricing-solo" style="max-width:100%;margin:0;">
         <div class="solo-label">🎯 اشتراك فردي</div>
-        <div class="solo-price">15 <span>دينار كويتي</span></div>
-        <div class="solo-desc">حصة خاصة لطالب واحد — اهتمام كامل وشرح مخصص</div>
+        <div class="solo-price">20 <span>دينار كويتي</span></div>
+        <div class="solo-desc">للحصة الواحدة — اهتمام كامل وشرح مخصص لطالب واحد</div>
         <a href="#booking" class="btn-primary" style="margin-top:20px;display:inline-block;border-radius:50px;">📅 احجز الآن</a>
       </div>
-      <p class="pricing-group-title">👥 باقات <span>المجموعات</span></p>
-      <div class="pricing-cards">
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">3<span>طلاب</span></div><div class="price-amount">12<sub> دينار</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">4<span>طلاب</span></div><div class="price-amount">10<sub> دينار</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card featured"><div class="featured-badge">⭐ الأكثر طلباً</div><div class="price-max">حد أقصى</div><div class="price-students">5<span>طلاب</span></div><div class="price-amount">8<sub> دينار</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-accent" style="font-size:.82rem;padding:9px 18px;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;">📅 احجز الآن</a></div>
-        <div class="price-card"><div class="price-students">10<span>طلاب</span></div><div class="price-amount">5<sub> دينار</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-      </div>
-    </div>
-    <div class="prices-8">
-      <div class="pricing-solo">
-        <div class="solo-label">🎯 اشتراك فردي</div>
-        <div class="solo-price">12 <span>دينار كويتي</span></div>
-        <div class="solo-desc">حصة خاصة لطالب واحد — اهتمام كامل وشرح مخصص</div>
-        <a href="#booking" class="btn-primary" style="margin-top:20px;display:inline-block;border-radius:50px;">📅 احجز الآن</a>
-      </div>
-      <p class="pricing-group-title">👥 باقات <span>المجموعات</span></p>
-      <div class="pricing-cards">
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">3<span>طلاب</span></div><div class="price-amount">10<sub> دينار</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card"><div class="price-max">حد أقصى</div><div class="price-students">4<span>طلاب</span></div><div class="price-amount">8<sub> دينار</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
-        <div class="price-card featured"><div class="featured-badge">⭐ الأكثر طلباً</div><div class="price-max">حد أقصى</div><div class="price-students">5<span>طلاب</span></div><div class="price-amount">6<sub> دينار</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-accent" style="font-size:.82rem;padding:9px 18px;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;">📅 احجز الآن</a></div>
-        <div class="price-card"><div class="price-students">10<span>طلاب</span></div><div class="price-amount">5<sub> دينار</sub></div><div class="price-per">لكل طالب</div><a href="#booking" class="btn-outline" style="font-size:.82rem;padding:9px 18px;">📅 احجز</a></div>
+      <div class="pricing-solo" style="max-width:100%;margin:0;border-color:var(--gold);box-shadow:0 8px 40px rgba(245,158,11,.2);">
+        <div class="solo-label" style="color:#E65100;">👥 اشتراك جماعي</div>
+        <div class="solo-price" style="color:#E65100;">100 <span>دينار كويتي</span></div>
+        <div class="solo-desc">في الشهر — اشترك مع مجموعة وتعلّم بسعر أقل</div>
+        <a href="#booking" class="btn-accent" style="margin-top:20px;display:inline-block;border-radius:50px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;padding:13px 28px;font-weight:700;font-size:.95rem;text-decoration:none;">📅 احجز الآن</a>
       </div>
     </div>
     <div class="pricing-savings"><div class="savings-icon">🔥</div><div class="savings-text">احجز قبل اكتمال المجموعات!</div><div class="savings-icon">🔥</div></div>
@@ -1134,9 +1042,8 @@ footer{background:var(--dark);padding:60px 5% 30px;}
     <h2 class="section-title">احجز درسك في <span>دقيقة واحدة</span></h2>
     <p class="section-sub">اختار المرحلة والمادة، وحدد الأيام والأوقات المناسبة — تقدر تضيف أكتر من يوم.</p>
   </div>
-  <div id="booking-container"></div>
-  <div style="display:none"><!-- OLD BOOKING BOX REMOVED -->
-
+  <div id="booking-container">
+  <div class="booking-box">
     <!-- STEP 1: المنهج -->
     <div style="margin-bottom:28px;">
       <p style="font-size:.8rem;color:var(--blue);font-weight:700;margin-bottom:14px;">🌍 الخطوة 1 — اختار منهجك الدراسي</p>
@@ -1274,7 +1181,8 @@ footer{background:var(--dark);padding:60px 5% 30px;}
       <div class="success-msg" id="successMsg">
         🎉 تم استلام طلبك! جاري فتح واتساب لإرسال تفاصيل حجزك لـ م. السيد سليم...
       </div>
-  </div>
+  </div><!-- end booking-box -->
+  </div><!-- end booking-container -->
 </section>
 
 <!-- TESTIMONIALS -->
@@ -1887,8 +1795,7 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<script src="booking.js"></script>
-<script>window.addEventListener('DOMContentLoaded', function(){ renderBooking('booking-container'); });</script>
+
 <script src="pwa-register.js" defer></script>
 </body>
 </html>
