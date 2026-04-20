@@ -1291,6 +1291,26 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
   </div>
 </div>
 
+<!-- ══ MODAL: Edit Material ══ -->
+<div class="mdl" id="mdl-edit-material">
+  <div class="mdl-box wide">
+    <div class="mdl-title">✏️ تعديل مسار التعلم</div>
+    <div class="fg">
+      <label>العنوان *</label>
+      <input type="text" id="edit-mat-title">
+    </div>
+    <div class="fg" id="edit-mat-url-div" style="display:none">
+      <label>الرابط (للفيديوهات فقط) *</label>
+      <input type="url" id="edit-mat-url" style="direction:ltr">
+    </div>
+    <div id="edit-mat-msg"></div>
+    <div class="mdl-btns">
+      <button class="btn-secondary" onclick="closeEditMaterialModal()">إلغاء</button>
+      <button class="btn-primary" id="edit-mat-btn" onclick="saveEditMaterial()">💾 حفظ التعديلات</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ CONFIRM MODAL ══ -->
 <div class="mdl" id="mdl-confirm">
   <div class="mdl-box">
@@ -1744,6 +1764,7 @@ function renderFiles() {
         <div class="file-date">${fds(f.created_at)}</div>
         <div class="file-acts">
           <a class="btn-sm btn-edit" href="${f.url}" target="_blank" download>⬇️ تحميل</a>
+          <button class="btn-sm btn-edit" onclick="openEditMaterialModal('${f.id}')">✏️ تعديل</button>
           <button class="btn-sm btn-del" onclick="confirmDelete('material','${f.id}','${(f.title||'الملف').replace(/'/g,'')}')">🗑️</button>
         </div>
       </div>
@@ -1773,6 +1794,7 @@ function renderVideos() {
             <div class="video-meta">${v.note||''} · ${fds(v.created_at)}</div>
             <div class="video-acts">
               <a class="btn-sm btn-edit" href="${v.url}" target="_blank">🔗 فتح</a>
+              <button class="btn-sm btn-edit" onclick="openEditMaterialModal('${v.id}')">✏️ تعديل</button>
               <button class="btn-sm btn-del" onclick="confirmDelete('material','${v.id}','${(v.title||'الفيديو').replace(/'/g,'')}')">🗑️</button>
             </div>
           </div>
@@ -1921,7 +1943,8 @@ async function uploadFile() {
 
   try {
     const ext  = file.name.split('.').pop();
-    const path = `teacher_materials/${ST.user.id}/${ST.curGradeId}/${Date.now()}_${file.name.replace(/\s+/g,'_')}`;
+    const safeName = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '.' + ext;
+    const path = `teacher_materials/${ST.user.id}/${ST.curGradeId}/${safeName}`;
 
     const { error: upErr } = await sb.storage.from('teacher-content').upload(path, file, { upsert:false });
     if(upErr) throw upErr;
@@ -1992,6 +2015,55 @@ async function saveVideo() {
   } catch(e) { setMsg('video-upload-msg', e.message, 'err'); }
   finally { btn.disabled = false; btn.textContent = '💾 حفظ الفيديو'; }
 }
+
+// ══════════════════════════════════════════════
+// EDIT MATERIAL
+// ══════════════════════════════════════════════
+function openEditMaterialModal(id) {
+  let mat = ST.files?.find(x => x.id === id) || ST.videos?.find(x => x.id === id);
+  if(!mat) return;
+  ST.pendingEditMat = mat;
+  document.getElementById('edit-mat-title').value = mat.title || '';
+  if (mat.type === 'video') {
+    document.getElementById('edit-mat-url-div').style.display = 'flex';
+    document.getElementById('edit-mat-url').value = mat.url || '';
+  } else {
+    document.getElementById('edit-mat-url-div').style.display = 'none';
+    document.getElementById('edit-mat-url').value = '';
+  }
+  document.getElementById('edit-mat-msg').innerHTML = '';
+  document.getElementById('mdl-edit-material').classList.add('show');
+}
+function closeEditMaterialModal() { document.getElementById('mdl-edit-material').classList.remove('show'); ST.pendingEditMat = null; }
+
+async function saveEditMaterial() {
+  if(!ST.pendingEditMat) return;
+  const id = ST.pendingEditMat.id;
+  const title = document.getElementById('edit-mat-title').value.trim();
+  const url = document.getElementById('edit-mat-url').value.trim();
+  if(!title) { setMsg('edit-mat-msg','العنوان مطلوب','err'); return; }
+
+  const payload = { title };
+  if (ST.pendingEditMat.type === 'video') {
+    if(!url) { setMsg('edit-mat-msg','الرابط مطلوب','err'); return; }
+    payload.url = url;
+  }
+
+  const btn = document.getElementById('edit-mat-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+  try {
+    const { error } = await sb.from('teacher_materials').update(payload).eq('id', id);
+    if(error) throw error;
+    toast('✅ تم التعديل بنجاح');
+    closeEditMaterialModal();
+    await loadContent(ST.pendingEditMat.type === 'video' ? 'videos' : 'files');
+  } catch(e) {
+    setMsg('edit-mat-msg', e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 حفظ التعديلات';
+  }
+}
+
 
 // ══════════════════════════════════════════════
 // CONFIRM DELETE

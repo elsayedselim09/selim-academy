@@ -637,6 +637,39 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   </div>
 </div>
 
+<!-- ADMIN MATERIALS MODAL -->
+<div class="mdl" id="mdl-admin-materials">
+  <div class="mdl-box wide" style="max-height:85vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="mdl-title" style="margin-bottom:0" id="mdl-admin-mat-title">إدارة المحتوى</div>
+      <button onclick="document.getElementById('mdl-admin-materials').classList.remove('show')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
+    </div>
+    <div id="mdl-admin-mat-body" style="flex:1;overflow-y:auto;padding-right:4px">
+      <div class="skel" style="height:60px;margin-bottom:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT ADMIN MATERIAL MODAL -->
+<div class="mdl" id="mdl-edit-admin-material">
+  <div class="mdl-box wide">
+    <div class="mdl-title">✏️ تعديل المحتوى</div>
+    <div class="fg">
+      <label>العنوان *</label>
+      <input type="text" id="edit-admin-mat-title">
+    </div>
+    <div class="fg" id="edit-admin-mat-url-div" style="display:none">
+      <label>الرابط (للفيديوهات فقط) *</label>
+      <input type="url" id="edit-admin-mat-url" style="direction:ltr">
+    </div>
+    <div id="edit-admin-mat-msg"></div>
+    <div class="mdl-btns">
+      <button class="mdl-cancel" onclick="closeEditAdminMaterial()">إلغاء</button>
+      <button class="mdl-confirm mc-save" id="edit-admin-mat-btn" onclick="saveEditAdminMaterial()">💾 حفظ التعديل</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast-wrap"></div>
 <style>
@@ -906,7 +939,8 @@ function openConfirm(id, action, type) {
     approve: 'هل تريد قبول هذا الطلب وإضافة الطالب للكورس؟',
     reject:  'هل تريد رفض هذا الطلب نهائياً؟',
     deleteCourse:  'هل تريد حذف هذا الكورس وكل حصصه نهائياً؟',
-    deleteSession: 'هل تريد حذف هذه الحصة نهائياً؟'
+    deleteSession: 'هل تريد حذف هذه الحصة نهائياً؟',
+    deleteMaterial: 'هل تريد حذف هذا المحتوى (الملف أو الفيديو) نهائياً؟'
   };
   document.getElementById('mdl-sub').textContent = subMap[type||action]||'هل أنت متأكد؟';
 
@@ -926,7 +960,17 @@ async function runConfirm() {
     if(action==='reject')         { await rejectReq(id);     return; }
     if(type==='deleteSubject')    { await delCourse(id);     return; }
     if(type==='deleteSession')    { await delSession(id);    return; }
+    if(type==='deleteMaterial')   { await delMaterial(id);   return; }
   } catch(e) { toast('حدث خطأ: '+e.message,'err'); }
+}
+
+async function delMaterial(id) {
+  const { error } = await sb.from('teacher_materials').delete().eq('id', id);
+  if(error) throw error;
+  toast('✅ تم الحذف بنجاح');
+  if (document.getElementById('mdl-admin-materials').classList.contains('show')) {
+    await fetchAndRenderAdminMaterials();
+  }
 }
 
 async function approveReq(id) {
@@ -1083,7 +1127,7 @@ function openSubjectDetail(id) {
     <div style="margin-bottom:14px">
       <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">📋 الصفوف الدراسية (${grades.length})</div>
       ${grades.length
-        ? grades.map(g => `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray-light);border-radius:8px;margin-bottom:6px"><span>🏫</span><span style="font-size:.85rem;font-weight:600">${g.name||g.grade_name||'—'}</span><span style="font-size:.72rem;color:var(--gray);margin-right:auto">${g.description||g.grade_level||''}</span></div>`).join('')
+        ? grades.map(g => `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray-light);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="openAdminSubjectMaterials('${s.teacher_id}', '${g.id}', '${(g.name||g.grade_name||'').replace(/'/g,"\\'").trim()}', '${(s.name||s.subject_name||'').replace(/'/g,"\\'").trim()}')"><span style="margin-right:auto;font-size:.85rem;font-weight:600">🏫 ${g.name||g.grade_name||'—'}</span><button style="padding:4px 8px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:Cairo,sans-serif;font-size:0.75rem">إدارة المحتوى</button></div>`).join('')
         : '<div style="color:var(--gray);font-size:.83rem">لا توجد صفوف مضافة</div>'
       }
     </div>
@@ -1118,6 +1162,112 @@ async function delCourse(id) {
   toast('✅ تم حذف المادة');
   await loadCourses();
 }
+
+// ══════════════════════════════════════════════════
+// ADMIN SUBJECT MATERIALS MANAGEMENT
+// ══════════════════════════════════════════════════
+S.adminMaterials = { teacher_id: null, grade_id: null, data: [] };
+
+async function openAdminSubjectMaterials(tid, gid, gradeName, subjName) {
+  if (!tid || !gid) return;
+  S.adminMaterials.teacher_id = tid;
+  S.adminMaterials.grade_id = gid;
+  
+  document.getElementById('mdl-subject').classList.remove('show');
+  document.getElementById('mdl-admin-mat-title').textContent = `إدارة المحتوى: ${subjName} - ${gradeName}`;
+  const b = document.getElementById('mdl-admin-mat-body');
+  b.innerHTML = '<div class="skel" style="height:60px;margin-bottom:10px"></div><div class="skel" style="height:60px"></div>';
+  document.getElementById('mdl-admin-materials').classList.add('show');
+  
+  await fetchAndRenderAdminMaterials();
+}
+
+async function fetchAndRenderAdminMaterials() {
+  const { teacher_id, grade_id } = S.adminMaterials;
+  const b = document.getElementById('mdl-admin-mat-body');
+  try {
+    const { data, error } = await sb.from('teacher_materials')
+      .select('*')
+      .eq('teacher_id', teacher_id)
+      .eq('grade_id', grade_id)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    S.adminMaterials.data = data || [];
+    
+    if (!data.length) {
+      b.innerHTML = '<div class="empty-box"><div class="ei">📚</div><div class="et">لا يوجد محتوى (ملفات أو فيديوهات) مرفوع لهذا الصف.</div></div>';
+      return;
+    }
+    
+    b.innerHTML = data.map(m => {
+      const isFile = m.type === 'file';
+      const icon = isFile ? '📎' : '🎬';
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--gray-light);border-bottom:1px solid var(--gray-mid);border-radius:8px;margin-bottom:8px">
+          <div>
+            <div style="font-weight:700;color:var(--dark);font-size:0.9rem">${icon} ${m.title || 'بدون عنوان'}</div>
+            <div style="font-size:0.75rem;color:var(--gray)">${isFile ? 'ملف' : 'فيديو'} · ${new Date(m.created_at).toLocaleDateString()}</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <a href="${m.url}" target="_blank" style="padding:4px 8px;background:var(--green-light);color:var(--green);border-radius:4px;font-size:0.75rem;text-decoration:none;font-weight:700">فتح / تحميل</a>
+            <button onclick="openEditAdminMaterial('${m.id}')" style="padding:4px 8px;background:var(--blue-light);color:var(--blue);border:none;border-radius:4px;font-size:0.75rem;font-weight:700;font-family:Cairo,sans-serif;cursor:pointer">✏️ تعديل</button>
+            <button onclick="openConfirm('${m.id}','delete','deleteMaterial')" style="padding:4px 8px;background:var(--red-light);color:var(--red);border:none;border-radius:4px;font-size:0.75rem;font-weight:700;font-family:Cairo,sans-serif;cursor:pointer">🗑️ حذف</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch(e) {
+    b.innerHTML = `<div class="msg-err">خطأ: ${e.message}</div>`;
+  }
+}
+
+function openEditAdminMaterial(id) {
+  const mat = S.adminMaterials.data.find(x => x.id === id);
+  if (!mat) return;
+  S.adminPendingEditMat = mat;
+  document.getElementById('edit-admin-mat-title').value = mat.title || '';
+  if (mat.type === 'video') {
+    document.getElementById('edit-admin-mat-url-div').style.display = 'block';
+    document.getElementById('edit-admin-mat-url').value = mat.url || '';
+  } else {
+    document.getElementById('edit-admin-mat-url-div').style.display = 'none';
+  }
+  document.getElementById('edit-admin-mat-msg').innerHTML = '';
+  document.getElementById('mdl-edit-admin-material').classList.add('show');
+}
+
+function closeEditAdminMaterial() {
+  document.getElementById('mdl-edit-admin-material').classList.remove('show');
+}
+
+async function saveEditAdminMaterial() {
+  if (!S.adminPendingEditMat) return;
+  const id = S.adminPendingEditMat.id;
+  const title = document.getElementById('edit-admin-mat-title').value.trim();
+  if(!title){ document.getElementById('edit-admin-mat-msg').innerHTML='<div class="msg-err">العنوان مطلوب</div>'; return; }
+  
+  const payload = { title };
+  if (S.adminPendingEditMat.type === 'video') {
+    const url = document.getElementById('edit-admin-mat-url').value.trim();
+    if(!url){ document.getElementById('edit-admin-mat-msg').innerHTML='<div class="msg-err">الرابط مطلوب</div>'; return; }
+    payload.url = url;
+  }
+  
+  const btn = document.getElementById('edit-admin-mat-btn');
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    const { error } = await sb.from('teacher_materials').update(payload).eq('id', id);
+    if(error) throw error;
+    toast('✅ تم تعديل المحتوى');
+    closeEditAdminMaterial();
+    await fetchAndRenderAdminMaterials();
+  } catch(e) {
+    document.getElementById('edit-admin-mat-msg').innerHTML=`<div class="msg-err">${e.message}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 حفظ التعديل';
+  }
+}
+
 
 // ══════════════════════════════════════════════════
 // SESSIONS — Admin view of teacher_sessions
