@@ -1118,13 +1118,36 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
     </div>
     <div class="fg-row">
       <div class="fg">
-        <label>تاريخ ووقت الحصة *</label>
-        <input type="datetime-local" id="sess-datetime" style="direction:ltr">
+        <label>نوع الحصة *</label>
+        <select id="sess-type" onchange="toggleSessType()">
+          <option value="single">اليوم فقط / لمرة واحدة</option>
+          <option value="recurring" selected>متكررة طوال الشهر (4 أسابيع)</option>
+        </select>
       </div>
       <div class="fg">
-        <label>مدة الحصة (دقيقة)</label>
-        <input type="number" id="sess-duration" placeholder="60" min="15" max="300" value="60">
+        <label>وقت الحصة *</label>
+        <input type="time" id="sess-time" style="direction:ltr">
       </div>
+    </div>
+    <div class="fg" id="sess-single-date-div" style="display:none">
+      <label>تاريخ الحصة *</label>
+      <input type="date" id="sess-date" style="direction:ltr">
+    </div>
+    <div class="fg" id="sess-recurring-days-div">
+      <label>أيام التكرار (اختر يوماً أو أكثر) *</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="sess-day-cb" value="0"> الأحد</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="sess-day-cb" value="1"> الاثنين</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="sess-day-cb" value="2"> الثلاثاء</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="sess-day-cb" value="3"> الأربعاء</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="sess-day-cb" value="4"> الخميس</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="sess-day-cb" value="5"> الجمعة</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="sess-day-cb" value="6"> السبت</label>
+      </div>
+    </div>
+    <div class="fg">
+      <label>مدة الحصة (دقيقة)</label>
+      <input type="number" id="sess-duration" placeholder="60" min="15" max="300" value="60">
     </div>
     <div class="fg">
       <label>رابط Zoom / Google Meet (اختياري)</label>
@@ -2330,12 +2353,40 @@ function renderSessionsData(data) {
 }
 
 // Session Modal
+function toggleSessType() {
+  const type = document.getElementById('sess-type').value;
+  if (type === 'single') {
+    document.getElementById('sess-single-date-div').style.display = 'block';
+    document.getElementById('sess-recurring-days-div').style.display = 'none';
+  } else {
+    document.getElementById('sess-single-date-div').style.display = 'none';
+    document.getElementById('sess-recurring-days-div').style.display = 'block';
+  }
+}
+
 function openSessionModal(id) {
   const s = id ? sessAllData.find(x => x.id === id) : null;
   document.getElementById('sess-mdl-title').textContent = s ? '✏️ تعديل الحصة' : '➕ إضافة حصة';
   document.getElementById('sess-edit-id').value = s?.id || '';
   document.getElementById('sess-title').value = s?.title || '';
-  document.getElementById('sess-datetime').value = s?.scheduled_at ? new Date(s.scheduled_at).toISOString().slice(0,16) : '';
+  
+  if (s) {
+    // Editing an existing session
+    const dt = new Date(s.scheduled_at);
+    document.getElementById('sess-type').value = 'single';
+    document.getElementById('sess-type').disabled = true; // Cannot change to recurring when editing one
+    document.getElementById('sess-date').value = dt.toISOString().slice(0, 10);
+    document.getElementById('sess-time').value = dt.toTimeString().slice(0, 5);
+  } else {
+    // New
+    document.getElementById('sess-type').disabled = false;
+    document.getElementById('sess-type').value = 'recurring';
+    document.getElementById('sess-date').value = '';
+    document.getElementById('sess-time').value = '';
+    document.querySelectorAll('.sess-day-cb').forEach(cb => cb.checked = false);
+  }
+  toggleSessType();
+
   document.getElementById('sess-duration').value = s?.duration_min || 60;
   document.getElementById('sess-zoom').value = s?.zoom_link || '';
   document.getElementById('sess-mdl-msg').innerHTML = '';
@@ -2370,22 +2421,48 @@ function editSession(id) { openSessionModal(id); }
 async function saveSession() {
   const id    = document.getElementById('sess-edit-id').value;
   const title = document.getElementById('sess-title').value.trim();
-  const dt    = document.getElementById('sess-datetime').value;
+  const time  = document.getElementById('sess-time').value;
+  const type  = document.getElementById('sess-type').value;
+
   if(!title) { setMsg('sess-mdl-msg','عنوان الحصة مطلوب','err'); return; }
-  if(!dt)    { setMsg('sess-mdl-msg','تاريخ الحصة مطلوب','err');  return; }
+  if(!time)  { setMsg('sess-mdl-msg','وقت الحصة مطلوب','err'); return; }
+
+  let targetDates = [];
+
+  if (type === 'single' || id) {
+    let dateVal = document.getElementById('sess-date').value;
+    if(!dateVal) { setMsg('sess-mdl-msg','التاريخ مطلوب للحصة الفردية','err'); return; }
+    targetDates.push(new Date(dateVal + 'T' + time));
+  } else {
+    // Recurring
+    const checkedDays = Array.from(document.querySelectorAll('.sess-day-cb:checked')).map(cb => parseInt(cb.value));
+    if(checkedDays.length === 0) { setMsg('sess-mdl-msg','الرجاء اختيار يوم واحد على الأقل','err'); return; }
+    
+    // Generate dates for the next 4 weeks (28 days)
+    let today = new Date();
+    today.setHours(0,0,0,0);
+    
+    for (let i = 0; i < 28; i++) {
+       let d = new Date(today);
+       d.setDate(today.getDate() + i);
+       if (checkedDays.includes(d.getDay())) {
+         let timeParts = time.split(':');
+         d.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0, 0);
+         targetDates.push(d);
+       }
+    }
+  }
 
   const subjId  = document.getElementById('sess-subject-sel').value;
   const gradeId = document.getElementById('sess-grade-sel').value;
   const subj    = ST.subjects.find(s => s.id === subjId);
   const grade   = subj?.teacher_grades?.find(g => g.id === gradeId);
 
-  const payload = {
+  const basePayload = {
     teacher_id:   ST.user.id,
     title,
-    scheduled_at: new Date(dt).toISOString(),
     duration_min: parseInt(document.getElementById('sess-duration').value) || 60,
     zoom_link:    document.getElementById('sess-zoom').value.trim() || null,
-    // subject_id محذوف لأنه غير موجود في عمود teacher_sessions
     subject_name: subj?.name || null,
     grade_id:     gradeId || null,
     grade_name:   grade?.name || null,
@@ -2396,13 +2473,20 @@ async function saveSession() {
 
   try {
     if(id) {
+      // Edit single
+      const payload = { ...basePayload, scheduled_at: targetDates[0].toISOString() };
       const { error } = await sb.from('teacher_sessions').update(payload).eq('id',id);
       if(error) throw error;
       toast('✅ تم تعديل الحصة');
     } else {
-      const { error } = await sb.from('teacher_sessions').insert(payload);
+      // Insert single or multiple
+      const rowsToInsert = targetDates.map(d => ({
+        ...basePayload,
+        scheduled_at: d.toISOString()
+      }));
+      const { error } = await sb.from('teacher_sessions').insert(rowsToInsert);
       if(error) throw error;
-      toast('✅ تم إضافة الحصة');
+      toast('✅ تم إضافة الحصص بنجاح');
     }
     closeSessionModal();
     await loadSessions();
