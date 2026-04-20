@@ -1145,8 +1145,9 @@ function openSubjectDetail(id) {
 
 async function approveSubject(id) {
   try {
-    const { error } = await sb.from('teacher_subjects').update({ is_approved: true }).eq('id', id);
+    const { data, error } = await sb.from('teacher_subjects').update({ is_approved: true }).eq('id', id).select();
     if(error) throw error;
+    if(!data || data.length === 0) throw new Error("ليس لديك صلاحية التعديل (UPDATE) في قاعدة البيانات.");
     const idx = S.teacherSubjects.findIndex(s => s.id === id);
     if(idx !== -1) S.teacherSubjects[idx].is_approved = true;
     toast('✅ تمت الموافقة على المادة');
