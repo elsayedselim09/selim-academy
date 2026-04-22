@@ -706,6 +706,73 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   </div>
 </div>
 
+<!-- EDIT SUBSCRIPTION MODAL -->
+<div class="mdl" id="mdl-edit-subscription">
+  <div class="mdl-box wide" style="max-width:520px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div class="mdl-title" style="margin-bottom:0">✏️ تعديل اشتراك الطالب</div>
+      <button onclick="document.getElementById('mdl-edit-subscription').classList.remove('show')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
+    </div>
+    <div style="text-align:center;margin-bottom:18px">
+      <span style="background:var(--blue-light);color:var(--blue);padding:5px 16px;border-radius:50px;font-size:.85rem;font-weight:700" id="esub-student-name">—</span>
+    </div>
+    <input type="hidden" id="esub-id">
+
+    <!-- معلومات الاشتراك الحالية (للعرض فقط) -->
+    <div class="fg-row" style="margin-bottom:14px">
+      <div class="fg">
+        <label>المادة</label>
+        <input type="text" id="esub-subject" readonly style="background:#f3f4f6;cursor:default">
+      </div>
+      <div class="fg">
+        <label>الصف</label>
+        <input type="text" id="esub-grade" readonly style="background:#f3f4f6;cursor:default">
+      </div>
+    </div>
+    <div class="fg-row" style="margin-bottom:14px">
+      <div class="fg">
+        <label>نوع الحصة</label>
+        <input type="text" id="esub-session-type" readonly style="background:#f3f4f6;cursor:default">
+      </div>
+      <div class="fg">
+        <label>🗓️ تاريخ انتهاء الاشتراك</label>
+        <input type="date" id="esub-end-date" style="direction:ltr">
+      </div>
+    </div>
+
+    <div class="fg" style="margin-bottom:14px">
+      <label>📅 الأيام والمواعيد</label>
+      <input type="text" id="esub-days" placeholder="مثال: الأحد 6م / الثلاثاء 6م">
+    </div>
+
+    <div class="fg" style="margin-bottom:14px">
+      <label>🔢 الحصص المتبقية</label>
+      <input type="number" id="esub-sessions-rem" placeholder="مثال: 8" min="0" style="direction:ltr">
+    </div>
+
+    <div class="fg" style="margin-bottom:16px">
+      <label>📝 ملاحظات</label>
+      <textarea id="esub-notes" data-col="admin_notes" rows="3" placeholder="أي ملاحظات على الاشتراك..."></textarea>
+    </div>
+
+    <div id="esub-msg"></div>
+
+    <!-- الأزرار -->
+    <div style="display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:6px">
+      <button onclick="deleteSubscription()"
+        style="padding:10px 18px;background:var(--red-light);color:var(--red);border:1.5px solid #FECACA;border-radius:9px;font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s"
+        onmouseover="this.style.background='var(--red)';this.style.color='#fff'"
+        onmouseout="this.style.background='var(--red-light)';this.style.color='var(--red)'">
+        🗑️ حذف الاشتراك
+      </button>
+      <div style="display:flex;gap:10px">
+        <button class="mdl-cancel" onclick="document.getElementById('mdl-edit-subscription').classList.remove('show')">إلغاء</button>
+        <button class="mdl-confirm mc-save" id="esub-save-btn" onclick="saveEditSubscription()">💾 حفظ التعديلات</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast-wrap"></div>
 <style>
@@ -782,10 +849,30 @@ async function doLogout() {
 async function loadRequests() {
   try {
     const {data:reqs, error} = await sb.from('subscription_requests')
-      .select('id,status,created_at,note,user_id,course_id,student_name,student_phone,grade,subject,session_type,days_info,curriculum,assigned_teacher_id')
+      .select('id,status,created_at,note,user_id,course_id,student_name,student_phone,grade,subject,session_type,days_info,curriculum,assigned_teacher_id,end_date,sessions_remaining,admin_notes')
       .order('created_at',{ascending:false});
-    if(error) throw error;
 
+    // إذا فشل الجلب بسبب أعمدة مفقودة، أعد المحاولة بدونها وأظهر تنبيهاً
+    if(error && error.message && (error.message.includes('end_date') || error.message.includes('sessions_remaining') || error.message.includes('column'))) {
+      console.warn('⚠️ أعمدة جديدة مطلوبة في قاعدة البيانات. الرجاء تشغيل Migration.');
+      toast('⚠️ يرجى إضافة الأعمدة الجديدة في Supabase — انظر وحدة التحكم (Console)','err');
+      console.log('%c SQL Migration مطلوب:\n\nALTER TABLE subscription_requests\n  ADD COLUMN IF NOT EXISTS end_date date,\n  ADD COLUMN IF NOT EXISTS sessions_remaining integer,\n  ADD COLUMN IF NOT EXISTS notes text;', 'color:#1A56DB;font-size:14px;font-weight:bold');
+
+      // Fallback — جلب بدون الأعمدة الجديدة
+      const {data:reqs2, error:e2} = await sb.from('subscription_requests')
+        .select('id,status,created_at,note,user_id,course_id,student_name,student_phone,grade,subject,session_type,days_info,curriculum,assigned_teacher_id')
+        .order('created_at',{ascending:false});
+      if(e2) throw e2;
+      processRequests(reqs2||[]);
+      return;
+    }
+    if(error) throw error;
+    processRequests(reqs||[]);
+  } catch(e) { console.error(e); toast('فشل تحميل الطلبات: '+e.message,'err'); }
+}
+
+async function processRequests(reqs) {
+  try {
     const uids = [...new Set(reqs.map(r=>r.user_id).filter(Boolean))];
     const cids = [...new Set(reqs.map(r=>r.course_id).filter(Boolean))];
     const tids = [...new Set(reqs.map(r=>r.assigned_teacher_id).filter(Boolean))];
@@ -941,7 +1028,7 @@ function renderReqTable() {
   if(!rows.length){ el.innerHTML=`<div class="empty-box"><div class="ei">📭</div><div class="et">لا توجد طلبات</div><div class="ed">${q?'لا توجد نتائج':'لا توجد طلبات في هذه الحالة'}</div></div>`; return; }
 
   const bmap={pending:`<span class="badge b-pending">⏳ معلق</span>`,approved:`<span class="badge b-approved">✅ مقبول</span>`,rejected:`<span class="badge b-rejected">❌ مرفوض</span>`};
-  el.innerHTML=`<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>الطالب</th><th>الهاتف</th><th>الصف</th><th>المادة</th><th>نوع الحصة</th><th>الأيام</th><th>الحالة</th><th>التاريخ</th><th>الإجراء</th></tr></thead><tbody>
+  el.innerHTML=`<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>الطالب</th><th>الهاتف</th><th>الصف</th><th>المادة</th><th>نوع الحصة</th><th>الأيام</th><th>الحصص المتبقية</th><th>انتهاء الاشتراك</th><th>الحالة</th><th>التاريخ</th><th>الإجراء</th></tr></thead><tbody>
   ${rows.map((r,i)=>`<tr id="req-row-${r.id}">
     <td style="color:var(--gray);font-size:.78rem">${i+1}</td>
     <td><div class="u-info"><div class="u-av">${ini(r.student_name||r.profiles?.full_name)}</div><div><div class="u-name">${r.student_name||r.profiles?.full_name||'—'}</div></div></div></td>
@@ -950,14 +1037,27 @@ function renderReqTable() {
     <td><span class="badge b-blue">${r.subject||'—'}</span></td>
     <td style="font-size:.78rem;color:var(--gray)">${r.session_type||'—'}</td>
     <td style="font-size:.75rem;color:var(--gray);max-width:160px">${r.days_info||'—'}</td>
+    <td style="text-align:center">
+      ${r.status==='approved'
+        ? (r.sessions_remaining != null
+            ? `<span style="background:${r.sessions_remaining<=3?'var(--red-light)':r.sessions_remaining<=8?'var(--gold-light)':'var(--green-light)'};color:${r.sessions_remaining<=3?'var(--red)':r.sessions_remaining<=8?'#92400E':'var(--green)'};border-radius:50px;padding:3px 12px;font-size:.8rem;font-weight:900">${r.sessions_remaining} حصة</span>`
+            : `<span style="color:var(--gray);font-size:.75rem">—</span>`)
+        : '—'}
+    </td>
+    <td style="text-align:center;font-size:.76rem">
+      ${r.status==='approved' && r.end_date
+        ? (() => { const d=new Date(r.end_date); const diff=Math.ceil((d-new Date())/(1000*60*60*24)); return `<span style="color:${diff<7?'var(--red)':diff<30?'var(--gold)':'var(--gray)'};font-weight:700">${d.toLocaleDateString('ar-EG',{day:'2-digit',month:'short',year:'numeric'})}</span>${diff>=0?`<div style="font-size:.68rem;color:${diff<7?'var(--red)':'var(--gray)'}">بعد ${diff} يوم</div>`:'<div style="font-size:.68rem;color:var(--red)">منتهي</div>'}`; })()
+        : '<span style="color:var(--gray);font-size:.75rem">—</span>'}
+    </td>
     <td>${bmap[r.status]||''}</td>
     <td style="font-size:.76rem;color:var(--gray)">${fdt(r.created_at)}</td>
     <td>${r.status==='pending'
       ?`<div class="acts"><button class="btn-ok" onclick="openConfirm('${r.id}','approve')">✅ قبول</button><button class="btn-no" onclick="openConfirm('${r.id}','reject')">❌ رفض</button></div>`
       :r.status==='approved'
-        ? (r.user_id 
-           ? `<div class="acts"><button class="btn-assign" onclick="openAssignTeacher('${r.id}','${r.user_id}','${(r.subject||'').replace(/'/g,'')}')">&#128106; ${r.assigned_teacher_name||'تعيين معلم'}</button></div>` 
-           : `<span class="badge b-gray" style="font-size:0.7rem">بدون حساب</span>`)
+        ? `<div class="acts">
+            ${r.user_id ? `<button class="btn-assign" onclick="openAssignTeacher('${r.id}','${r.user_id}','${(r.subject||'').replace(/'/g,'')}')">👨‍🏫 ${r.assigned_teacher_name||'تعيين معلم'}</button>` : `<span class="badge b-gray" style="font-size:0.7rem">بدون حساب</span>`}
+            <button class="btn-ed" onclick="openEditSubscription('${r.id}')" title="تعديل الاشتراك">✏️ تعديل</button>
+           </div>`
         :`<span class="btn-pr">تمت المعالجة</span>`}</td>
   </tr>`).join('')}</tbody></table></div>`;
 }
@@ -1655,11 +1755,28 @@ async function loadStudents() {
 
     if(!S.students.length) { el.innerHTML = `<div class="empty-box"><div class="ei">👥</div><div class="et">لا يوجد طلاب بعد</div></div>`; return; }
 
-    el.innerHTML = `<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>الطالب</th><th>الهاتف</th><th>طلبات الاشتراك</th><th>تاريخ التسجيل</th></tr></thead><tbody>
-    ${S.students.map((s,i) => `
-      <tr onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
-        <td style="color:var(--gray);font-size:.78rem">${i+1}</td>
-        <td>
+    // جلب الطلبات المقبولة بالتفصيل لكل طالب (لزر تعيين المعلم)
+    let approvedReqMap = {};
+    if(sids.length) {
+      const { data: approvedReqs } = await sb.from('subscription_requests')
+        .select('id,user_id,subject,assigned_teacher_id')
+        .in('user_id', sids)
+        .eq('status','approved');
+      (approvedReqs||[]).forEach(r => {
+        if(!approvedReqMap[r.user_id]) approvedReqMap[r.user_id] = [];
+        approvedReqMap[r.user_id].push(r);
+      });
+    }
+
+    el.innerHTML = `<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>الطالب</th><th>الهاتف</th><th>طلبات الاشتراك</th><th>تاريخ التسجيل</th><th>الإجراء</th></tr></thead><tbody>
+    ${S.students.map((s,i) => {
+      const approvedReqs = approvedReqMap[s.id] || [];
+      // أول طلب مقبول بدون معلم أو أي طلب مقبول
+      const firstReq = approvedReqs.find(r => !r.assigned_teacher_id) || approvedReqs[0];
+      return `
+      <tr>
+        <td style="color:var(--gray);font-size:.78rem" onclick="openStudentDetail('${s.id}')" style="cursor:pointer">${i+1}</td>
+        <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
           <div class="u-info">
             <div class="u-av">${s.avatar_url ? `<img src="${s.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : ini(s.full_name)}</div>
             <div>
@@ -1668,16 +1785,25 @@ async function loadStudents() {
             </div>
           </div>
         </td>
-        <td style="font-size:.84rem">${s.phone||'—'}</td>
-        <td>
+        <td style="font-size:.84rem" onclick="openStudentDetail('${s.id}')" style="cursor:pointer">${s.phone||'—'}</td>
+        <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
           ${(rm[s.id]||[]).length === 0
             ? '<span class="badge b-gray">لا يوجد</span>'
             : `<span class="badge b-blue">📤 ${(rm[s.id]||[]).length} طلب</span>`
           }
           ${(rm[s.id]||[]).includes('approved') ? '<span class="badge b-approved" style="margin-right:4px">✅ مقبول</span>' : ''}
         </td>
-        <td style="font-size:.76rem;color:var(--gray)">${fds(s.created_at)}</td>
-      </tr>`).join('')}
+        <td style="font-size:.76rem;color:var(--gray)" onclick="openStudentDetail('${s.id}')" style="cursor:pointer">${fds(s.created_at)}</td>
+        <td>
+          <div class="acts">
+            ${firstReq
+              ? `<button class="btn-assign" onclick="event.stopPropagation();openAssignTeacher('${firstReq.id}','${s.id}','${(firstReq.subject||'').replace(/'/g,'')}')">👨‍🏫 ${firstReq.assigned_teacher_id ? 'تغيير معلم' : 'تعيين معلم'}</button>`
+              : `<span class="badge b-gray" style="font-size:.7rem">لا طلبات مقبولة</span>`
+            }
+          </div>
+        </td>
+      </tr>`;
+    }).join('')}
     </tbody></table></div>`;
   } catch(e) { toast('فشل تحميل الطلاب: '+e.message,'err'); }
 }
@@ -2571,6 +2697,97 @@ async function loadAdminExams() {
       }).join('')
       : '<p style="text-align:center;color:var(--gray);padding:20px">لا توجد اختبارات</p>';
   } catch(e) { toast('خطأ في تحميل إحصائيات الاختبارات: '+e.message,'err'); }
+}
+
+// ══════════════════════════════════════════════════
+// EDIT SUBSCRIPTION — تعديل اشتراك الطالب
+// ══════════════════════════════════════════════════
+let _editSubCtx = null;
+
+async function openEditSubscription(reqId) {
+  _editSubCtx = { reqId };
+  const req = S.requests.find(r => r.id === reqId);
+  if (!req) { toast('الطلب غير موجود في الذاكرة','err'); return; }
+
+  // جلب أحدث بيانات الطلب من Supabase
+  const { data, error } = await sb.from('subscription_requests')
+    .select('id,status,subject,grade,session_type,days_info,created_at,user_id,student_name,student_phone,assigned_teacher_id,end_date,sessions_remaining,admin_notes')
+    .eq('id', reqId).single();
+  if (error) { toast('خطأ في جلب بيانات الاشتراك: '+error.message,'err'); return; }
+
+  _editSubCtx.req = data;
+
+  // تعبئة النموذج
+  document.getElementById('esub-id').value           = data.id;
+  document.getElementById('esub-subject').value      = data.subject || '';
+  document.getElementById('esub-grade').value        = data.grade || '';
+  document.getElementById('esub-session-type').value = data.session_type || '';
+  document.getElementById('esub-days').value         = data.days_info || '';
+  document.getElementById('esub-end-date').value     = data.end_date ? data.end_date.slice(0,10) : '';
+  document.getElementById('esub-sessions-rem').value = data.sessions_remaining ?? '';
+  document.getElementById('esub-notes').value        = data.admin_notes || '';
+
+  const nameEl = document.getElementById('esub-student-name');
+  nameEl.textContent = data.student_name || req.profiles?.full_name || 'الطالب';
+
+  document.getElementById('esub-msg').innerHTML = '';
+  document.getElementById('mdl-edit-subscription').classList.add('show');
+}
+
+async function saveEditSubscription() {
+  if (!_editSubCtx) return;
+  const btn = document.getElementById('esub-save-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+
+  const endDate    = document.getElementById('esub-end-date').value;
+  const sessRem    = document.getElementById('esub-sessions-rem').value;
+  const notes      = document.getElementById('esub-notes').value.trim();
+  const daysInfo   = document.getElementById('esub-days').value.trim();
+
+  const payload = {
+    days_info: daysInfo || null,
+    admin_notes: notes || null,
+    end_date: endDate || null,
+    sessions_remaining: sessRem !== '' ? parseInt(sessRem) : null,
+  };
+
+  try {
+    const { error } = await sb.from('subscription_requests')
+      .update(payload)
+      .eq('id', _editSubCtx.reqId);
+    if (error) throw error;
+
+    // تحديث محلي
+    const idx = S.requests.findIndex(r => r.id === _editSubCtx.reqId);
+    if (idx !== -1) Object.assign(S.requests[idx], payload);
+
+    toast('✅ تم حفظ تعديلات الاشتراك بنجاح');
+    document.getElementById('mdl-edit-subscription').classList.remove('show');
+    renderReqTable();
+  } catch(e) {
+    document.getElementById('esub-msg').innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 حفظ التعديلات';
+  }
+}
+
+async function deleteSubscription() {
+  if (!_editSubCtx) return;
+  if (!confirm('هل أنت متأكد من حذف هذا الاشتراك نهائياً؟ لا يمكن التراجع عن هذه العملية.')) return;
+
+  try {
+    const { error } = await sb.from('subscription_requests')
+      .delete()
+      .eq('id', _editSubCtx.reqId);
+    if (error) throw error;
+
+    S.requests = S.requests.filter(r => r.id !== _editSubCtx.reqId);
+    toast('✅ تم حذف الاشتراك بنجاح');
+    document.getElementById('mdl-edit-subscription').classList.remove('show');
+    refreshStats(); updateBadge(); renderReqTable();
+  } catch(e) {
+    toast('خطأ في الحذف: '+e.message,'err');
+  }
 }
 
 </script>
