@@ -1279,8 +1279,20 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
         <div style="font-size:.74rem;color:var(--blue)">📊 نسبة الحضور</div>
       </div>
     </div>
-    <div style="font-size:.85rem;font-weight:700;color:var(--dark);margin-bottom:12px">📋 سجل الحضور</div>
-    <div id="stu-att-records"></div>
+    <!-- Tabs -->
+    <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--gray-mid);padding-bottom:0">
+      <button id="tab-att-btn" onclick="switchStuTab('att')" style="padding:8px 18px;border:none;background:none;font-family:Cairo,sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;color:var(--blue);border-bottom:2.5px solid var(--blue);margin-bottom:-2px">📋 الحضور</button>
+      <button id="tab-exam-btn" onclick="switchStuTab('exam')" style="padding:8px 18px;border:none;background:none;font-family:Cairo,sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;color:var(--gray);border-bottom:2.5px solid transparent;margin-bottom:-2px">📝 الاختبارات</button>
+    </div>
+    <!-- Tab: Attendance -->
+    <div id="tab-att">
+      <div style="font-size:.85rem;font-weight:700;color:var(--dark);margin-bottom:12px">📋 سجل الحضور</div>
+      <div id="stu-att-records"></div>
+    </div>
+    <!-- Tab: Exams -->
+    <div id="tab-exam" style="display:none">
+      <div id="stu-exam-records"></div>
+    </div>
   </div>
 </div>
 
@@ -2707,62 +2719,107 @@ async function loadStudentsList(gradeId) {
 }
 
 // ── Student Detail Modal ──
+function switchStuTab(tab) {
+  document.getElementById('tab-att').style.display    = tab === 'att'  ? 'block' : 'none';
+  document.getElementById('tab-exam').style.display   = tab === 'exam' ? 'block' : 'none';
+  document.getElementById('tab-att-btn').style.color  = tab === 'att'  ? 'var(--blue)' : 'var(--gray)';
+  document.getElementById('tab-exam-btn').style.color = tab === 'exam' ? 'var(--blue)' : 'var(--gray)';
+  document.getElementById('tab-att-btn').style.borderBottomColor  = tab === 'att'  ? 'var(--blue)' : 'transparent';
+  document.getElementById('tab-exam-btn').style.borderBottomColor = tab === 'exam' ? 'var(--blue)' : 'transparent';
+}
+
 async function openStudentDetail(studentId, name, gradeName) {
   document.getElementById('stu-detail-av').textContent = ini(name);
   document.getElementById('stu-detail-name').textContent = name;
   document.getElementById('stu-detail-grade').textContent = gradeName || '—';
-  document.getElementById('stu-att-records').innerHTML = `<div class="skel" style="height:40px;margin-bottom:8px"></div>`.repeat(5);
+  document.getElementById('stu-att-records').innerHTML  = `<div class="skel" style="height:40px;margin-bottom:8px"></div>`.repeat(4);
+  document.getElementById('stu-exam-records').innerHTML = `<div class="skel" style="height:56px;margin-bottom:8px;border-radius:10px"></div>`.repeat(3);
+  switchStuTab('att');
   document.getElementById('mdl-student').classList.add('show');
 
   try {
-    // جلب تفاصيل التسجيل وسجل الحضور معاً
-    const [enrRes, attRes] = await Promise.all([
+    // جلب كل البيانات دفعة واحدة
+    const [enrRes, attRes, examsRes] = await Promise.all([
       sb.from('teacher_enrollments')
         .select('subject_name,grade_name,enrolled_at')
-        .eq('teacher_id', ST.user.id)
-        .eq('student_id', studentId)
-        .limit(5),
+        .eq('teacher_id', ST.user.id).eq('student_id', studentId).limit(5),
       sb.from('teacher_attendance')
         .select('*').eq('teacher_id', ST.user.id).eq('student_id', studentId)
         .order('session_date', { ascending: false }),
+      sb.from('exams')
+        .select('id,title,subject,grade,is_published')
+        .eq('teacher_id', ST.user.id).eq('is_published', true),
     ]);
 
-    // عرض تفاصيل الاشتراك
+    // ── تفاصيل الاشتراك ──
     const enrollments = enrRes.data || [];
     if (enrollments.length) {
-      const detGradeEl = document.getElementById('stu-detail-grade');
-      const enrInfo = enrollments.map(e =>
-        [e.subject_name, e.grade_name].filter(Boolean).join(' — ')
-      ).join(' | ');
-      if (detGradeEl) detGradeEl.textContent = enrInfo || gradeName || '—';
+      const enrInfo = enrollments.map(e => [e.subject_name, e.grade_name].filter(Boolean).join(' — ')).join(' | ');
+      document.getElementById('stu-detail-grade').textContent = enrInfo || gradeName || '—';
     }
 
+    // ── الحضور ──
     const records = attRes.data || [];
     const present = records.filter(r => r.status === 'present').length;
     const absent  = records.filter(r => r.status === 'absent').length;
     const total   = present + absent;
     const pct     = total ? Math.round(present/total*100) : 0;
-
     document.getElementById('det-present').textContent = present;
     document.getElementById('det-absent').textContent  = absent;
     document.getElementById('det-pct').textContent     = pct + '%';
 
-    if(!records.length) {
-      document.getElementById('stu-att-records').innerHTML = `<div class="empty-box"><div class="ei">📋</div><div class="et">لا يوجد سجل حضور بعد</div></div>`;
-      return;
-    }
-
-    document.getElementById('stu-att-records').innerHTML = records.map(r => `
-      <div class="sarec-row">
-        <div class="sarec-date">📅 ${fds(r.session_date)}</div>
-        <div>
-          ${r.status === 'present'
+    document.getElementById('stu-att-records').innerHTML = records.length
+      ? records.map(r => `
+        <div class="sarec-row">
+          <div class="sarec-date">📅 ${fds(r.session_date)}</div>
+          <div>${r.status === 'present'
             ? `<span class="badge b-green">✅ حضر</span>`
             : `<span class="badge" style="background:var(--red-light);color:var(--red);border:1px solid #FECACA">❌ غاب</span>`}
-        </div>
-      </div>`).join('');
+          </div>
+        </div>`).join('')
+      : `<div class="empty-box"><div class="ei">📋</div><div class="et">لا يوجد سجل حضور بعد</div></div>`;
+
+    // ── الاختبارات ──
+    const allExams = examsRes.data || [];
+    if (!allExams.length) {
+      document.getElementById('stu-exam-records').innerHTML =
+        `<div class="empty-box"><div class="ei">📝</div><div class="et">لا توجد اختبارات منشورة بعد</div></div>`;
+    } else {
+      // جلب نتائج هذا الطالب فقط لاختبارات المعلم
+      const examIds = allExams.map(e => e.id);
+      const { data: stuResults } = await sb.from('results')
+        .select('exam_id,score,total_questions,percentage,submitted_at')
+        .eq('student_id', studentId)
+        .in('exam_id', examIds);
+      const resMap = {};
+      (stuResults || []).forEach(r => resMap[r.exam_id] = r);
+
+      document.getElementById('stu-exam-records').innerHTML = allExams.map(ex => {
+        const r = resMap[ex.id];
+        const hasDone = !!r;
+        const pctColor = r ? (r.percentage >= 60 ? 'var(--green)' : 'var(--red)') : '';
+        return `
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1px solid var(--gray-mid);border-radius:12px;margin-bottom:8px">
+            <div style="width:40px;height:40px;border-radius:10px;background:${hasDone ? (r.percentage>=60?'var(--green-light)':'var(--red-light)') : 'var(--gray-light)'};display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">
+              ${hasDone ? (r.percentage>=60?'🏆':'📉') : '📝'}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ex.title}</div>
+              <div style="font-size:.75rem;color:var(--gray)">${ex.subject}${ex.grade && ex.grade!=='undefined' ? ' · '+ex.grade : ''}</div>
+            </div>
+            <div style="text-align:center;flex-shrink:0">
+              ${hasDone
+                ? `<div style="font-weight:900;font-size:1rem;color:${pctColor}">${r.percentage}%</div>
+                   <div style="font-size:.7rem;color:var(--gray)">${r.score}/${r.total_questions}</div>`
+                : `<span style="background:var(--red-light);color:var(--red);padding:4px 10px;border-radius:50px;font-size:.75rem;font-weight:700">غائب</span>`}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
   } catch(e) {
-    document.getElementById('stu-att-records').innerHTML = `<div class="msg-err">خطأ: ${e.message}</div>`;
+    document.getElementById('stu-att-records').innerHTML  = `<div class="msg-err">خطأ: ${e.message}</div>`;
+    document.getElementById('stu-exam-records').innerHTML = `<div class="msg-err">خطأ: ${e.message}</div>`;
   }
 }
 function closeStudentDetail() { document.getElementById('mdl-student').classList.remove('show'); }
