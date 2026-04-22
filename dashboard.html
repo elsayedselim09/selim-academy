@@ -1452,16 +1452,21 @@ async function loadStudentExams() {
       .order('created_at', { ascending: false });
 
     // فلترة الاختبارات: teacher_id + grade_id يجب أن يطابق تسجيل الطالب
+    const myGradeIds = new Set(myEnrollments.map(e => e.grade_id).filter(Boolean));
+    const myTeacherGradePairs = myEnrollments.map(e => e.teacher_id + '::' + e.grade_id);
+
     const publishedExams = (allTeacherExams || []).filter(ex => {
-      return myEnrollments.some(enr => {
-        const teacherMatch = enr.teacher_id === ex.teacher_id;
-        // إذا كان الاختبار محدد بـ grade_id → مطابقة دقيقة
-        if (ex.grade_id) return teacherMatch && enr.grade_id === ex.grade_id;
-        // إذا لم يكن هناك grade_id → اعتمد على نص الصف (للاختبارات القديمة)
-        if (ex.grade) return teacherMatch && (enr.grade_name === ex.grade || !ex.grade);
-        // اختبار بدون صف محدد → يظهر لكل طلاب المعلم
-        return teacherMatch;
-      });
+      const teacherMatch = myTeacherIds.includes(ex.teacher_id);
+      if (!teacherMatch) return false;
+      // اختبار بـ grade_id → مطابقة دقيقة
+      if (ex.grade_id) return myTeacherGradePairs.includes(ex.teacher_id + '::' + ex.grade_id);
+      // اختبار بدون grade_id ولا grade → يظهر لكل طلاب المعلم
+      if (!ex.grade || ex.grade === 'undefined' || ex.grade === '') return teacherMatch;
+      // اختبار قديم بنص فقط → مطابقة نص مع trim
+      return myEnrollments.some(enr =>
+        enr.teacher_id === ex.teacher_id &&
+        enr.grade_name.trim() === ex.grade.trim()
+      );
     });
 
     const { data: myResults } = await sb.from('results').select('exam_id,score,total_questions,percentage').eq('student_id', STATE.user.id);
