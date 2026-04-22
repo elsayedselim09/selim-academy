@@ -2183,7 +2183,7 @@ async function loadAdminExams() {
   try {
     const { data: exams } = await sb.from('exams').select('*').order('created_at', { ascending: false });
     const { data: results } = await sb.from('results').select('*');
-    const { data: profiles } = await sb.from('profiles').select('id,full_name');
+    const { data: profiles } = await sb.from('profiles').select('id,full_name,role');
     const pMap = {}; (profiles||[]).forEach(p => pMap[p.id] = p.full_name);
     const totalExams = (exams||[]).length;
     const publishedExams = (exams||[]).filter(e => e.is_published).length;
@@ -2196,7 +2196,7 @@ async function loadAdminExams() {
       <div class="stat-card"><div class="stat-icon si-purple">👥</div><div><div class="stat-num">${totalParticipants}</div><div class="stat-label">إجمالي المشاركين</div></div></div>
       <div class="stat-card"><div class="stat-icon si-gold">📊</div><div><div class="stat-num">${avgScore}%</div><div class="stat-label">متوسط الدرجات</div></div></div>`;
 
-    // Leaderboard - top students across all exams
+    // Leaderboard
     const studentScores = {};
     (results||[]).forEach(r => {
       if (!studentScores[r.student_id]) studentScores[r.student_id] = { total: 0, count: 0 };
@@ -2216,20 +2216,79 @@ async function loadAdminExams() {
         </div>`).join('')
       : '<p style="text-align:center;color:var(--gray);padding:20px">لا توجد نتائج بعد</p>';
 
-    // Exams list
+    // جلب الأسئلة والإجابات
+    const examIds = (exams||[]).map(e => e.id);
+    let allQuestions = [], allAnswers = [];
+    if (examIds.length > 0) {
+      const { data: qs } = await sb.from('questions').select('id,exam_id,question_text,option_a,option_b,option_c,option_d,correct_answer,sort_order').in('exam_id', examIds).order('sort_order');
+      const { data: ans } = await sb.from('student_answers').select('student_id,question_id,exam_id,selected_answer,is_correct').in('exam_id', examIds);
+      allQuestions = qs || [];
+      allAnswers = ans || [];
+    }
+    const optLabel = {a:'A',b:'B',c:'C',d:'D'};
+
+    // Exams list with expandable student results
     document.getElementById('admin-exams-list').innerHTML = (exams||[]).length > 0
       ? (exams||[]).map(ex => {
         const exResults = (results||[]).filter(r => r.exam_id === ex.id);
         const cnt = exResults.length;
         const avg = cnt > 0 ? (exResults.reduce((s,r) => s + Number(r.percentage), 0) / cnt).toFixed(1) : '-';
-        return `<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--gray-mid)">
-          <div style="font-size:1.3rem">📝</div>
-          <div style="flex:1">
-            <div style="font-weight:700;font-size:.9rem">${ex.title}</div>
-            <div style="font-size:.75rem;color:var(--gray)">${ex.subject}${ex.grade?' · '+ex.grade:''} · المعلم: ${pMap[ex.teacher_id]||'—'} · ${ex.is_published?'✅ منشور':'📄 مسودة'}</div>
+        const examQs = allQuestions.filter(q => q.exam_id === ex.id);
+
+        // بناء تفاصيل كل طالب
+        const studentRows = exResults.sort((a,b) => b.percentage - a.percentage).map((r, ri) => {
+          const stuAns = allAnswers.filter(a => a.exam_id === ex.id && a.student_id === r.student_id);
+          const qRows = examQs.map(q => {
+            const ans = stuAns.find(a => a.question_id === q.id);
+            const sel = ans ? ans.selected_answer : null;
+            const correct = q.correct_answer;
+            const isOk = sel === correct;
+            return `<tr style="border-bottom:1px solid var(--gray-mid)">
+              <td style="padding:6px 10px;font-size:.78rem;max-width:200px">${q.question_text||'—'}</td>
+              <td style="padding:6px;text-align:center">
+                ${['a','b','c','d'].map(l=>`<span style="display:inline-block;width:22px;height:22px;border-radius:50%;font-size:.68rem;font-weight:700;line-height:22px;text-align:center;margin:0 1px;background:${l===correct?'var(--green)':l===sel&&!isOk?'var(--red)':'var(--gray-mid)'};color:${l===correct||(l===sel&&!isOk)?'#fff':'var(--gray)'}">${l.toUpperCase()}</span>`).join('')}
+              </td>
+              <td style="padding:6px;text-align:center;font-size:.78rem;font-weight:700;color:${sel?isOk?'var(--green)':'var(--red)':'var(--gray)'}">
+                ${sel ? (isOk ? '✅' : '❌ '+optLabel[sel]) : '—'}
+              </td>
+            </tr>`;
+          }).join('');
+
+          return `<div style="border-bottom:1px solid var(--gray-mid)">
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;background:${ri%2===0?'#fafafa':'#fff'}" onclick="const d=this.nextElementSibling;d.style.display=d.style.display==='none'?'block':'none'">
+              <div style="width:26px;height:26px;border-radius:50%;background:${ri<3?'var(--gold)':'var(--gray-mid)'};display:flex;align-items:center;justify-content:center;font-weight:900;color:${ri<3?'#fff':'var(--gray)'};font-size:.75rem;flex-shrink:0">${ri+1}</div>
+              <div style="flex:1;font-weight:700;font-size:.85rem">${pMap[r.student_id]||'طالب'}</div>
+              <div style="font-size:.8rem;color:var(--gray)">${r.score}/${r.total_questions} · ${Math.floor(r.time_spent/60)}د</div>
+              <div style="font-weight:900;font-size:.95rem;color:${r.percentage>=60?'var(--green)':'var(--red)'}">${r.percentage}%</div>
+              <span style="font-size:.75rem;color:var(--gray)">▼</span>
+            </div>
+            <div style="display:none;padding:10px 16px;background:#f8fafc">
+              ${examQs.length > 0 ? `<table style="width:100%;border-collapse:collapse;font-family:Cairo,sans-serif">
+                <thead><tr style="background:var(--gray-light)">
+                  <th style="padding:6px 10px;text-align:right;font-size:.75rem;font-weight:700;color:var(--gray)">السؤال</th>
+                  <th style="padding:6px;text-align:center;font-size:.75rem;font-weight:700;color:var(--gray)">الاختيارات</th>
+                  <th style="padding:6px;text-align:center;font-size:.75rem;font-weight:700;color:var(--gray)">إجابة الطالب</th>
+                </tr></thead>
+                <tbody>${qRows}</tbody>
+              </table>` : '<p style="color:var(--gray);font-size:.8rem;text-align:center;padding:10px">لا توجد أسئلة مفصلة (PDF)</p>'}
+            </div>
+          </div>`;
+        }).join('');
+
+        return `<div style="border-bottom:1px solid var(--gray-mid)">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px 0;cursor:pointer" onclick="const d=document.getElementById('admin-exam-detail-${ex.id}');d.style.display=d.style.display==='none'?'block':'none'">
+            <div style="font-size:1.3rem">📝</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:.9rem">${ex.title}</div>
+              <div style="font-size:.75rem;color:var(--gray)">${ex.subject}${ex.grade?' · '+ex.grade:''} · المعلم: ${pMap[ex.teacher_id]||'—'} · ${ex.is_published?'✅ منشور':'📄 مسودة'} · ${ex.is_results_published?'📊 نتائج معتمدة':'🔒 مخفية'}</div>
+            </div>
+            <div style="text-align:center"><div style="font-weight:900;color:var(--blue)">${cnt}</div><div style="font-size:.7rem;color:var(--gray)">مشارك</div></div>
+            <div style="text-align:center;margin-right:12px"><div style="font-weight:900;color:${avg>=60||avg==='-'?'var(--green)':'var(--red)'}">${avg}${avg!=='-'?'%':''}</div><div style="font-size:.7rem;color:var(--gray)">متوسط</div></div>
+            <span style="font-size:.8rem;color:var(--gray);margin-right:8px">▼ تفاصيل</span>
           </div>
-          <div style="text-align:center"><div style="font-weight:900;color:var(--blue)">${cnt}</div><div style="font-size:.7rem;color:var(--gray)">مشارك</div></div>
-          <div style="text-align:center;margin-right:12px"><div style="font-weight:900;color:${avg>=60||avg==='-'?'var(--green)':'var(--red)'}">${avg}${avg!=='-'?'%':''}</div><div style="font-size:.7rem;color:var(--gray)">متوسط</div></div>
+          <div id="admin-exam-detail-${ex.id}" style="display:none;border:1px solid var(--gray-mid);border-radius:10px;margin-bottom:12px;overflow:hidden">
+            ${cnt > 0 ? studentRows : '<p style="text-align:center;color:var(--gray);padding:16px">لا توجد نتائج بعد</p>'}
+          </div>
         </div>`;
       }).join('')
       : '<p style="text-align:center;color:var(--gray);padding:20px">لا توجد اختبارات</p>';
