@@ -629,7 +629,7 @@ async function fetchAllData(userId) {
   const [p, approvedReqs, act, notif, teEnrRes] = await Promise.all([
     sb.from('profiles').select('*').eq('id', userId).single(),
     sb.from('subscription_requests')
-      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id')
+      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,admin_notes')
       .eq('user_id', userId).eq('status','approved')
       .order('created_at', { ascending: false }),
     sb.from('activity_log').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(8),
@@ -998,63 +998,172 @@ function subscription() {
 
   // توليد كروت الاشتراكات للمواد
   const subsHtml = reqs.map(req => {
-    // حساب تواريخ الاشتراك
-    const startDate = new Date(req.created_at);
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 30); // الاشتراك مدته شهر (30 يوم)
-    
-    // المتبقي
+    // ── تاريخ الانتهاء: من الأدمين إن وُجد، وإلا 30 يوم تلقائياً ──
+    let endDate, daysLeft, hasAdminEndDate = false;
+    if (req.end_date) {
+      endDate = new Date(req.end_date);
+      hasAdminEndDate = true;
+    } else {
+      endDate = new Date(req.created_at);
+      endDate.setDate(endDate.getDate() + 30);
+    }
     const today = new Date();
-    const diffTime = endDate - today;
-    const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    const statusColor = daysLeft <= 0 ? 'var(--red)' : daysLeft <= 5 ? 'var(--gold)' : 'var(--green)';
-    const statusText  = daysLeft < 0 ? 'منتهي' : daysLeft === 0 ? 'ينتهي اليوم' : `متبقي ${daysLeft} يوم`;
+    today.setHours(0,0,0,0);
+    daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+
+    // ── الحصص المتبقية ──
+    const sessRem     = req.sessions_remaining;
+    const hasSessRem  = sessRem != null && sessRem !== '';
+
+    // ── ألوان الحالة بناءً على الحصص أو الأيام ──
+    let urgencyColor, urgencyBg, statusText, statusIcon;
+    if (hasSessRem) {
+      if (sessRem <= 0) {
+        urgencyColor = 'var(--red)'; urgencyBg = 'rgba(239,68,68,0.1)';
+        statusText = 'انتهت الحصص'; statusIcon = '🔴';
+      } else if (sessRem <= 3) {
+        urgencyColor = 'var(--red)'; urgencyBg = 'rgba(239,68,68,0.1)';
+        statusText = `تبقّى ${sessRem} حصة فقط!`; statusIcon = '⚠️';
+      } else if (sessRem <= 8) {
+        urgencyColor = 'var(--gold)'; urgencyBg = 'rgba(245,158,11,0.1)';
+        statusText = `تبقّى ${sessRem} حصص`; statusIcon = '🟡';
+      } else {
+        urgencyColor = 'var(--green)'; urgencyBg = 'rgba(14,159,110,0.1)';
+        statusText = `${sessRem} حصة متبقية`; statusIcon = '🟢';
+      }
+    } else {
+      // fallback: حساب من الأيام
+      if (daysLeft <= 0) {
+        urgencyColor = 'var(--red)'; urgencyBg = 'rgba(239,68,68,0.1)';
+        statusText = daysLeft === 0 ? 'ينتهي اليوم' : 'منتهي'; statusIcon = '🔴';
+      } else if (daysLeft <= 7) {
+        urgencyColor = 'var(--red)'; urgencyBg = 'rgba(239,68,68,0.1)';
+        statusText = `تبقّى ${daysLeft} يوم فقط!`; statusIcon = '⚠️';
+      } else if (daysLeft <= 14) {
+        urgencyColor = 'var(--gold)'; urgencyBg = 'rgba(245,158,11,0.1)';
+        statusText = `تبقّى ${daysLeft} يوم`; statusIcon = '🟡';
+      } else {
+        urgencyColor = 'var(--green)'; urgencyBg = 'rgba(14,159,110,0.1)';
+        statusText = `متبقي ${daysLeft} يوم`; statusIcon = '🟢';
+      }
+    }
+
+    // ── شريط التقدم للحصص ──
+    let progressBar = '';
+    if (hasSessRem) {
+      // نفترض الإجمالي = المتبقي + المنجزة (لا نعرف الإجمالي، فنحدد شريط بناءً على ما تبقى)
+      const maxForBar = sessRem <= 3 ? 10 : sessRem <= 8 ? 16 : 24;
+      const pct = Math.max(0, Math.min(100, Math.round((sessRem / maxForBar) * 100)));
+      progressBar = `
+        <div style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:.76rem;font-weight:700;color:var(--gray)">الحصص المتبقية</span>
+            <span style="font-size:.8rem;font-weight:900;color:${urgencyColor}">${sessRem} حصة</span>
+          </div>
+          <div style="background:var(--gray-mid);border-radius:50px;height:8px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${urgencyColor};border-radius:50px;transition:width .5s ease"></div>
+          </div>
+        </div>`;
+    }
+
+    // ── تنبيه احمر إذا الحصص قليلة ──
+    const alertBanner = (hasSessRem && sessRem <= 3 && sessRem > 0) ? `
+      <div style="background:rgba(239,68,68,0.08);border:1.5px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.3rem">⚠️</span>
+        <div>
+          <div style="font-size:.85rem;font-weight:900;color:var(--red)">اشتراكك على وشك الانتهاء!</div>
+          <div style="font-size:.76rem;color:#B91C1C;margin-top:2px">تبقّى لك ${sessRem} حصة فقط — تواصل مع الأكاديمية لتجديد اشتراكك</div>
+        </div>
+      </div>` : (hasSessRem && sessRem <= 0) ? `
+      <div style="background:rgba(239,68,68,0.08);border:1.5px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.3rem">🔴</span>
+        <div>
+          <div style="font-size:.85rem;font-weight:900;color:var(--red)">انتهت حصصك في هذه المادة</div>
+          <div style="font-size:.76rem;color:#B91C1C;margin-top:2px">تواصل مع الأكاديمية لتجديد اشتراكك والاستمرار في التعلم</div>
+        </div>
+      </div>` : '';
 
     return `
-    <div class="sub-card" style="margin-bottom:20px; border-top:4px solid ${statusColor}; background:var(--white); box-shadow:0 4px 15px rgba(0,0,0,0.04); border-radius:12px; padding:20px; border-left:1px solid var(--gray-mid); border-right:1px solid var(--gray-mid); border-bottom:1px solid var(--gray-mid);">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
-        <div class="sub-badge" style="background:var(--blue-light); color:var(--blue); padding:6px 14px; border-radius:50px; font-weight:900; font-size:.9rem; display:inline-block;">📚 ${req.subject}</div>
-        <div style="display:inline-flex; align-items:center; gap:8px; background:${daysLeft <= 5 ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)'}; color:${statusColor}; border-radius:10px; padding:8px 16px; font-weight:700; font-size:.85rem;">
-          📅 ${statusText}
+    <div style="margin-bottom:20px;border-top:4px solid ${urgencyColor};background:var(--white);box-shadow:0 4px 15px rgba(0,0,0,0.05);border-radius:12px;padding:22px;border:1px solid var(--gray-mid);border-top:4px solid ${urgencyColor}">
+      
+      <!-- رأس الكارت -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:46px;height:46px;border-radius:12px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">📚</div>
+          <div>
+            <div style="font-size:1rem;font-weight:900;color:var(--dark)">${req.subject}</div>
+            <div style="font-size:.78rem;color:var(--gray);margin-top:2px">${req.grade || ''} ${req.session_type ? '· ' + req.session_type : ''}</div>
+          </div>
+        </div>
+        <div style="display:inline-flex;align-items:center;gap:7px;background:${urgencyBg};color:${urgencyColor};border-radius:10px;padding:8px 14px;font-weight:700;font-size:.85rem;border:1px solid ${urgencyColor}33">
+          ${statusIcon} ${statusText}
         </div>
       </div>
-      
-      <div class="sub-plan" style="font-size:1.1rem; font-weight:800; color:var(--dark); margin-bottom:16px;">
-        ${req.grade || ''} — ${req.session_type || 'حصص'}
+
+      <!-- تنبيه الانتهاء -->
+      ${alertBanner}
+
+      <!-- شريط الحصص -->
+      ${progressBar}
+
+      <!-- معلومات الاشتراك -->
+      <div style="display:grid;grid-template-columns:${hasSessRem ? 'repeat(3,1fr)' : '1fr 1fr'};gap:12px;margin-bottom:18px;background:var(--gray-light);padding:14px;border-radius:10px">
+        <div style="text-align:center">
+          <div style="font-size:.72rem;color:var(--gray);margin-bottom:4px">📅 تاريخ البدء</div>
+          <div style="font-size:.85rem;font-weight:700;color:var(--dark)">${formatDate(req.created_at)}</div>
+        </div>
+        ${hasSessRem ? `
+        <div style="text-align:center;border-right:1px solid var(--gray-mid);border-left:1px solid var(--gray-mid);padding:0 8px">
+          <div style="font-size:.72rem;color:var(--gray);margin-bottom:4px">🔢 الحصص المتبقية</div>
+          <div style="font-size:1.2rem;font-weight:900;color:${urgencyColor}">${sessRem}</div>
+        </div>` : ''}
+        <div style="text-align:center">
+          <div style="font-size:.72rem;color:var(--gray);margin-bottom:4px">${hasAdminEndDate ? '🗓️ تاريخ الانتهاء' : '🔄 يُجدَّد في'}</div>
+          <div style="font-size:.85rem;font-weight:700;color:${daysLeft <= 7 ? 'var(--red)' : 'var(--dark)'}">${formatDate(endDate.toISOString())}</div>
+        </div>
       </div>
-      
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px; background:var(--gray-light); padding:15px; border-radius:10px;">
+
+      <!-- الأيام والمواعيد -->
+      ${req.days_info ? `
+      <div style="background:var(--blue-light);border-radius:9px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:flex-start;gap:8px">
+        <span style="font-size:1rem;flex-shrink:0">📅</span>
         <div>
-          <div style="font-size:.76rem; color:var(--gray); margin-bottom:4px;">تاريخ البدء</div>
-          <div style="font-size:.9rem; font-weight:700; color:var(--dark);">${formatDate(req.created_at)}</div>
+          <div style="font-size:.72rem;color:var(--blue);font-weight:700;margin-bottom:3px">مواعيد حصصك</div>
+          <div style="font-size:.84rem;font-weight:600;color:var(--dark);line-height:1.7">${req.days_info.split('/').map(d=>`<span style="display:inline-block;background:#fff;border-radius:6px;padding:2px 8px;margin:2px;font-size:.8rem">${d.trim()}</span>`).join('')}</div>
         </div>
+      </div>` : ''}
+
+      <!-- ملاحظات الأدمين -->
+      ${req.admin_notes ? `
+      <div style="background:var(--gold-light);border:1px solid #FCD34D;border-radius:9px;padding:10px 14px;margin-bottom:16px;display:flex;gap:8px;align-items:flex-start">
+        <span style="font-size:1rem;flex-shrink:0">📌</span>
         <div>
-          <div style="font-size:.76rem; color:var(--gray); margin-bottom:4px;">تاريخ التجديد/الانتهاء</div>
-          <div style="font-size:.9rem; font-weight:700; color:${daysLeft <= 5 ? 'var(--red)' : 'var(--dark)'};">${formatDate(endDate.toISOString())}</div>
+          <div style="font-size:.72rem;color:#92400E;font-weight:700;margin-bottom:2px">ملاحظة من الأكاديمية</div>
+          <div style="font-size:.83rem;color:var(--dark)">${req.admin_notes}</div>
         </div>
-      </div>
-      
-      <div style="display:flex; gap:12px; flex-wrap:wrap">
-        <button class="btn-renew" style="flex:1; min-width:200px; padding:12px; border:none; border-radius:10px; background:var(--dark); color:#fff; font-weight:700; cursor:pointer;" onclick="window.open('https://wa.me/201012142749?text=${encodeURIComponent('أريد تجديد اشتراكي في مادة ' + req.subject)}','_blank')">
-          🔄 طلب تجديد الاشتراك
-        </button>
-      </div>
+      </div>` : ''}
+
+      <!-- زر التجديد -->
+      <button style="width:100%;padding:12px;border:none;border-radius:10px;background:var(--dark);color:#fff;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s"
+        onmouseover="this.style.opacity='.85'"
+        onmouseout="this.style.opacity='1'"
+        onclick="window.open('https://wa.me/201012142749?text=${encodeURIComponent('أريد تجديد اشتراكي في مادة ' + req.subject + (hasSessRem ? ' — تبقّى لي ' + sessRem + ' حصة' : ''))}','_blank')">
+        🔄 طلب تجديد الاشتراك
+      </button>
     </div>`;
   }).join('');
 
   return `
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div>
         <div class="page-title">الاشتراكات 💳</div>
-        <p class="page-sub" style="margin-bottom:0;">تفاصيل اشتراكاتك الحالية وصلاحياتها</p>
+        <p class="page-sub" style="margin-bottom:0">تفاصيل اشتراكاتك الحالية وصلاحياتها</p>
       </div>
-      <button onclick="openBookingModal()" style="padding:10px 20px; background:var(--green); color:#fff; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+      <button onclick="openBookingModal()" style="padding:10px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px">
         ➕ إضافة اشتراك جديد
       </button>
     </div>
-    
-    <div style="margin-top:24px;">
+    <div style="margin-top:24px">
       ${subsHtml}
     </div>`;
 }
@@ -1284,16 +1393,26 @@ function renderCourseItem(e) {
   const c = e.courses || {};
   const r = e._request;
   const p = e.progress_pct || 0;
-  // عرض اسم المعلم إن وجد، وإلا الصف الدراسي
   const metaLine = c.teacher_name
     ? `👨‍🏫 ${c.teacher_name}`
     : (r?.grade ? `🏫 ${r.grade}` : '');
+
+  // حصص متبقية
+  const sessRem = r?.sessions_remaining;
+  const hasSess = sessRem != null;
+  const sessColor = !hasSess ? '' : sessRem <= 3 ? 'var(--red)' : sessRem <= 8 ? 'var(--gold)' : 'var(--green)';
+  const sessBadge = hasSess ? `
+    <span style="display:inline-flex;align-items:center;gap:4px;background:${sessRem<=3?'var(--red-light)':sessRem<=8?'var(--gold-light)':'var(--green-light)'};color:${sessColor};border-radius:50px;padding:2px 9px;font-size:.72rem;font-weight:900;margin-top:4px">
+      🔢 ${sessRem} حصة متبقية
+    </span>` : '';
+
   return `
     <div class="course-item">
       <div class="course-thumb" style="background:${c.icon_bg||'#EBF5FF'}">${c.icon||'📚'}</div>
       <div class="course-info">
         <div class="course-name">${c.name||'—'}</div>
         ${metaLine ? `<div class="course-meta">${metaLine}</div>` : ''}
+        ${sessBadge}
         <div class="pw">
           <div class="pb"><div class="pf" style="width:${p}%;background:${pgGradient(p)}"></div></div>
           <div class="pp" style="color:${pgColor(p)}">${p}%</div>
