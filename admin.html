@@ -579,6 +579,25 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   </div>
 </div>
 
+<!-- STUDENT SUBJECT DETAIL MODAL -->
+<div class="mdl" id="mdl-student-subject-detail">
+  <div class="mdl-box wide" style="max-width:620px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button onclick="document.getElementById('mdl-student-subject-detail').classList.remove('show');document.getElementById('mdl-student-detail').classList.add('show')" style="background:var(--gray-light);border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:700;color:var(--gray);display:flex;align-items:center;gap:5px">← رجوع</button>
+        <div class="mdl-title" style="margin-bottom:0" id="stu-subj-mdl-title">📚 تفاصيل المادة</div>
+      </div>
+      <button onclick="document.getElementById('mdl-student-subject-detail').classList.remove('show')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
+    </div>
+    <div id="stu-subj-detail-body" style="max-height:560px;overflow-y:auto">
+      <div class="skel" style="height:200px;border-radius:12px"></div>
+    </div>
+    <div class="mdl-btns" style="margin-top:18px">
+      <button class="mdl-cancel" onclick="document.getElementById('mdl-student-subject-detail').classList.remove('show')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <!-- TEACHER DETAIL MODAL -->
 <div class="mdl" id="mdl-teacher-detail">
   <div class="mdl-box wide" style="max-width:520px">
@@ -1744,14 +1763,223 @@ async function openStudentDetail(studentId) {
     <!-- Teacher Enrollments -->
     ${enrs.length ? `
     <div>
-      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">👨‍🏫 مسجل مع معلمين (${enrs.length})</div>
+      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">👨‍🏫 المواد المشترك بها (${enrs.length}) — <span style="font-weight:400;color:var(--blue)">اضغط على المادة لعرض تفاصيلها</span></div>
       ${enrs.map(e => `
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--green-light);border-radius:8px;margin-bottom:5px">
-          <span>📚</span>
-          <span style="font-size:.84rem;font-weight:600;flex:1">${e.subject_name||'—'}</span>
-          <span style="font-size:.74rem;color:var(--gray)">${e.grade_name||''}</span>
+        <div onclick="openStudentSubjectDetail('${studentId}','${e.teacher_id}','${(e.subject_name||'').replace(/'/g,"\\'")}','${(e.grade_name||'').replace(/'/g,"\\'")}','${e.grade_id||''}')"
+          style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--green-light);border:1.5px solid #6EE7B7;border-radius:10px;margin-bottom:7px;cursor:pointer;transition:all .2s"
+          onmouseover="this.style.background='#A7F3D0';this.style.transform='translateX(-2px)'"
+          onmouseout="this.style.background='var(--green-light)';this.style.transform='translateX(0)'">
+          <span style="font-size:1.2rem">📚</span>
+          <div style="flex:1">
+            <div style="font-size:.88rem;font-weight:700;color:var(--dark)">${e.subject_name||'—'}</div>
+            <div style="font-size:.73rem;color:var(--gray);margin-top:2px">${e.grade_name||'غير محدد'}</div>
+          </div>
+          <span style="font-size:.78rem;color:var(--blue);font-weight:700">عرض التفاصيل ←</span>
         </div>`).join('')}
     </div>` : ''}`;
+}
+
+// ══════════════════════════════════
+// STUDENT SUBJECT DETAIL
+// ══════════════════════════════════
+async function openStudentSubjectDetail(studentId, teacherId, subjectName, gradeName, gradeId) {
+  // إغلاق نافذة تفاصيل الطالب وفتح نافذة تفاصيل المادة
+  document.getElementById('mdl-student-detail').classList.remove('show');
+  const modal = document.getElementById('mdl-student-subject-detail');
+  const body  = document.getElementById('stu-subj-detail-body');
+  document.getElementById('stu-subj-mdl-title').textContent = '📚 ' + subjectName + (gradeName ? ' — ' + gradeName : '');
+  modal.classList.add('show');
+  body.innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      ${'<div class="skel" style="height:80px;flex:1;border-radius:10px"></div>'.repeat(3)}
+    </div>
+    <div class="skel" style="height:200px;border-radius:10px;margin-bottom:14px"></div>
+    <div class="skel" style="height:150px;border-radius:10px"></div>`;
+
+  try {
+    const student = S.students.find(x => x.id === studentId);
+    const studentName = student?.full_name || 'الطالب';
+
+    // جلب البيانات بالتوازي
+    const [sessRes, attRes, examRes, enrollRes] = await Promise.all([
+      // حصص المعلم لهذه المادة
+      sb.from('teacher_sessions')
+        .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name')
+        .eq('teacher_id', teacherId)
+        .order('scheduled_at', {ascending: false}),
+
+      // سجل حضور الطالب
+      sb.from('attendance')
+        .select('session_id,status,created_at')
+        .eq('student_id', studentId),
+
+      // نتائج اختبارات الطالب
+      sb.from('exam_results')
+        .select('id,exam_id,score,total_questions,percentage,time_spent,created_at')
+        .eq('student_id', studentId),
+
+      // تفاصيل التسجيل
+      sb.from('teacher_enrollments')
+        .select('enrolled_at,subject_name,grade_name')
+        .eq('student_id', studentId)
+        .eq('teacher_id', teacherId)
+        .maybeSingle()
+    ]);
+
+    // الحصص المرتبطة بهذه المادة
+    let sessions = (sessRes.data || []).filter(s =>
+      (!subjectName || (s.subject_name||'').includes(subjectName) || subjectName.includes(s.subject_name||'')) &&
+      (!gradeId || s.grade_id === gradeId || !s.grade_id)
+    );
+    // إذا لم توجد حصص بالفلتر، اعرض كل حصص المعلم
+    if (!sessions.length) sessions = sessRes.data || [];
+
+    const sessIds = sessions.map(s => s.id);
+    const attMap  = {};
+    (attRes.data || []).forEach(a => { attMap[a.session_id] = a.status; });
+
+    // إحصائيات الحضور
+    const attended = sessIds.filter(id => attMap[id] === 'present').length;
+    const absent   = sessIds.filter(id => attMap[id] === 'absent').length;
+    const notMarked= sessIds.filter(id => !attMap[id]).length;
+    const totalSess= sessions.length;
+    const attPct   = totalSess > 0 ? Math.round((attended / totalSess) * 100) : 0;
+
+    // اختبارات هذه المادة — جلب عناوين الاختبارات
+    let exams = [], examResultsFiltered = [];
+    if ((examRes.data||[]).length > 0) {
+      const examIds = (examRes.data||[]).map(r => r.exam_id);
+      const { data: examsData } = await sb.from('exams')
+        .select('id,title,subject,grade')
+        .in('id', examIds);
+      // فلترة الاختبارات المرتبطة بهذه المادة
+      const relatedExams = (examsData||[]).filter(e =>
+        (!subjectName || (e.subject||'').includes(subjectName) || subjectName.includes(e.subject||''))
+      );
+      const relatedIds = new Set(relatedExams.map(e => e.id));
+      examResultsFiltered = (examRes.data||[]).filter(r => relatedIds.has(r.exam_id)).map(r => ({
+        ...r,
+        _exam: relatedExams.find(e => e.id === r.exam_id)
+      }));
+      exams = relatedExams;
+    }
+
+    const avgScore = examResultsFiltered.length > 0
+      ? (examResultsFiltered.reduce((s,r) => s + Number(r.percentage), 0) / examResultsFiltered.length).toFixed(1)
+      : null;
+
+    // بناء HTML التفاصيل
+    body.innerHTML = `
+      <!-- رأس المعلومات -->
+      <div style="background:linear-gradient(135deg,#EBF5FF,#F0FDF4);border:1px solid #BFDBFE;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:14px">
+        <div style="width:52px;height:52px;border-radius:13px;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">📚</div>
+        <div style="flex:1">
+          <div style="font-size:1rem;font-weight:900;color:var(--dark)">${subjectName}</div>
+          <div style="font-size:.78rem;color:var(--gray);margin-top:3px">🎓 ${studentName} · ${gradeName || 'غير محدد'}</div>
+          ${enrollRes.data ? `<div style="font-size:.72rem;color:var(--gray);margin-top:2px">📅 تاريخ الانضمام: ${fds(enrollRes.data.enrolled_at)}</div>` : ''}
+        </div>
+      </div>
+
+      <!-- إحصائيات سريعة -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
+        <div style="background:var(--blue-light);border:1px solid #BFDBFE;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:1.4rem;font-weight:900;color:var(--blue)">${totalSess}</div>
+          <div style="font-size:.72rem;color:var(--gray);margin-top:3px">📅 إجمالي الحصص</div>
+        </div>
+        <div style="background:var(--green-light);border:1px solid #6EE7B7;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:1.4rem;font-weight:900;color:var(--green)">${attPct}%</div>
+          <div style="font-size:.72rem;color:var(--gray);margin-top:3px">✅ نسبة الحضور</div>
+        </div>
+        <div style="background:${avgScore!==null?(Number(avgScore)>=60?'var(--green-light)':'var(--red-light)'):'var(--gray-light)'};border:1px solid ${avgScore!==null?(Number(avgScore)>=60?'#6EE7B7':'#FECACA'):'var(--gray-mid)'};border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:1.4rem;font-weight:900;color:${avgScore!==null?(Number(avgScore)>=60?'var(--green)':'var(--red)'):'var(--gray)'}">${avgScore !== null ? avgScore + '%' : '—'}</div>
+          <div style="font-size:.72rem;color:var(--gray);margin-top:3px">📝 متوسط الاختبارات</div>
+        </div>
+      </div>
+
+      <!-- مواعيد الحصص والحضور -->
+      <div style="margin-bottom:18px">
+        <div style="font-size:.85rem;font-weight:900;color:var(--dark);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+          🗓️ مواعيد الحصص والحضور
+          <span style="background:var(--blue-light);color:var(--blue);border-radius:50px;padding:2px 10px;font-size:.72rem;font-weight:700">${totalSess} حصة</span>
+        </div>
+        ${totalSess === 0
+          ? `<div style="text-align:center;padding:24px;color:var(--gray);font-size:.85rem;background:var(--gray-light);border-radius:10px">📭 لا توجد حصص مسجلة لهذه المادة</div>`
+          : `<div style="border:1px solid var(--gray-mid);border-radius:10px;overflow:hidden">
+              <div style="display:grid;grid-template-columns:1fr 120px 80px 80px;gap:0;background:var(--gray-light);padding:9px 14px;font-size:.74rem;font-weight:700;color:var(--gray);border-bottom:1px solid var(--gray-mid)">
+                <div>الحصة</div><div style="text-align:center">الموعد</div><div style="text-align:center">المدة</div><div style="text-align:center">الحضور</div>
+              </div>
+              ${sessions.map((s, i) => {
+                const attStatus = attMap[s.id];
+                const badge = attStatus === 'present'
+                  ? `<span style="background:var(--green-light);color:#065F46;border:1px solid #6EE7B7;padding:3px 10px;border-radius:50px;font-size:.71rem;font-weight:700">✅ حاضر</span>`
+                  : attStatus === 'absent'
+                  ? `<span style="background:var(--red-light);color:var(--red);border:1px solid #FECACA;padding:3px 10px;border-radius:50px;font-size:.71rem;font-weight:700">❌ غائب</span>`
+                  : `<span style="background:var(--gray-light);color:var(--gray);border:1px solid var(--gray-mid);padding:3px 10px;border-radius:50px;font-size:.71rem;font-weight:700">— غير مسجل</span>`;
+                const dateStr = s.scheduled_at
+                  ? new Date(s.scheduled_at).toLocaleDateString('ar-EG',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})
+                  : '—';
+                const timeStr = s.scheduled_at
+                  ? new Date(s.scheduled_at).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit',hour12:true})
+                  : '';
+                return `<div style="display:grid;grid-template-columns:1fr 120px 80px 80px;gap:0;padding:10px 14px;border-bottom:${i<sessions.length-1?'1px solid var(--gray-mid)':'none'};background:${i%2===0?'#fff':'#fafafa'};align-items:center">
+                  <div>
+                    <div style="font-size:.84rem;font-weight:700;color:var(--dark)">${s.title || 'حصة ' + (i+1)}</div>
+                    ${s.zoom_link ? `<a href="${s.zoom_link}" target="_blank" style="font-size:.7rem;color:var(--blue);text-decoration:none">🔗 رابط Zoom</a>` : ''}
+                  </div>
+                  <div style="text-align:center">
+                    <div style="font-size:.76rem;font-weight:700;color:var(--dark)">${dateStr}</div>
+                    <div style="font-size:.7rem;color:var(--gray)">${timeStr}</div>
+                  </div>
+                  <div style="text-align:center;font-size:.78rem;color:var(--gray)">${s.duration_min ? s.duration_min + ' د' : '—'}</div>
+                  <div style="text-align:center">${badge}</div>
+                </div>`;
+              }).join('')}
+            </div>
+          <!-- ملخص الحضور -->
+          <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+            <span style="font-size:.76rem;background:var(--green-light);color:#065F46;padding:4px 12px;border-radius:50px;font-weight:700">✅ حضر: ${attended}</span>
+            <span style="font-size:.76rem;background:var(--red-light);color:var(--red);padding:4px 12px;border-radius:50px;font-weight:700">❌ غاب: ${absent}</span>
+            <span style="font-size:.76rem;background:var(--gray-light);color:var(--gray);padding:4px 12px;border-radius:50px;font-weight:700">— غير مسجل: ${notMarked}</span>
+          </div>`
+        }
+      </div>
+
+      <!-- درجات الاختبارات -->
+      <div>
+        <div style="font-size:.85rem;font-weight:900;color:var(--dark);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+          📝 درجات الاختبارات
+          <span style="background:var(--purple-light);color:var(--purple);border-radius:50px;padding:2px 10px;font-size:.72rem;font-weight:700">${examResultsFiltered.length} اختبار</span>
+        </div>
+        ${examResultsFiltered.length === 0
+          ? `<div style="text-align:center;padding:24px;color:var(--gray);font-size:.85rem;background:var(--gray-light);border-radius:10px">📭 لم يؤدِ الطالب أي اختبارات في هذه المادة</div>`
+          : `<div style="border:1px solid var(--gray-mid);border-radius:10px;overflow:hidden">
+              <div style="display:grid;grid-template-columns:1fr 90px 90px 90px;gap:0;background:var(--gray-light);padding:9px 14px;font-size:.74rem;font-weight:700;color:var(--gray);border-bottom:1px solid var(--gray-mid)">
+                <div>الاختبار</div><div style="text-align:center">الإجابات</div><div style="text-align:center">الوقت</div><div style="text-align:center">النتيجة</div>
+              </div>
+              ${examResultsFiltered.map((r, i) => `
+                <div style="display:grid;grid-template-columns:1fr 90px 90px 90px;gap:0;padding:10px 14px;border-bottom:${i<examResultsFiltered.length-1?'1px solid var(--gray-mid)':'none'};background:${i%2===0?'#fff':'#fafafa'};align-items:center">
+                  <div>
+                    <div style="font-size:.84rem;font-weight:700;color:var(--dark)">${r._exam?.title || 'اختبار'}</div>
+                    <div style="font-size:.7rem;color:var(--gray)">${fds(r.created_at)}</div>
+                  </div>
+                  <div style="text-align:center;font-size:.84rem;font-weight:700;color:var(--dark)">${r.score}/${r.total_questions}</div>
+                  <div style="text-align:center;font-size:.78rem;color:var(--gray)">${r.time_spent ? Math.floor(r.time_spent/60) + ' د' : '—'}</div>
+                  <div style="text-align:center">
+                    <span style="font-size:.88rem;font-weight:900;color:${r.percentage>=60?'var(--green)':'var(--red)'}">${r.percentage}%</span>
+                  </div>
+                </div>`).join('')}
+              <!-- متوسط -->
+              <div style="padding:10px 14px;background:${Number(avgScore)>=60?'#ECFDF5':'#FEF2F2'};border-top:2px solid ${Number(avgScore)>=60?'#6EE7B7':'#FECACA'};display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:.82rem;font-weight:700;color:var(--gray)">📊 المتوسط العام</span>
+                <span style="font-size:1rem;font-weight:900;color:${Number(avgScore)>=60?'var(--green)':'var(--red)'}">${avgScore}%</span>
+              </div>
+            </div>`
+        }
+      </div>`;
+
+  } catch(e) {
+    body.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ في جلب البيانات</div><div class="ed">${e.message}</div></div>`;
+  }
 }
 
 // ══════════════════════════════════
