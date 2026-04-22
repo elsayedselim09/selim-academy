@@ -3197,7 +3197,7 @@ function updateExamGrades() {
   const subject = ST.subjects.find(s => s.name === subjName);
   if (subject && subject.teacher_grades) {
     subject.teacher_grades.forEach(g => {
-      gradeSel.innerHTML += `<option value="${g.grade_name}">${g.grade_name}</option>`;
+      gradeSel.innerHTML += `<option value="${g.name}">${g.name}</option>`;
     });
   }
 }

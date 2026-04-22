@@ -400,7 +400,7 @@ async function selectAnswer(qId, letter) {
         exam_id: examId,
         question_id: qId,
         selected_answer: letter
-      }, { onConflict: 'student_id, question_id' });
+      }, { onConflict: 'student_id, exam_id, question_id' });
       ind.textContent = '✅ تم الحفظ';
       setTimeout(()=>ind.style.display='none', 2000);
     } catch(e) {
