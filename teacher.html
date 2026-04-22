@@ -1265,7 +1265,7 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       <button class="btn-secondary" style="margin-right:auto;padding:7px 14px;font-size:.8rem" onclick="closeStudentDetail()">✕ إغلاق</button>
     </div>
     <!-- Stats -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
       <div style="background:var(--green-light);border-radius:12px;padding:16px;text-align:center">
         <div style="font-size:1.6rem;font-weight:900;color:var(--green)" id="det-present">0</div>
         <div style="font-size:.74rem;color:var(--green)">✅ أيام حضور</div>
@@ -1277,6 +1277,24 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       <div style="background:var(--blue-light);border-radius:12px;padding:16px;text-align:center">
         <div style="font-size:1.6rem;font-weight:900;color:var(--blue)" id="det-pct">0%</div>
         <div style="font-size:.74rem;color:var(--blue)">📊 نسبة الحضور</div>
+      </div>
+    </div>
+    <!-- Remaining Sessions Banner -->
+    <div id="det-sessions-wrap" style="margin-bottom:20px;display:none">
+      <div id="det-sessions-inner" style="border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px;background:var(--green-light)">
+        <div style="font-size:1.8rem" id="det-sessions-icon">🟢</div>
+        <div style="flex:1">
+          <div style="font-size:.72rem;font-weight:700;opacity:.75;margin-bottom:2px">الحصص المتبقية للطالب</div>
+          <div style="display:flex;align-items:baseline;gap:6px">
+            <div style="font-size:1.6rem;font-weight:900" id="det-sessions-num">—</div>
+            <div style="font-size:.82rem;font-weight:700" id="det-sessions-label">حصة متبقية</div>
+          </div>
+        </div>
+        <div style="width:80px">
+          <div style="background:rgba(0,0,0,.1);border-radius:50px;height:8px;overflow:hidden">
+            <div id="det-sessions-bar" style="height:100%;border-radius:50px;background:var(--green);transition:width .5s ease;width:100%"></div>
+          </div>
+        </div>
       </div>
     </div>
     <!-- Tabs -->
@@ -2737,9 +2755,11 @@ async function openStudentDetail(studentId, name, gradeName) {
   switchStuTab('att');
   document.getElementById('mdl-student').classList.add('show');
 
+  document.getElementById('det-sessions-wrap').style.display = 'none';
+
   try {
-    // جلب كل البيانات دفعة واحدة
-    const [enrRes, attRes, examsRes] = await Promise.all([
+    // جلب كل البيانات دفعة واحدة بما فيها اشتراكات الطالب
+    const [enrRes, attRes, examsRes, subReqRes] = await Promise.all([
       sb.from('teacher_enrollments')
         .select('subject_name,grade_name,enrolled_at')
         .eq('teacher_id', ST.user.id).eq('student_id', studentId).limit(5),
@@ -2749,7 +2769,44 @@ async function openStudentDetail(studentId, name, gradeName) {
       sb.from('exams')
         .select('id,title,subject,grade,is_published')
         .eq('teacher_id', ST.user.id).eq('is_published', true),
+      sb.from('subscription_requests')
+        .select('sessions_remaining,subject')
+        .eq('user_id', studentId)
+        .eq('status', 'approved')
+        .eq('assigned_teacher_id', ST.user.id),
     ]);
+
+    // ── عرض الحصص المتبقية ──
+    const subs = subReqRes.data || [];
+    const withData = subs.filter(r => r.sessions_remaining != null);
+    if (withData.length > 0) {
+      const totalRem = withData.reduce((s, r) => s + parseInt(r.sessions_remaining), 0);
+      const wrap  = document.getElementById('det-sessions-wrap');
+      const inner = document.getElementById('det-sessions-inner');
+      const icon  = document.getElementById('det-sessions-icon');
+      const num   = document.getElementById('det-sessions-num');
+      const lbl   = document.getElementById('det-sessions-label');
+      const bar   = document.getElementById('det-sessions-bar');
+      num.textContent = totalRem;
+      if (totalRem <= 0) {
+        inner.style.background = 'var(--red-light)'; inner.style.color = 'var(--red)';
+        icon.textContent = '🔴'; lbl.textContent = 'انتهت الحصص!';
+        bar.style.background = 'var(--red)'; bar.style.width = '5%';
+      } else if (totalRem <= 3) {
+        inner.style.background = 'rgba(239,68,68,0.1)'; inner.style.color = 'var(--red)';
+        icon.textContent = '⚠️'; lbl.textContent = 'حصة فقط — قارب على الانتهاء';
+        bar.style.background = 'var(--red)'; bar.style.width = Math.round(totalRem/10*100)+'%';
+      } else if (totalRem <= 8) {
+        inner.style.background = 'rgba(245,158,11,0.1)'; inner.style.color = '#92400E';
+        icon.textContent = '🟡'; lbl.textContent = 'حصة متبقية';
+        bar.style.background = 'var(--gold)'; bar.style.width = Math.round(totalRem/16*100)+'%';
+      } else {
+        inner.style.background = 'var(--green-light)'; inner.style.color = 'var(--green)';
+        icon.textContent = '🟢'; lbl.textContent = 'حصة متبقية';
+        bar.style.background = 'var(--green)'; bar.style.width = Math.min(100,Math.round(totalRem/24*100))+'%';
+      }
+      wrap.style.display = 'block';
+    }
 
     // ── تفاصيل الاشتراك ──
     const enrollments = enrRes.data || [];
@@ -2942,10 +2999,59 @@ async function saveAttendance() {
 
     if(!rows.length) { toast('لم يتم تسجيل أي حضور بعد','err'); return; }
 
+    // ── 1. جلب الحضور القديم لهذا اليوم (لمعرفة من كان حاضراً من قبل) ──
+    const { data: oldAtt } = await sb.from('teacher_attendance')
+      .select('student_id, status')
+      .eq('teacher_id', ST.user.id)
+      .eq('grade_id', curGradeForAtt)
+      .eq('session_date', date);
+    const oldMap = {};
+    (oldAtt || []).forEach(r => { oldMap[r.student_id] = r.status; });
+
+    // ── 2. حفظ الحضور ──
     const { error } = await sb.from('teacher_attendance')
       .upsert(rows, { onConflict: 'teacher_id,student_id,grade_id,session_date' });
     if(error) throw error;
-    toast('✅ تم حفظ الحضور بنجاح');
+
+    // ── 3. تحديد الطلاب الذين أصبحوا "حضر" الآن ولم يكونوا حضراً سابقاً ──
+    //       (منع الخصم المزدوج لو أُعيد حفظ نفس اليوم)
+    const newlyPresent = rows
+      .filter(r => r.status === 'present' && oldMap[r.student_id] !== 'present')
+      .map(r => r.student_id);
+
+    // الطلاب الذين تحوّلوا من حضور إلى غياب (نسترجع الحصة)
+    const newlyAbsent = rows
+      .filter(r => r.status === 'absent' && oldMap[r.student_id] === 'present')
+      .map(r => r.student_id);
+
+    // ── 4. خصم / استرداد الحصص ──
+    if(newlyPresent.length > 0 || newlyAbsent.length > 0) {
+      // جلب اشتراكات الطلاب المرتبطة بهذا المعلم وهذا الصف
+      const allAffected = [...newlyPresent, ...newlyAbsent];
+      const { data: subs } = await sb.from('subscription_requests')
+        .select('id, user_id, sessions_remaining')
+        .eq('status', 'approved')
+        .eq('assigned_teacher_id', ST.user.id)
+        .in('user_id', allAffected);
+
+      if(subs && subs.length > 0) {
+        // تحديث كل اشتراك على حدة
+        const updatePromises = subs.map(sub => {
+          const isPresent = newlyPresent.includes(sub.user_id);
+          const isAbsent  = newlyAbsent.includes(sub.user_id);
+          if(sub.sessions_remaining == null) return Promise.resolve(); // لا يوجد رصيد للخصم
+          let newVal = sub.sessions_remaining;
+          if(isPresent) newVal = Math.max(0, newVal - 1);  // خصم حصة
+          if(isAbsent)  newVal = newVal + 1;               // استرداد حصة
+          return sb.from('subscription_requests')
+            .update({ sessions_remaining: newVal })
+            .eq('id', sub.id);
+        });
+        await Promise.all(updatePromises);
+      }
+    }
+
+    toast('✅ تم حفظ الحضور وتحديث رصيد الحصص');
   } catch(e) {
     toast('خطأ: '+e.message,'err');
   } finally {
