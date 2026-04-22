@@ -796,6 +796,9 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
     <button class="nav-item"        id="nav-students" onclick="goTo('students')">
       <span class="nav-icon">👥</span> الطلاب
     </button>
+    <button class="nav-item"        id="nav-exams"    onclick="goTo('exams')">
+      <span class="nav-icon">📝</span> الاختبارات
+    </button>
     <div class="nav-group-label">الحساب</div>
     <button class="nav-item"        id="nav-profile"  onclick="goTo('profile')">
       <span class="nav-icon">👤</span> حسابي
@@ -1091,7 +1094,54 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
     </div>
   </div>
 
+  <!-- ════ EXAMS ════ -->
+  <div class="page" id="page-exams">
+    <div id="exams-main-view">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="page-title">الاختبارات 📝</div>
+          <p class="page-sub" style="margin-bottom:0">إنشاء وإدارة الاختبارات</p>
+        </div>
+        <button class="btn-primary" onclick="openExamModal()">➕ إنشاء اختبار</button>
+      </div>
+      <div class="stats-grid" id="exam-stats" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card"><div class="stat-icon si-blue">📝</div><div><div class="stat-num" id="st-total-exams">0</div><div class="stat-label">إجمالي الاختبارات</div></div></div>
+        <div class="stat-card"><div class="stat-icon si-green">✅</div><div><div class="stat-num" id="st-published-exams">0</div><div class="stat-label">اختبارات منشورة</div></div></div>
+        <div class="stat-card"><div class="stat-icon si-gold">👥</div><div><div class="stat-num" id="st-exam-participants">0</div><div class="stat-label">إجمالي المشاركين</div></div></div>
+      </div>
+      <div id="exams-list"><div class="skel" style="height:120px;border-radius:14px;margin-bottom:12px"></div></div>
+    </div>
+    <div id="exam-results-view" style="display:none"></div>
+  </div>
+
 </main>
+
+<!-- ══ MODAL: Create Exam ══ -->
+<div class="mdl" id="mdl-exam">
+  <div class="mdl-box wide" style="position:relative;max-height:90vh;overflow-y:auto">
+    <div class="mdl-title">➕ إنشاء اختبار جديد</div>
+    <div class="fg-row">
+      <div class="fg" style="flex:2"><label>عنوان الاختبار *</label><input type="text" id="exam-title" placeholder="مثال: اختبار الفصل الأول"></div>
+      <div class="fg" style="flex:1"><label>المدة (دقائق) *</label><input type="number" id="exam-duration" value="30" min="5" max="180"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>المادة *</label><select id="exam-subject-sel"><option value="">— اختر —</option></select></div>
+      <div class="fg"><label>الصف</label><select id="exam-grade-sel"><option value="">— اختر —</option></select></div>
+    </div>
+    <div style="border-top:1px solid var(--gray-mid);margin:16px 0;padding-top:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h3 style="font-size:1rem;font-weight:900">📋 الأسئلة</h3>
+        <button class="btn-primary" type="button" onclick="addQuestionField()" style="font-size:.82rem;padding:8px 16px">➕ سؤال جديد</button>
+      </div>
+      <div id="questions-container"></div>
+    </div>
+    <div id="exam-modal-msg"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn-primary" onclick="saveExam()" id="save-exam-btn" style="flex:1">💾 حفظ الاختبار</button>
+      <button class="btn-secondary" onclick="closeExamModal()" style="flex:.5">إلغاء</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ MODAL: Add/Edit Session ══ -->
 <div class="mdl" id="mdl-session">
@@ -3003,6 +3053,7 @@ window.goTo = async function(name) {
   if(name === 'courses')  { showCoursesMain(); await loadSubjects(); }
   if(name === 'sessions') await loadSessions();
   if(name === 'students') await loadStudents();
+  if(name === 'exams')    await loadExams();
   if(name === 'profile')  await loadProfile();
   if(name === 'settings') await loadProfile();
 };
@@ -3042,6 +3093,192 @@ window.runConfirm = async function() {
     }
   } catch(e) { toast('خطأ: '+e.message,'err'); }
 };
+
+// ══════════════════════════════════════════════
+// EXAMS MODULE
+// ══════════════════════════════════════════════
+let examQCount = 0;
+
+async function loadExams() {
+  const { data: exams } = await sb.from('exams').select('*').eq('teacher_id', ST.user.id).order('created_at', { ascending: false });
+  const { data: allResults } = await sb.from('results').select('exam_id').in('exam_id', (exams||[]).map(e=>e.id));
+  const published = (exams||[]).filter(e => e.is_published).length;
+  const participants = allResults ? allResults.length : 0;
+  document.getElementById('st-total-exams').textContent = (exams||[]).length;
+  document.getElementById('st-published-exams').textContent = published;
+  document.getElementById('st-exam-participants').textContent = participants;
+  const el = document.getElementById('exams-list');
+  if (!exams || exams.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray)"><div style="font-size:3rem;margin-bottom:12px">📝</div><p style="font-weight:700">لا توجد اختبارات بعد</p><p style="font-size:.85rem">اضغط على إنشاء اختبار للبدء</p></div>';
+    return;
+  }
+  el.innerHTML = exams.map(ex => {
+    const cnt = allResults ? allResults.filter(r => r.exam_id === ex.id).length : 0;
+    return `<div class="section-card" style="margin-bottom:14px">
+      <div class="section-head">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:1.3rem">📝</span>
+          <div>
+            <h3 style="font-size:.95rem">${ex.title}</h3>
+            <div style="font-size:.78rem;color:var(--gray)">${ex.subject}${ex.grade?' · '+ex.grade:''} · ${ex.duration} دقيقة</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="padding:4px 12px;border-radius:50px;font-size:.75rem;font-weight:700;background:${ex.is_published?'var(--green-light);color:var(--green)':'var(--gold-light);color:#92400E'}">${ex.is_published?'✅ منشور':'📄 مسودة'}</span>
+        </div>
+      </div>
+      <div class="section-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="font-size:.85rem;color:var(--gray)">👥 ${cnt} مشارك · 📅 ${new Date(ex.created_at).toLocaleDateString('ar-EG')}</div>
+        <div style="display:flex;gap:8px">
+          ${!ex.is_published ? `<button class="btn-primary" onclick="togglePublish('${ex.id}',true)" style="font-size:.8rem;padding:6px 14px">🚀 نشر</button>` : `<button class="btn-secondary" onclick="togglePublish('${ex.id}',false)" style="font-size:.8rem;padding:6px 14px">⏸ إيقاف</button>`}
+          <button class="btn-primary" onclick="viewExamResults('${ex.id}','${ex.title}')" style="font-size:.8rem;padding:6px 14px;background:var(--purple)">📊 النتائج</button>
+          <button class="btn-secondary" onclick="deleteExam('${ex.id}')" style="font-size:.8rem;padding:6px 14px;color:var(--red)">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openExamModal() {
+  document.getElementById('mdl-exam').classList.add('show');
+  document.getElementById('exam-title').value = '';
+  document.getElementById('exam-duration').value = '30';
+  document.getElementById('exam-modal-msg').innerHTML = '';
+  document.getElementById('questions-container').innerHTML = '';
+  examQCount = 0;
+  // Fill subject/grade dropdowns
+  const subjSel = document.getElementById('exam-subject-sel');
+  const gradeSel = document.getElementById('exam-grade-sel');
+  subjSel.innerHTML = '<option value="">— اختر —</option>';
+  gradeSel.innerHTML = '<option value="">— اختر —</option>';
+  if (ST.subjects) ST.subjects.forEach(s => subjSel.innerHTML += `<option value="${s.name}">${s.name}</option>`);
+  if (ST.grades) ST.grades.forEach(g => gradeSel.innerHTML += `<option value="${g.grade_name}">${g.grade_name}</option>`);
+  addQuestionField();
+}
+function closeExamModal() { document.getElementById('mdl-exam').classList.remove('show'); }
+
+function addQuestionField() {
+  examQCount++;
+  const n = examQCount;
+  document.getElementById('questions-container').insertAdjacentHTML('beforeend', `
+    <div class="section-card" id="q-block-${n}" style="margin-bottom:14px">
+      <div class="section-head" style="padding:12px 16px">
+        <h3 style="font-size:.88rem">السؤال ${n}</h3>
+        <button type="button" onclick="document.getElementById('q-block-${n}').remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem">✖</button>
+      </div>
+      <div class="section-body" style="padding:14px 16px">
+        <div class="fg"><label>نص السؤال *</label><textarea class="eq-text" rows="2" placeholder="اكتب السؤال هنا..."></textarea></div>
+        <div class="fg-row">
+          <div class="fg"><label>A</label><input class="eq-a" type="text" placeholder="الخيار A"></div>
+          <div class="fg"><label>B</label><input class="eq-b" type="text" placeholder="الخيار B"></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>C</label><input class="eq-c" type="text" placeholder="الخيار C"></div>
+          <div class="fg"><label>D</label><input class="eq-d" type="text" placeholder="الخيار D"></div>
+        </div>
+        <div class="fg"><label>الإجابة الصحيحة *</label><select class="eq-correct"><option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option></select></div>
+      </div>
+    </div>`);
+}
+
+async function saveExam() {
+  const title = document.getElementById('exam-title').value.trim();
+  const duration = parseInt(document.getElementById('exam-duration').value) || 30;
+  const subject = document.getElementById('exam-subject-sel').value;
+  const grade = document.getElementById('exam-grade-sel').value;
+  if (!title || !subject) { setMsg('exam-modal-msg','الرجاء ملء العنوان والمادة','err'); return; }
+  const blocks = document.querySelectorAll('#questions-container .section-card');
+  if (blocks.length === 0) { setMsg('exam-modal-msg','أضف سؤال واحد على الأقل','err'); return; }
+  const questions = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
+    const qt = b.querySelector('.eq-text').value.trim();
+    const a = b.querySelector('.eq-a').value.trim();
+    const bv = b.querySelector('.eq-b').value.trim();
+    const c = b.querySelector('.eq-c').value.trim();
+    const d = b.querySelector('.eq-d').value.trim();
+    const correct = b.querySelector('.eq-correct').value;
+    if (!qt || !a || !bv || !c || !d) { setMsg('exam-modal-msg',`السؤال ${i+1}: الرجاء ملء كل الحقول`,'err'); return; }
+    questions.push({ question_text:qt, option_a:a, option_b:bv, option_c:c, option_d:d, correct_answer:correct, sort_order:i });
+  }
+  const btn = document.getElementById('save-exam-btn');
+  btn.disabled = true; btn.textContent = '⏳...';
+  try {
+    const { data: exam, error: e1 } = await sb.from('exams').insert({ title, subject, grade, duration, teacher_id: ST.user.id }).select().single();
+    if (e1) throw e1;
+    const qs = questions.map(q => ({ ...q, exam_id: exam.id }));
+    const { error: e2 } = await sb.from('questions').insert(qs);
+    if (e2) throw e2;
+    toast('✅ تم إنشاء الاختبار بنجاح');
+    closeExamModal();
+    await loadExams();
+  } catch(e) { setMsg('exam-modal-msg', e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '💾 حفظ الاختبار'; }
+}
+
+async function togglePublish(examId, publish) {
+  try {
+    const { error } = await sb.from('exams').update({ is_published: publish }).eq('id', examId);
+    if (error) throw error;
+    toast(publish ? '✅ تم نشر الاختبار' : '⏸ تم إيقاف الاختبار');
+    await loadExams();
+  } catch(e) { toast('خطأ: '+e.message,'err'); }
+}
+
+async function deleteExam(examId) {
+  if (!confirm('هل تريد حذف هذا الاختبار؟ سيتم حذف جميع الأسئلة والنتائج.')) return;
+  try {
+    await sb.from('student_answers').delete().eq('exam_id', examId);
+    await sb.from('results').delete().eq('exam_id', examId);
+    await sb.from('questions').delete().eq('exam_id', examId);
+    const { error } = await sb.from('exams').delete().eq('id', examId);
+    if (error) throw error;
+    toast('✅ تم حذف الاختبار');
+    await loadExams();
+  } catch(e) { toast('خطأ: '+e.message,'err'); }
+}
+
+async function viewExamResults(examId, examTitle) {
+  document.getElementById('exams-main-view').style.display = 'none';
+  const rv = document.getElementById('exam-results-view');
+  rv.style.display = 'block';
+  rv.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner" style="border-top-color:var(--blue);margin:0 auto"></div></div>';
+  try {
+    const { data: results } = await sb.from('results').select('*').eq('exam_id', examId).order('percentage', { ascending: false });
+    const { data: questions } = await sb.from('questions').select('id,question_text').eq('exam_id', examId);
+    // Get student names
+    const sIds = (results||[]).map(r=>r.student_id);
+    let profiles = [];
+    if (sIds.length > 0) {
+      const { data: p } = await sb.from('profiles').select('id,full_name').in('id', sIds);
+      profiles = p || [];
+    }
+    const getName = id => (profiles.find(p=>p.id===id)||{}).full_name || 'طالب';
+    const avgPct = results && results.length > 0 ? (results.reduce((s,r)=>s+Number(r.percentage),0)/results.length).toFixed(1) : 0;
+
+    rv.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <button class="btn-secondary" onclick="document.getElementById('exams-main-view').style.display='block';document.getElementById('exam-results-view').style.display='none'" style="padding:8px 16px">→ رجوع</button>
+        <div class="page-title">📊 نتائج: ${examTitle}</div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+        <div class="stat-card"><div class="stat-icon si-blue">👥</div><div><div class="stat-num">${(results||[]).length}</div><div class="stat-label">مشارك</div></div></div>
+        <div class="stat-card"><div class="stat-icon si-green">📊</div><div><div class="stat-num">${avgPct}%</div><div class="stat-label">متوسط الدرجات</div></div></div>
+        <div class="stat-card"><div class="stat-icon si-gold">🏆</div><div><div class="stat-num">${results&&results[0]?results[0].percentage+'%':'-'}</div><div class="stat-label">أعلى درجة</div></div></div>
+      </div>
+      <div class="section-card">
+        <div class="section-head"><h3>🏆 ترتيب الطلاب</h3></div>
+        <div class="section-body">
+          ${results && results.length > 0 ? results.map((r,i) => `
+            <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--gray-mid)">
+              <div style="width:32px;height:32px;border-radius:50%;background:${i<3?'var(--gold)':'var(--gray-mid)'};display:flex;align-items:center;justify-content:center;font-weight:900;color:${i<3?'#fff':'var(--gray)'};font-size:.85rem">${i+1}</div>
+              <div style="flex:1"><div style="font-weight:700;font-size:.9rem">${getName(r.student_id)}</div><div style="font-size:.78rem;color:var(--gray)">${r.score}/${r.total_questions} · ${Math.floor(r.time_spent/60)}د</div></div>
+              <div style="font-weight:900;font-size:1.1rem;color:${r.percentage>=60?'var(--green)':'var(--red)'}">${r.percentage}%</div>
+            </div>`).join('') : '<p style="text-align:center;color:var(--gray);padding:20px">لا توجد نتائج بعد</p>'}
+        </div>
+      </div>`;
+  } catch(e) { rv.innerHTML = `<p style="color:var(--red);text-align:center">خطأ: ${e.message}</p>`; }
+}
 
 // ══════════════════════════════════════════════
 // INIT

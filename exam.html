@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أكاديمية سليم | الاختبار</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{--blue:#1A56DB;--blue-dark:#1342B0;--blue-light:#EBF5FF;--green:#0E9F6E;--green-light:#ECFDF5;--red:#EF4444;--red-light:#FEF2F2;--gold:#F59E0B;--gold-light:#FFFBEB;--dark:#111928;--gray:#6B7280;--gray-light:#F9FAFB;--gray-mid:#E5E7EB;--white:#fff;--radius:14px;--shadow:0 4px 24px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Cairo',sans-serif;background:#F1F5F9;color:var(--dark);direction:rtl;min-height:100vh;user-select:none;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+
+#loader{position:fixed;inset:0;background:#F1F5F9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999}
+.spinner{width:40px;height:40px;border:3px solid var(--gray-mid);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+
+.exam-header{position:sticky;top:0;background:var(--white);border-bottom:1px solid var(--gray-mid);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;box-shadow:var(--shadow)}
+.exam-title-area{display:flex;align-items:center;gap:12px}
+.exam-title-area h1{font-size:1rem;font-weight:900;color:var(--dark)}
+.exam-badge{padding:4px 12px;border-radius:50px;font-size:.75rem;font-weight:700;background:var(--blue-light);color:var(--blue)}
+
+.timer-box{display:flex;align-items:center;gap:8px;padding:8px 18px;border-radius:12px;font-weight:900;font-size:1.1rem;border:2px solid var(--green);color:var(--green);background:var(--green-light);transition:all .3s}
+.timer-box.warning{border-color:var(--gold);color:#92400E;background:var(--gold-light)}
+.timer-box.danger{border-color:var(--red);color:var(--red);background:var(--red-light);animation:pulse 1s infinite}
+
+.progress-bar{height:4px;background:var(--gray-mid);position:sticky;top:64px;z-index:99}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),#3B82F6);transition:width .4s;border-radius:0 4px 4px 0}
+
+.exam-container{max-width:800px;margin:0 auto;padding:28px 20px}
+.question-card{background:var(--white);border:1px solid var(--gray-mid);border-radius:var(--radius);padding:32px;margin-bottom:20px;animation:fadeIn .3s ease;box-shadow:var(--shadow)}
+.q-number{font-size:.82rem;font-weight:700;color:var(--blue);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.q-text{font-size:1.1rem;font-weight:700;line-height:1.8;margin-bottom:24px;color:var(--dark)}
+
+.options{display:flex;flex-direction:column;gap:10px}
+.option{display:flex;align-items:center;gap:14px;padding:14px 18px;border:2px solid var(--gray-mid);border-radius:12px;cursor:pointer;transition:all .2s;background:var(--white)}
+.option:hover{border-color:var(--blue);background:var(--blue-light)}
+.option.selected{border-color:var(--blue);background:var(--blue-light);box-shadow:0 0 0 3px rgba(26,86,219,.15)}
+.opt-letter{width:36px;height:36px;border-radius:50%;background:var(--gray-light);border:2px solid var(--gray-mid);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.9rem;flex-shrink:0;transition:all .2s}
+.option.selected .opt-letter{background:var(--blue);color:var(--white);border-color:var(--blue)}
+.opt-text{font-size:.95rem;font-weight:600}
+
+.nav-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px;flex-wrap:wrap}
+.btn{padding:12px 28px;border:none;border-radius:12px;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:8px}
+.btn-primary{background:var(--blue);color:var(--white)}.btn-primary:hover{background:var(--blue-dark)}
+.btn-secondary{background:var(--gray-light);color:var(--gray);border:1.5px solid var(--gray-mid)}.btn-secondary:hover{background:var(--gray-mid)}
+.btn-submit{background:var(--green);color:var(--white);font-size:1rem}.btn-submit:hover{background:#0B8A5F}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.q-map{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.q-dot{width:38px;height:38px;border-radius:10px;border:2px solid var(--gray-mid);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:900;cursor:pointer;transition:all .2s;background:var(--white)}
+.q-dot:hover{border-color:var(--blue)}
+.q-dot.answered{background:var(--blue);color:var(--white);border-color:var(--blue)}
+.q-dot.current{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,158,11,.3)}
+
+#result-screen{display:none}
+.result-card{background:var(--white);border-radius:20px;padding:40px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.1);max-width:600px;margin:40px auto;animation:fadeIn .5s}
+.result-icon{font-size:4rem;margin-bottom:16px}
+.result-score{font-size:3rem;font-weight:900;color:var(--blue);margin-bottom:8px}
+.result-pct{font-size:1.3rem;font-weight:700;margin-bottom:24px}
+.result-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+.rs-item{background:var(--gray-light);border-radius:12px;padding:16px}
+.rs-num{font-size:1.4rem;font-weight:900}
+.rs-label{font-size:.78rem;color:var(--gray);margin-top:4px}
+.rs-green{color:var(--green)}.rs-red{color:var(--red)}.rs-blue{color:var(--blue)}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--white);border-radius:20px;padding:32px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-box h3{font-size:1.1rem;margin-bottom:12px}
+.modal-box p{font-size:.9rem;color:var(--gray);margin-bottom:24px}
+.modal-btns{display:flex;gap:12px;justify-content:center}
+
+.cheat-warning{position:fixed;top:0;left:0;right:0;background:var(--red);color:var(--white);padding:10px;text-align:center;font-weight:700;font-size:.9rem;z-index:9999;display:none;animation:fadeIn .3s}
+.save-indicator{position:fixed;bottom:20px;right:20px;background:var(--dark);color:#fff;padding:8px 16px;border-radius:50px;font-size:.8rem;font-weight:700;display:none;z-index:999}
+
+@media(max-width:600px){
+  .exam-header{padding:10px 14px;flex-wrap:wrap;gap:8px}
+  .exam-container{padding:16px 12px}
+  .question-card{padding:20px 16px}
+  .result-stats{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="loader"><div style="font-size:2.5rem">📝</div><div class="spinner"></div><p style="color:var(--gray);font-size:.9rem" id="loader-msg">جاري تحميل الاختبار...</p></div>
+
+<div id="cheat-warning" class="cheat-warning">⚠️ تحذير: تم تسجيل خروجك من الصفحة. استمرارك بالغش سيؤدي لإلغاء اختبارك!</div>
+<div id="save-indicator" class="save-indicator">⏳ جاري الحفظ...</div>
+
+<div id="exam-screen" style="display:none">
+  <header class="exam-header">
+    <div class="exam-title-area">
+      <span style="font-size:1.3rem">📝</span>
+      <h1 id="exam-title">الاختبار</h1>
+      <span class="exam-badge" id="exam-subject">—</span>
+    </div>
+    <div class="timer-box" id="timer-box">⏱ <span id="timer">00:00</span></div>
+  </header>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="exam-container">
+    <div class="q-map" id="q-map"></div>
+    <div id="question-area"></div>
+    <div class="nav-bar">
+      <button class="btn btn-secondary" id="btn-prev" onclick="prevQ()">→ السابق</button>
+      <span id="q-counter" style="font-size:.85rem;color:var(--gray);font-weight:700"></span>
+      <button class="btn btn-primary" id="btn-next" onclick="nextQ()">التالي ←</button>
+    </div>
+    <div style="text-align:center;margin-top:24px">
+      <button class="btn btn-submit" id="btn-finish" onclick="confirmSubmit()">✅ تسليم الاختبار</button>
+    </div>
+  </div>
+</div>
+
+<div id="result-screen"></div>
+
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-box">
+    <h3>⚠️ تأكيد التسليم</h3>
+    <p id="confirm-msg">هل أنت متأكد من تسليم الاختبار؟</p>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal()">مراجعة</button>
+      <button class="btn btn-submit" id="final-submit-btn" onclick="submitExam()">تسليم نهائي</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const sb = supabase.createClient(
+  'https://hjhoudwknwnxfndrgpfe.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s'
+);
+
+let EXAM = null, QUESTIONS = [], ANSWERS = {}, currentQ = 0, timerInterval = null, timeLeft = 0, submitted = false, cheatCount = 0;
+const examId = new URLSearchParams(window.location.search).get('id');
+
+async function boot() {
+  if (!examId) { alert('لا يوجد اختبار محدد'); window.location.href = 'dashboard.html'; return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+
+  try {
+    document.getElementById('loader-msg').textContent = 'جاري تهيئة الاختبار في السيرفر...';
+    
+    // 1. بدء الاختبار والتأكد من السيرفر (Secure RPC)
+    const { data: startData, error: startErr } = await sb.rpc('start_exam', { p_exam_id: examId });
+    
+    if (startErr) throw startErr;
+    if (!startData.success) {
+      if (startData.score !== undefined) {
+        // 이미 제출된 경우
+        showResult(startData.score, startData.total, startData.percentage, 0, true);
+        return;
+      }
+      alert(startData.error || 'حدث خطأ');
+      window.location.href = 'dashboard.html';
+      return;
+    }
+
+    timeLeft = startData.time_left;
+
+    // 2. تحميل بيانات الاختبار
+    const { data: exam } = await sb.from('exams').select('*').eq('id', examId).single();
+    EXAM = exam;
+    
+    // 3. تحميل الأسئلة (بدون الإجابات الصحيحة للطلاب)
+    // RLS يمنعهم من رؤية correct_answer إذا لم يكونوا المعلم
+    const { data: qs } = await sb.from('questions').select('id,question_text,option_a,option_b,option_c,option_d,sort_order').eq('exam_id', examId).order('sort_order');
+    QUESTIONS = qs || [];
+
+    // 4. تحميل الإجابات المحفوظة مسبقاً (Auto-save Resume)
+    const { data: savedAnswers } = await sb.from('student_answers').select('question_id, selected_answer').eq('exam_id', examId).eq('student_id', session.user.id);
+    (savedAnswers || []).forEach(ans => { ANSWERS[ans.question_id] = ans.selected_answer; });
+
+    setupUI();
+  } catch(e) {
+    alert('حدث خطأ: ' + e.message);
+    window.location.href = 'dashboard.html';
+  }
+}
+
+function setupUI() {
+  document.getElementById('exam-title').textContent = EXAM.title;
+  document.getElementById('exam-subject').textContent = EXAM.subject + (EXAM.grade ? ' · ' + EXAM.grade : '');
+  
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('exam-screen').style.display = 'block';
+
+  renderMap();
+  showQuestion(0);
+  startTimer();
+  setupAntiCheat();
+}
+
+function renderMap() {
+  document.getElementById('q-map').innerHTML = QUESTIONS.map((q, i) =>
+    `<div class="q-dot ${ANSWERS[q.id] ? 'answered' : ''} ${i === currentQ ? 'current' : ''}" onclick="goToQ(${i})">${i + 1}</div>`
+  ).join('');
+}
+
+function showQuestion(idx) {
+  currentQ = idx;
+  const q = QUESTIONS[idx];
+  const selected = ANSWERS[q.id] || '';
+  document.getElementById('question-area').innerHTML = `
+    <div class="question-card">
+      <div class="q-number">📌 السؤال ${idx + 1} من ${QUESTIONS.length}</div>
+      <div class="q-text">${q.question_text}</div>
+      <div class="options">
+        ${['a', 'b', 'c', 'd'].map(letter => `
+          <div class="option ${selected === letter ? 'selected' : ''}" onclick="selectAnswer('${q.id}','${letter}')">
+            <div class="opt-letter">${letter.toUpperCase()}</div>
+            <div class="opt-text">${q['option_' + letter]}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  document.getElementById('q-counter').textContent = `${idx + 1} / ${QUESTIONS.length}`;
+  document.getElementById('btn-prev').disabled = idx === 0;
+  document.getElementById('btn-next').disabled = idx === QUESTIONS.length - 1;
+  document.getElementById('progress-fill').style.width = ((idx + 1) / QUESTIONS.length * 100) + '%';
+  renderMap();
+}
+
+let saveTimeout;
+async function selectAnswer(qId, letter) {
+  if (submitted) return;
+  ANSWERS[qId] = letter;
+  showQuestion(currentQ);
+  
+  // Auto-save to server
+  const ind = document.getElementById('save-indicator');
+  ind.style.display = 'block';
+  ind.textContent = '⏳ جاري الحفظ...';
+  
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(async () => {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      // Upsert
+      await sb.from('student_answers').upsert({
+        student_id: session.user.id,
+        exam_id: examId,
+        question_id: qId,
+        selected_answer: letter
+      }, { onConflict: 'student_id, question_id' });
+      ind.textContent = '✅ تم الحفظ';
+      setTimeout(()=>ind.style.display='none', 2000);
+    } catch(e) {
+      ind.textContent = '❌ خطأ في الحفظ';
+    }
+  }, 500);
+}
+
+function nextQ() { if (currentQ < QUESTIONS.length - 1) showQuestion(currentQ + 1); }
+function prevQ() { if (currentQ > 0) showQuestion(currentQ - 1); }
+function goToQ(idx) { showQuestion(idx); }
+
+function startTimer() {
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft <= 0) { 
+      clearInterval(timerInterval); 
+      alert('انتهى الوقت! سيتم تسليم الاختبار تلقائياً.');
+      submitExam(); 
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+  document.getElementById('timer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const box = document.getElementById('timer-box');
+  box.className = 'timer-box';
+  if (timeLeft <= 60) box.classList.add('danger');
+  else if (timeLeft <= 300) box.classList.add('warning');
+}
+
+function confirmSubmit() {
+  const unanswered = QUESTIONS.filter(q => !ANSWERS[q.id]).length;
+  document.getElementById('confirm-msg').textContent = unanswered > 0
+    ? `لديك ${unanswered} سؤال بدون إجابة. هل تريد التسليم؟`
+    : 'هل أنت متأكد من تسليم الاختبار؟ لا يمكن التراجع بعد التسليم.';
+  document.getElementById('confirm-modal').classList.add('show');
+}
+function closeModal() { document.getElementById('confirm-modal').classList.remove('show'); }
+
+async function submitExam() {
+  if (submitted) return;
+  submitted = true;
+  closeModal();
+  clearInterval(timerInterval);
+  const btn = document.getElementById('btn-finish');
+  btn.disabled = true; btn.textContent = '⏳ جاري احتساب النتيجة...';
+
+  try {
+    // 5. Submit through Secure RPC (Server-side grading)
+    const { data: res, error } = await sb.rpc('submit_exam', { p_exam_id: examId });
+    if (error) throw error;
+    
+    if (!res.success) {
+      alert(res.error);
+      window.location.href = 'dashboard.html';
+      return;
+    }
+
+    showResult(res.score, res.total, res.percentage, res.time_spent, false);
+  } catch(e) {
+    alert('حدث خطأ أثناء التسليم: ' + e.message);
+    btn.disabled = false; btn.textContent = 'إعادة التسليم';
+    submitted = false;
+  }
+}
+
+function showResult(score, total, pct, timeSpent, isAlreadyDone) {
+  document.getElementById('exam-screen').style.display = 'none';
+  const r = document.getElementById('result-screen');
+  r.style.display = 'block';
+  
+  const icon = pct >= 80 ? '🏆' : pct >= 60 ? '✅' : pct >= 40 ? '📊' : '📉';
+  const msg = pct >= 80 ? 'ممتاز! أداء رائع' : pct >= 60 ? 'جيد جداً' : pct >= 40 ? 'مقبول — حاول أكثر' : 'تحتاج مراجعة';
+  const mins = Math.floor(timeSpent / 60), secs = timeSpent % 60;
+
+  r.innerHTML = `
+    <div class="result-card">
+      <div class="result-icon">${icon}</div>
+      ${isAlreadyDone ? '<div style="color:var(--gold);font-weight:900;margin-bottom:10px">⚠️ لقد قمت بحل هذا الاختبار مسبقاً</div>' : ''}
+      <div class="result-score">${score} / ${total}</div>
+      <div class="result-pct" style="color:${pct >= 60 ? 'var(--green)' : 'var(--red)'}">${pct}% — ${msg}</div>
+      <div class="result-stats">
+        <div class="rs-item"><div class="rs-num rs-green">${score}</div><div class="rs-label">إجابات صحيحة</div></div>
+        <div class="rs-item"><div class="rs-num rs-red">${total - score}</div><div class="rs-label">إجابات خاطئة</div></div>
+        <div class="rs-item"><div class="rs-num rs-blue">${mins}:${String(secs).padStart(2,'0')}</div><div class="rs-label">الوقت المستغرق</div></div>
+      </div>
+      <button class="btn btn-secondary" onclick="window.location.href='dashboard.html'" style="width:100%">← العودة للوحة التحكم</button>
+    </div>`;
+}
+
+// Anti-cheat System
+function setupAntiCheat() {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && !submitted) {
+      cheatCount++;
+      const w = document.getElementById('cheat-warning');
+      w.style.display = 'block';
+      setTimeout(() => w.style.display = 'none', 4000);
+      
+      // Log cheat attempt (optional: send to DB)
+      console.warn('Cheat attempt detected. Count:', cheatCount);
+    }
+  });
+  
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('copy', e => e.preventDefault());
+  document.addEventListener('paste', e => e.preventDefault());
+  
+  // Prevent accidentally closing page
+  window.addEventListener('beforeunload', function (e) {
+    if (!submitted) {
+      e.preventDefault();
+      e.returnValue = 'الاختبار لم ينته بعد. الإجابات غير المحفوظة ستضيع!';
+    }
+  });
+}
+
+boot();
+</script>
+</body>
+</html>

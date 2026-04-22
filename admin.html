@@ -270,6 +270,8 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <div class="nav-label">المستخدمون</div>
     <button class="nav-item"        id="nav-teachers"  onclick="goTo('teachers')"><span class="nav-icon">👨‍🏫</span> المعلمون<span class="nav-badge" id="teacher-badge" style="display:none">0</span></button>
     <button class="nav-item"        id="nav-students"  onclick="goTo('students')"><span class="nav-icon">👥</span> الطلاب</button>
+    <div class="nav-label">الاختبارات</div>
+    <button class="nav-item"        id="nav-admin-exams" onclick="goTo('admin-exams')"><span class="nav-icon">📝</span> إحصائيات الاختبارات</button>
     <div class="nav-label">الحساب</div>
     <button class="nav-item"        id="nav-profile"   onclick="goTo('profile')"><span class="nav-icon">👤</span> حسابي</button>
   </nav>
@@ -531,6 +533,21 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     </div>
   </div>
 
+  <!-- ADMIN EXAMS -->
+  <div class="page" id="page-admin-exams">
+    <div class="page-title">إحصائيات الاختبارات 📝</div>
+    <p class="page-sub">نظرة عامة على جميع الاختبارات والنتائج</p>
+    <div class="stats-grid" id="admin-exam-stats" style="grid-template-columns:repeat(4,1fr)"></div>
+    <div class="section-card">
+      <div class="section-head"><h3>🏆 أفضل الطلاب (Leaderboard)</h3></div>
+      <div class="section-body" id="admin-leaderboard"><div class="skel" style="height:60px;margin-bottom:10px"></div></div>
+    </div>
+    <div class="section-card">
+      <div class="section-head"><h3>📊 جميع الاختبارات</h3></div>
+      <div class="section-body" id="admin-exams-list"><div class="skel" style="height:60px;margin-bottom:10px"></div></div>
+    </div>
+  </div>
+
 </main>
 
 <!-- CONFIRM MODAL -->
@@ -730,7 +747,7 @@ function goTo(name) {
   document.getElementById('nav-'+name).classList.add('active');
   closeSidebar();
   if (name !== 'sessions' && _sessInterval) { clearInterval(_sessInterval); _sessInterval = null; }
-  const loaders = {courses:loadCourses, sessions:initSessions, students:loadStudents, profile:loadProfile, teachers:loadTeachers};
+  const loaders = {courses:loadCourses, sessions:initSessions, students:loadStudents, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams};
   if(loaders[name]) loaders[name]();
   if(name==='requests') renderReqTable();
 }
@@ -2159,6 +2176,66 @@ async function revokeTeacher(teacherId) {
     document.getElementById('loader').style.display='none';
   }
 })();
+// ══════════════════════════════════
+// ADMIN EXAMS MODULE
+// ══════════════════════════════════
+async function loadAdminExams() {
+  try {
+    const { data: exams } = await sb.from('exams').select('*').order('created_at', { ascending: false });
+    const { data: results } = await sb.from('results').select('*');
+    const { data: profiles } = await sb.from('profiles').select('id,full_name');
+    const pMap = {}; (profiles||[]).forEach(p => pMap[p.id] = p.full_name);
+    const totalExams = (exams||[]).length;
+    const publishedExams = (exams||[]).filter(e => e.is_published).length;
+    const totalParticipants = results ? results.length : 0;
+    const avgScore = results && results.length > 0 ? (results.reduce((s,r) => s + Number(r.percentage), 0) / results.length).toFixed(1) : 0;
+
+    document.getElementById('admin-exam-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-icon si-blue">📝</div><div><div class="stat-num">${totalExams}</div><div class="stat-label">إجمالي الاختبارات</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-green">✅</div><div><div class="stat-num">${publishedExams}</div><div class="stat-label">منشورة</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-purple">👥</div><div><div class="stat-num">${totalParticipants}</div><div class="stat-label">إجمالي المشاركين</div></div></div>
+      <div class="stat-card"><div class="stat-icon si-gold">📊</div><div><div class="stat-num">${avgScore}%</div><div class="stat-label">متوسط الدرجات</div></div></div>`;
+
+    // Leaderboard - top students across all exams
+    const studentScores = {};
+    (results||[]).forEach(r => {
+      if (!studentScores[r.student_id]) studentScores[r.student_id] = { total: 0, count: 0 };
+      studentScores[r.student_id].total += Number(r.percentage);
+      studentScores[r.student_id].count++;
+    });
+    const leaderboard = Object.entries(studentScores)
+      .map(([id, s]) => ({ id, avg: (s.total / s.count).toFixed(1), count: s.count, name: pMap[id] || 'طالب' }))
+      .sort((a, b) => b.avg - a.avg).slice(0, 10);
+
+    document.getElementById('admin-leaderboard').innerHTML = leaderboard.length > 0
+      ? leaderboard.map((s, i) => `
+        <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--gray-mid)">
+          <div style="width:32px;height:32px;border-radius:50%;background:${i<3?'var(--gold)':'var(--gray-mid)'};display:flex;align-items:center;justify-content:center;font-weight:900;color:${i<3?'#fff':'var(--gray)'};font-size:.85rem">${i+1}</div>
+          <div style="flex:1"><div style="font-weight:700;font-size:.9rem">${s.name}</div><div style="font-size:.75rem;color:var(--gray)">${s.count} اختبار</div></div>
+          <div style="font-weight:900;font-size:1.1rem;color:${s.avg>=60?'var(--green)':'var(--red)'}">${s.avg}%</div>
+        </div>`).join('')
+      : '<p style="text-align:center;color:var(--gray);padding:20px">لا توجد نتائج بعد</p>';
+
+    // Exams list
+    document.getElementById('admin-exams-list').innerHTML = (exams||[]).length > 0
+      ? (exams||[]).map(ex => {
+        const exResults = (results||[]).filter(r => r.exam_id === ex.id);
+        const cnt = exResults.length;
+        const avg = cnt > 0 ? (exResults.reduce((s,r) => s + Number(r.percentage), 0) / cnt).toFixed(1) : '-';
+        return `<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--gray-mid)">
+          <div style="font-size:1.3rem">📝</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:.9rem">${ex.title}</div>
+            <div style="font-size:.75rem;color:var(--gray)">${ex.subject}${ex.grade?' · '+ex.grade:''} · المعلم: ${pMap[ex.teacher_id]||'—'} · ${ex.is_published?'✅ منشور':'📄 مسودة'}</div>
+          </div>
+          <div style="text-align:center"><div style="font-weight:900;color:var(--blue)">${cnt}</div><div style="font-size:.7rem;color:var(--gray)">مشارك</div></div>
+          <div style="text-align:center;margin-right:12px"><div style="font-weight:900;color:${avg>=60||avg==='-'?'var(--green)':'var(--red)'}">${avg}${avg!=='-'?'%':''}</div><div style="font-size:.7rem;color:var(--gray)">متوسط</div></div>
+        </div>`;
+      }).join('')
+      : '<p style="text-align:center;color:var(--gray);padding:20px">لا توجد اختبارات</p>';
+  } catch(e) { toast('خطأ في تحميل إحصائيات الاختبارات: '+e.message,'err'); }
+}
+
 </script>
 <script src="pwa-register.js" defer></script>
 </body>

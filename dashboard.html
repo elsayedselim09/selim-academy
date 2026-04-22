@@ -725,6 +725,7 @@ const NAV_ITEMS = [
   { id:'home',         icon:'🏠', label:'الرئيسية'   },
   { id:'courses',      icon:'📚', label:'كورساتي'    },
   { id:'sessions',     icon:'🎥', label:'الحصص'      },
+  { id:'exams',        icon:'📝', label:'الاختبارات'  },
   { id:'progress',     icon:'📈', label:'التقدم'     },
   { id:'subscription', icon:'💳', label:'الاشتراك'   },
   { id:'settings',     icon:'⚙️', label:'الإعدادات'  },
@@ -803,10 +804,12 @@ document.addEventListener('click', e => {
 // ══════════════════════════════════════════════════════════════════
 function renderPage() {
   const c = document.getElementById('pages-container');
-  const pages = { home, courses, sessions, progress, subscription, settings, support, subjectMaterials };
+  const pages = { home, courses, sessions, progress, subscription, settings, support, subjectMaterials, exams, myResults };
   c.innerHTML = `<div class="page active">${(pages[STATE.currentPage] || home)()}</div>`;
   if (STATE.currentPage === 'settings') bindSettings();
   if (STATE.currentPage === 'support')  bindSupport();
+  if (STATE.currentPage === 'exams')    loadStudentExams();
+  if (STATE.currentPage === 'myResults') loadMyResults();
 }
 
 // ── SUBJECT MATERIALS LOGIC ───────────────────────────────────────────────
@@ -1403,6 +1406,90 @@ let _authHandled = false;
   </div>
 </div>
 <script src="booking.js"></script>
+<script>
+// ══════ EXAMS MODULE (Student) ══════
+function exams() {
+  return `
+    <div class="page-title">الاختبارات 📝</div>
+    <p class="page-sub">الاختبارات المتاحة ونتائجك</p>
+    <div style="display:flex;gap:10px;margin-bottom:20px">
+      <button class="btn-filter active" id="ef-available" onclick="switchExamTab('available')" style="padding:8px 18px;border-radius:10px;border:1.5px solid var(--gray-mid);background:var(--blue);color:#fff;font-family:Cairo,sans-serif;font-weight:700;font-size:.85rem;cursor:pointer">📝 المتاحة</button>
+      <button class="btn-filter" id="ef-results" onclick="switchExamTab('results')" style="padding:8px 18px;border-radius:10px;border:1.5px solid var(--gray-mid);background:#fff;color:var(--gray);font-family:Cairo,sans-serif;font-weight:700;font-size:.85rem;cursor:pointer">📊 نتائجي</button>
+    </div>
+    <div id="student-exams-list"><div class="skel" style="height:100px;border-radius:12px;margin-bottom:12px"></div></div>`;
+}
+function myResults() { return exams(); }
+
+function switchExamTab(tab) {
+  document.getElementById('ef-available').style.background = tab==='available'?'var(--blue)':'#fff';
+  document.getElementById('ef-available').style.color = tab==='available'?'#fff':'var(--gray)';
+  document.getElementById('ef-results').style.background = tab==='results'?'var(--blue)':'#fff';
+  document.getElementById('ef-results').style.color = tab==='results'?'#fff':'var(--gray)';
+  if (tab==='available') loadStudentExams(); else loadMyResults();
+}
+
+async function loadStudentExams() {
+  const el = document.getElementById('student-exams-list');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:20px"><div class="skel" style="height:80px;border-radius:12px;margin-bottom:10px"></div></div>';
+  try {
+    const { data: publishedExams } = await sb.from('exams').select('*').eq('is_published', true).order('created_at', { ascending: false });
+    const { data: myResults } = await sb.from('results').select('exam_id,score,total_questions,percentage').eq('student_id', STATE.user.id);
+    const doneIds = (myResults||[]).map(r=>r.exam_id);
+    if (!publishedExams || publishedExams.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray)"><div style="font-size:3rem;margin-bottom:10px">📝</div><p style="font-weight:700">لا توجد اختبارات متاحة حالياً</p></div>';
+      return;
+    }
+    el.innerHTML = publishedExams.map(ex => {
+      const done = doneIds.includes(ex.id);
+      const result = done ? (myResults||[]).find(r=>r.exam_id===ex.id) : null;
+      return `<div style="background:#fff;border:1px solid var(--gray-mid);border-radius:14px;padding:18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;animation:fadeIn .3s">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:48px;height:48px;border-radius:12px;background:${done?'var(--green-light)':'var(--blue-light)'};display:flex;align-items:center;justify-content:center;font-size:1.3rem">${done?'✅':'📝'}</div>
+          <div>
+            <div style="font-weight:900;font-size:.95rem">${ex.title}</div>
+            <div style="font-size:.78rem;color:var(--gray)">${ex.subject}${ex.grade?' · '+ex.grade:''} · ${ex.duration} دقيقة</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${done ? `<span style="font-weight:900;font-size:1.1rem;color:${result.percentage>=60?'var(--green)':'var(--red)'}">${result.percentage}%</span><span style="font-size:.85rem;color:var(--gray)">${result.score}/${result.total_questions}</span>` : `<a href="exam.html?id=${ex.id}" style="padding:8px 20px;background:var(--blue);color:#fff;border-radius:10px;font-weight:700;font-size:.85rem;text-decoration:none;font-family:Cairo,sans-serif">ابدأ الاختبار</a>`}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = `<p style="color:var(--red)">خطأ: ${e.message}</p>`; }
+}
+
+async function loadMyResults() {
+  const el = document.getElementById('student-exams-list');
+  if (!el) return;
+  el.innerHTML = '<div class="skel" style="height:80px;border-radius:12px;margin-bottom:10px"></div>';
+  try {
+    const { data: results } = await sb.from('results').select('*').eq('student_id', STATE.user.id).order('submitted_at', { ascending: false });
+    if (!results || results.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray)"><div style="font-size:3rem;margin-bottom:10px">📊</div><p style="font-weight:700">لم تحل أي اختبار بعد</p></div>';
+      return;
+    }
+    // Get exam titles
+    const examIds = results.map(r=>r.exam_id);
+    const { data: examsData } = await sb.from('exams').select('id,title,subject').in('id', examIds);
+    const getExam = id => (examsData||[]).find(e=>e.id===id) || { title:'اختبار', subject:'' };
+    el.innerHTML = results.map(r => {
+      const ex = getExam(r.exam_id);
+      const icon = r.percentage >= 80 ? '🏆' : r.percentage >= 60 ? '✅' : r.percentage >= 40 ? '📊' : '📉';
+      return `<div style="background:#fff;border:1px solid var(--gray-mid);border-radius:14px;padding:18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:2rem">${icon}</div>
+          <div>
+            <div style="font-weight:900;font-size:.95rem">${ex.title}</div>
+            <div style="font-size:.78rem;color:var(--gray)">${ex.subject} · ${new Date(r.submitted_at).toLocaleDateString('ar-EG')} · ${Math.floor(r.time_spent/60)}د</div>
+          </div>
+        </div>
+        <div style="font-weight:900;font-size:1.2rem;color:${r.percentage>=60?'var(--green)':'var(--red)'}">${r.score}/${r.total_questions} (${r.percentage}%)</div>
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = `<p style="color:var(--red)">خطأ: ${e.message}</p>`; }
+}
+</script>
 <script>
 function openBookingModal() {
   var overlay = document.getElementById('bk-modal-overlay');
