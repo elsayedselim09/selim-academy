@@ -140,11 +140,15 @@ body{font-family:'Cairo',sans-serif;background:#F1F5F9;color:var(--dark);directi
   <!-- PDF LAYOUT -->
   <div id="pdf-layout" style="display:none">
     <div id="pdf-viewer">
-      <div style="padding:10px;background:#333;color:#fff;text-align:center;font-size:0.85rem">
-        📄 عرض ورقة الأسئلة
-        <a id="pdf-download-link" href="#" target="_blank" style="color:var(--blue-light);margin-right:10px;text-decoration:underline">تحميل الملف</a>
+      <div style="padding:10px;background:#1e293b;color:#fff;text-align:center;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:16px;flex-shrink:0">
+        <span>📄 ورقة الأسئلة</span>
+        <a id="pdf-open-link" href="#" target="_blank" rel="noopener"
+          style="background:var(--blue);color:#fff;padding:5px 14px;border-radius:8px;font-size:.8rem;font-weight:700;text-decoration:none"
+          onclick="pdfLinkClicked()">⬇️ فتح / تحميل PDF</a>
       </div>
-      <iframe id="pdf-iframe" src="" style="width:100%;height:100%;border:none;flex:1"></iframe>
+      <div id="pdf-embed-wrap" style="flex:1;overflow:auto;background:#525659;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px;gap:16px">
+        <!-- PDF rendered here via JS -->
+      </div>
     </div>
     <div id="pdf-bubble-sheet">
       <h3 style="font-weight:900;margin-bottom:20px;display:flex;align-items:center;gap:8px">
@@ -187,13 +191,16 @@ async function boot() {
   try {
     document.getElementById('loader-msg').textContent = 'جاري تهيئة الاختبار في السيرفر...';
     
-    // 1. بدء الاختبار والتأكد من السيرفر
+    // 1. بدء/استئناف الاختبار من السيرفر
     const { data: startData, error: startErr } = await sb.rpc('start_exam', { p_exam_id: examId });
     
     if (startErr) throw startErr;
     if (!startData.success) {
+      // إذا كان الطالب سلّم مسبقاً — نعرض نتيجته
       if (startData.score !== undefined) {
-        showResult(startData.score, startData.total, startData.percentage, 0, true, false);
+        document.getElementById('loader').style.display = 'none';
+        const { data: eData } = await sb.from('exams').select('is_results_published').eq('id', examId).single();
+        showResult(startData.score, startData.total, startData.percentage, 0, true, eData?.is_results_published);
         return;
       }
       alert(startData.error || 'حدث خطأ');
@@ -201,24 +208,25 @@ async function boot() {
       return;
     }
 
+    // الوقت المتبقي يأتي من السيرفر دائماً (سواء جديد أو استئناف)
     timeLeft = startData.time_left;
     EXAM_MODE = startData.exam_mode || 'manual';
+    const isResumed = startData.resumed || false;
 
     // 2. تحميل بيانات الاختبار
     const { data: exam } = await sb.from('exams').select('*').eq('id', examId).single();
     EXAM = exam;
-    // Update local mode just in case
     EXAM_MODE = EXAM.exam_mode || 'manual';
     
     // 3. تحميل الأسئلة
     const { data: qs } = await sb.from('questions').select('id,question_text,media_url,is_image_options,option_a,option_b,option_c,option_d,option_a_img,option_b_img,option_c_img,option_d_img,sort_order').eq('exam_id', examId).order('sort_order');
     QUESTIONS = qs || [];
 
-    // 4. تحميل الإجابات المحفوظة مسبقاً (Auto-save Resume)
+    // 4. تحميل الإجابات المحفوظة (دائماً — جديد أو استئناف)
     const { data: savedAnswers } = await sb.from('student_answers').select('question_id, selected_answer').eq('exam_id', examId).eq('student_id', session.user.id);
     (savedAnswers || []).forEach(ans => { ANSWERS[ans.question_id] = ans.selected_answer; });
 
-    setupUI();
+    setupUI(isResumed);
   } catch(e) {
     alert('حدث خطأ: ' + e.message);
     window.location.href = 'dashboard.html';
@@ -232,20 +240,51 @@ function zoomImage(e, url) {
   document.getElementById('img-zoom-modal').style.display = 'flex';
 }
 
-function setupUI() {
+// متغير لتتبع إذا فتح الطالب PDF (لا يُعدّ غشاً)
+let pdfJustOpened = false;
+function pdfLinkClicked() { pdfJustOpened = true; }
+
+function setupUI(isResumed) {
   document.getElementById('exam-title').textContent = EXAM.title;
   document.getElementById('exam-subject').textContent = EXAM.subject + (EXAM.grade ? ' · ' + EXAM.grade : '');
   
   document.getElementById('loader').style.display = 'none';
   document.getElementById('exam-screen').style.display = 'block';
 
+  // بانر الاستئناف
+  if (isResumed) {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:64px;left:0;right:0;background:#0E9F6E;color:#fff;text-align:center;padding:8px;font-size:.85rem;font-weight:700;z-index:200;animation:fadeIn .3s';
+    banner.textContent = '🔄 تم استئناف الاختبار من حيث توقفت — إجاباتك محفوظة';
+    document.body.appendChild(banner);
+    setTimeout(() => banner.remove(), 5000);
+  }
+
   if (EXAM_MODE === 'pdf') {
     document.getElementById('normal-layout').style.display = 'none';
     document.getElementById('progress-bar-wrap').style.display = 'none';
     document.getElementById('pdf-layout').style.display = 'flex';
     
-    document.getElementById('pdf-iframe').src = EXAM.media_url || '';
-    document.getElementById('pdf-download-link').href = EXAM.media_url || '#';
+    const pdfUrl = EXAM.media_url || '';
+    document.getElementById('pdf-open-link').href = pdfUrl;
+    
+    // محاولة عرض PDF مضمّن — نجرب Google Docs Viewer كوسيط لأن Supabase يمنع X-Frame
+    const wrap = document.getElementById('pdf-embed-wrap');
+    if (pdfUrl) {
+      const googleViewer = `https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+      wrap.innerHTML = `
+        <iframe src="${googleViewer}"
+          style="width:100%;height:100%;min-height:70vh;border:none;border-radius:8px;background:#fff"
+          id="pdf-gviewer"
+          onload="this.style.opacity=1"
+          style="opacity:0;transition:opacity .3s">
+        </iframe>
+        <div style="color:rgba(255,255,255,.6);font-size:.78rem;text-align:center;margin-top:8px">
+          إذا لم يظهر الملف اضغط "فتح / تحميل PDF" ↑
+        </div>`;
+    } else {
+      wrap.innerHTML = `<div style="color:#fff;text-align:center;padding:40px">❌ لا يوجد ملف PDF مرفق</div>`;
+    }
     
     renderBubbleSheet();
   } else {
@@ -475,6 +514,11 @@ function showResult(score, total, pct, timeSpent, isAlreadyDone, isPublished) {
 function setupAntiCheat() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && !submitted) {
+      // إذا كان الطالب في اختبار PDF وضغط على رابط الملف — لا يُعدّ غشاً
+      if (EXAM_MODE === 'pdf' && pdfJustOpened) {
+        pdfJustOpened = false;
+        return;
+      }
       cheatCount++;
       const w = document.getElementById('cheat-warning');
       w.style.display = 'block';
@@ -483,14 +527,13 @@ function setupAntiCheat() {
   });
   
   document.addEventListener('contextmenu', e => e.preventDefault());
-  // Allow copy/paste might be needed for legit reasons if it's text, but generally disable it.
   document.addEventListener('copy', e => e.preventDefault());
   document.addEventListener('paste', e => e.preventDefault());
   
   window.addEventListener('beforeunload', function (e) {
     if (!submitted) {
       e.preventDefault();
-      e.returnValue = 'الاختبار لم ينته بعد. الإجابات غير المحفوظة ستضيع!';
+      e.returnValue = 'الاختبار لم ينته بعد. إجاباتك محفوظة ويمكنك العودة خلال الوقت المتاح.';
     }
   });
 }
