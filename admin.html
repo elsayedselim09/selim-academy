@@ -565,16 +565,24 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
 
 <!-- STUDENT DETAIL MODAL -->
 <div class="mdl" id="mdl-student-detail">
-  <div class="mdl-box wide" style="max-width:520px">
+  <div class="mdl-box wide" style="max-width:680px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div class="mdl-title" style="margin-bottom:0">👥 تفاصيل الطالب</div>
       <button onclick="document.getElementById('mdl-student-detail').classList.remove('show')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
     </div>
-    <div id="student-detail-body" style="max-height:520px;overflow-y:auto">
+    <div id="student-detail-body" style="max-height:75vh;overflow-y:auto">
       <div class="skel" style="height:180px;border-radius:12px"></div>
     </div>
+    <!-- Subject detail panel (slides in) -->
+    <div id="subj-detail-panel" style="display:none;margin-top:14px;border-top:2px solid var(--gray-mid);padding-top:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <button onclick="document.getElementById('subj-detail-panel').style.display='none'" style="background:var(--gray-light);border:1px solid var(--gray-mid);border-radius:8px;padding:5px 12px;font-family:Cairo,sans-serif;font-size:.8rem;cursor:pointer">→ رجوع</button>
+        <div id="subj-panel-title" style="font-weight:900;font-size:.95rem"></div>
+      </div>
+      <div id="subj-panel-body"><div class="skel" style="height:200px;border-radius:12px"></div></div>
+    </div>
     <div class="mdl-btns" style="margin-top:18px">
-      <button class="mdl-cancel" onclick="document.getElementById('mdl-student-detail').classList.remove('show')">إغلاق</button>
+      <button class="mdl-cancel" onclick="document.getElementById('mdl-student-detail').classList.remove('show');document.getElementById('subj-detail-panel').style.display='none'">إغلاق</button>
     </div>
   </div>
 </div>
@@ -1669,31 +1677,37 @@ async function openStudentDetail(studentId) {
 
   const modal = document.getElementById('mdl-student-detail');
   const body  = document.getElementById('student-detail-body');
+  document.getElementById('subj-detail-panel').style.display = 'none';
   modal.classList.add('show');
   body.innerHTML = '<div class="skel" style="height:200px;border-radius:12px"></div>';
 
-  // جلب طلبات الاشتراك والتسجيلات معاً
   const [reqRes, enrRes] = await Promise.all([
     sb.from('subscription_requests')
       .select('id,status,subject,grade,session_type,days_info,created_at')
-      .eq('user_id', studentId)
-      .order('created_at', {ascending: false}),
+      .eq('user_id', studentId).order('created_at', {ascending: false}),
     sb.from('teacher_enrollments')
-      .select('id,enrolled_at,teacher_subjects(subject_name),teacher_grades(grade_name)')
+      .select('id,teacher_id,grade_id,grade_name,subject_name,enrolled_at')
       .eq('student_id', studentId)
   ]);
 
   const reqs = reqRes.data || [];
   const enrs = enrRes.data || [];
 
+  // جلب أسماء المعلمين
+  const teacherIds = [...new Set(enrs.map(e => e.teacher_id))];
+  let teacherNames = {};
+  if (teacherIds.length) {
+    const { data: tps } = await sb.from('profiles').select('id,full_name').in('id', teacherIds);
+    (tps||[]).forEach(t => teacherNames[t.id] = t.full_name);
+  }
+
   const statusBadge = st => ({
     approved: '<span class="badge b-approved">✅ مقبول</span>',
     pending:  '<span class="badge b-pending">⏳ معلق</span>',
     rejected: '<span class="badge b-rejected">❌ مرفوض</span>'
-  })[st] || '<span class="badge b-gray">'+st+'</span>';
+  })[st] || `<span class="badge b-gray">${st}</span>`;
 
   body.innerHTML = `
-    <!-- Avatar + Name -->
     <div style="text-align:center;padding:10px 0 16px">
       <div class="t-mdl-av" style="background:linear-gradient(135deg,var(--green),#0B8A5F)">
         ${s.avatar_url ? `<img src="${s.avatar_url}">` : ini(s.full_name)}
@@ -1702,29 +1716,33 @@ async function openStudentDetail(studentId) {
       <div class="t-mdl-spec">🎓 طالب</div>
     </div>
 
-    <!-- Info Grid -->
     <div class="t-info-grid">
-      <div class="t-info-item">
-        <div class="t-info-lbl">📱 رقم الهاتف</div>
-        <div class="t-info-val">${s.phone || '—'}</div>
-      </div>
-      <div class="t-info-item">
-        <div class="t-info-lbl">📅 تاريخ التسجيل</div>
-        <div class="t-info-val">${fds(s.created_at)}</div>
-      </div>
-      <div class="t-info-item">
-        <div class="t-info-lbl">📤 طلبات الاشتراك</div>
-        <div class="t-info-val">${reqs.length} طلب</div>
-      </div>
-      <div class="t-info-item">
-        <div class="t-info-lbl">✅ الطلبات المقبولة</div>
-        <div class="t-info-val">${reqs.filter(r=>r.status==='approved').length}</div>
-      </div>
+      <div class="t-info-item"><div class="t-info-lbl">📱 الهاتف</div><div class="t-info-val">${s.phone||'—'}</div></div>
+      <div class="t-info-item"><div class="t-info-lbl">📅 تاريخ التسجيل</div><div class="t-info-val">${fds(s.created_at)}</div></div>
+      <div class="t-info-item"><div class="t-info-lbl">📤 طلبات الاشتراك</div><div class="t-info-val">${reqs.length} طلب</div></div>
+      <div class="t-info-item"><div class="t-info-lbl">✅ المقبولة</div><div class="t-info-val">${reqs.filter(r=>r.status==='approved').length}</div></div>
     </div>
 
-    <!-- Subscription Requests -->
-    <div style="margin-bottom:14px">
-      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">📤 سجل طلبات الاشتراك (${reqs.length})</div>
+    <!-- المواد المسجلة — كل مادة زر قابل للضغط -->
+    ${enrs.length ? `
+    <div style="margin-bottom:16px">
+      <div style="font-size:.85rem;font-weight:900;color:var(--dark);margin-bottom:10px">📚 المواد المسجلة — اضغط للتفاصيل</div>
+      ${enrs.map(e => `
+        <div onclick="openSubjectDetail('${studentId}','${e.teacher_id}','${e.grade_id}','${e.subject_name}','${e.grade_name}','${teacherNames[e.teacher_id]||''}')"
+          style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--blue-light);border:1.5px solid #BFDBFE;border-radius:12px;margin-bottom:8px;cursor:pointer;transition:all .2s"
+          onmouseover="this.style.background='#DBEAFE'" onmouseout="this.style.background='var(--blue-light)'">
+          <div style="width:40px;height:40px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">📚</div>
+          <div style="flex:1">
+            <div style="font-weight:900;font-size:.9rem;color:var(--dark)">${e.subject_name||'—'}</div>
+            <div style="font-size:.76rem;color:var(--gray)">👨‍🏫 ${teacherNames[e.teacher_id]||'—'} · 🏫 ${e.grade_name||'—'}</div>
+          </div>
+          <div style="color:var(--blue);font-size:.8rem;font-weight:700">تفاصيل ←</div>
+        </div>`).join('')}
+    </div>` : '<div style="color:var(--gray);font-size:.85rem;text-align:center;padding:12px">لا توجد مواد مسجلة</div>'}
+
+    <!-- طلبات الاشتراك -->
+    <div>
+      <div style="font-size:.85rem;font-weight:900;color:var(--dark);margin-bottom:8px">📤 طلبات الاشتراك (${reqs.length})</div>
       ${reqs.length
         ? reqs.map(r => `
           <div style="padding:10px 12px;background:var(--gray-light);border-radius:8px;margin-bottom:7px;border-right:3px solid ${r.status==='approved'?'var(--green)':r.status==='rejected'?'var(--red)':'var(--gold)'}">
@@ -1733,25 +1751,132 @@ async function openStudentDetail(studentId) {
               ${statusBadge(r.status)}
             </div>
             <div style="font-size:.74rem;color:var(--gray)">
-              ${r.grade ? `🏫 ${r.grade} · ` : ''}${r.session_type || ''} · ${fds(r.created_at)}
+              ${r.grade?`🏫 ${r.grade} · `:''}${r.session_type||''} · ${fds(r.created_at)}
             </div>
-            ${r.days_info ? `<div style="font-size:.72rem;color:var(--gray);margin-top:2px">📅 ${r.days_info}</div>` : ''}
+            ${r.days_info?`<div style="font-size:.72rem;color:var(--gray);margin-top:2px">📅 ${r.days_info}</div>`:''}
           </div>`).join('')
-        : '<div style="color:var(--gray);font-size:.83rem">لم يقدم أي طلب بعد</div>'
-      }
-    </div>
+        : '<div style="color:var(--gray);font-size:.83rem">لم يقدم أي طلب بعد</div>'}
+    </div>`;
+}
 
-    <!-- Teacher Enrollments -->
-    ${enrs.length ? `
-    <div>
-      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">👨‍🏫 مسجل مع معلمين (${enrs.length})</div>
-      ${enrs.map(e => `
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--green-light);border-radius:8px;margin-bottom:5px">
-          <span>📚</span>
-          <span style="font-size:.84rem;font-weight:600;flex:1">${e.teacher_subjects?.subject_name||'—'}</span>
-          <span style="font-size:.74rem;color:var(--gray)">${e.teacher_grades?.grade_name||''}</span>
-        </div>`).join('')}
-    </div>` : ''}`;
+async function openSubjectDetail(studentId, teacherId, gradeId, subjectName, gradeName, teacherName) {
+  const panel = document.getElementById('subj-detail-panel');
+  const panelBody = document.getElementById('subj-panel-body');
+  document.getElementById('subj-panel-title').textContent = `📚 ${subjectName} — ${gradeName}`;
+  panel.style.display = 'block';
+  panelBody.innerHTML = '<div class="skel" style="height:160px;border-radius:12px"></div>';
+
+  // سكرول للأسفل لإظهار البانل
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  try {
+    // جلب الحصص والحضور ودرجات الاختبارات دفعة واحدة
+    const [sessRes, attRes, examsRes] = await Promise.all([
+      sb.from('teacher_sessions')
+        .select('id,title,scheduled_at,duration_min,status,zoom_link')
+        .eq('teacher_id', teacherId).eq('grade_id', gradeId)
+        .order('scheduled_at', { ascending: false }).limit(20),
+      sb.from('teacher_attendance')
+        .select('session_date,status')
+        .eq('teacher_id', teacherId).eq('student_id', studentId)
+        .order('session_date', { ascending: false }),
+      sb.from('exams')
+        .select('id,title,grade,is_published,is_results_published')
+        .eq('teacher_id', teacherId).eq('grade_id', gradeId).eq('is_published', true),
+    ]);
+
+    const sessions = sessRes.data || [];
+    const attRecords = attRes.data || [];
+    const exams = examsRes.data || [];
+
+    // إحصائيات الحضور
+    const present = attRecords.filter(r => r.status === 'present').length;
+    const absent  = attRecords.filter(r => r.status === 'absent').length;
+    const total   = present + absent;
+    const pct     = total ? Math.round(present/total*100) : 0;
+
+    // نتائج الاختبارات
+    let examResults = {};
+    if (exams.length) {
+      const { data: res } = await sb.from('results')
+        .select('exam_id,score,total_questions,percentage')
+        .eq('student_id', studentId).in('exam_id', exams.map(e=>e.id));
+      (res||[]).forEach(r => examResults[r.exam_id] = r);
+    }
+
+    // بناء سجل الحضور مع مطابقة الحصص
+    const attMap = {};
+    attRecords.forEach(r => attMap[r.session_date?.slice(0,10)] = r.status);
+
+    panelBody.innerHTML = `
+      <!-- إحصائيات الحضور -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="background:var(--green-light);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:1.4rem;font-weight:900;color:var(--green)">${present}</div>
+          <div style="font-size:.72rem;color:var(--green)">✅ حضور</div>
+        </div>
+        <div style="background:var(--red-light);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:1.4rem;font-weight:900;color:var(--red)">${absent}</div>
+          <div style="font-size:.72rem;color:var(--red)">❌ غياب</div>
+        </div>
+        <div style="background:var(--blue-light);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:1.4rem;font-weight:900;color:var(--blue)">${pct}%</div>
+          <div style="font-size:.72rem;color:var(--blue)">📊 نسبة</div>
+        </div>
+      </div>
+
+      <!-- سجل الحصص والحضور -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:.85rem;font-weight:900;color:var(--dark);margin-bottom:8px">📅 الحصص وسجل الحضور</div>
+        ${sessions.length ? sessions.map(sess => {
+          const dateKey = sess.scheduled_at?.slice(0,10);
+          const attStatus = attMap[dateKey];
+          const statusBadge = attStatus === 'present'
+            ? `<span style="background:var(--green-light);color:var(--green);padding:3px 10px;border-radius:50px;font-size:.72rem;font-weight:700">✅ حضر</span>`
+            : attStatus === 'absent'
+            ? `<span style="background:var(--red-light);color:var(--red);padding:3px 10px;border-radius:50px;font-size:.72rem;font-weight:700">❌ غاب</span>`
+            : `<span style="background:var(--gray-light);color:var(--gray);padding:3px 10px;border-radius:50px;font-size:.72rem;font-weight:700">— لم يُسجل</span>`;
+          return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fff;border:1px solid var(--gray-mid);border-radius:10px;margin-bottom:6px">
+            <div style="font-size:1.1rem">${sess.status==='completed'?'✅':sess.status==='upcoming'?'⏳':'📋'}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:.83rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sess.title||'حصة دراسية'}</div>
+              <div style="font-size:.72rem;color:var(--gray)">📅 ${sess.scheduled_at ? new Date(sess.scheduled_at).toLocaleDateString('ar-EG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'} · ${sess.duration_min||0} دقيقة</div>
+            </div>
+            ${statusBadge}
+          </div>`;
+        }).join('') : '<div style="color:var(--gray);font-size:.83rem;text-align:center;padding:10px">لا توجد حصص مسجلة</div>'}
+        ${attRecords.filter(a => !sessions.some(s => s.scheduled_at?.slice(0,10) === a.session_date?.slice(0,10))).map(a => `
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fff;border:1px solid var(--gray-mid);border-radius:10px;margin-bottom:6px">
+            <div style="font-size:1.1rem">📋</div>
+            <div style="flex:1"><div style="font-size:.83rem;font-weight:700">حصة</div><div style="font-size:.72rem;color:var(--gray)">📅 ${fds(a.session_date)}</div></div>
+            ${a.status==='present'
+              ? `<span style="background:var(--green-light);color:var(--green);padding:3px 10px;border-radius:50px;font-size:.72rem;font-weight:700">✅ حضر</span>`
+              : `<span style="background:var(--red-light);color:var(--red);padding:3px 10px;border-radius:50px;font-size:.72rem;font-weight:700">❌ غاب</span>`}
+          </div>`).join('')}
+      </div>
+
+      <!-- الاختبارات -->
+      <div>
+        <div style="font-size:.85rem;font-weight:900;color:var(--dark);margin-bottom:8px">📝 الاختبارات (${exams.length})</div>
+        ${exams.length ? exams.map(ex => {
+          const r = examResults[ex.id];
+          const hasDone = !!r;
+          return `<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:#fff;border:1px solid var(--gray-mid);border-radius:10px;margin-bottom:7px">
+            <div style="width:38px;height:38px;border-radius:9px;background:${hasDone?(r.percentage>=60?'var(--green-light)':'var(--red-light)'):'var(--gray-light)'};display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">
+              ${hasDone?(r.percentage>=60?'🏆':'📉'):'📝'}
+            </div>
+            <div style="flex:1"><div style="font-weight:700;font-size:.85rem">${ex.title}</div></div>
+            <div style="text-align:center;flex-shrink:0">
+              ${hasDone
+                ? `<div style="font-weight:900;font-size:1rem;color:${r.percentage>=60?'var(--green)':'var(--red)'}">${r.percentage}%</div><div style="font-size:.7rem;color:var(--gray)">${r.score}/${r.total_questions}</div>`
+                : `<span style="background:var(--red-light);color:var(--red);padding:3px 10px;border-radius:50px;font-size:.75rem;font-weight:700">غائب</span>`}
+            </div>
+          </div>`;
+        }).join('') : '<div style="color:var(--gray);font-size:.83rem;text-align:center;padding:10px">لا توجد اختبارات بعد</div>'}
+      </div>`;
+  } catch(e) {
+    panelBody.innerHTML = `<div style="color:var(--red);font-size:.85rem;padding:12px">خطأ: ${e.message}</div>`;
+  }
 }
 
 // ══════════════════════════════════
