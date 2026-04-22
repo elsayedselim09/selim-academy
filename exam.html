@@ -211,7 +211,7 @@ async function boot() {
     EXAM_MODE = EXAM.exam_mode || 'manual';
     
     // 3. تحميل الأسئلة
-    const { data: qs } = await sb.from('questions').select('id,question_text,media_url,is_image_options,option_a,option_b,option_c,option_d,sort_order').eq('exam_id', examId).order('sort_order');
+    const { data: qs } = await sb.from('questions').select('id,question_text,media_url,is_image_options,option_a,option_b,option_c,option_d,option_a_img,option_b_img,option_c_img,option_d_img,sort_order').eq('exam_id', examId).order('sort_order');
     QUESTIONS = qs || [];
 
     // 4. تحميل الإجابات المحفوظة مسبقاً (Auto-save Resume)
@@ -284,26 +284,41 @@ function renderMap() {
   ).join('');
 }
 
+function buildOptionContent(text, imgUrl) {
+  if (imgUrl && text) {
+    return `<div style="display:flex;flex-direction:column;gap:8px;flex:1">
+      <span>${text}</span>
+      <img class="opt-img" src="${imgUrl}" onclick="zoomImage(event,'${imgUrl}')">
+    </div>`;
+  } else if (imgUrl) {
+    return `<img class="opt-img" src="${imgUrl}" onclick="zoomImage(event,'${imgUrl}')" style="max-width:220px;max-height:160px">`;
+  } else {
+    return `<span class="opt-text">${text || ''}</span>`;
+  }
+}
+
 function showQuestion(idx) {
   currentQ = idx;
   const q = QUESTIONS[idx];
   const selected = ANSWERS[q.id] || '';
-  const isImgOpt = q.is_image_options;
 
-  let optsHtml = ['a', 'b', 'c', 'd'].map(letter => `
-    <div class="option ${selected === letter ? 'selected' : ''}" onclick="selectAnswer('${q.id}','${letter}')">
-      <div class="opt-letter">${letter.toUpperCase()}</div>
-      <div class="opt-text">
-        ${isImgOpt ? `<img class="opt-img" src="${q['option_' + letter]}" onclick="zoomImage(event, '${q['option_' + letter]}')">` : q['option_' + letter]}
-      </div>
-    </div>
-  `).join('');
+  let optsHtml = ['a', 'b', 'c', 'd'].map(letter => {
+    const optText = q['option_' + letter] || '';
+    const optImg  = q['option_' + letter + '_img'] || '';
+    return `
+      <div class="option ${selected === letter ? 'selected' : ''}" onclick="selectAnswer('${q.id}','${letter}')">
+        <div class="opt-letter">${letter.toUpperCase()}</div>
+        <div class="opt-text" style="flex:1;display:flex;align-items:center">
+          ${buildOptionContent(optText, optImg)}
+        </div>
+      </div>`;
+  }).join('');
 
   document.getElementById('question-area').innerHTML = `
     <div class="question-card">
       <div class="q-number">📌 السؤال ${idx + 1} من ${QUESTIONS.length}</div>
       ${q.question_text && q.question_text !== 'سؤال مصور' ? `<div class="q-text">${q.question_text}</div>` : ''}
-      ${q.media_url ? `<img src="${q.media_url}" class="q-img" onclick="zoomImage(event, '${q.media_url}')">` : ''}
+      ${q.media_url ? `<img src="${q.media_url}" class="q-img" onclick="zoomImage(event,'${q.media_url}')">` : ''}
       <div class="options">${optsHtml}</div>
     </div>`;
   

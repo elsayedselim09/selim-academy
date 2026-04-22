@@ -1133,10 +1133,7 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       <label>نوع الاختبار *</label>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <label style="flex:1;background:var(--gray-light);padding:10px;border-radius:10px;border:1px solid var(--gray-mid);cursor:pointer;display:flex;align-items:center;gap:8px">
-          <input type="radio" name="exam_mode" value="manual" checked onchange="toggleExamMode()"> 📝 إدخال نصي
-        </label>
-        <label style="flex:1;background:var(--gray-light);padding:10px;border-radius:10px;border:1px solid var(--gray-mid);cursor:pointer;display:flex;align-items:center;gap:8px">
-          <input type="radio" name="exam_mode" value="image" onchange="toggleExamMode()"> 🖼️ إدخال صور
+          <input type="radio" name="exam_mode" value="manual" checked onchange="toggleExamMode()"> 📝 أسئلة نصية + صور
         </label>
         <label style="flex:1;background:var(--gray-light);padding:10px;border-radius:10px;border:1px solid var(--gray-mid);cursor:pointer;display:flex;align-items:center;gap:8px">
           <input type="radio" name="exam_mode" value="pdf" onchange="toggleExamMode()"> 📄 ملف PDF كامل
@@ -1147,9 +1144,21 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
     <!-- PDF MODE CONTAINER -->
     <div id="exam-pdf-container" style="display:none;border-top:1px solid var(--gray-mid);margin:16px 0;padding-top:16px">
       <div class="fg">
-        <label>رابط ملف الـ PDF *</label>
-        <input type="url" id="exam-pdf-url" placeholder="https://..." style="direction:ltr">
-        <div style="font-size:0.8rem;color:var(--gray);margin-top:4px">ارفع ملف الـ PDF على Google Drive وضع رابطه المباشر هنا، أو استخدم رابط الملف من خوادمك.</div>
+        <label>ملف الـ PDF *</label>
+        <div
+          class="upload-zone"
+          id="exam-pdf-drop-zone"
+          onclick="document.getElementById('exam-pdf-file-input').click()"
+          ondragover="handleDragOver(event,'exam-pdf-drop-zone')"
+          ondragleave="handleDragLeave('exam-pdf-drop-zone')"
+          ondrop="handleExamPdfDrop(event)"
+        >
+          <div class="uz-icon">📄</div>
+          <div class="uz-text" id="exam-pdf-zone-text">اضغط لاختيار ملف PDF أو اسحبه هنا</div>
+          <div class="uz-sub">ملفات PDF فقط — حجم أقصى 50 MB</div>
+          <input type="file" id="exam-pdf-file-input" style="display:none" accept=".pdf" onchange="handleExamPdfSelected(this)">
+          <div id="exam-pdf-selected-name" style="margin-top:10px;font-size:.82rem;color:var(--blue);font-weight:700"></div>
+        </div>
       </div>
       <div class="fg" style="max-width:200px">
         <label>عدد الأسئلة *</label>
@@ -3187,10 +3196,9 @@ function updateExamGrades() {
 
 function toggleExamMode() {
   const mode = document.querySelector('input[name="exam_mode"]:checked').value;
-  document.getElementById('exam-manual-container').style.display = (mode === 'manual' || mode === 'image') ? 'block' : 'none';
+  document.getElementById('exam-manual-container').style.display = mode === 'manual' ? 'block' : 'none';
   document.getElementById('exam-pdf-container').style.display = mode === 'pdf' ? 'block' : 'none';
-  if (mode === 'manual' || mode === 'image') {
-    // Re-render questions to match mode if we already have them, or just clear them
+  if (mode === 'manual') {
     document.getElementById('questions-container').innerHTML = '';
     examQCount = 0;
     addQuestionField();
@@ -3218,7 +3226,9 @@ function openExamModal() {
   document.getElementById('mdl-exam').classList.add('show');
   document.getElementById('exam-title').value = '';
   document.getElementById('exam-duration').value = '30';
-  document.getElementById('exam-pdf-url').value = '';
+  document.getElementById('exam-pdf-file-input').value = '';
+  document.getElementById('exam-pdf-zone-text').textContent = 'اضغط لاختيار ملف PDF أو اسحبه هنا';
+  document.getElementById('exam-pdf-selected-name').textContent = '';
   document.getElementById('exam-modal-msg').innerHTML = '';
   document.getElementById('questions-container').innerHTML = '';
   document.querySelector('input[name="exam_mode"][value="manual"]').checked = true;
@@ -3239,8 +3249,6 @@ function closeExamModal() { document.getElementById('mdl-exam').classList.remove
 function addQuestionField() {
   examQCount++;
   const n = examQCount;
-  const mode = document.querySelector('input[name="exam_mode"]:checked').value;
-  const isImg = mode === 'image';
   
   document.getElementById('questions-container').insertAdjacentHTML('beforeend', `
     <div class="section-card" id="q-block-${n}" style="margin-bottom:14px">
@@ -3249,22 +3257,136 @@ function addQuestionField() {
         <button type="button" onclick="document.getElementById('q-block-${n}').remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem">✖</button>
       </div>
       <div class="section-body" style="padding:14px 16px">
-        ${isImg ? `
-          <div class="fg"><label>رابط صورة السؤال *</label><input type="url" class="eq-qimg" placeholder="https://..." style="direction:ltr"></div>
-        ` : `
-          <div class="fg"><label>نص السؤال *</label><textarea class="eq-text" rows="2" placeholder="اكتب السؤال هنا..."></textarea></div>
-        `}
-        <div class="fg-row">
-          <div class="fg"><label>A</label><input class="eq-a" type="${isImg?'url':'text'}" placeholder="${isImg?'رابط صورة الخيار A':'الخيار A'}" ${isImg?'style="direction:ltr"':''}></div>
-          <div class="fg"><label>B</label><input class="eq-b" type="${isImg?'url':'text'}" placeholder="${isImg?'رابط صورة الخيار B':'الخيار B'}" ${isImg?'style="direction:ltr"':''}></div>
+        <!-- Question text + image -->
+        <div class="fg">
+          <label>نص السؤال *</label>
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            <textarea class="eq-text" rows="2" placeholder="اكتب السؤال هنا..." style="flex:1"></textarea>
+            <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px">
+              <button type="button" onclick="triggerQImgUpload(${n})" 
+                style="background:var(--blue-light);border:1.5px solid #BFDBFE;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:.8rem;color:var(--blue);font-family:'Cairo',sans-serif;white-space:nowrap;display:flex;align-items:center;gap:4px">
+                🖼️ صورة
+              </button>
+              <input type="file" id="q-img-input-${n}" accept="image/*" style="display:none" onchange="previewQImg(${n}, this)">
+              <div id="q-img-preview-${n}" style="width:60px;height:60px;border-radius:8px;border:1.5px dashed var(--gray-mid);display:none;overflow:hidden;cursor:pointer" onclick="triggerQImgUpload(${n})">
+                <img id="q-img-thumb-${n}" style="width:100%;height:100%;object-fit:cover">
+              </div>
+              <div id="q-img-name-${n}" style="font-size:.65rem;color:var(--blue);text-align:center;max-width:70px;word-break:break-all;display:none"></div>
+            </div>
+          </div>
         </div>
+        
+        <!-- Options A & B -->
         <div class="fg-row">
-          <div class="fg"><label>C</label><input class="eq-c" type="${isImg?'url':'text'}" placeholder="${isImg?'رابط صورة الخيار C':'الخيار C'}" ${isImg?'style="direction:ltr"':''}></div>
-          <div class="fg"><label>D</label><input class="eq-d" type="${isImg?'url':'text'}" placeholder="${isImg?'رابط صورة الخيار D':'الخيار D'}" ${isImg?'style="direction:ltr"':''}></div>
+          <div class="fg">
+            <label>A</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input class="eq-a" type="text" placeholder="الخيار A" style="flex:1">
+              <button type="button" onclick="triggerOptImgUpload(${n},'a')"
+                style="background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:.8rem;flex-shrink:0">🖼️</button>
+              <input type="file" id="opt-img-input-${n}-a" accept="image/*" style="display:none" onchange="previewOptImg(${n},'a',this)">
+            </div>
+            <div id="opt-img-preview-${n}-a" style="margin-top:4px;display:none">
+              <img id="opt-img-thumb-${n}-a" style="max-height:50px;border-radius:6px;border:1px solid var(--gray-mid)">
+              <span style="font-size:.7rem;color:var(--blue)"> ✅ صورة مرفقة</span>
+            </div>
+          </div>
+          <div class="fg">
+            <label>B</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input class="eq-b" type="text" placeholder="الخيار B" style="flex:1">
+              <button type="button" onclick="triggerOptImgUpload(${n},'b')"
+                style="background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:.8rem;flex-shrink:0">🖼️</button>
+              <input type="file" id="opt-img-input-${n}-b" accept="image/*" style="display:none" onchange="previewOptImg(${n},'b',this)">
+            </div>
+            <div id="opt-img-preview-${n}-b" style="margin-top:4px;display:none">
+              <img id="opt-img-thumb-${n}-b" style="max-height:50px;border-radius:6px;border:1px solid var(--gray-mid)">
+              <span style="font-size:.7rem;color:var(--blue)"> ✅ صورة مرفقة</span>
+            </div>
+          </div>
         </div>
+        
+        <!-- Options C & D -->
+        <div class="fg-row">
+          <div class="fg">
+            <label>C</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input class="eq-c" type="text" placeholder="الخيار C" style="flex:1">
+              <button type="button" onclick="triggerOptImgUpload(${n},'c')"
+                style="background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:.8rem;flex-shrink:0">🖼️</button>
+              <input type="file" id="opt-img-input-${n}-c" accept="image/*" style="display:none" onchange="previewOptImg(${n},'c',this)">
+            </div>
+            <div id="opt-img-preview-${n}-c" style="margin-top:4px;display:none">
+              <img id="opt-img-thumb-${n}-c" style="max-height:50px;border-radius:6px;border:1px solid var(--gray-mid)">
+              <span style="font-size:.7rem;color:var(--blue)"> ✅ صورة مرفقة</span>
+            </div>
+          </div>
+          <div class="fg">
+            <label>D</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input class="eq-d" type="text" placeholder="الخيار D" style="flex:1">
+              <button type="button" onclick="triggerOptImgUpload(${n},'d')"
+                style="background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:.8rem;flex-shrink:0">🖼️</button>
+              <input type="file" id="opt-img-input-${n}-d" accept="image/*" style="display:none" onchange="previewOptImg(${n},'d',this)">
+            </div>
+            <div id="opt-img-preview-${n}-d" style="margin-top:4px;display:none">
+              <img id="opt-img-thumb-${n}-d" style="max-height:50px;border-radius:6px;border:1px solid var(--gray-mid)">
+              <span style="font-size:.7rem;color:var(--blue)"> ✅ صورة مرفقة</span>
+            </div>
+          </div>
+        </div>
+        
         <div class="fg"><label>الإجابة الصحيحة *</label><select class="eq-correct"><option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option></select></div>
       </div>
     </div>`);
+}
+
+function triggerQImgUpload(n) {
+  document.getElementById('q-img-input-'+n).click();
+}
+function triggerOptImgUpload(n, opt) {
+  document.getElementById('opt-img-input-'+n+'-'+opt).click();
+}
+function previewQImg(n, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  document.getElementById('q-img-thumb-'+n).src = url;
+  document.getElementById('q-img-preview-'+n).style.display = 'block';
+  document.getElementById('q-img-name-'+n).textContent = file.name;
+  document.getElementById('q-img-name-'+n).style.display = 'block';
+}
+function previewOptImg(n, opt, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  document.getElementById('opt-img-thumb-'+n+'-'+opt).src = url;
+  document.getElementById('opt-img-preview-'+n+'-'+opt).style.display = 'block';
+}
+function handleExamPdfDrop(e) {
+  e.preventDefault();
+  document.getElementById('exam-pdf-drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') {
+    document.getElementById('exam-pdf-file-input').files = e.dataTransfer.files;
+    handleExamPdfSelected({files:[file]});
+  }
+}
+function handleExamPdfSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('exam-pdf-zone-text').textContent = '📎 ' + file.name + ' (' + fsize(file.size) + ')';
+  document.getElementById('exam-pdf-selected-name').textContent = '';
+}
+
+async function uploadImageToSupabase(file, folder) {
+  const ext = file.name.split('.').pop();
+  const safeName = Date.now() + '_' + Math.random().toString(36).substring(2,8) + '.' + ext;
+  const path = folder + '/' + safeName;
+  const { error } = await sb.storage.from('teacher-content').upload(path, file, { upsert: false });
+  if (error) throw error;
+  const { data } = sb.storage.from('teacher-content').getPublicUrl(path);
+  return data.publicUrl;
 }
 
 async function saveExam() {
@@ -3279,47 +3401,87 @@ async function saveExam() {
   let questions = [];
   let mediaUrl = null;
 
-  if (mode === 'pdf') {
-    mediaUrl = document.getElementById('exam-pdf-url').value.trim();
-    if(!mediaUrl) { setMsg('exam-modal-msg','الرجاء إدخال رابط ملف الـ PDF','err'); return; }
-    const count = parseInt(document.getElementById('exam-pdf-qcount').value) || 10;
-    for(let i=1; i<=count; i++) {
-      const ans = document.getElementById('pdf-ans-'+i).value;
-      questions.push({
-        question_text: 'سؤال ' + i,
-        option_a: 'A', option_b: 'B', option_c: 'C', option_d: 'D',
-        correct_answer: ans,
-        sort_order: i-1
-      });
-    }
-  } else {
-    const blocks = document.querySelectorAll('#questions-container .section-card');
-    if (blocks.length === 0) { setMsg('exam-modal-msg','أضف سؤال واحد على الأقل','err'); return; }
-    const isImg = mode === 'image';
-    for (let i = 0; i < blocks.length; i++) {
-      const b = blocks[i];
-      const qt = isImg ? 'سؤال مصور' : b.querySelector('.eq-text').value.trim();
-      const qImg = isImg ? b.querySelector('.eq-qimg').value.trim() : null;
-      const a = b.querySelector('.eq-a').value.trim();
-      const bv = b.querySelector('.eq-b').value.trim();
-      const c = b.querySelector('.eq-c').value.trim();
-      const d = b.querySelector('.eq-d').value.trim();
-      const correct = b.querySelector('.eq-correct').value;
-      
-      if (isImg && (!qImg || !a || !bv || !c || !d)) { setMsg('exam-modal-msg',`السؤال ${i+1}: الرجاء ملء جميع الروابط`,'err'); return; }
-      if (!isImg && (!qt || !a || !bv || !c || !d)) { setMsg('exam-modal-msg',`السؤال ${i+1}: الرجاء ملء جميع الحقول`,'err'); return; }
-      
-      questions.push({
-        question_text: qt, media_url: qImg, is_image_options: isImg,
-        option_a: a, option_b: bv, option_c: c, option_d: d,
-        correct_answer: correct, sort_order: i
-      });
-    }
-  }
-
   const btn = document.getElementById('save-exam-btn');
   btn.disabled = true; btn.textContent = '⏳...';
+
   try {
+    if (mode === 'pdf') {
+      // Upload PDF file to Supabase Storage
+      const pdfInput = document.getElementById('exam-pdf-file-input');
+      const pdfFile = pdfInput.files[0];
+      if (!pdfFile) { setMsg('exam-modal-msg','الرجاء اختيار ملف PDF','err'); btn.disabled=false; btn.textContent='💾 حفظ الاختبار'; return; }
+      
+      btn.textContent = '⏳ جاري رفع الملف...';
+      const ext = pdfFile.name.split('.').pop();
+      const safeName = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '.' + ext;
+      const path = `exam_pdfs/${ST.user.id}/${safeName}`;
+      const { error: upErr } = await sb.storage.from('teacher-content').upload(path, pdfFile, { upsert: false });
+      if (upErr) throw upErr;
+      const { data: urlData } = sb.storage.from('teacher-content').getPublicUrl(path);
+      mediaUrl = urlData.publicUrl;
+
+      const count = parseInt(document.getElementById('exam-pdf-qcount').value) || 10;
+      for(let i=1; i<=count; i++) {
+        const ans = document.getElementById('pdf-ans-'+i).value;
+        questions.push({
+          question_text: 'سؤال ' + i,
+          option_a: 'A', option_b: 'B', option_c: 'C', option_d: 'D',
+          correct_answer: ans,
+          sort_order: i-1
+        });
+      }
+    } else {
+      // manual mode: text + optional image uploads
+      const blocks = document.querySelectorAll('#questions-container .section-card');
+      if (blocks.length === 0) { setMsg('exam-modal-msg','أضف سؤال واحد على الأقل','err'); btn.disabled=false; btn.textContent='💾 حفظ الاختبار'; return; }
+      
+      btn.textContent = '⏳ جاري رفع الصور...';
+
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        const n = b.id.replace('q-block-','');
+        const qt = b.querySelector('.eq-text').value.trim();
+        const a = b.querySelector('.eq-a').value.trim();
+        const bv = b.querySelector('.eq-b').value.trim();
+        const c = b.querySelector('.eq-c').value.trim();
+        const d = b.querySelector('.eq-d').value.trim();
+        const correct = b.querySelector('.eq-correct').value;
+        
+        if (!qt && !document.getElementById('q-img-input-'+n)?.files[0]) {
+          setMsg('exam-modal-msg',`السؤال ${i+1}: الرجاء كتابة نص السؤال أو رفع صورة`,'err');
+          btn.disabled=false; btn.textContent='💾 حفظ الاختبار'; return;
+        }
+
+        // Upload question image if selected
+        let qImgUrl = null;
+        const qImgFile = document.getElementById('q-img-input-'+n)?.files[0];
+        if (qImgFile) qImgUrl = await uploadImageToSupabase(qImgFile, `exam_images/${ST.user.id}`);
+
+        // Upload option images if selected
+        let aImgUrl = null, bImgUrl = null, cImgUrl = null, dImgUrl = null;
+        const aFile = document.getElementById('opt-img-input-'+n+'-a')?.files[0];
+        const bFile = document.getElementById('opt-img-input-'+n+'-b')?.files[0];
+        const cFile = document.getElementById('opt-img-input-'+n+'-c')?.files[0];
+        const dFile = document.getElementById('opt-img-input-'+n+'-d')?.files[0];
+        if (aFile) aImgUrl = await uploadImageToSupabase(aFile, `exam_images/${ST.user.id}`);
+        if (bFile) bImgUrl = await uploadImageToSupabase(bFile, `exam_images/${ST.user.id}`);
+        if (cFile) cImgUrl = await uploadImageToSupabase(cFile, `exam_images/${ST.user.id}`);
+        if (dFile) dImgUrl = await uploadImageToSupabase(dFile, `exam_images/${ST.user.id}`);
+
+        questions.push({
+          question_text: qt || 'سؤال مصور',
+          media_url: qImgUrl,
+          option_a: a || null, option_a_img: aImgUrl,
+          option_b: bv || null, option_b_img: bImgUrl,
+          option_c: c || null, option_c_img: cImgUrl,
+          option_d: d || null, option_d_img: dImgUrl,
+          is_image_options: !!(aImgUrl||bImgUrl||cImgUrl||dImgUrl),
+          correct_answer: correct, sort_order: i
+        });
+      }
+    }
+
+    btn.textContent = '⏳ جاري الحفظ...';
     const { data: exam, error: e1 } = await sb.from('exams').insert({ 
       title, subject, grade, duration, teacher_id: ST.user.id, exam_mode: mode, media_url: mediaUrl 
     }).select().single();
