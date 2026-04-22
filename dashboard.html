@@ -1443,6 +1443,16 @@ async function loadStudentExams() {
     el.innerHTML = publishedExams.map(ex => {
       const done = doneIds.includes(ex.id);
       const result = done ? (myResults||[]).find(r=>r.exam_id===ex.id) : null;
+      let statusHtml = `<a href="exam.html?id=${ex.id}" style="padding:8px 20px;background:var(--blue);color:#fff;border-radius:10px;font-weight:700;font-size:.85rem;text-decoration:none;font-family:Cairo,sans-serif">ابدأ الاختبار</a>`;
+      
+      if (done) {
+        if (ex.is_results_published) {
+          statusHtml = `<span style="font-weight:900;font-size:1.1rem;color:${result.percentage>=60?'var(--green)':'var(--red)'}">${result.percentage}%</span><span style="font-size:.85rem;color:var(--gray)">${result.score}/${result.total_questions}</span>`;
+        } else {
+          statusHtml = `<span style="font-size:.85rem;color:var(--gold);font-weight:700">⏳ بانتظار الاعتماد</span>`;
+        }
+      }
+
       return `<div style="background:#fff;border:1px solid var(--gray-mid);border-radius:14px;padding:18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;animation:fadeIn .3s">
         <div style="display:flex;align-items:center;gap:12px">
           <div style="width:48px;height:48px;border-radius:12px;background:${done?'var(--green-light)':'var(--blue-light)'};display:flex;align-items:center;justify-content:center;font-size:1.3rem">${done?'✅':'📝'}</div>
@@ -1452,7 +1462,7 @@ async function loadStudentExams() {
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
-          ${done ? `<span style="font-weight:900;font-size:1.1rem;color:${result.percentage>=60?'var(--green)':'var(--red)'}">${result.percentage}%</span><span style="font-size:.85rem;color:var(--gray)">${result.score}/${result.total_questions}</span>` : `<a href="exam.html?id=${ex.id}" style="padding:8px 20px;background:var(--blue);color:#fff;border-radius:10px;font-weight:700;font-size:.85rem;text-decoration:none;font-family:Cairo,sans-serif">ابدأ الاختبار</a>`}
+          ${statusHtml}
         </div>
       </div>`;
     }).join('');
@@ -1469,13 +1479,19 @@ async function loadMyResults() {
       el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray)"><div style="font-size:3rem;margin-bottom:10px">📊</div><p style="font-weight:700">لم تحل أي اختبار بعد</p></div>';
       return;
     }
-    // Get exam titles
+    // Get exam titles and is_results_published
     const examIds = results.map(r=>r.exam_id);
-    const { data: examsData } = await sb.from('exams').select('id,title,subject').in('id', examIds);
-    const getExam = id => (examsData||[]).find(e=>e.id===id) || { title:'اختبار', subject:'' };
+    const { data: examsData } = await sb.from('exams').select('id,title,subject,is_results_published').in('id', examIds);
+    const getExam = id => (examsData||[]).find(e=>e.id===id) || { title:'اختبار', subject:'', is_results_published: false };
     el.innerHTML = results.map(r => {
       const ex = getExam(r.exam_id);
-      const icon = r.percentage >= 80 ? '🏆' : r.percentage >= 60 ? '✅' : r.percentage >= 40 ? '📊' : '📉';
+      const isPub = ex.is_results_published;
+      const icon = !isPub ? '⏳' : r.percentage >= 80 ? '🏆' : r.percentage >= 60 ? '✅' : r.percentage >= 40 ? '📊' : '📉';
+      
+      let scoreHtml = !isPub 
+        ? `<div style="font-weight:700;font-size:1rem;color:var(--gold)">قيد المراجعة</div>`
+        : `<div style="font-weight:900;font-size:1.2rem;color:${r.percentage>=60?'var(--green)':'var(--red)'}">${r.score}/${r.total_questions} (${r.percentage}%)</div>`;
+
       return `<div style="background:#fff;border:1px solid var(--gray-mid);border-radius:14px;padding:18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
         <div style="display:flex;align-items:center;gap:12px">
           <div style="font-size:2rem">${icon}</div>
@@ -1484,7 +1500,7 @@ async function loadMyResults() {
             <div style="font-size:.78rem;color:var(--gray)">${ex.subject} · ${new Date(r.submitted_at).toLocaleDateString('ar-EG')} · ${Math.floor(r.time_spent/60)}د</div>
           </div>
         </div>
-        <div style="font-weight:900;font-size:1.2rem;color:${r.percentage>=60?'var(--green)':'var(--red)'}">${r.score}/${r.total_questions} (${r.percentage}%)</div>
+        ${scoreHtml}
       </div>`;
     }).join('');
   } catch(e) { el.innerHTML = `<p style="color:var(--red)">خطأ: ${e.message}</p>`; }

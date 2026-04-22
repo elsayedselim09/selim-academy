@@ -33,6 +33,7 @@ body{font-family:'Cairo',sans-serif;background:#F1F5F9;color:var(--dark);directi
 .question-card{background:var(--white);border:1px solid var(--gray-mid);border-radius:var(--radius);padding:32px;margin-bottom:20px;animation:fadeIn .3s ease;box-shadow:var(--shadow)}
 .q-number{font-size:.82rem;font-weight:700;color:var(--blue);margin-bottom:8px;display:flex;align-items:center;gap:6px}
 .q-text{font-size:1.1rem;font-weight:700;line-height:1.8;margin-bottom:24px;color:var(--dark)}
+.q-img{max-width:100%;border-radius:8px;margin-bottom:16px;cursor:zoom-in;border:1px solid var(--gray-mid)}
 
 .options{display:flex;flex-direction:column;gap:10px}
 .option{display:flex;align-items:center;gap:14px;padding:14px 18px;border:2px solid var(--gray-mid);border-radius:12px;cursor:pointer;transition:all .2s;background:var(--white)}
@@ -40,10 +41,11 @@ body{font-family:'Cairo',sans-serif;background:#F1F5F9;color:var(--dark);directi
 .option.selected{border-color:var(--blue);background:var(--blue-light);box-shadow:0 0 0 3px rgba(26,86,219,.15)}
 .opt-letter{width:36px;height:36px;border-radius:50%;background:var(--gray-light);border:2px solid var(--gray-mid);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.9rem;flex-shrink:0;transition:all .2s}
 .option.selected .opt-letter{background:var(--blue);color:var(--white);border-color:var(--blue)}
-.opt-text{font-size:.95rem;font-weight:600}
+.opt-text{font-size:.95rem;font-weight:600;flex:1}
+.opt-img{max-width:200px;max-height:150px;border-radius:6px;object-fit:contain;cursor:zoom-in}
 
 .nav-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px;flex-wrap:wrap}
-.btn{padding:12px 28px;border:none;border-radius:12px;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:8px}
+.btn{padding:12px 28px;border:none;border-radius:12px;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .btn-primary{background:var(--blue);color:var(--white)}.btn-primary:hover{background:var(--blue-dark)}
 .btn-secondary{background:var(--gray-light);color:var(--gray);border:1.5px solid var(--gray-mid)}.btn-secondary:hover{background:var(--gray-mid)}
 .btn-submit{background:var(--green);color:var(--white);font-size:1rem}.btn-submit:hover{background:#0B8A5F}
@@ -54,6 +56,23 @@ body{font-family:'Cairo',sans-serif;background:#F1F5F9;color:var(--dark);directi
 .q-dot:hover{border-color:var(--blue)}
 .q-dot.answered{background:var(--blue);color:var(--white);border-color:var(--blue)}
 .q-dot.current{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,158,11,.3)}
+
+/* PDF Mode Layout */
+#pdf-layout{display:flex;height:calc(100vh - 64px);flex-direction:row}
+#pdf-viewer{flex:2;border-left:1px solid var(--gray-mid);background:#525659;display:flex;flex-direction:column}
+#pdf-bubble-sheet{flex:1;background:var(--white);padding:24px;overflow-y:auto}
+.bubble-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px;background:var(--gray-light);border-radius:12px;border:1px solid var(--gray-mid)}
+.bubble-qnum{font-weight:900;width:30px;color:var(--blue)}
+.bubble-opts{display:flex;gap:8px;flex:1;justify-content:center}
+.bubble{width:38px;height:38px;border-radius:50%;border:2px solid var(--gray-mid);display:flex;align-items:center;justify-content:center;font-weight:700;cursor:pointer;background:var(--white);transition:0.2s}
+.bubble:hover{border-color:var(--blue)}
+.bubble.selected{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+@media(max-width:768px){
+  #pdf-layout{flex-direction:column}
+  #pdf-viewer{flex:1;min-height:40vh;border-left:none;border-bottom:1px solid var(--gray-mid)}
+  #pdf-bubble-sheet{flex:1;padding:16px}
+}
 
 #result-screen{display:none}
 .result-card{background:var(--white);border-radius:20px;padding:40px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.1);max-width:600px;margin:40px auto;animation:fadeIn .5s}
@@ -76,12 +95,9 @@ body{font-family:'Cairo',sans-serif;background:#F1F5F9;color:var(--dark);directi
 .cheat-warning{position:fixed;top:0;left:0;right:0;background:var(--red);color:var(--white);padding:10px;text-align:center;font-weight:700;font-size:.9rem;z-index:9999;display:none;animation:fadeIn .3s}
 .save-indicator{position:fixed;bottom:20px;right:20px;background:var(--dark);color:#fff;padding:8px 16px;border-radius:50px;font-size:.8rem;font-weight:700;display:none;z-index:999}
 
-@media(max-width:600px){
-  .exam-header{padding:10px 14px;flex-wrap:wrap;gap:8px}
-  .exam-container{padding:16px 12px}
-  .question-card{padding:20px 16px}
-  .result-stats{grid-template-columns:1fr}
-}
+/* Zoom Image Modal */
+#img-zoom-modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:none;align-items:center;justify-content:center}
+#img-zoom-modal img{max-width:90%;max-height:90%;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.5)}
 </style>
 </head>
 <body>
@@ -90,6 +106,11 @@ body{font-family:'Cairo',sans-serif;background:#F1F5F9;color:var(--dark);directi
 
 <div id="cheat-warning" class="cheat-warning">⚠️ تحذير: تم تسجيل خروجك من الصفحة. استمرارك بالغش سيؤدي لإلغاء اختبارك!</div>
 <div id="save-indicator" class="save-indicator">⏳ جاري الحفظ...</div>
+
+<!-- Image Zoom Modal -->
+<div id="img-zoom-modal" onclick="this.style.display='none'">
+  <img id="zoomed-img" src="">
+</div>
 
 <div id="exam-screen" style="display:none">
   <header class="exam-header">
@@ -100,8 +121,10 @@ body{font-family:'Cairo',sans-serif;background:#F1F5F9;color:var(--dark);directi
     </div>
     <div class="timer-box" id="timer-box">⏱ <span id="timer">00:00</span></div>
   </header>
-  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-  <div class="exam-container">
+  <div class="progress-bar" id="progress-bar-wrap"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  
+  <!-- NORMAL / IMAGE LAYOUT -->
+  <div id="normal-layout" class="exam-container" style="display:none">
     <div class="q-map" id="q-map"></div>
     <div id="question-area"></div>
     <div class="nav-bar">
@@ -111,6 +134,24 @@ body{font-family:'Cairo',sans-serif;background:#F1F5F9;color:var(--dark);directi
     </div>
     <div style="text-align:center;margin-top:24px">
       <button class="btn btn-submit" id="btn-finish" onclick="confirmSubmit()">✅ تسليم الاختبار</button>
+    </div>
+  </div>
+
+  <!-- PDF LAYOUT -->
+  <div id="pdf-layout" style="display:none">
+    <div id="pdf-viewer">
+      <div style="padding:10px;background:#333;color:#fff;text-align:center;font-size:0.85rem">
+        📄 عرض ورقة الأسئلة
+        <a id="pdf-download-link" href="#" target="_blank" style="color:var(--blue-light);margin-right:10px;text-decoration:underline">تحميل الملف</a>
+      </div>
+      <iframe id="pdf-iframe" src="" style="width:100%;height:100%;border:none;flex:1"></iframe>
+    </div>
+    <div id="pdf-bubble-sheet">
+      <h3 style="font-weight:900;margin-bottom:20px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:1.5rem">📝</span> نموذج الإجابة
+      </h3>
+      <div id="bubble-list"></div>
+      <button class="btn btn-submit" style="width:100%;margin-top:24px" id="btn-finish-pdf" onclick="confirmSubmit()">✅ تسليم الاختبار</button>
     </div>
   </div>
 </div>
@@ -135,6 +176,7 @@ const sb = supabase.createClient(
 );
 
 let EXAM = null, QUESTIONS = [], ANSWERS = {}, currentQ = 0, timerInterval = null, timeLeft = 0, submitted = false, cheatCount = 0;
+let EXAM_MODE = 'manual'; // manual, image, pdf
 const examId = new URLSearchParams(window.location.search).get('id');
 
 async function boot() {
@@ -145,14 +187,13 @@ async function boot() {
   try {
     document.getElementById('loader-msg').textContent = 'جاري تهيئة الاختبار في السيرفر...';
     
-    // 1. بدء الاختبار والتأكد من السيرفر (Secure RPC)
+    // 1. بدء الاختبار والتأكد من السيرفر
     const { data: startData, error: startErr } = await sb.rpc('start_exam', { p_exam_id: examId });
     
     if (startErr) throw startErr;
     if (!startData.success) {
       if (startData.score !== undefined) {
-        // 이미 제출된 경우
-        showResult(startData.score, startData.total, startData.percentage, 0, true);
+        showResult(startData.score, startData.total, startData.percentage, 0, true, false);
         return;
       }
       alert(startData.error || 'حدث خطأ');
@@ -161,14 +202,16 @@ async function boot() {
     }
 
     timeLeft = startData.time_left;
+    EXAM_MODE = startData.exam_mode || 'manual';
 
     // 2. تحميل بيانات الاختبار
     const { data: exam } = await sb.from('exams').select('*').eq('id', examId).single();
     EXAM = exam;
+    // Update local mode just in case
+    EXAM_MODE = EXAM.exam_mode || 'manual';
     
-    // 3. تحميل الأسئلة (بدون الإجابات الصحيحة للطلاب)
-    // RLS يمنعهم من رؤية correct_answer إذا لم يكونوا المعلم
-    const { data: qs } = await sb.from('questions').select('id,question_text,option_a,option_b,option_c,option_d,sort_order').eq('exam_id', examId).order('sort_order');
+    // 3. تحميل الأسئلة
+    const { data: qs } = await sb.from('questions').select('id,question_text,media_url,is_image_options,option_a,option_b,option_c,option_d,sort_order').eq('exam_id', examId).order('sort_order');
     QUESTIONS = qs || [];
 
     // 4. تحميل الإجابات المحفوظة مسبقاً (Auto-save Resume)
@@ -182,6 +225,13 @@ async function boot() {
   }
 }
 
+function zoomImage(e, url) {
+  e.stopPropagation();
+  if(!url) return;
+  document.getElementById('zoomed-img').src = url;
+  document.getElementById('img-zoom-modal').style.display = 'flex';
+}
+
 function setupUI() {
   document.getElementById('exam-title').textContent = EXAM.title;
   document.getElementById('exam-subject').textContent = EXAM.subject + (EXAM.grade ? ' · ' + EXAM.grade : '');
@@ -189,10 +239,43 @@ function setupUI() {
   document.getElementById('loader').style.display = 'none';
   document.getElementById('exam-screen').style.display = 'block';
 
-  renderMap();
-  showQuestion(0);
+  if (EXAM_MODE === 'pdf') {
+    document.getElementById('normal-layout').style.display = 'none';
+    document.getElementById('progress-bar-wrap').style.display = 'none';
+    document.getElementById('pdf-layout').style.display = 'flex';
+    
+    document.getElementById('pdf-iframe').src = EXAM.media_url || '';
+    document.getElementById('pdf-download-link').href = EXAM.media_url || '#';
+    
+    renderBubbleSheet();
+  } else {
+    document.getElementById('normal-layout').style.display = 'block';
+    renderMap();
+    showQuestion(0);
+  }
+
   startTimer();
   setupAntiCheat();
+}
+
+function renderBubbleSheet() {
+  document.getElementById('bubble-list').innerHTML = QUESTIONS.map((q, i) => {
+    const sel = ANSWERS[q.id] || '';
+    return `
+      <div class="bubble-row">
+        <div class="bubble-qnum">${i + 1}.</div>
+        <div class="bubble-opts">
+          ${['a', 'b', 'c', 'd'].map(letter => `
+            <div class="bubble ${sel === letter ? 'selected' : ''}" 
+                 onclick="selectAnswer('${q.id}', '${letter}')"
+                 id="bub-${q.id}-${letter}">
+              ${letter.toUpperCase()}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function renderMap() {
@@ -205,19 +288,25 @@ function showQuestion(idx) {
   currentQ = idx;
   const q = QUESTIONS[idx];
   const selected = ANSWERS[q.id] || '';
+  const isImgOpt = q.is_image_options;
+
+  let optsHtml = ['a', 'b', 'c', 'd'].map(letter => `
+    <div class="option ${selected === letter ? 'selected' : ''}" onclick="selectAnswer('${q.id}','${letter}')">
+      <div class="opt-letter">${letter.toUpperCase()}</div>
+      <div class="opt-text">
+        ${isImgOpt ? `<img class="opt-img" src="${q['option_' + letter]}" onclick="zoomImage(event, '${q['option_' + letter]}')">` : q['option_' + letter]}
+      </div>
+    </div>
+  `).join('');
+
   document.getElementById('question-area').innerHTML = `
     <div class="question-card">
       <div class="q-number">📌 السؤال ${idx + 1} من ${QUESTIONS.length}</div>
-      <div class="q-text">${q.question_text}</div>
-      <div class="options">
-        ${['a', 'b', 'c', 'd'].map(letter => `
-          <div class="option ${selected === letter ? 'selected' : ''}" onclick="selectAnswer('${q.id}','${letter}')">
-            <div class="opt-letter">${letter.toUpperCase()}</div>
-            <div class="opt-text">${q['option_' + letter]}</div>
-          </div>
-        `).join('')}
-      </div>
+      ${q.question_text && q.question_text !== 'سؤال مصور' ? `<div class="q-text">${q.question_text}</div>` : ''}
+      ${q.media_url ? `<img src="${q.media_url}" class="q-img" onclick="zoomImage(event, '${q.media_url}')">` : ''}
+      <div class="options">${optsHtml}</div>
     </div>`;
+  
   document.getElementById('q-counter').textContent = `${idx + 1} / ${QUESTIONS.length}`;
   document.getElementById('btn-prev').disabled = idx === 0;
   document.getElementById('btn-next').disabled = idx === QUESTIONS.length - 1;
@@ -229,7 +318,19 @@ let saveTimeout;
 async function selectAnswer(qId, letter) {
   if (submitted) return;
   ANSWERS[qId] = letter;
-  showQuestion(currentQ);
+  
+  if (EXAM_MODE === 'pdf') {
+    // Update bubble UI
+    ['a','b','c','d'].forEach(l => {
+      const el = document.getElementById(`bub-${qId}-${l}`);
+      if(el) {
+        if(l===letter) el.classList.add('selected');
+        else el.classList.remove('selected');
+      }
+    });
+  } else {
+    showQuestion(currentQ);
+  }
   
   // Auto-save to server
   const ind = document.getElementById('save-indicator');
@@ -240,7 +341,6 @@ async function selectAnswer(qId, letter) {
   saveTimeout = setTimeout(async () => {
     try {
       const { data: { session } } = await sb.auth.getSession();
-      // Upsert
       await sb.from('student_answers').upsert({
         student_id: session.user.id,
         exam_id: examId,
@@ -295,11 +395,11 @@ async function submitExam() {
   submitted = true;
   closeModal();
   clearInterval(timerInterval);
-  const btn = document.getElementById('btn-finish');
-  btn.disabled = true; btn.textContent = '⏳ جاري احتساب النتيجة...';
+  
+  const btn = EXAM_MODE==='pdf' ? document.getElementById('btn-finish-pdf') : document.getElementById('btn-finish');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ جاري احتساب النتيجة...'; }
 
   try {
-    // 5. Submit through Secure RPC (Server-side grading)
     const { data: res, error } = await sb.rpc('submit_exam', { p_exam_id: examId });
     if (error) throw error;
     
@@ -309,19 +409,34 @@ async function submitExam() {
       return;
     }
 
-    showResult(res.score, res.total, res.percentage, res.time_spent, false);
+    // Refresh EXAM to check if is_results_published is true
+    const { data: eData } = await sb.from('exams').select('is_results_published').eq('id', examId).single();
+    
+    showResult(res.score, res.total, res.percentage, res.time_spent, false, eData?.is_results_published);
   } catch(e) {
     alert('حدث خطأ أثناء التسليم: ' + e.message);
-    btn.disabled = false; btn.textContent = 'إعادة التسليم';
+    if(btn) { btn.disabled = false; btn.textContent = 'إعادة التسليم'; }
     submitted = false;
   }
 }
 
-function showResult(score, total, pct, timeSpent, isAlreadyDone) {
+function showResult(score, total, pct, timeSpent, isAlreadyDone, isPublished) {
   document.getElementById('exam-screen').style.display = 'none';
   const r = document.getElementById('result-screen');
   r.style.display = 'block';
   
+  if (!isPublished) {
+    // Hidden results mode
+    r.innerHTML = `
+      <div class="result-card">
+        <div class="result-icon">⏳</div>
+        <div class="result-score" style="font-size:2rem;color:var(--dark)">تم التسليم بنجاح</div>
+        <div class="result-pct" style="color:var(--gray)">النتيجة قيد المراجعة والاعتماد من قبل المعلم.</div>
+        <button class="btn btn-primary" onclick="window.location.href='dashboard.html'" style="width:100%;margin-top:20px">← العودة للوحة التحكم</button>
+      </div>`;
+    return;
+  }
+
   const icon = pct >= 80 ? '🏆' : pct >= 60 ? '✅' : pct >= 40 ? '📊' : '📉';
   const msg = pct >= 80 ? 'ممتاز! أداء رائع' : pct >= 60 ? 'جيد جداً' : pct >= 40 ? 'مقبول — حاول أكثر' : 'تحتاج مراجعة';
   const mins = Math.floor(timeSpent / 60), secs = timeSpent % 60;
@@ -349,17 +464,14 @@ function setupAntiCheat() {
       const w = document.getElementById('cheat-warning');
       w.style.display = 'block';
       setTimeout(() => w.style.display = 'none', 4000);
-      
-      // Log cheat attempt (optional: send to DB)
-      console.warn('Cheat attempt detected. Count:', cheatCount);
     }
   });
   
   document.addEventListener('contextmenu', e => e.preventDefault());
+  // Allow copy/paste might be needed for legit reasons if it's text, but generally disable it.
   document.addEventListener('copy', e => e.preventDefault());
   document.addEventListener('paste', e => e.preventDefault());
   
-  // Prevent accidentally closing page
   window.addEventListener('beforeunload', function (e) {
     if (!submitted) {
       e.preventDefault();

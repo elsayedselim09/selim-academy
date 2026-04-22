@@ -1125,16 +1125,49 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       <div class="fg" style="flex:1"><label>المدة (دقائق) *</label><input type="number" id="exam-duration" value="30" min="5" max="180"></div>
     </div>
     <div class="fg-row">
-      <div class="fg"><label>المادة *</label><select id="exam-subject-sel"><option value="">— اختر —</option></select></div>
+      <div class="fg"><label>المادة *</label><select id="exam-subject-sel" onchange="updateExamGrades()"><option value="">— اختر —</option></select></div>
       <div class="fg"><label>الصف</label><select id="exam-grade-sel"><option value="">— اختر —</option></select></div>
     </div>
-    <div style="border-top:1px solid var(--gray-mid);margin:16px 0;padding-top:16px">
+    
+    <div class="fg" style="margin-top:10px">
+      <label>نوع الاختبار *</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label style="flex:1;background:var(--gray-light);padding:10px;border-radius:10px;border:1px solid var(--gray-mid);cursor:pointer;display:flex;align-items:center;gap:8px">
+          <input type="radio" name="exam_mode" value="manual" checked onchange="toggleExamMode()"> 📝 إدخال نصي
+        </label>
+        <label style="flex:1;background:var(--gray-light);padding:10px;border-radius:10px;border:1px solid var(--gray-mid);cursor:pointer;display:flex;align-items:center;gap:8px">
+          <input type="radio" name="exam_mode" value="image" onchange="toggleExamMode()"> 🖼️ إدخال صور
+        </label>
+        <label style="flex:1;background:var(--gray-light);padding:10px;border-radius:10px;border:1px solid var(--gray-mid);cursor:pointer;display:flex;align-items:center;gap:8px">
+          <input type="radio" name="exam_mode" value="pdf" onchange="toggleExamMode()"> 📄 ملف PDF كامل
+        </label>
+      </div>
+    </div>
+
+    <!-- PDF MODE CONTAINER -->
+    <div id="exam-pdf-container" style="display:none;border-top:1px solid var(--gray-mid);margin:16px 0;padding-top:16px">
+      <div class="fg">
+        <label>رابط ملف الـ PDF *</label>
+        <input type="url" id="exam-pdf-url" placeholder="https://..." style="direction:ltr">
+        <div style="font-size:0.8rem;color:var(--gray);margin-top:4px">ارفع ملف الـ PDF على Google Drive وضع رابطه المباشر هنا، أو استخدم رابط الملف من خوادمك.</div>
+      </div>
+      <div class="fg" style="max-width:200px">
+        <label>عدد الأسئلة *</label>
+        <input type="number" id="exam-pdf-qcount" value="10" min="1" max="100" onchange="generatePdfAnswerKey()">
+      </div>
+      <h3 style="font-size:1rem;font-weight:900;margin-bottom:12px">🔑 نموذج الإجابة (Answer Key)</h3>
+      <div id="pdf-answer-key" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px"></div>
+    </div>
+
+    <!-- MANUAL / IMAGE CONTAINER -->
+    <div id="exam-manual-container" style="border-top:1px solid var(--gray-mid);margin:16px 0;padding-top:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <h3 style="font-size:1rem;font-weight:900">📋 الأسئلة</h3>
         <button class="btn-primary" type="button" onclick="addQuestionField()" style="font-size:.82rem;padding:8px 16px">➕ سؤال جديد</button>
       </div>
       <div id="questions-container"></div>
     </div>
+
     <div id="exam-modal-msg"></div>
     <div style="display:flex;gap:10px;margin-top:16px">
       <button class="btn-primary" onclick="saveExam()" id="save-exam-btn" style="flex:1">💾 حفظ الاختبار</button>
@@ -2819,55 +2852,34 @@ function updateAttSummary(total) {
   const present = Object.values(attRecords).filter(s => s==='present').length;
   const absent  = Object.values(attRecords).filter(s => s==='absent').length;
   const none    = total - present - absent;
-  document.getElementById('att-pres-count').textContent = present;
-  document.getElementById('att-abs-count').textContent  = absent;
-  document.getElementById('att-none-count').textContent = none;
-  document.getElementById('att-summary').style.display  = 'flex';
-}
-
-async function saveAttendance() {
-  const date = document.getElementById('att-date').value;
-  if(!date || !curGradeForAtt) return;
-
-  const btn = document.getElementById('save-att-btn');
-  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
-
-  try {
-    const rows = Object.entries(attRecords).map(([studentId, status]) => ({
-      teacher_id:   ST.user.id,
-      student_id:   studentId,
-      grade_id:     curGradeForAtt,
-      session_date: date,
-      status,
-    }));
-
-    if(!rows.length) { toast('لم يتم تسجيل أي حضور بعد','err'); return; }
-
-    const { error } = await sb.from('teacher_attendance')
-      .upsert(rows, { onConflict: 'teacher_id,student_id,grade_id,session_date' });
-    if(error) throw error;
-    toast('✅ تم حفظ الحضور بنجاح');
-  } catch(e) {
-    toast('خطأ: '+e.message,'err');
-  } finally {
-    btn.disabled = false; btn.textContent = '💾 حفظ الحضور';
-  }
-}
-
-// ══════════════════════════════════════════════
-// PROFILE PAGE
-// ══════════════════════════════════════════════
-async function loadProfile() {
-  if(!ST.profile) return;
-  const p = ST.profile;
-  // Avatar
-  const avEl = document.getElementById('prof-av-circle');
-  if(p.avatar_url) avEl.innerHTML = `<img src="${p.avatar_url}">`;
-  else avEl.textContent = ini(p.full_name);
-  // Names
-  const nameEl = document.getElementById('prof-display-name');
-  if(nameEl) nameEl.textContent = p.full_name || '...';
-  const specEl = document.getElementById('prof-display-spec');
+  document.getElementById('att-pres-count').text  el.innerHTML = exams.map(ex => {
+    const cnt = allResults ? allResults.filter(r => r.exam_id === ex.id).length : 0;
+    const modeStr = ex.exam_mode === 'pdf' ? '📄 PDF' : ex.exam_mode === 'image' ? '🖼️ صور' : '📝 نصي';
+    return `<div class="section-card" style="margin-bottom:14px">
+      <div class="section-head">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:1.3rem">📝</span>
+          <div>
+            <h3 style="font-size:.95rem">${ex.title}</h3>
+            <div style="font-size:.78rem;color:var(--gray)">${ex.subject}${ex.grade?' · '+ex.grade:''} · ${ex.duration} دقيقة · نوع: ${modeStr}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="padding:4px 12px;border-radius:50px;font-size:.75rem;font-weight:700;background:${ex.is_published?'var(--green-light);color:var(--green)':'var(--gold-light);color:#92400E'}">${ex.is_published?'✅ منشور':' 📄 مسودة'}</span>
+          <span style="padding:4px 12px;border-radius:50px;font-size:.75rem;font-weight:700;background:${ex.is_results_published?'var(--blue-light);color:var(--blue)':'var(--gray-light);color:var(--gray)'}">${ex.is_results_published?'📢 النتائج معتمدة':' 🔒 النتائج مخفية'}</span>
+        </div>
+      </div>
+      <div class="section-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="font-size:.85rem;color:var(--gray)">👥 ${cnt} مشارك · 📅 ${new Date(ex.created_at).toLocaleDateString('ar-EG')}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${!ex.is_published ? `<button class="btn-primary" onclick="togglePublish('${ex.id}',true)" style="font-size:.8rem;padding:6px 14px">🚀 نشر الاختبار</button>` : `<button class="btn-secondary" onclick="togglePublish('${ex.id}',false)" style="font-size:.8rem;padding:6px 14px">⏸ إيقاف الاختبار</button>`}
+          ${!ex.is_results_published ? `<button class="btn-primary" onclick="togglePublishResults('${ex.id}',true)" style="font-size:.8rem;padding:6px 14px;background:var(--blue)">📢 اعتماد النتائج للطلاب</button>` : `<button class="btn-secondary" onclick="togglePublishResults('${ex.id}',false)" style="font-size:.8rem;padding:6px 14px">🔒 إخفاء النتائج</button>`}
+          <button class="btn-primary" onclick="viewExamResults('${ex.id}','${ex.title}')" style="font-size:.8rem;padding:6px 14px;background:var(--purple)">📊 عرض النتائج</button>
+          <button class="btn-secondary" onclick="deleteExam('${ex.id}')" style="font-size:.8rem;padding:6px 14px;color:var(--red)">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');ecEl = document.getElementById('prof-display-spec');
   if(specEl) specEl.textContent = (p.specialization || '') + (p.experience_years ? ' · ' + p.experience_years + ' سنوات خبرة' : '');
   // Intro video
   const vsEl = document.getElementById('intro-video-status');
@@ -3139,27 +3151,76 @@ async function loadExams() {
   }).join('');
 }
 
+function updateExamGrades() {
+  const subjName = document.getElementById('exam-subject-sel').value;
+  const gradeSel = document.getElementById('exam-grade-sel');
+  gradeSel.innerHTML = '<option value="">— اختر الصف —</option>';
+  if (!subjName || !ST.subjects) return;
+  const subject = ST.subjects.find(s => s.name === subjName);
+  if (subject && subject.teacher_grades) {
+    subject.teacher_grades.forEach(g => {
+      gradeSel.innerHTML += `<option value="${g.grade_name}">${g.grade_name}</option>`;
+    });
+  }
+}
+
+function toggleExamMode() {
+  const mode = document.querySelector('input[name="exam_mode"]:checked').value;
+  document.getElementById('exam-manual-container').style.display = (mode === 'manual' || mode === 'image') ? 'block' : 'none';
+  document.getElementById('exam-pdf-container').style.display = mode === 'pdf' ? 'block' : 'none';
+  if (mode === 'manual' || mode === 'image') {
+    // Re-render questions to match mode if we already have them, or just clear them
+    document.getElementById('questions-container').innerHTML = '';
+    examQCount = 0;
+    addQuestionField();
+  } else {
+    generatePdfAnswerKey();
+  }
+}
+
+function generatePdfAnswerKey() {
+  const count = parseInt(document.getElementById('exam-pdf-qcount').value) || 10;
+  let html = '';
+  for(let i=1; i<=count; i++) {
+    html += `
+      <div style="background:var(--gray-light);padding:8px;border-radius:8px;text-align:center;border:1px solid var(--gray-mid)">
+        <div style="font-size:0.8rem;font-weight:700;margin-bottom:6px;color:var(--gray)">س ${i}</div>
+        <select id="pdf-ans-${i}" style="width:100%;padding:4px;border-radius:4px;border:1px solid var(--gray-mid)">
+          <option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option>
+        </select>
+      </div>`;
+  }
+  document.getElementById('pdf-answer-key').innerHTML = html;
+}
+
 function openExamModal() {
   document.getElementById('mdl-exam').classList.add('show');
   document.getElementById('exam-title').value = '';
   document.getElementById('exam-duration').value = '30';
+  document.getElementById('exam-pdf-url').value = '';
   document.getElementById('exam-modal-msg').innerHTML = '';
   document.getElementById('questions-container').innerHTML = '';
+  document.querySelector('input[name="exam_mode"][value="manual"]').checked = true;
+  toggleExamMode();
+  
   examQCount = 0;
-  // Fill subject/grade dropdowns
+  // Fill subject dropdowns
   const subjSel = document.getElementById('exam-subject-sel');
-  const gradeSel = document.getElementById('exam-grade-sel');
-  subjSel.innerHTML = '<option value="">— اختر —</option>';
-  gradeSel.innerHTML = '<option value="">— اختر —</option>';
-  if (ST.subjects) ST.subjects.forEach(s => subjSel.innerHTML += `<option value="${s.name}">${s.name}</option>`);
-  if (ST.grades) ST.grades.forEach(g => gradeSel.innerHTML += `<option value="${g.grade_name}">${g.grade_name}</option>`);
-  addQuestionField();
+  subjSel.innerHTML = '<option value="">— اختر المادة —</option>';
+  document.getElementById('exam-grade-sel').innerHTML = '<option value="">— اختر الصف —</option>';
+  
+  if (ST.subjects) {
+    ST.subjects.forEach(s => subjSel.innerHTML += `<option value="${s.name}">${s.name}</option>`);
+  }
 }
 function closeExamModal() { document.getElementById('mdl-exam').classList.remove('show'); }
 
 function addQuestionField() {
   examQCount++;
   const n = examQCount;
+  const mode = document.querySelector('input[name="exam_mode"]:checked').value;
+  const isImg = mode === 'image';
+  
   document.getElementById('questions-container').insertAdjacentHTML('beforeend', `
     <div class="section-card" id="q-block-${n}" style="margin-bottom:14px">
       <div class="section-head" style="padding:12px 16px">
@@ -3167,14 +3228,18 @@ function addQuestionField() {
         <button type="button" onclick="document.getElementById('q-block-${n}').remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem">✖</button>
       </div>
       <div class="section-body" style="padding:14px 16px">
-        <div class="fg"><label>نص السؤال *</label><textarea class="eq-text" rows="2" placeholder="اكتب السؤال هنا..."></textarea></div>
+        ${isImg ? `
+          <div class="fg"><label>رابط صورة السؤال *</label><input type="url" class="eq-qimg" placeholder="https://..." style="direction:ltr"></div>
+        ` : `
+          <div class="fg"><label>نص السؤال *</label><textarea class="eq-text" rows="2" placeholder="اكتب السؤال هنا..."></textarea></div>
+        `}
         <div class="fg-row">
-          <div class="fg"><label>A</label><input class="eq-a" type="text" placeholder="الخيار A"></div>
-          <div class="fg"><label>B</label><input class="eq-b" type="text" placeholder="الخيار B"></div>
+          <div class="fg"><label>A</label><input class="eq-a" type="${isImg?'url':'text'}" placeholder="${isImg?'رابط صورة الخيار A':'الخيار A'}" ${isImg?'style="direction:ltr"':''}></div>
+          <div class="fg"><label>B</label><input class="eq-b" type="${isImg?'url':'text'}" placeholder="${isImg?'رابط صورة الخيار B':'الخيار B'}" ${isImg?'style="direction:ltr"':''}></div>
         </div>
         <div class="fg-row">
-          <div class="fg"><label>C</label><input class="eq-c" type="text" placeholder="الخيار C"></div>
-          <div class="fg"><label>D</label><input class="eq-d" type="text" placeholder="الخيار D"></div>
+          <div class="fg"><label>C</label><input class="eq-c" type="${isImg?'url':'text'}" placeholder="${isImg?'رابط صورة الخيار C':'الخيار C'}" ${isImg?'style="direction:ltr"':''}></div>
+          <div class="fg"><label>D</label><input class="eq-d" type="${isImg?'url':'text'}" placeholder="${isImg?'رابط صورة الخيار D':'الخيار D'}" ${isImg?'style="direction:ltr"':''}></div>
         </div>
         <div class="fg"><label>الإجابة الصحيحة *</label><select class="eq-correct"><option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option></select></div>
       </div>
@@ -3186,25 +3251,57 @@ async function saveExam() {
   const duration = parseInt(document.getElementById('exam-duration').value) || 30;
   const subject = document.getElementById('exam-subject-sel').value;
   const grade = document.getElementById('exam-grade-sel').value;
+  const mode = document.querySelector('input[name="exam_mode"]:checked').value;
+  
   if (!title || !subject) { setMsg('exam-modal-msg','الرجاء ملء العنوان والمادة','err'); return; }
-  const blocks = document.querySelectorAll('#questions-container .section-card');
-  if (blocks.length === 0) { setMsg('exam-modal-msg','أضف سؤال واحد على الأقل','err'); return; }
-  const questions = [];
-  for (let i = 0; i < blocks.length; i++) {
-    const b = blocks[i];
-    const qt = b.querySelector('.eq-text').value.trim();
-    const a = b.querySelector('.eq-a').value.trim();
-    const bv = b.querySelector('.eq-b').value.trim();
-    const c = b.querySelector('.eq-c').value.trim();
-    const d = b.querySelector('.eq-d').value.trim();
-    const correct = b.querySelector('.eq-correct').value;
-    if (!qt || !a || !bv || !c || !d) { setMsg('exam-modal-msg',`السؤال ${i+1}: الرجاء ملء كل الحقول`,'err'); return; }
-    questions.push({ question_text:qt, option_a:a, option_b:bv, option_c:c, option_d:d, correct_answer:correct, sort_order:i });
+  
+  let questions = [];
+  let mediaUrl = null;
+
+  if (mode === 'pdf') {
+    mediaUrl = document.getElementById('exam-pdf-url').value.trim();
+    if(!mediaUrl) { setMsg('exam-modal-msg','الرجاء إدخال رابط ملف الـ PDF','err'); return; }
+    const count = parseInt(document.getElementById('exam-pdf-qcount').value) || 10;
+    for(let i=1; i<=count; i++) {
+      const ans = document.getElementById('pdf-ans-'+i).value;
+      questions.push({
+        question_text: 'سؤال ' + i,
+        option_a: 'A', option_b: 'B', option_c: 'C', option_d: 'D',
+        correct_answer: ans,
+        sort_order: i-1
+      });
+    }
+  } else {
+    const blocks = document.querySelectorAll('#questions-container .section-card');
+    if (blocks.length === 0) { setMsg('exam-modal-msg','أضف سؤال واحد على الأقل','err'); return; }
+    const isImg = mode === 'image';
+    for (let i = 0; i < blocks.length; i++) {
+      const b = blocks[i];
+      const qt = isImg ? 'سؤال مصور' : b.querySelector('.eq-text').value.trim();
+      const qImg = isImg ? b.querySelector('.eq-qimg').value.trim() : null;
+      const a = b.querySelector('.eq-a').value.trim();
+      const bv = b.querySelector('.eq-b').value.trim();
+      const c = b.querySelector('.eq-c').value.trim();
+      const d = b.querySelector('.eq-d').value.trim();
+      const correct = b.querySelector('.eq-correct').value;
+      
+      if (isImg && (!qImg || !a || !bv || !c || !d)) { setMsg('exam-modal-msg',`السؤال ${i+1}: الرجاء ملء جميع الروابط`,'err'); return; }
+      if (!isImg && (!qt || !a || !bv || !c || !d)) { setMsg('exam-modal-msg',`السؤال ${i+1}: الرجاء ملء جميع الحقول`,'err'); return; }
+      
+      questions.push({
+        question_text: qt, media_url: qImg, is_image_options: isImg,
+        option_a: a, option_b: bv, option_c: c, option_d: d,
+        correct_answer: correct, sort_order: i
+      });
+    }
   }
+
   const btn = document.getElementById('save-exam-btn');
   btn.disabled = true; btn.textContent = '⏳...';
   try {
-    const { data: exam, error: e1 } = await sb.from('exams').insert({ title, subject, grade, duration, teacher_id: ST.user.id }).select().single();
+    const { data: exam, error: e1 } = await sb.from('exams').insert({ 
+      title, subject, grade, duration, teacher_id: ST.user.id, exam_mode: mode, media_url: mediaUrl 
+    }).select().single();
     if (e1) throw e1;
     const qs = questions.map(q => ({ ...q, exam_id: exam.id }));
     const { error: e2 } = await sb.from('questions').insert(qs);
@@ -3221,6 +3318,15 @@ async function togglePublish(examId, publish) {
     const { error } = await sb.from('exams').update({ is_published: publish }).eq('id', examId);
     if (error) throw error;
     toast(publish ? '✅ تم نشر الاختبار' : '⏸ تم إيقاف الاختبار');
+    await loadExams();
+  } catch(e) { toast('خطأ: '+e.message,'err'); }
+}
+
+async function togglePublishResults(examId, publish) {
+  try {
+    const { error } = await sb.from('exams').update({ is_results_published: publish }).eq('id', examId);
+    if (error) throw error;
+    toast(publish ? '✅ تم اعتماد النتائج وعرضها للطلاب' : '🔒 تم إخفاء النتائج');
     await loadExams();
   } catch(e) { toast('خطأ: '+e.message,'err'); }
 }
