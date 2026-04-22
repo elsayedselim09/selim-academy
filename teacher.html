@@ -2852,34 +2852,55 @@ function updateAttSummary(total) {
   const present = Object.values(attRecords).filter(s => s==='present').length;
   const absent  = Object.values(attRecords).filter(s => s==='absent').length;
   const none    = total - present - absent;
-  document.getElementById('att-pres-count').text  el.innerHTML = exams.map(ex => {
-    const cnt = allResults ? allResults.filter(r => r.exam_id === ex.id).length : 0;
-    const modeStr = ex.exam_mode === 'pdf' ? '📄 PDF' : ex.exam_mode === 'image' ? '🖼️ صور' : '📝 نصي';
-    return `<div class="section-card" style="margin-bottom:14px">
-      <div class="section-head">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:1.3rem">📝</span>
-          <div>
-            <h3 style="font-size:.95rem">${ex.title}</h3>
-            <div style="font-size:.78rem;color:var(--gray)">${ex.subject}${ex.grade?' · '+ex.grade:''} · ${ex.duration} دقيقة · نوع: ${modeStr}</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="padding:4px 12px;border-radius:50px;font-size:.75rem;font-weight:700;background:${ex.is_published?'var(--green-light);color:var(--green)':'var(--gold-light);color:#92400E'}">${ex.is_published?'✅ منشور':' 📄 مسودة'}</span>
-          <span style="padding:4px 12px;border-radius:50px;font-size:.75rem;font-weight:700;background:${ex.is_results_published?'var(--blue-light);color:var(--blue)':'var(--gray-light);color:var(--gray)'}">${ex.is_results_published?'📢 النتائج معتمدة':' 🔒 النتائج مخفية'}</span>
-        </div>
-      </div>
-      <div class="section-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-        <div style="font-size:.85rem;color:var(--gray)">👥 ${cnt} مشارك · 📅 ${new Date(ex.created_at).toLocaleDateString('ar-EG')}</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${!ex.is_published ? `<button class="btn-primary" onclick="togglePublish('${ex.id}',true)" style="font-size:.8rem;padding:6px 14px">🚀 نشر الاختبار</button>` : `<button class="btn-secondary" onclick="togglePublish('${ex.id}',false)" style="font-size:.8rem;padding:6px 14px">⏸ إيقاف الاختبار</button>`}
-          ${!ex.is_results_published ? `<button class="btn-primary" onclick="togglePublishResults('${ex.id}',true)" style="font-size:.8rem;padding:6px 14px;background:var(--blue)">📢 اعتماد النتائج للطلاب</button>` : `<button class="btn-secondary" onclick="togglePublishResults('${ex.id}',false)" style="font-size:.8rem;padding:6px 14px">🔒 إخفاء النتائج</button>`}
-          <button class="btn-primary" onclick="viewExamResults('${ex.id}','${ex.title}')" style="font-size:.8rem;padding:6px 14px;background:var(--purple)">📊 عرض النتائج</button>
-          <button class="btn-secondary" onclick="deleteExam('${ex.id}')" style="font-size:.8rem;padding:6px 14px;color:var(--red)">🗑️</button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');ecEl = document.getElementById('prof-display-spec');
+  document.getElementById('att-pres-count').textContent = present;
+  document.getElementById('att-abs-count').textContent  = absent;
+  document.getElementById('att-none-count').textContent = none;
+  document.getElementById('att-summary').style.display  = 'flex';
+}
+
+async function saveAttendance() {
+  const date = document.getElementById('att-date').value;
+  if(!date || !curGradeForAtt) return;
+
+  const btn = document.getElementById('save-att-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+
+  try {
+    const rows = Object.entries(attRecords).map(([studentId, status]) => ({
+      teacher_id:   ST.user.id,
+      student_id:   studentId,
+      grade_id:     curGradeForAtt,
+      session_date: date,
+      status,
+    }));
+
+    if(!rows.length) { toast('لم يتم تسجيل أي حضور بعد','err'); return; }
+
+    const { error } = await sb.from('teacher_attendance')
+      .upsert(rows, { onConflict: 'teacher_id,student_id,grade_id,session_date' });
+    if(error) throw error;
+    toast('✅ تم حفظ الحضور بنجاح');
+  } catch(e) {
+    toast('خطأ: '+e.message,'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 حفظ الحضور';
+  }
+}
+
+// ══════════════════════════════════════════════
+// PROFILE PAGE
+// ══════════════════════════════════════════════
+async function loadProfile() {
+  if(!ST.profile) return;
+  const p = ST.profile;
+  // Avatar
+  const avEl = document.getElementById('prof-av-circle');
+  if(p.avatar_url) avEl.innerHTML = `<img src="${p.avatar_url}">`;
+  else avEl.textContent = ini(p.full_name);
+  // Names
+  const nameEl = document.getElementById('prof-display-name');
+  if(nameEl) nameEl.textContent = p.full_name || '...';
+  const specEl = document.getElementById('prof-display-spec');
   if(specEl) specEl.textContent = (p.specialization || '') + (p.experience_years ? ' · ' + p.experience_years + ' سنوات خبرة' : '');
   // Intro video
   const vsEl = document.getElementById('intro-video-status');
