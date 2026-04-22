@@ -1694,7 +1694,7 @@ async function openStudentDetail(studentId) {
   // جلب طلبات الاشتراك والتسجيلات معاً
   const [reqRes, enrRes] = await Promise.all([
     sb.from('subscription_requests')
-      .select('id,status,subject,grade,session_type,days_info,created_at')
+      .select('id,status,subject,grade,session_type,days_info,created_at,assigned_teacher_id')
       .eq('user_id', studentId)
       .order('created_at', {ascending: false}),
     sb.from('teacher_enrollments')
@@ -1741,40 +1741,56 @@ async function openStudentDetail(studentId) {
       </div>
     </div>
 
-    <!-- Subscription Requests -->
+    <!-- Subscription Requests + clickable approved ones -->
     <div style="margin-bottom:14px">
-      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">📤 سجل طلبات الاشتراك (${reqs.length})</div>
+      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">
+        📤 سجل طلبات الاشتراك (${reqs.length})
+        ${reqs.some(r=>r.status==='approved') ? '<span style="font-weight:400;color:var(--blue);font-size:.75rem"> — اضغط على المادة المقبولة لعرض تفاصيلها</span>' : ''}
+      </div>
       ${reqs.length
-        ? reqs.map(r => `
-          <div style="padding:10px 12px;background:var(--gray-light);border-radius:8px;margin-bottom:7px;border-right:3px solid ${r.status==='approved'?'var(--green)':r.status==='rejected'?'var(--red)':'var(--gold)'}">
+        ? reqs.map(r => {
+            const isApproved = r.status === 'approved';
+            const teacherIdForReq = enrs.find(e => (e.subject_name||'').includes(r.subject||'') || (r.subject||'').includes(e.subject_name||''))?.teacher_id || '';
+            const assignedTeacherId = r.assigned_teacher_id || teacherIdForReq;
+            return `
+          <div
+            ${isApproved ? `onclick="openStudentSubjectDetailFromReq('${studentId}','${assignedTeacherId}','${(r.subject||'').replace(/'/g,"\\'")}','${(r.grade||'').replace(/'/g,"\\'")}','${r.id}')"` : ''}
+            style="padding:10px 14px;background:${isApproved?'var(--green-light)':'var(--gray-light)'};border-radius:10px;margin-bottom:7px;border-right:3px solid ${isApproved?'var(--green)':r.status==='rejected'?'var(--red)':'var(--gold)'};${isApproved?'cursor:pointer;border:1.5px solid #6EE7B7;':''}transition:all .2s"
+            ${isApproved ? `onmouseover="this.style.background='#A7F3D0'" onmouseout="this.style.background='var(--green-light)'"` : ''}>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-              <span style="font-size:.85rem;font-weight:700">${r.subject||'—'}</span>
-              ${statusBadge(r.status)}
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:1.1rem">📚</span>
+                <span style="font-size:.88rem;font-weight:700;color:var(--dark)">${r.subject||'—'}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                ${statusBadge(r.status)}
+                ${isApproved ? `<span style="font-size:.74rem;color:var(--blue);font-weight:700">عرض التفاصيل ←</span>` : ''}
+              </div>
             </div>
             <div style="font-size:.74rem;color:var(--gray)">
               ${r.grade ? `🏫 ${r.grade} · ` : ''}${r.session_type || ''} · ${fds(r.created_at)}
             </div>
             ${r.days_info ? `<div style="font-size:.72rem;color:var(--gray);margin-top:2px">📅 ${r.days_info}</div>` : ''}
-          </div>`).join('')
+          </div>`;
+          }).join('')
         : '<div style="color:var(--gray);font-size:.83rem">لم يقدم أي طلب بعد</div>'
       }
     </div>
 
-    <!-- Teacher Enrollments -->
+    <!-- Teacher Enrollments (إن وُجدت) -->
     ${enrs.length ? `
-    <div>
-      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">👨‍🏫 المواد المشترك بها (${enrs.length}) — <span style="font-weight:400;color:var(--blue)">اضغط على المادة لعرض تفاصيلها</span></div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">👨‍🏫 تسجيلات إضافية (${enrs.length})</div>
       ${enrs.map(e => `
         <div onclick="openStudentSubjectDetail('${studentId}','${e.teacher_id}','${(e.subject_name||'').replace(/'/g,"\\'")}','${(e.grade_name||'').replace(/'/g,"\\'")}','${e.grade_id||''}')"
-          style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--green-light);border:1.5px solid #6EE7B7;border-radius:10px;margin-bottom:7px;cursor:pointer;transition:all .2s"
-          onmouseover="this.style.background='#A7F3D0';this.style.transform='translateX(-2px)'"
-          onmouseout="this.style.background='var(--green-light)';this.style.transform='translateX(0)'">
-          <span style="font-size:1.2rem">📚</span>
+          style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--blue-light);border:1.5px solid #BFDBFE;border-radius:10px;margin-bottom:7px;cursor:pointer;transition:all .2s"
+          onmouseover="this.style.background='#DBEAFE'" onmouseout="this.style.background='var(--blue-light)'">
+          <span style="font-size:1.1rem">📖</span>
           <div style="flex:1">
             <div style="font-size:.88rem;font-weight:700;color:var(--dark)">${e.subject_name||'—'}</div>
             <div style="font-size:.73rem;color:var(--gray);margin-top:2px">${e.grade_name||'غير محدد'}</div>
           </div>
-          <span style="font-size:.78rem;color:var(--blue);font-weight:700">عرض التفاصيل ←</span>
+          <span style="font-size:.74rem;color:var(--blue);font-weight:700">عرض التفاصيل ←</span>
         </div>`).join('')}
     </div>` : ''}`;
 }
@@ -1782,7 +1798,22 @@ async function openStudentDetail(studentId) {
 // ══════════════════════════════════
 // STUDENT SUBJECT DETAIL
 // ══════════════════════════════════
-async function openStudentSubjectDetail(studentId, teacherId, subjectName, gradeName, gradeId) {
+
+// نقطة دخول من طلب الاشتراك المقبول (قد لا يوجد teacher_enrollments)
+async function openStudentSubjectDetailFromReq(studentId, teacherId, subjectName, gradeName, reqId) {
+  // محاولة جلب معرف المعلم من subscription_requests إذا لم يكن موجوداً
+  if (!teacherId) {
+    const { data: reqData } = await sb.from('subscription_requests')
+      .select('assigned_teacher_id')
+      .eq('id', reqId)
+      .maybeSingle();
+    teacherId = reqData?.assigned_teacher_id || '';
+  }
+  // فتح نافذة التفاصيل — بدون grade_id (لأنها قادمة من طلب اشتراك)
+  openStudentSubjectDetail(studentId, teacherId, subjectName, gradeName, '', reqId);
+}
+
+async function openStudentSubjectDetail(studentId, teacherId, subjectName, gradeName, gradeId, reqId) {
   // إغلاق نافذة تفاصيل الطالب وفتح نافذة تفاصيل المادة
   document.getElementById('mdl-student-detail').classList.remove('show');
   const modal = document.getElementById('mdl-student-subject-detail');
@@ -1801,12 +1832,32 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
     const studentName = student?.full_name || 'الطالب';
 
     // جلب البيانات بالتوازي
+    // إذا لم يكن هناك معلم محدد، نجلب الحصص بناءً على اسم المادة فقط
+    const sessQuery = teacherId
+      ? sb.from('teacher_sessions')
+          .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,teacher_id')
+          .eq('teacher_id', teacherId)
+          .order('scheduled_at', {ascending: false})
+      : sb.from('teacher_sessions')
+          .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,teacher_id')
+          .ilike('subject_name', `%${subjectName}%`)
+          .order('scheduled_at', {ascending: false});
+
+    const enrollQuery = teacherId
+      ? sb.from('teacher_enrollments')
+          .select('enrolled_at,subject_name,grade_name')
+          .eq('student_id', studentId)
+          .eq('teacher_id', teacherId)
+          .maybeSingle()
+      : sb.from('subscription_requests')
+          .select('created_at,subject,grade')
+          .eq('user_id', studentId)
+          .eq('subject', subjectName)
+          .eq('status', 'approved')
+          .maybeSingle();
+
     const [sessRes, attRes, examRes, enrollRes] = await Promise.all([
-      // حصص المعلم لهذه المادة
-      sb.from('teacher_sessions')
-        .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name')
-        .eq('teacher_id', teacherId)
-        .order('scheduled_at', {ascending: false}),
+      sessQuery,
 
       // سجل حضور الطالب
       sb.from('attendance')
@@ -1818,13 +1869,12 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
         .select('id,exam_id,score,total_questions,percentage,time_spent,created_at')
         .eq('student_id', studentId),
 
-      // تفاصيل التسجيل
-      sb.from('teacher_enrollments')
-        .select('enrolled_at,subject_name,grade_name')
-        .eq('student_id', studentId)
-        .eq('teacher_id', teacherId)
-        .maybeSingle()
+      enrollQuery
     ]);
+
+    const enrolledAt = teacherId
+      ? enrollRes.data?.enrolled_at
+      : enrollRes.data?.created_at;
 
     // الحصص المرتبطة بهذه المادة
     let sessions = (sessRes.data || []).filter(s =>
@@ -1876,7 +1926,7 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
         <div style="flex:1">
           <div style="font-size:1rem;font-weight:900;color:var(--dark)">${subjectName}</div>
           <div style="font-size:.78rem;color:var(--gray);margin-top:3px">🎓 ${studentName} · ${gradeName || 'غير محدد'}</div>
-          ${enrollRes.data ? `<div style="font-size:.72rem;color:var(--gray);margin-top:2px">📅 تاريخ الانضمام: ${fds(enrollRes.data.enrolled_at)}</div>` : ''}
+          ${enrolledAt ? `<div style="font-size:.72rem;color:var(--gray);margin-top:2px">📅 تاريخ الاشتراك: ${fds(enrolledAt)}</div>` : ''}
         </div>
       </div>
 
