@@ -1433,11 +1433,41 @@ async function loadStudentExams() {
   if (!el) return;
   el.innerHTML = '<div style="text-align:center;padding:20px"><div class="skel" style="height:80px;border-radius:12px;margin-bottom:10px"></div></div>';
   try {
-    const { data: publishedExams } = await sb.from('exams').select('*').eq('is_published', true).order('created_at', { ascending: false });
+    // جلب تسجيلات الطالب عند معلميه (teacher_id + grade_id)
+    const { data: myEnrollments } = await sb.from('teacher_enrollments')
+      .select('teacher_id, grade_id, grade_name, subject_name')
+      .eq('student_id', STATE.user.id);
+
+    if (!myEnrollments || myEnrollments.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray)"><div style="font-size:3rem;margin-bottom:10px">📝</div><p style="font-weight:700">لا توجد اختبارات متاحة — تأكد من تسجيلك مع معلم</p></div>';
+      return;
+    }
+
+    // جلب كل الاختبارات المنشورة لمعلمي الطالب فقط
+    const myTeacherIds = [...new Set(myEnrollments.map(e => e.teacher_id))];
+    const { data: allTeacherExams } = await sb.from('exams')
+      .select('*')
+      .eq('is_published', true)
+      .in('teacher_id', myTeacherIds)
+      .order('created_at', { ascending: false });
+
+    // فلترة الاختبارات: teacher_id + grade_id يجب أن يطابق تسجيل الطالب
+    const publishedExams = (allTeacherExams || []).filter(ex => {
+      return myEnrollments.some(enr => {
+        const teacherMatch = enr.teacher_id === ex.teacher_id;
+        // إذا كان الاختبار محدد بـ grade_id → مطابقة دقيقة
+        if (ex.grade_id) return teacherMatch && enr.grade_id === ex.grade_id;
+        // إذا لم يكن هناك grade_id → اعتمد على نص الصف (للاختبارات القديمة)
+        if (ex.grade) return teacherMatch && (enr.grade_name === ex.grade || !ex.grade);
+        // اختبار بدون صف محدد → يظهر لكل طلاب المعلم
+        return teacherMatch;
+      });
+    });
+
     const { data: myResults } = await sb.from('results').select('exam_id,score,total_questions,percentage').eq('student_id', STATE.user.id);
     const doneIds = (myResults||[]).map(r=>r.exam_id);
     if (!publishedExams || publishedExams.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray)"><div style="font-size:3rem;margin-bottom:10px">📝</div><p style="font-weight:700">لا توجد اختبارات متاحة حالياً</p></div>';
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray)"><div style="font-size:3rem;margin-bottom:10px">📝</div><p style="font-weight:700">لا توجد اختبارات متاحة لصفك حالياً</p></div>';
       return;
     }
     el.innerHTML = publishedExams.map(ex => {

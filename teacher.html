@@ -3197,7 +3197,8 @@ function updateExamGrades() {
   const subject = ST.subjects.find(s => s.name === subjName);
   if (subject && subject.teacher_grades) {
     subject.teacher_grades.forEach(g => {
-      gradeSel.innerHTML += `<option value="${g.name}">${g.name}</option>`;
+      // value = "gradeId::gradeName" لنحفظ الاثنين معاً
+      gradeSel.innerHTML += `<option value="${g.id}::${g.name}">${g.name}</option>`;
     });
   }
 }
@@ -3401,7 +3402,10 @@ async function saveExam() {
   const title = document.getElementById('exam-title').value.trim();
   const duration = parseInt(document.getElementById('exam-duration').value) || 30;
   const subject = document.getElementById('exam-subject-sel').value;
-  const grade = document.getElementById('exam-grade-sel').value;
+  const gradeRaw = document.getElementById('exam-grade-sel').value;
+  // gradeRaw = "gradeId::gradeName" or empty
+  const gradeId   = gradeRaw ? gradeRaw.split('::')[0] : null;
+  const gradeName = gradeRaw ? gradeRaw.split('::').slice(1).join('::') : null;
   const mode = document.querySelector('input[name="exam_mode"]:checked').value;
   
   if (!title || !subject) { setMsg('exam-modal-msg','الرجاء ملء العنوان والمادة','err'); return; }
@@ -3491,7 +3495,7 @@ async function saveExam() {
 
     btn.textContent = '⏳ جاري الحفظ...';
     const { data: exam, error: e1 } = await sb.from('exams').insert({ 
-      title, subject, grade, duration, teacher_id: ST.user.id, exam_mode: mode, media_url: mediaUrl 
+      title, subject, grade: gradeName, grade_id: gradeId, duration, teacher_id: ST.user.id, exam_mode: mode, media_url: mediaUrl 
     }).select().single();
     if (e1) throw e1;
     const qs = questions.map(q => ({ ...q, exam_id: exam.id }));
