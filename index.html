@@ -1940,6 +1940,8 @@ async function renderTeachers() {
 // ══════════════════════════════════════════════
 // TEACHER DETAIL MODAL
 // ══════════════════════════════════════════════
+// TEACHER DETAIL MODAL
+// ══════════════════════════════════════════════
 async function openTeacherModal(teacherId) {
   var modal = document.getElementById('teacher-modal');
   modal.classList.add('show');
@@ -1964,7 +1966,7 @@ async function openTeacherModal(teacherId) {
     if (profRes.error) throw profRes.error;
     var p = profRes.data;
 
-    // Header
+    // Header — صورة + اسم + تخصص
     var avEl = document.getElementById('tmdl-av');
     if (p.avatar_url) {
       avEl.innerHTML = '<img src="' + p.avatar_url + '" alt="">';
@@ -1975,7 +1977,8 @@ async function openTeacherModal(teacherId) {
     document.getElementById('tmdl-spec').textContent = (p.specialization && p.specialization.trim()) ? p.specialization : '';
 
     var chips = '';
-    if (p.experience_years && p.experience_years.trim()) chips += '<span class="tmdl-chip">⏱ ' + p.experience_years + ' خبرة</span>';
+    if (p.experience_years && p.experience_years.trim())
+      chips += '<span class="tmdl-chip">⏱ ' + p.experience_years + ' خبرة</span>';
     document.getElementById('tmdl-chips').innerHTML = chips;
 
     if (p.bio && p.bio.trim()) {
@@ -2025,138 +2028,6 @@ async function openTeacherModal(teacherId) {
           '</div>';
         });
       });
-    }
-
-    document.getElementById('tmdl-grades-body').innerHTML = html;
-  } catch(e) {
-    console.error('Teacher modal error:', e);
-    document.getElementById('tmdl-grades-body').innerHTML =
-      '<div style="color:#EF4444;text-align:center;padding:20px;">خطأ في تحميل البيانات</div>';
-  }
-}
-    document.getElementById('tmdl-name').textContent = p.full_name || 'معلم';
-    document.getElementById('tmdl-spec').textContent = p.specialization || '';
-
-    var chips = '';
-    if (p.experience_years) chips += '<span class="tmdl-chip">⏱ ' + p.experience_years + ' خبرة</span>';
-    document.getElementById('tmdl-chips').innerHTML = chips;
-
-    // Bio
-    if (p.bio) {
-      document.getElementById('tmdl-bio').textContent = p.bio;
-      document.getElementById('tmdl-bio-sec').style.display = 'block';
-    }
-
-    // 2) جلب المواد والصفوف
-    var subjRes = await window._sb
-      .from('teacher_subjects')
-      .select('id, name, teacher_grades(id, name, group_name, schedule_days, schedule_time, max_students)')
-      .eq('teacher_id', teacherId);
-    var subjects = subjRes.data || [];
-
-    // 3) جلب الحصص القادمة
-    var now = new Date().toISOString();
-    var sessRes = await window._sb
-      .from('teacher_sessions')
-      .select('id, title, scheduled_at, duration_min, subject_name, grade_name, status')
-      .eq('teacher_id', teacherId)
-      .gte('scheduled_at', now)
-      .order('scheduled_at', { ascending: true })
-      .limit(10);
-    var sessions = sessRes.data || [];
-
-    // Build grades+sessions UI
-    var html = '';
-
-    if (subjects.length === 0 && sessions.length === 0) {
-      html = '<div class="tmdl-no-sess">لم يتم إضافة صفوف أو مجموعات بعد</div>';
-    } else {
-      // Group sessions by grade_name for quick lookup
-      var sessByGrade = {};
-      sessions.forEach(function(s) {
-        var key = s.grade_name || '__general__';
-        if (!sessByGrade[key]) sessByGrade[key] = [];
-        sessByGrade[key].push(s);
-      });
-
-      subjects.forEach(function(subj) {
-        var grades = subj.teacher_grades || [];
-        if (grades.length === 0) return;
-        grades.forEach(function(g) {
-          var gradeSessions = sessByGrade[g.name] || [];
-          var sessHtml = '';
-          if (gradeSessions.length > 0) {
-            sessHtml = gradeSessions.slice(0,4).map(function(s) {
-              var dt = new Date(s.scheduled_at);
-              var dateStr = dt.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long' });
-              var timeStr = dt.toLocaleTimeString('ar-EG', { hour:'2-digit', minute:'2-digit' });
-              var isLive = s.status === 'live';
-              return '<div class="tmdl-sess-item">' +
-                '<div class="tmdl-sess-dot ' + (isLive ? 'live' : 'upcoming') + '"></div>' +
-                '<div class="tmdl-sess-info">' +
-                  '<div class="tmdl-sess-title">' + (s.title || 'حصة دراسية') + '</div>' +
-                  '<div class="tmdl-sess-meta">📅 ' + dateStr + ' · ⏰ ' + timeStr + (s.duration_min ? ' · ' + s.duration_min + ' دقيقة' : '') + '</div>' +
-                '</div>' +
-                (isLive ? '<span style="background:#D1FAE5;color:#065F46;padding:3px 10px;border-radius:50px;font-size:.7rem;font-weight:700;">🔴 الآن</span>' : '') +
-              '</div>';
-            }).join('');
-          } else if (g.schedule_days || g.schedule_time) {
-            // Show schedule info from grade record
-            var schedInfo = '';
-            if (g.schedule_days) schedInfo += '📅 ' + g.schedule_days;
-            if (g.schedule_time) schedInfo += (schedInfo ? ' · ' : '') + '⏰ ' + g.schedule_time;
-            sessHtml = '<div class="tmdl-sess-item">' +
-              '<div class="tmdl-sess-dot upcoming"></div>' +
-              '<div class="tmdl-sess-info"><div class="tmdl-sess-title">مواعيد المجموعة</div>' +
-              '<div class="tmdl-sess-meta">' + schedInfo + '</div></div>' +
-            '</div>';
-          } else {
-            sessHtml = '<div class="tmdl-no-sess" style="font-size:.8rem;">لا توجد حصص قادمة</div>';
-          }
-
-          html += '<div class="tmdl-grade-card">' +
-            '<div class="tmdl-grade-head">' +
-              '<div class="tmdl-grade-icon">' + (g.name||'').slice(0,2) + '</div>' +
-              '<div>' +
-                '<div class="tmdl-grade-name">' + (g.name || 'مجموعة') + (g.group_name ? ' — ' + g.group_name : '') + '</div>' +
-                '<div class="tmdl-grade-subj">📚 ' + (subj.name || '') + (g.max_students ? ' · 👥 حتى ' + g.max_students + ' طالب' : '') + '</div>' +
-              '</div>' +
-            '</div>' +
-            '<div class="tmdl-sess-list">' + sessHtml + '</div>' +
-          '</div>';
-        });
-      });
-
-      // Sessions not linked to a grade
-      var ungradedSessions = sessions.filter(function(s) {
-        return !subjects.some(function(subj) {
-          return (subj.teacher_grades||[]).some(function(g) { return g.name === s.grade_name; });
-        });
-      });
-      if (ungradedSessions.length > 0) {
-        html += '<div class="tmdl-grade-card">' +
-          '<div class="tmdl-grade-head">' +
-            '<div class="tmdl-grade-icon">📅</div>' +
-            '<div><div class="tmdl-grade-name">حصص عامة</div></div>' +
-          '</div>' +
-          '<div class="tmdl-sess-list">' +
-          ungradedSessions.slice(0,4).map(function(s) {
-            var dt = new Date(s.scheduled_at);
-            var dateStr = dt.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long' });
-            var timeStr = dt.toLocaleTimeString('ar-EG', { hour:'2-digit', minute:'2-digit' });
-            return '<div class="tmdl-sess-item">' +
-              '<div class="tmdl-sess-dot upcoming"></div>' +
-              '<div class="tmdl-sess-info">' +
-                '<div class="tmdl-sess-title">' + (s.title||'حصة') + '</div>' +
-                '<div class="tmdl-sess-meta">📅 ' + dateStr + ' · ⏰ ' + timeStr + '</div>' +
-              '</div></div>';
-          }).join('') +
-          '</div></div>';
-      }
-
-      if (!html) {
-        html = '<div class="tmdl-no-sess">لم يتم إضافة صفوف أو مجموعات بعد</div>';
-      }
     }
 
     document.getElementById('tmdl-grades-body').innerHTML = html;
