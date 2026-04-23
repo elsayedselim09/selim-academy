@@ -679,22 +679,76 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
   color:#fff; text-align:center; position:relative; overflow:hidden;
 }
 .profile-header::before { content:''; position:absolute; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.06); top:-80px; left:-50px }
+.av-circle-wrap {
+  position:relative; width:110px; height:110px; margin:0 auto 16px; z-index:1;
+  cursor:pointer;
+}
 .av-circle {
-  width:100px; height:100px; border-radius:50%;
+  width:110px; height:110px; border-radius:50%;
   background:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.1));
-  border:3px solid rgba(255,255,255,.4);
+  border:4px solid rgba(255,255,255,.5);
   display:flex; align-items:center; justify-content:center;
-  font-size:2.2rem; font-weight:900; color:#fff;
-  margin:0 auto 14px; overflow:hidden; position:relative; z-index:1;
+  font-size:2.4rem; font-weight:900; color:#fff;
+  overflow:hidden; position:relative;
+  transition:all .25s; box-shadow:0 4px 20px rgba(0,0,0,.25);
 }
-.av-circle img { width:100%; height:100%; object-fit:cover }
-.av-upload-lbl {
-  display:inline-flex; align-items:center; gap:6px; padding:7px 18px;
-  background:rgba(255,255,255,.2); border:1.5px solid rgba(255,255,255,.4);
-  border-radius:50px; color:#fff; font-size:.8rem; font-weight:700;
-  cursor:pointer; transition:all .2s; position:relative; z-index:1;
+.av-circle img { width:100%; height:100%; object-fit:cover; display:block }
+.av-circle-wrap:hover .av-circle { border-color:rgba(255,255,255,.9); box-shadow:0 6px 28px rgba(0,0,0,.35) }
+
+/* Camera overlay on hover */
+.av-overlay {
+  position:absolute; inset:0; border-radius:50%;
+  background:rgba(0,0,0,0); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:4px;
+  transition:background .25s; pointer-events:none;
 }
-.av-upload-lbl:hover { background:rgba(255,255,255,.3) }
+.av-circle-wrap:hover .av-overlay { background:rgba(0,0,0,.45) }
+.av-overlay-icon { font-size:1.5rem; opacity:0; transform:scale(.7); transition:all .25s }
+.av-overlay-txt  { font-size:.62rem; font-weight:700; color:#fff; opacity:0; transform:translateY(4px); transition:all .25s }
+.av-circle-wrap:hover .av-overlay-icon { opacity:1; transform:scale(1) }
+.av-circle-wrap:hover .av-overlay-txt  { opacity:1; transform:translateY(0) }
+
+/* Camera badge bottom-right */
+.av-cam-badge {
+  position:absolute; bottom:4px; left:4px;
+  width:30px; height:30px; border-radius:50%;
+  background:white; border:2.5px solid var(--blue);
+  display:flex; align-items:center; justify-content:center;
+  font-size:.85rem; box-shadow:0 2px 8px rgba(0,0,0,.2);
+  transition:all .2s; z-index:2;
+}
+.av-circle-wrap:hover .av-cam-badge { background:var(--blue); transform:scale(1.1) }
+
+/* Loading spinner on avatar */
+.av-loading-ring {
+  position:absolute; inset:-4px; border-radius:50%;
+  border:4px solid transparent;
+  border-top-color:#fff; border-right-color:rgba(255,255,255,.4);
+  animation:spin .7s linear infinite; display:none;
+}
+.av-circle-wrap.uploading .av-loading-ring { display:block }
+.av-circle-wrap.uploading .av-cam-badge { display:none }
+
+/* Actions menu */
+.av-actions-menu {
+  position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%);
+  background:#fff; border:1px solid var(--gray-mid); border-radius:14px;
+  box-shadow:0 8px 32px rgba(0,0,0,.15); padding:8px;
+  min-width:180px; z-index:100; display:none; animation:fadeIn .2s ease;
+}
+.av-actions-menu.show { display:block }
+.av-action-btn {
+  display:flex; align-items:center; gap:10px; padding:10px 14px;
+  border-radius:9px; width:100%; border:none; background:none;
+  font-family:'Cairo',sans-serif; font-size:.85rem; font-weight:700;
+  color:var(--dark); cursor:pointer; transition:all .15s; text-align:right;
+}
+.av-action-btn:hover { background:var(--gray-light) }
+.av-action-btn.danger { color:var(--red) }
+.av-action-btn.danger:hover { background:var(--red-light) }
+.av-action-sep { height:1px; background:var(--gray-mid); margin:4px 0 }
+
+.av-upload-lbl { display:none }
 .prof-name { font-size:1.3rem; font-weight:900; margin:10px 0 4px; position:relative; z-index:1 }
 .prof-spec { font-size:.85rem; opacity:.8; position:relative; z-index:1 }
 .intro-video-wrap {
@@ -991,11 +1045,29 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
   <div class="page" id="page-profile">
     <!-- Profile header card -->
     <div class="profile-header">
-      <div class="av-circle" id="prof-av-circle">م</div>
-      <label class="av-upload-lbl">
-        📷 تغيير الصورة
-        <input type="file" id="prof-av-input" accept="image/*" style="display:none" onchange="handleAvatarChange(this)">
-      </label>
+      <!-- Avatar wrapper — click opens action menu -->
+      <div class="av-circle-wrap" id="prof-av-wrap" onclick="toggleAvatarMenu(event)">
+        <div class="av-circle" id="prof-av-circle">م</div>
+        <div class="av-overlay">
+          <div class="av-overlay-icon">📷</div>
+          <div class="av-overlay-txt">تغيير الصورة</div>
+        </div>
+        <div class="av-cam-badge">📷</div>
+        <div class="av-loading-ring"></div>
+        <!-- Dropdown menu -->
+        <div class="av-actions-menu" id="av-menu">
+          <button class="av-action-btn" onclick="triggerAvatarUpload(event)">
+            📁 رفع صورة من الجهاز
+          </button>
+          <div class="av-action-sep"></div>
+          <button class="av-action-btn danger" onclick="removeAvatar(event)">
+            🗑️ حذف الصورة الحالية
+          </button>
+        </div>
+      </div>
+      <!-- Hidden file input -->
+      <input type="file" id="prof-av-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" onchange="handleAvatarChange(this)">
+      <label class="av-upload-lbl"></label>
       <div class="prof-name" id="prof-display-name">...</div>
       <div class="prof-spec" id="prof-display-spec">...</div>
     </div>
@@ -3092,28 +3164,113 @@ async function loadProfile() {
   fill('sett-bio',   p.bio);
 }
 
-async function handleAvatarChange(input) {
-  if(!input.files||!input.files[0]) return;
-  const file = input.files[0];
-  // Preview
-  const avEl = document.getElementById('prof-av-circle');
-  const reader = new FileReader();
-  reader.onload = e => { avEl.innerHTML = `<img src="${e.target.result}">`; };
-  reader.readAsDataURL(file);
+// ──────────────────────────────────────────────
+// AVATAR MENU & UPLOAD  (Facebook-style)
+// ──────────────────────────────────────────────
+function toggleAvatarMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('av-menu');
+  const isShow = menu.classList.contains('show');
+  // Close any open menus first
+  document.querySelectorAll('.av-actions-menu.show').forEach(m => m.classList.remove('show'));
+  if (!isShow) menu.classList.add('show');
+}
+// Close menu when clicking outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.av-actions-menu.show').forEach(m => m.classList.remove('show'));
+});
+
+function triggerAvatarUpload(e) {
+  e.stopPropagation();
+  document.getElementById('av-menu').classList.remove('show');
+  document.getElementById('prof-av-input').click();
+}
+
+async function removeAvatar(e) {
+  e.stopPropagation();
+  document.getElementById('av-menu').classList.remove('show');
+  if (!ST.profile?.avatar_url) { toast('لا توجد صورة لحذفها', 'err'); return; }
+  if (!confirm('هل تريد حذف صورة البروفايل؟')) return;
+  const wrap = document.getElementById('prof-av-wrap');
+  wrap.classList.add('uploading');
   try {
-    const path = `${ST.user.id}/avatar.${file.name.split('.').pop()}`;
-    const { error: e1 } = await sb.storage.from('avatars').upload(path, file, { upsert:true });
-    if(e1) throw e1;
+    // Remove from storage
+    const oldPath = `${ST.user.id}/avatar`;
+    // Try common extensions
+    for (const ext of ['jpg','jpeg','png','webp','gif']) {
+      await sb.storage.from('avatars').remove([`${oldPath}.${ext}`]);
+    }
+    const { error } = await sb.from('profiles').update({ avatar_url: null }).eq('id', ST.user.id);
+    if (error) throw error;
+    ST.profile = { ...ST.profile, avatar_url: null };
+    const avEl = document.getElementById('prof-av-circle');
+    avEl.innerHTML = '';
+    avEl.textContent = ini(ST.profile.full_name);
+    const sav = document.getElementById('sidebar-av');
+    if (sav) { sav.innerHTML = ''; sav.textContent = ini(ST.profile.full_name); }
+    toast('✅ تم حذف الصورة');
+  } catch(err) { toast('خطأ: ' + err.message, 'err'); }
+  finally { wrap.classList.remove('uploading'); }
+}
+
+async function handleAvatarChange(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+
+  // Validate size (max 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    toast('❌ حجم الصورة يجب أن يكون أقل من 5MB', 'err');
+    input.value = '';
+    return;
+  }
+
+  const wrap = document.getElementById('prof-av-wrap');
+  const avEl = document.getElementById('prof-av-circle');
+
+  // Show instant local preview
+  const reader = new FileReader();
+  reader.onload = ev => { avEl.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover">`; };
+  reader.readAsDataURL(file);
+
+  // Show uploading state
+  wrap.classList.add('uploading');
+
+  try {
+    const ext  = file.name.split('.').pop().toLowerCase() || 'jpg';
+    const path = `${ST.user.id}/avatar.${ext}`;
+
+    const { error: e1 } = await sb.storage.from('avatars').upload(path, file, {
+      upsert: true,
+      contentType: file.type,
+    });
+    if (e1) throw e1;
+
     const { data } = sb.storage.from('avatars').getPublicUrl(path);
     const url = data.publicUrl + '?t=' + Date.now();
+
     const { error: e2 } = await sb.from('profiles').update({ avatar_url: url }).eq('id', ST.user.id);
-    if(e2) throw e2;
+    if (e2) throw e2;
+
     ST.profile = { ...ST.profile, avatar_url: url };
-    // Update sidebar avatar
+
+    // Update sidebar avatar too
     const sav = document.getElementById('sidebar-av');
-    if(sav) sav.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-    toast('✅ تم تحديث الصورة');
-  } catch(e) { toast('خطأ في رفع الصورة: '+e.message,'err'); }
+    if (sav) sav.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+
+    toast('✅ تم تحديث صورة البروفايل بنجاح');
+  } catch(err) {
+    toast('❌ خطأ في رفع الصورة: ' + err.message, 'err');
+    // Revert preview on error
+    if (ST.profile?.avatar_url) {
+      avEl.innerHTML = `<img src="${ST.profile.avatar_url}" style="width:100%;height:100%;object-fit:cover">`;
+    } else {
+      avEl.innerHTML = '';
+      avEl.textContent = ini(ST.profile?.full_name);
+    }
+  } finally {
+    wrap.classList.remove('uploading');
+    input.value = ''; // reset so same file can be re-selected
+  }
 }
 
 async function saveProfile() {
