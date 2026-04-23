@@ -496,8 +496,13 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
 
   <!-- STUDENTS -->
   <div class="page" id="page-students">
-    <div class="page-title">👥 الطلاب</div>
-    <p class="page-sub">جميع الطلاب المسجلين في المنصة</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:10px">
+      <div class="page-title">👥 الطلاب</div>
+      <button class="btn-primary" onclick="openManualEnroll()" style="background:var(--green);gap:8px">
+        ➕ إضافة اشتراك يدوي
+      </button>
+    </div>
+    <p class="page-sub">جميع الطلاب المسجلين في المنصة — يمكنك إضافة اشتراك يدوياً لأي طالب تواصل معك على واتساب</p>
     <div class="section-card">
       <div class="section-head"><h3>قائمة الطلاب</h3><span id="stu-count" style="font-size:.82rem;color:var(--gray)"></span></div>
       <div id="stu-body"></div>
@@ -2792,5 +2797,312 @@ async function deleteSubscription() {
 
 </script>
 <script src="pwa-register.js" defer></script>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- MODAL: إضافة اشتراك يدوي                                  -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="mdl" id="mdl-manual-enroll" style="z-index:1100">
+  <div class="mdl-box wide" style="max-width:580px;max-height:90vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-shrink:0">
+      <div>
+        <div class="mdl-title" style="margin-bottom:4px;text-align:right">➕ إضافة اشتراك يدوي</div>
+        <div style="font-size:.8rem;color:var(--gray);text-align:right">للطلاب الذين تواصلوا واتساب واستقروا على المادة والمعلم</div>
+      </div>
+      <button onclick="document.getElementById('mdl-manual-enroll').classList.remove('show')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray);flex-shrink:0">✕</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding-left:4px">
+
+      <!-- خطوة 1: الطالب -->
+      <div style="background:var(--blue-light);border:1px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:.78rem;font-weight:700;color:var(--blue);margin-bottom:8px">① اختر الطالب</div>
+        <div class="fg" style="margin-bottom:0">
+          <input type="text" id="me-student-search" placeholder="🔍 ابحث باسم الطالب أو رقم هاتفه..." oninput="filterManualStudents()" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none">
+          <div id="me-student-list" style="margin-top:8px;max-height:140px;overflow-y:auto;border:1px solid var(--gray-mid);border-radius:9px;background:var(--white);display:none"></div>
+          <div id="me-student-selected" style="margin-top:8px;display:none;background:var(--green-light);border:1px solid #6EE7B7;border-radius:9px;padding:10px 13px;display:flex;align-items:center;justify-content:space-between"></div>
+        </div>
+      </div>
+
+      <!-- خطوة 2: المادة والمعلم -->
+      <div style="background:var(--purple-light);border:1px solid #DDD6FE;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:.78rem;font-weight:700;color:var(--purple);margin-bottom:10px">② المادة والمعلم</div>
+        <div class="fg-row">
+          <div class="fg" style="margin-bottom:0">
+            <label style="font-size:.78rem">المادة *</label>
+            <input type="text" id="me-subject" placeholder="مثال: رياضيات، فيزياء..." style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none">
+          </div>
+          <div class="fg" style="margin-bottom:0">
+            <label style="font-size:.78rem">الصف الدراسي *</label>
+            <input type="text" id="me-grade-text" placeholder="مثال: أول ثانوي..." style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none">
+          </div>
+        </div>
+        <div class="fg" style="margin-bottom:6px;margin-top:10px">
+          <label style="font-size:.78rem">المعلم *</label>
+          <select id="me-teacher-sel" onchange="loadManualGrades()" style="width:100%;padding:10px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:var(--white)">
+            <option value="">— اختر المعلم —</option>
+          </select>
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label style="font-size:.78rem">الصف عند المعلم (اختياري)</label>
+          <select id="me-grade-sel" style="width:100%;padding:10px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:var(--white)">
+            <option value="">— اختر صف المعلم —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- خطوة 3: تفاصيل إضافية -->
+      <div style="background:var(--gold-light);border:1px solid #FCD34D;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:.78rem;font-weight:700;color:#92400E;margin-bottom:10px">③ تفاصيل الاشتراك (اختياري)</div>
+        <div class="fg-row">
+          <div class="fg" style="margin-bottom:0">
+            <label style="font-size:.78rem">نوع الحصة</label>
+            <select id="me-session-type" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:var(--white)">
+              <option value="">— اختر —</option>
+              <option value="فردي">فردي</option>
+              <option value="جروب">جروب</option>
+              <option value="أونلاين">أونلاين</option>
+              <option value="أوفلاين">أوفلاين</option>
+            </select>
+          </div>
+          <div class="fg" style="margin-bottom:0">
+            <label style="font-size:.78rem">عدد الحصص المتبقية</label>
+            <input type="number" id="me-sessions-rem" min="0" placeholder="مثال: 8" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none">
+          </div>
+        </div>
+        <div class="fg" style="margin-bottom:6px;margin-top:10px">
+          <label style="font-size:.78rem">المواعيد والأيام</label>
+          <input type="text" id="me-days-info" placeholder="مثال: السبت والثلاثاء 5-6م" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none">
+        </div>
+        <div class="fg-row">
+          <div class="fg" style="margin-bottom:0">
+            <label style="font-size:.78rem">تاريخ انتهاء الاشتراك</label>
+            <input type="date" id="me-end-date" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;direction:ltr">
+          </div>
+          <div class="fg" style="margin-bottom:0">
+            <label style="font-size:.78rem">المنهج / الكتاب</label>
+            <input type="text" id="me-curriculum" placeholder="مثال: المنهج الوطني" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none">
+          </div>
+        </div>
+        <div class="fg" style="margin-bottom:0;margin-top:10px">
+          <label style="font-size:.78rem">ملاحظات الإدارة</label>
+          <textarea id="me-notes" rows="2" placeholder="أي ملاحظات تريد إضافتها على هذا الاشتراك..." style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;resize:none"></textarea>
+        </div>
+      </div>
+
+      <div id="me-msg"></div>
+    </div>
+
+    <div class="mdl-btns" style="flex-shrink:0;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-mid)">
+      <button class="mdl-cancel" onclick="document.getElementById('mdl-manual-enroll').classList.remove('show')">إلغاء</button>
+      <button class="mdl-confirm mc-approve" id="me-save-btn" onclick="saveManualEnroll()">✅ إضافة الاشتراك</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════
+// MANUAL ENROLLMENT (إضافة اشتراك يدوي)
+// ══════════════════════════════════
+let _meSelectedStudent = null;
+
+function openManualEnroll() {
+  _meSelectedStudent = null;
+
+  // تنظيف الحقول
+  ['me-student-search','me-subject','me-grade-text','me-days-info','me-curriculum','me-notes','me-sessions-rem'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('me-end-date').value = '';
+  document.getElementById('me-session-type').value = '';
+  document.getElementById('me-student-list').style.display = 'none';
+  document.getElementById('me-student-list').innerHTML = '';
+  const selDiv = document.getElementById('me-student-selected');
+  selDiv.style.display = 'none';
+  selDiv.innerHTML = '';
+  document.getElementById('me-msg').innerHTML = '';
+
+  // تعبئة المعلمين
+  const approvedTeachers = (S.teachers || []).filter(t => t.teacher_approved === true);
+  const tSel = document.getElementById('me-teacher-sel');
+  tSel.innerHTML = '<option value="">— اختر المعلم —</option>' +
+    approvedTeachers.map(t =>
+      `<option value="${t.id}">${t.full_name || '—'} ${t.specialization ? '('+t.specialization+')' : ''}</option>`
+    ).join('');
+  document.getElementById('me-grade-sel').innerHTML = '<option value="">— اختر صف المعلم —</option>';
+
+  document.getElementById('mdl-manual-enroll').classList.add('show');
+}
+
+function filterManualStudents() {
+  const q = document.getElementById('me-student-search').value.trim().toLowerCase();
+  const listEl = document.getElementById('me-student-list');
+  if (q.length < 1) { listEl.style.display = 'none'; return; }
+
+  const results = (S.students || []).filter(s =>
+    (s.full_name||'').toLowerCase().includes(q) ||
+    (s.phone||'').includes(q)
+  ).slice(0, 8);
+
+  if (!results.length) {
+    listEl.innerHTML = '<div style="padding:12px;text-align:center;font-size:.82rem;color:var(--gray)">لا يوجد طلاب بهذا الاسم</div>';
+    listEl.style.display = 'block';
+    return;
+  }
+
+  listEl.innerHTML = results.map(s => `
+    <div onclick="selectManualStudent('${s.id}')"
+         style="padding:10px 13px;cursor:pointer;border-bottom:1px solid var(--gray-mid);font-size:.87rem;display:flex;align-items:center;gap:9px;transition:background .15s"
+         onmouseover="this.style.background='var(--gray-light)'" onmouseout="this.style.background=''">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-mid));display:flex;align-items:center;justify-content:center;color:#fff;font-size:.75rem;font-weight:900;flex-shrink:0">${ini(s.full_name)}</div>
+      <div>
+        <div style="font-weight:700;color:var(--dark)">${s.full_name || '—'}</div>
+        <div style="font-size:.73rem;color:var(--gray)">${s.phone || '—'}</div>
+      </div>
+    </div>
+  `).join('');
+  listEl.style.display = 'block';
+}
+
+function selectManualStudent(id) {
+  const s = (S.students || []).find(x => x.id === id);
+  if (!s) return;
+  _meSelectedStudent = s;
+
+  document.getElementById('me-student-list').style.display = 'none';
+  document.getElementById('me-student-search').value = '';
+
+  const selDiv = document.getElementById('me-student-selected');
+  selDiv.style.display = 'flex';
+  selDiv.innerHTML = `
+    <div style="display:flex;align-items:center;gap:9px">
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--green),#0B8A5F);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.78rem;font-weight:900">${ini(s.full_name)}</div>
+      <div>
+        <div style="font-size:.88rem;font-weight:700;color:#065F46">${s.full_name || '—'}</div>
+        <div style="font-size:.73rem;color:#0E9F6E">${s.phone || '—'}</div>
+      </div>
+    </div>
+    <button onclick="clearManualStudent()" style="background:none;border:none;cursor:pointer;font-size:1rem;color:#0E9F6E" title="تغيير الطالب">✕</button>
+  `;
+}
+
+function clearManualStudent() {
+  _meSelectedStudent = null;
+  const selDiv = document.getElementById('me-student-selected');
+  selDiv.style.display = 'none';
+  selDiv.innerHTML = '';
+  document.getElementById('me-student-search').value = '';
+}
+
+async function loadManualGrades() {
+  const tid = document.getElementById('me-teacher-sel').value;
+  const gSel = document.getElementById('me-grade-sel');
+  if (!tid) { gSel.innerHTML = '<option value="">— اختر صف المعلم —</option>'; return; }
+  const { data: grades } = await sb.from('teacher_grades').select('id,name').eq('teacher_id', tid);
+  gSel.innerHTML = '<option value="">— اختر صف —</option>' +
+    (grades || []).map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+}
+
+async function saveManualEnroll() {
+  const btn = document.getElementById('me-save-btn');
+  const msgEl = document.getElementById('me-msg');
+  msgEl.innerHTML = '';
+
+  // التحقق
+  if (!_meSelectedStudent) {
+    msgEl.innerHTML = '<div class="msg-err">❌ اختر الطالب أولاً</div>'; return;
+  }
+  const subject = document.getElementById('me-subject').value.trim();
+  if (!subject) {
+    msgEl.innerHTML = '<div class="msg-err">❌ اكتب اسم المادة</div>'; return;
+  }
+  const teacherId = document.getElementById('me-teacher-sel').value;
+  if (!teacherId) {
+    msgEl.innerHTML = '<div class="msg-err">❌ اختر المعلم</div>'; return;
+  }
+
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+
+  try {
+    const gradeId   = document.getElementById('me-grade-sel').value || null;
+    const gradeName = gradeId
+      ? document.getElementById('me-grade-sel').selectedOptions[0]?.text
+      : (document.getElementById('me-grade-text').value.trim() || null);
+    const sessionType  = document.getElementById('me-session-type').value || null;
+    const daysInfo     = document.getElementById('me-days-info').value.trim() || null;
+    const endDate      = document.getElementById('me-end-date').value || null;
+    const curriculum   = document.getElementById('me-curriculum').value.trim() || null;
+    const notes        = document.getElementById('me-notes').value.trim() || null;
+    const sessRem      = document.getElementById('me-sessions-rem').value;
+    const teacher      = S.teachers.find(t => t.id === teacherId);
+
+    // 1. إنشاء subscription_request بحالة approved مباشرة
+    const reqPayload = {
+      user_id            : _meSelectedStudent.id,
+      status             : 'approved',
+      subject            : subject,
+      grade              : gradeName || document.getElementById('me-grade-text').value.trim() || null,
+      student_name       : _meSelectedStudent.full_name,
+      student_phone      : _meSelectedStudent.phone || null,
+      session_type       : sessionType,
+      days_info          : daysInfo,
+      curriculum         : curriculum,
+      assigned_teacher_id: teacherId,
+      end_date           : endDate || null,
+      sessions_remaining : sessRem !== '' ? parseInt(sessRem) : null,
+      admin_notes        : notes || 'تم إضافته يدوياً من الإدارة',
+      created_at         : new Date().toISOString(),
+      updated_at         : new Date().toISOString(),
+    };
+
+    const { data: newReq, error: e1 } = await sb
+      .from('subscription_requests')
+      .insert(reqPayload)
+      .select()
+      .single();
+    if (e1) throw e1;
+
+    // 2. إضافة teacher_enrollment
+    const teacherSubRes = await sb.from('teacher_subjects')
+      .select('id').eq('teacher_id', teacherId)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+
+    const enrollPayload = {
+      teacher_id  : teacherId,
+      student_id  : _meSelectedStudent.id,
+      grade_id    : gradeId || null,
+      grade_name  : gradeName || null,
+      subject_name: subject,
+      enrolled_at : new Date().toISOString(),
+    };
+    if (teacherSubRes.data?.id) enrollPayload.subject_id = teacherSubRes.data.id;
+
+    const { error: e2 } = await sb.from('teacher_enrollments').insert(enrollPayload);
+    if (e2 && !e2.message?.includes('duplicate')) throw e2;
+
+    // 3. إشعار للطالب
+    await sb.from('notifications').insert({
+      user_id: _meSelectedStudent.id,
+      icon   : '✅',
+      text   : `تم تسجيلك في مادة "${subject}" مع ${teacher?.full_name || 'المعلم'}${daysInfo ? ' — ' + daysInfo : ''}`,
+      is_read: false,
+    });
+
+    // 4. تحديث البيانات المحلية وإغلاق الـ modal
+    S.requests.unshift({ ...reqPayload, id: newReq.id, profiles: _meSelectedStudent });
+    refreshStats();
+    updateBadge();
+    toast(`✅ تم إضافة اشتراك "${subject}" للطالب ${_meSelectedStudent.full_name} بنجاح`);
+    document.getElementById('mdl-manual-enroll').classList.remove('show');
+
+    // إعادة تحميل الطلاب لتحديث الجدول
+    if (typeof loadStudents === 'function') loadStudents();
+
+  } catch(e) {
+    msgEl.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = '✅ إضافة الاشتراك';
+  }
+}
+</script>
 </body>
 </html>
