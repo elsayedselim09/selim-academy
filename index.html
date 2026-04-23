@@ -790,6 +790,27 @@ footer{background:var(--dark);padding:60px 5% 30px;}
     if (data.session) {
       btns.innerHTML = '<a href="' + DASHBOARD_APP_URL + '" class="btn-register">🎓 حسابي</a>';
     }
+
+    // === تشخيص Supabase — يظهر في الـ console فقط ===
+    try {
+      var diagRes = await window._sb
+        .from('profiles')
+        .select('id, full_name, role, is_approved')
+        .eq('role', 'teacher');
+      if (diagRes.error) {
+        console.error('🔴 [DIAG] خطأ في قراءة profiles:', diagRes.error);
+        console.warn('💡 الحل المحتمل: افتح Supabase → Table Editor → profiles → RLS وتأكد أن هناك سياسة SELECT مفتوحة للـ anon role، أو أضف السياسة:\n  CREATE POLICY "allow_read_approved_teachers" ON profiles FOR SELECT USING (true);');
+      } else {
+        var all = diagRes.data || [];
+        var teachers = all.filter(function(r){ return r.is_approved; });
+        console.log('✅ [DIAG] كل المعلمين في profiles:', all.length, '— المعتمدون:', teachers.length);
+        if (teachers.length === 0 && all.length > 0) {
+          console.warn('⚠️ [DIAG] يوجد معلمون لكن is_approved = false لجميعهم. افتح Supabase وعدّل is_approved إلى true لهم.');
+        }
+      }
+    } catch(e) {
+      console.error('🔴 [DIAG] استثناء في الاتصال بـ Supabase:', e);
+    }
   });
 </script>
 </head>
@@ -1859,14 +1880,22 @@ async function renderTeachers() {
     // جلب المعلمين المعتمدين فقط — بدون رقم الموبايل
     var res = await window._sb
       .from('profiles')
-      .select('id, full_name, avatar_url, specialization, experience_years, bio, role')
+      .select('id, full_name, avatar_url, specialization, experience_years, bio, role, is_approved')
       .eq('role', 'teacher')
       .eq('is_approved', true);
+
+    // تسجيل أي خطأ من Supabase في الـ console
+    if (res.error) {
+      console.error('Supabase teachers query error:', res.error);
+      // إظهار رسالة تشخيصية في الـ grid
+      grid.innerHTML = '<p style="text-align:center;color:#EF4444;grid-column:1/-1;padding:40px 0;">⚠️ تعذر تحميل المدرسين: ' + (res.error.message || res.error.code || 'خطأ غير معروف') + '<br><small style="color:#9CA3AF;">تحقق من إعدادات RLS في Supabase</small></p>';
+      return;
+    }
 
     var teachers = (res.data || []);
 
     if (teachers.length === 0) {
-      grid.innerHTML = '<p style="text-align:center;color:#6B7280;grid-column:1/-1;padding:40px 0;">لا يوجد مدرسون متاحون حالياً</p>';
+      grid.innerHTML = '<p style="text-align:center;color:#6B7280;grid-column:1/-1;padding:40px 0;">لا يوجد مدرسون متاحون حالياً<br><small style="color:#9CA3AF;">تأكد أن المعلمين لديهم is_approved = true و role = teacher في جدول profiles</small></p>';
       return;
     }
 
