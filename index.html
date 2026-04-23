@@ -174,18 +174,20 @@ section{padding:80px 5%;}
 /* ── TEACHERS ── */
 #teachers{background:var(--white);}
 .teachers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:24px;}
-.teacher-card{background:#fff;border:1px solid var(--gray-mid);border-radius:var(--radius);padding:28px;text-align:center;transition:all .3s;cursor:pointer;}
+.teacher-card{background:#fff;border:1px solid var(--gray-mid);border-radius:var(--radius);overflow:hidden;transition:all .3s;cursor:pointer;display:flex;flex-direction:column;}
 .teacher-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--blue);}
-.teacher-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-mid));display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 14px;overflow:hidden;}
-.teacher-avatar img{width:100%;height:100%;object-fit:cover;}
-.teacher-name{font-size:1.05rem;font-weight:900;margin-bottom:4px;}
-.teacher-subject{font-size:.85rem;color:var(--blue);font-weight:600;margin-bottom:10px;}
-.teacher-stars{color:var(--gold);font-size:.9rem;margin-bottom:12px;}
-.teacher-badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;}
+.teacher-avatar{width:100%;aspect-ratio:1/1;background:linear-gradient(135deg,var(--blue),var(--blue-mid));display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:900;color:#fff;overflow:hidden;flex-shrink:0;}
+.teacher-avatar img{width:100%;height:100%;object-fit:cover;object-position:top center;}
+.teacher-card-body{padding:18px 20px;display:flex;flex-direction:column;flex:1;}
+.teacher-name{font-size:1.05rem;font-weight:900;margin-bottom:3px;}
+.teacher-subject{font-size:.82rem;color:var(--blue);font-weight:600;margin-bottom:10px;}
+.teacher-bio{font-size:.82rem;color:var(--gray);line-height:1.65;margin-bottom:14px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.teacher-stars{color:var(--gold);font-size:.9rem;margin-bottom:10px;}
+.teacher-badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
 .badge{padding:3px 10px;border-radius:50px;font-size:.75rem;font-weight:600;}
 .badge.blue{background:var(--blue-light);color:var(--blue);}
 .badge.green{background:#ECFDF5;color:var(--green);}
-.teacher-btn{display:block;padding:8px;border:1px solid var(--gray-mid);border-radius:8px;color:var(--blue);font-size:.85rem;font-weight:600;text-decoration:none;transition:all .2s;}
+.teacher-btn{display:block;padding:9px;border:1px solid var(--gray-mid);border-radius:8px;color:var(--blue);font-size:.85rem;font-weight:600;text-decoration:none;transition:all .2s;text-align:center;}
 .teacher-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue);}
 
 /* skeleton loader for teachers */
@@ -1897,17 +1899,20 @@ async function renderTeachers() {
       var avatarHtml = t.avatar_url
         ? '<img src="' + t.avatar_url + '" alt="' + (t.full_name||'') + '">'
         : initials;
-      var expBadge = t.experience_years ? t.experience_years + ' خبرة' : '';
-      var bioShort = t.bio ? (t.bio.length > 90 ? t.bio.slice(0,90) + '...' : t.bio) : 'مدرس متخصص في أكاديمية سليم.';
+      var expBadge  = (t.experience_years && t.experience_years.trim()) ? t.experience_years + ' خبرة' : '';
+      var specText  = (t.specialization  && t.specialization.trim())   ? t.specialization   : 'تخصص متنوع';
+      var bioText   = (t.bio && t.bio.trim()) ? t.bio : 'مدرس متخصص في أكاديمية سليم.';
       return (
-        '<div class="teacher-card" onclick="openTeacherModal(\'' + t.id + '\')">' +
+        '<div class="teacher-card" onclick="openTeacherModal(\'' + t.id + '\')">'+
           '<div class="teacher-avatar">' + avatarHtml + '</div>' +
-          '<div class="teacher-name">' + (t.full_name || 'معلم') + '</div>' +
-          '<div class="teacher-subject">' + (t.specialization || 'تخصص متنوع') + '</div>' +
-          '<div class="teacher-stars">★★★★★</div>' +
-          (expBadge ? '<div class="teacher-badges"><span class="badge green">' + expBadge + '</span></div>' : '') +
-          '<p style="font-size:.82rem;color:var(--gray);line-height:1.6;margin-bottom:14px;">' + bioShort + '</p>' +
-          '<div class="teacher-btn">👁️ عرض التفاصيل</div>' +
+          '<div class="teacher-card-body">' +
+            '<div class="teacher-name">' + (t.full_name || 'معلم') + '</div>' +
+            '<div class="teacher-subject">' + specText + '</div>' +
+            '<div class="teacher-stars">★★★★★</div>' +
+            (expBadge ? '<div class="teacher-badges"><span class="badge green">' + expBadge + '</span></div>' : '') +
+            '<div class="teacher-bio">' + bioText + '</div>' +
+            '<div class="teacher-btn">👁️ عرض التفاصيل</div>' +
+          '</div>' +
         '</div>'
       );
     }).join('');
@@ -1918,12 +1923,14 @@ async function renderTeachers() {
       return (
         '<div class="teacher-card">' +
           '<div class="teacher-avatar"' + (t.avatarStyle ? ' style="' + t.avatarStyle + '"' : '') + '>' + t.avatar + '</div>' +
-          '<div class="teacher-name">' + t.name + '</div>' +
-          '<div class="teacher-subject">' + t.subject + '</div>' +
-          '<div class="teacher-stars">★★★★★ (' + t.rating + ')</div>' +
-          '<div class="teacher-badges"><span class="badge green">' + t.badge + '</span></div>' +
-          '<p style="font-size:.82rem;color:var(--gray);line-height:1.6;margin-bottom:14px;">' + t.desc + '</p>' +
-          '<a href="#booking" class="teacher-btn">📅 احجز حصة</a>' +
+          '<div class="teacher-card-body">' +
+            '<div class="teacher-name">' + t.name + '</div>' +
+            '<div class="teacher-subject">' + t.subject + '</div>' +
+            '<div class="teacher-stars">★★★★★</div>' +
+            '<div class="teacher-badges"><span class="badge green">' + t.badge + '</span></div>' +
+            '<div class="teacher-bio">' + t.desc + '</div>' +
+            '<a href="#booking" class="teacher-btn">📅 احجز حصة</a>' +
+          '</div>' +
         '</div>'
       );
     }).join('');
@@ -1938,7 +1945,7 @@ async function openTeacherModal(teacherId) {
   modal.classList.add('show');
   document.body.style.overflow = 'hidden';
 
-  // Reset content
+  // Reset
   document.getElementById('tmdl-av').innerHTML = '⏳';
   document.getElementById('tmdl-name').textContent = '...';
   document.getElementById('tmdl-spec').textContent = '';
@@ -1948,7 +1955,7 @@ async function openTeacherModal(teacherId) {
     '<div style="text-align:center;padding:24px;color:#9CA3AF;">⏳ جاري التحميل...</div>';
 
   try {
-    // 1) جلب بيانات المعلم — بدون phone
+    // 1) بيانات المعلم
     var profRes = await window._sb
       .from('profiles')
       .select('id, full_name, avatar_url, specialization, experience_years, bio')
@@ -1957,13 +1964,76 @@ async function openTeacherModal(teacherId) {
     if (profRes.error) throw profRes.error;
     var p = profRes.data;
 
-    // Fill header
+    // Header
     var avEl = document.getElementById('tmdl-av');
     if (p.avatar_url) {
       avEl.innerHTML = '<img src="' + p.avatar_url + '" alt="">';
     } else {
       avEl.textContent = ini(p.full_name);
     }
+    document.getElementById('tmdl-name').textContent = p.full_name || 'معلم';
+    document.getElementById('tmdl-spec').textContent = (p.specialization && p.specialization.trim()) ? p.specialization : '';
+
+    var chips = '';
+    if (p.experience_years && p.experience_years.trim()) chips += '<span class="tmdl-chip">⏱ ' + p.experience_years + ' خبرة</span>';
+    document.getElementById('tmdl-chips').innerHTML = chips;
+
+    if (p.bio && p.bio.trim()) {
+      document.getElementById('tmdl-bio').textContent = p.bio;
+      document.getElementById('tmdl-bio-sec').style.display = 'block';
+    }
+
+    // 2) المواد والصفوف فقط — بدون حصص
+    var subjRes = await window._sb
+      .from('teacher_subjects')
+      .select('id, name, icon, level, teacher_grades(id, name, description)')
+      .eq('teacher_id', teacherId)
+      .eq('is_approved', true);
+
+    var subjects = subjRes.data || [];
+    var html = '';
+
+    if (subjects.length === 0) {
+      html = '<div class="tmdl-no-sess">لم يتم إضافة صفوف أو مجموعات بعد</div>';
+    } else {
+      subjects.forEach(function(subj) {
+        var grades = subj.teacher_grades || [];
+        if (grades.length === 0) {
+          html += '<div class="tmdl-grade-card">' +
+            '<div class="tmdl-grade-head">' +
+              '<div class="tmdl-grade-icon">' + (subj.icon || '📚') + '</div>' +
+              '<div>' +
+                '<div class="tmdl-grade-name">' + (subj.name || 'مادة') + '</div>' +
+                (subj.level ? '<div class="tmdl-grade-subj">' + subj.level + '</div>' : '') +
+              '</div>' +
+            '</div>' +
+          '</div>';
+          return;
+        }
+        grades.forEach(function(g) {
+          html += '<div class="tmdl-grade-card">' +
+            '<div class="tmdl-grade-head">' +
+              '<div class="tmdl-grade-icon">' + (subj.icon || '📚') + '</div>' +
+              '<div>' +
+                '<div class="tmdl-grade-name">' + (g.name || 'مجموعة') + '</div>' +
+                '<div class="tmdl-grade-subj">📚 ' + (subj.name || '') +
+                  (subj.level ? ' · ' + subj.level : '') +
+                  (g.description ? ' · ' + g.description : '') +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        });
+      });
+    }
+
+    document.getElementById('tmdl-grades-body').innerHTML = html;
+  } catch(e) {
+    console.error('Teacher modal error:', e);
+    document.getElementById('tmdl-grades-body').innerHTML =
+      '<div style="color:#EF4444;text-align:center;padding:20px;">خطأ في تحميل البيانات</div>';
+  }
+}
     document.getElementById('tmdl-name').textContent = p.full_name || 'معلم';
     document.getElementById('tmdl-spec').textContent = p.specialization || '';
 
@@ -2169,7 +2239,7 @@ window.addEventListener('DOMContentLoaded', function() {
         <div class="tmdl-bio" id="tmdl-bio"></div>
       </div>
       <div class="tmdl-section">
-        <div class="tmdl-section-title">📚 الصفوف والمجموعات والمواعيد</div>
+        <div class="tmdl-section-title">📚 الصفوف والمجموعات</div>
         <div id="tmdl-grades-body">
           <div style="text-align:center;padding:24px;color:#9CA3AF;">⏳ جاري التحميل...</div>
         </div>
