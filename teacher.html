@@ -10,6 +10,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/selim-academy/icon-192x192.png">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 <style>
 /* ══════════════════════════════════════════
    ANIMATIONS
@@ -802,6 +804,81 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
   .stats-grid{grid-template-columns:1fr}.quick-actions{grid-template-columns:1fr}
   .fg-row{grid-template-columns:1fr}.banner{padding:20px}
 }
+
+/* ══════════════════════════════════════════
+   CROP MODAL
+══════════════════════════════════════════ */
+#crop-modal {
+  position:fixed; inset:0; z-index:2000;
+  background:rgba(0,0,0,.75); backdrop-filter:blur(6px);
+  display:none; align-items:center; justify-content:center; padding:20px;
+}
+#crop-modal.show { display:flex }
+.crop-box {
+  background:#1a1a2e; border-radius:24px;
+  width:100%; max-width:520px;
+  box-shadow:0 24px 80px rgba(0,0,0,.5);
+  animation:fadeIn .25s ease; overflow:hidden; display:flex; flex-direction:column;
+}
+.crop-header {
+  padding:18px 24px; display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.crop-header-title { font-size:1rem; font-weight:900; color:#fff }
+.crop-header-sub   { font-size:.75rem; color:rgba(255,255,255,.45); margin-top:2px }
+.crop-close {
+  width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.08);
+  border:none; color:rgba(255,255,255,.6); font-size:1.1rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition:all .2s;
+}
+.crop-close:hover { background:rgba(239,68,68,.3); color:#fff }
+.crop-canvas-wrap {
+  position:relative; width:100%; height:340px;
+  background:#0a0a14; overflow:hidden;
+}
+.crop-canvas-wrap img { display:block; max-width:100% }
+.crop-tools {
+  padding:16px 24px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  border-top:1px solid rgba(255,255,255,.07);
+}
+.crop-tool-btn {
+  padding:8px 14px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
+  border-radius:9px; color:rgba(255,255,255,.8); font-family:'Cairo',sans-serif;
+  font-size:.8rem; font-weight:700; cursor:pointer; transition:all .2s;
+  display:flex; align-items:center; gap:5px;
+}
+.crop-tool-btn:hover { background:rgba(255,255,255,.15); color:#fff }
+.crop-ratio-group { display:flex; gap:6px; margin-right:auto }
+.crop-ratio-btn {
+  padding:6px 12px; background:rgba(255,255,255,.06); border:1.5px solid rgba(255,255,255,.1);
+  border-radius:7px; color:rgba(255,255,255,.55); font-family:'Cairo',sans-serif;
+  font-size:.75rem; font-weight:700; cursor:pointer; transition:all .2s;
+}
+.crop-ratio-btn.active { background:var(--blue); border-color:var(--blue); color:#fff }
+.crop-footer {
+  padding:16px 24px; display:flex; gap:12px; justify-content:flex-end;
+  border-top:1px solid rgba(255,255,255,.07);
+}
+.crop-cancel-btn {
+  padding:10px 22px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
+  border-radius:10px; color:rgba(255,255,255,.7); font-family:'Cairo',sans-serif;
+  font-size:.88rem; font-weight:700; cursor:pointer; transition:all .2s;
+}
+.crop-cancel-btn:hover { background:rgba(255,255,255,.15) }
+.crop-save-btn {
+  padding:10px 28px; background:linear-gradient(135deg,var(--blue),var(--blue-mid));
+  border:none; border-radius:10px; color:#fff; font-family:'Cairo',sans-serif;
+  font-size:.88rem; font-weight:700; cursor:pointer; transition:all .2s;
+  display:flex; align-items:center; gap:8px; box-shadow:0 4px 16px rgba(26,86,219,.4);
+}
+.crop-save-btn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(26,86,219,.5) }
+.crop-save-btn:disabled { opacity:.6; cursor:not-allowed; transform:none }
+/* preview circle inside crop modal */
+.crop-preview-circle {
+  width:64px; height:64px; border-radius:50%; overflow:hidden;
+  border:3px solid rgba(255,255,255,.2); flex-shrink:0;
+  background:#111;
+}
 </style>
 </head>
 <body>
@@ -1553,6 +1630,40 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 </div>
 
 <!-- ══ TOAST ══ -->
+<!-- ══ CROP MODAL ══ -->
+<div id="crop-modal">
+  <div class="crop-box">
+    <div class="crop-header">
+      <div>
+        <div class="crop-header-title">✂️ قص وتعديل الصورة</div>
+        <div class="crop-header-sub">اسحب لتحريك · انقر للتكبير أو التصغير</div>
+      </div>
+      <button class="crop-close" onclick="closeCropModal()">✕</button>
+    </div>
+    <div class="crop-canvas-wrap">
+      <img id="crop-img" src="" alt="crop">
+    </div>
+    <div class="crop-tools">
+      <button class="crop-tool-btn" onclick="cropperInst?.rotate(-90)" title="تدوير يساراً">↺ تدوير</button>
+      <button class="crop-tool-btn" onclick="cropperInst?.scaleX(cropFlipX *= -1)" title="عكس أفقي">⇄ عكس</button>
+      <button class="crop-tool-btn" onclick="cropperInst?.reset()">↩ إعادة تعيين</button>
+      <div class="crop-ratio-group">
+        <button class="crop-ratio-btn active" onclick="setCropRatio(1,1,this)">1:1</button>
+        <button class="crop-ratio-btn" onclick="setCropRatio(4,3,this)">4:3</button>
+        <button class="crop-ratio-btn" onclick="setCropRatio(0,0,this)">حر</button>
+      </div>
+      <!-- live circle preview -->
+      <div class="crop-preview-circle" id="crop-preview-circle"></div>
+    </div>
+    <div class="crop-footer">
+      <button class="crop-cancel-btn" onclick="closeCropModal()">إلغاء</button>
+      <button class="crop-save-btn" id="crop-save-btn" onclick="applyCrop()">
+        <span id="crop-save-txt">✅ تطبيق وحفظ</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-wrap"></div>
 
 <script>
@@ -3165,17 +3276,19 @@ async function loadProfile() {
 }
 
 // ──────────────────────────────────────────────
-// AVATAR MENU & UPLOAD  (Facebook-style)
+// AVATAR MENU & CROP UPLOAD  (Facebook-style)
 // ──────────────────────────────────────────────
+let cropperInst  = null;
+let cropFlipX    = 1;
+let _cropRawFile = null; // original file before crop
+
 function toggleAvatarMenu(e) {
   e.stopPropagation();
   const menu = document.getElementById('av-menu');
   const isShow = menu.classList.contains('show');
-  // Close any open menus first
   document.querySelectorAll('.av-actions-menu.show').forEach(m => m.classList.remove('show'));
   if (!isShow) menu.classList.add('show');
 }
-// Close menu when clicking outside
 document.addEventListener('click', () => {
   document.querySelectorAll('.av-actions-menu.show').forEach(m => m.classList.remove('show'));
 });
@@ -3186,62 +3299,96 @@ function triggerAvatarUpload(e) {
   document.getElementById('prof-av-input').click();
 }
 
-async function removeAvatar(e) {
-  e.stopPropagation();
-  document.getElementById('av-menu').classList.remove('show');
-  if (!ST.profile?.avatar_url) { toast('لا توجد صورة لحذفها', 'err'); return; }
-  if (!confirm('هل تريد حذف صورة البروفايل؟')) return;
-  const wrap = document.getElementById('prof-av-wrap');
-  wrap.classList.add('uploading');
-  try {
-    // Remove from storage
-    const oldPath = `${ST.user.id}/avatar`;
-    // Try common extensions
-    for (const ext of ['jpg','jpeg','png','webp','gif']) {
-      await sb.storage.from('avatars').remove([`${oldPath}.${ext}`]);
-    }
-    const { error } = await sb.from('profiles').update({ avatar_url: null }).eq('id', ST.user.id);
-    if (error) throw error;
-    ST.profile = { ...ST.profile, avatar_url: null };
-    const avEl = document.getElementById('prof-av-circle');
-    avEl.innerHTML = '';
-    avEl.textContent = ini(ST.profile.full_name);
-    const sav = document.getElementById('sidebar-av');
-    if (sav) { sav.innerHTML = ''; sav.textContent = ini(ST.profile.full_name); }
-    toast('✅ تم حذف الصورة');
-  } catch(err) { toast('خطأ: ' + err.message, 'err'); }
-  finally { wrap.classList.remove('uploading'); }
-}
-
-async function handleAvatarChange(input) {
+/* ── Open crop modal after file selected ── */
+function handleAvatarChange(input) {
   if (!input.files || !input.files[0]) return;
   const file = input.files[0];
 
-  // Validate size (max 5MB)
-  if (file.size > 5 * 1024 * 1024) {
-    toast('❌ حجم الصورة يجب أن يكون أقل من 5MB', 'err');
+  if (file.size > 10 * 1024 * 1024) {
+    toast('❌ حجم الصورة يجب أن يكون أقل من 10MB', 'err');
     input.value = '';
     return;
   }
 
-  const wrap = document.getElementById('prof-av-wrap');
-  const avEl = document.getElementById('prof-av-circle');
+  _cropRawFile = file;
+  const url = URL.createObjectURL(file);
+  openCropModal(url);
+  input.value = ''; // reset so same file triggers change again
+}
 
-  // Show instant local preview
-  const reader = new FileReader();
-  reader.onload = ev => { avEl.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover">`; };
-  reader.readAsDataURL(file);
+function openCropModal(src) {
+  const modal = document.getElementById('crop-modal');
+  const img   = document.getElementById('crop-img');
+  cropFlipX   = 1;
 
-  // Show uploading state
-  wrap.classList.add('uploading');
+  // Destroy old instance
+  if (cropperInst) { cropperInst.destroy(); cropperInst = null; }
+
+  img.src = src;
+  modal.classList.add('show');
+
+  // Init Cropper after image loads
+  img.onload = () => {
+    cropperInst = new Cropper(img, {
+      aspectRatio: 1,
+      viewMode: 1,
+      dragMode: 'move',
+      autoCropArea: 0.85,
+      restore: false,
+      guides: true,
+      center: true,
+      highlight: false,
+      cropBoxMovable: true,
+      cropBoxResizable: true,
+      toggleDragModeOnDblclick: false,
+      preview: '#crop-preview-circle',
+    });
+  };
+}
+
+function closeCropModal() {
+  document.getElementById('crop-modal').classList.remove('show');
+  if (cropperInst) { cropperInst.destroy(); cropperInst = null; }
+  _cropRawFile = null;
+}
+
+function setCropRatio(w, h, btn) {
+  document.querySelectorAll('.crop-ratio-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (cropperInst) cropperInst.setAspectRatio(w && h ? w / h : NaN);
+}
+
+/* ── Crop → upload to Supabase ── */
+async function applyCrop() {
+  if (!cropperInst) return;
+  const saveBtn = document.getElementById('crop-save-btn');
+  const saveTxt = document.getElementById('crop-save-txt');
+  saveBtn.disabled = true;
+  saveTxt.textContent = '⏳ جاري الرفع...';
 
   try {
-    const ext  = file.name.split('.').pop().toLowerCase() || 'jpg';
-    const path = `${ST.user.id}/avatar.${ext}`;
+    // Get cropped canvas (max 800×800 for performance)
+    const canvas = cropperInst.getCroppedCanvas({ width: 800, height: 800, imageSmoothingQuality: 'high' });
 
-    const { error: e1 } = await sb.storage.from('avatars').upload(path, file, {
-      upsert: true,
-      contentType: file.type,
+    // Convert to blob
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.88));
+
+    const wrap = document.getElementById('prof-av-wrap');
+    const avEl = document.getElementById('prof-av-circle');
+
+    // Instant local preview from cropped canvas
+    avEl.innerHTML = `<img src="${canvas.toDataURL('image/jpeg', 0.88)}" style="width:100%;height:100%;object-fit:cover">`;
+
+    // Close modal first for smooth UX
+    document.getElementById('crop-modal').classList.remove('show');
+    if (cropperInst) { cropperInst.destroy(); cropperInst = null; }
+
+    // Show uploading state on avatar
+    wrap.classList.add('uploading');
+
+    const path = `${ST.user.id}/avatar.jpg`;
+    const { error: e1 } = await sb.storage.from('avatars').upload(path, blob, {
+      upsert: true, contentType: 'image/jpeg',
     });
     if (e1) throw e1;
 
@@ -3253,24 +3400,53 @@ async function handleAvatarChange(input) {
 
     ST.profile = { ...ST.profile, avatar_url: url };
 
-    // Update sidebar avatar too
+    // Update sidebar avatar
     const sav = document.getElementById('sidebar-av');
     if (sav) sav.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+
+    // Replace preview with final CDN url
+    avEl.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover">`;
 
     toast('✅ تم تحديث صورة البروفايل بنجاح');
   } catch(err) {
     toast('❌ خطأ في رفع الصورة: ' + err.message, 'err');
-    // Revert preview on error
     if (ST.profile?.avatar_url) {
-      avEl.innerHTML = `<img src="${ST.profile.avatar_url}" style="width:100%;height:100%;object-fit:cover">`;
+      document.getElementById('prof-av-circle').innerHTML =
+        `<img src="${ST.profile.avatar_url}" style="width:100%;height:100%;object-fit:cover">`;
     } else {
+      const avEl = document.getElementById('prof-av-circle');
       avEl.innerHTML = '';
       avEl.textContent = ini(ST.profile?.full_name);
     }
   } finally {
-    wrap.classList.remove('uploading');
-    input.value = ''; // reset so same file can be re-selected
+    document.getElementById('prof-av-wrap').classList.remove('uploading');
+    saveBtn.disabled = false;
+    saveTxt.textContent = '✅ تطبيق وحفظ';
+    _cropRawFile = null;
   }
+}
+
+/* ── Remove avatar ── */
+async function removeAvatar(e) {
+  e.stopPropagation();
+  document.getElementById('av-menu').classList.remove('show');
+  if (!ST.profile?.avatar_url) { toast('لا توجد صورة لحذفها', 'err'); return; }
+  if (!confirm('هل تريد حذف صورة البروفايل؟')) return;
+  const wrap = document.getElementById('prof-av-wrap');
+  wrap.classList.add('uploading');
+  try {
+    await sb.storage.from('avatars').remove([`${ST.user.id}/avatar.jpg`]);
+    const { error } = await sb.from('profiles').update({ avatar_url: null }).eq('id', ST.user.id);
+    if (error) throw error;
+    ST.profile = { ...ST.profile, avatar_url: null };
+    const avEl = document.getElementById('prof-av-circle');
+    avEl.innerHTML = '';
+    avEl.textContent = ini(ST.profile.full_name);
+    const sav = document.getElementById('sidebar-av');
+    if (sav) { sav.innerHTML = ''; sav.textContent = ini(ST.profile.full_name); }
+    toast('✅ تم حذف الصورة');
+  } catch(err) { toast('خطأ: ' + err.message, 'err'); }
+  finally { wrap.classList.remove('uploading'); }
 }
 
 async function saveProfile() {
