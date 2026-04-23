@@ -176,7 +176,8 @@ section{padding:80px 5%;}
 .teachers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:24px;}
 .teacher-card{background:#fff;border:1px solid var(--gray-mid);border-radius:var(--radius);padding:28px;text-align:center;transition:all .3s;cursor:pointer;}
 .teacher-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--blue);}
-.teacher-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-mid));display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 14px;}
+.teacher-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-mid));display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 14px;overflow:hidden;}
+.teacher-avatar img{width:100%;height:100%;object-fit:cover;}
 .teacher-name{font-size:1.05rem;font-weight:900;margin-bottom:4px;}
 .teacher-subject{font-size:.85rem;color:var(--blue);font-weight:600;margin-bottom:10px;}
 .teacher-stars{color:var(--gold);font-size:.9rem;margin-bottom:12px;}
@@ -186,6 +187,95 @@ section{padding:80px 5%;}
 .badge.green{background:#ECFDF5;color:var(--green);}
 .teacher-btn{display:block;padding:8px;border:1px solid var(--gray-mid);border-radius:8px;color:var(--blue);font-size:.85rem;font-weight:600;text-decoration:none;transition:all .2s;}
 .teacher-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+/* skeleton loader for teachers */
+.teacher-skel{background:#fff;border:1px solid var(--gray-mid);border-radius:var(--radius);padding:28px;text-align:center;}
+.skel-block{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:8px;}
+
+/* ── TEACHER DETAIL MODAL ── */
+#teacher-modal{
+  position:fixed;inset:0;z-index:3000;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;padding:16px;
+}
+#teacher-modal.show{display:flex;}
+.tmdl-box{
+  background:#fff;border-radius:24px;width:100%;max-width:640px;
+  max-height:90vh;overflow-y:auto;
+  box-shadow:0 24px 80px rgba(0,0,0,.25);
+  animation:tmdlIn .3s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes tmdlIn{from{opacity:0;transform:translateY(30px) scale(.97)}to{opacity:1;transform:none}}
+.tmdl-cover{
+  background:linear-gradient(135deg,#1342B0,#1A56DB,#3B82F6);
+  border-radius:24px 24px 0 0;padding:32px 28px 24px;
+  position:relative;text-align:center;overflow:hidden;
+}
+.tmdl-cover::before{content:'';position:absolute;width:240px;height:240px;border-radius:50%;
+  background:rgba(255,255,255,.06);top:-100px;left:-60px;}
+.tmdl-cover::after{content:'';position:absolute;width:160px;height:160px;border-radius:50%;
+  background:rgba(255,255,255,.04);bottom:-60px;right:10%;}
+.tmdl-close{
+  position:absolute;top:16px;left:16px;z-index:2;
+  width:34px;height:34px;border-radius:50%;
+  background:rgba(255,255,255,.15);border:none;color:#fff;
+  font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.tmdl-close:hover{background:rgba(255,255,255,.3);}
+.tmdl-av{
+  width:96px;height:96px;border-radius:50%;
+  border:4px solid rgba(255,255,255,.5);
+  background:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.1));
+  display:flex;align-items:center;justify-content:center;
+  font-size:2rem;font-weight:900;color:#fff;
+  margin:0 auto 14px;overflow:hidden;position:relative;z-index:1;
+  box-shadow:0 8px 24px rgba(0,0,0,.2);
+}
+.tmdl-av img{width:100%;height:100%;object-fit:cover;}
+.tmdl-name{font-size:1.3rem;font-weight:900;color:#fff;position:relative;z-index:1;margin-bottom:4px;}
+.tmdl-spec{font-size:.88rem;color:rgba(255,255,255,.75);position:relative;z-index:1;margin-bottom:14px;}
+.tmdl-chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1;}
+.tmdl-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+  border-radius:50px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#fff;
+}
+.tmdl-body{padding:24px 28px;}
+.tmdl-section{margin-bottom:22px;}
+.tmdl-section-title{
+  font-size:.78rem;font-weight:900;color:var(--gray);
+  text-transform:uppercase;letter-spacing:.8px;
+  margin-bottom:12px;padding-bottom:8px;
+  border-bottom:2px solid var(--gray-mid);
+}
+.tmdl-bio{font-size:.9rem;color:#374151;line-height:1.8;}
+.tmdl-grade-card{
+  background:var(--gray-light);border:1px solid var(--gray-mid);
+  border-radius:14px;padding:16px 18px;margin-bottom:10px;
+}
+.tmdl-grade-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.tmdl-grade-icon{
+  width:38px;height:38px;border-radius:10px;
+  background:linear-gradient(135deg,var(--blue),var(--blue-mid));
+  display:flex;align-items:center;justify-content:center;
+  font-size:.9rem;font-weight:900;color:#fff;flex-shrink:0;
+}
+.tmdl-grade-name{font-size:.92rem;font-weight:900;color:var(--dark);}
+.tmdl-grade-subj{font-size:.75rem;color:var(--blue);font-weight:600;}
+.tmdl-sess-list{display:flex;flex-direction:column;gap:8px;}
+.tmdl-sess-item{
+  display:flex;align-items:center;gap:12px;
+  background:#fff;border:1px solid var(--gray-mid);
+  border-radius:10px;padding:10px 14px;
+}
+.tmdl-sess-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.tmdl-sess-dot.upcoming{background:var(--blue);}
+.tmdl-sess-dot.live{background:var(--green);}
+.tmdl-sess-info{flex:1;}
+.tmdl-sess-title{font-size:.84rem;font-weight:700;color:var(--dark);}
+.tmdl-sess-meta{font-size:.75rem;color:var(--gray);margin-top:2px;}
+.tmdl-no-sess{font-size:.85rem;color:var(--gray);text-align:center;padding:16px;}
 
 /* ── COURSES ── */
 #courses-sec{background:var(--gray-light);}
@@ -1740,23 +1830,264 @@ var coursesData = [
   }
 ];
 
-function renderTeachers() {
+// ══════════════════════════════════════════════
+// TEACHERS — جلب من Supabase
+// ══════════════════════════════════════════════
+var _sb = window._sb; // reuse existing supabase client
+
+function ini(name) {
+  if (!name) return '؟';
+  return name.trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase();
+}
+
+async function renderTeachers() {
   var grid = document.getElementById('teachersGrid');
   if (!grid) return;
-  grid.innerHTML = teachersData.map(function(t) {
-    return (
-      '<div class="teacher-card">' +
-        '<div class="teacher-avatar"' + (t.avatarStyle ? ' style="' + t.avatarStyle + '"' : '') + '>' + t.avatar + '</div>' +
-        '<div class="teacher-name">' + t.name + '</div>' +
-        '<div class="teacher-subject">' + t.subject + '</div>' +
-        '<div class="teacher-stars">★★★★★ (' + t.rating + ')</div>' +
-        '<div class="teacher-badges"><span class="badge green">' + t.badge + '</span></div>' +
-        '<p style="font-size:.82rem;color:var(--gray);line-height:1.6;margin-bottom:14px;">' + t.desc + '</p>' +
-        '<a href="#booking" class="teacher-btn">📅 احجز حصة</a>' +
-      '</div>'
-    );
+
+  // Show skeleton
+  grid.innerHTML = [1,2,3,4].map(function() {
+    return '<div class="teacher-skel">' +
+      '<div class="skel-block" style="width:80px;height:80px;border-radius:50%;margin:0 auto 14px;"></div>' +
+      '<div class="skel-block" style="height:18px;width:60%;margin:0 auto 8px;"></div>' +
+      '<div class="skel-block" style="height:14px;width:40%;margin:0 auto 12px;"></div>' +
+      '<div class="skel-block" style="height:12px;width:80%;margin:0 auto 6px;"></div>' +
+      '<div class="skel-block" style="height:12px;width:65%;margin:0 auto;"></div>' +
+    '</div>';
   }).join('');
+
+  try {
+    // جلب المعلمين المعتمدين فقط — بدون رقم الموبايل
+    var res = await window._sb
+      .from('profiles')
+      .select('id, full_name, avatar_url, specialization, experience_years, bio, role')
+      .eq('role', 'teacher')
+      .eq('is_approved', true);
+
+    var teachers = (res.data || []);
+
+    if (teachers.length === 0) {
+      grid.innerHTML = '<p style="text-align:center;color:#6B7280;grid-column:1/-1;padding:40px 0;">لا يوجد مدرسون متاحون حالياً</p>';
+      return;
+    }
+
+    grid.innerHTML = teachers.map(function(t) {
+      var initials = ini(t.full_name);
+      var avatarHtml = t.avatar_url
+        ? '<img src="' + t.avatar_url + '" alt="' + (t.full_name||'') + '">'
+        : initials;
+      var expBadge = t.experience_years ? t.experience_years + ' خبرة' : '';
+      var bioShort = t.bio ? (t.bio.length > 90 ? t.bio.slice(0,90) + '...' : t.bio) : 'مدرس متخصص في أكاديمية سليم.';
+      return (
+        '<div class="teacher-card" onclick="openTeacherModal(\'' + t.id + '\')">' +
+          '<div class="teacher-avatar">' + avatarHtml + '</div>' +
+          '<div class="teacher-name">' + (t.full_name || 'معلم') + '</div>' +
+          '<div class="teacher-subject">' + (t.specialization || 'تخصص متنوع') + '</div>' +
+          '<div class="teacher-stars">★★★★★</div>' +
+          (expBadge ? '<div class="teacher-badges"><span class="badge green">' + expBadge + '</span></div>' : '') +
+          '<p style="font-size:.82rem;color:var(--gray);line-height:1.6;margin-bottom:14px;">' + bioShort + '</p>' +
+          '<div class="teacher-btn">👁️ عرض التفاصيل</div>' +
+        '</div>'
+      );
+    }).join('');
+  } catch(e) {
+    console.warn('Supabase teachers error:', e);
+    // Fallback to static data if Supabase fails
+    grid.innerHTML = teachersData.map(function(t) {
+      return (
+        '<div class="teacher-card">' +
+          '<div class="teacher-avatar"' + (t.avatarStyle ? ' style="' + t.avatarStyle + '"' : '') + '>' + t.avatar + '</div>' +
+          '<div class="teacher-name">' + t.name + '</div>' +
+          '<div class="teacher-subject">' + t.subject + '</div>' +
+          '<div class="teacher-stars">★★★★★ (' + t.rating + ')</div>' +
+          '<div class="teacher-badges"><span class="badge green">' + t.badge + '</span></div>' +
+          '<p style="font-size:.82rem;color:var(--gray);line-height:1.6;margin-bottom:14px;">' + t.desc + '</p>' +
+          '<a href="#booking" class="teacher-btn">📅 احجز حصة</a>' +
+        '</div>'
+      );
+    }).join('');
+  }
 }
+
+// ══════════════════════════════════════════════
+// TEACHER DETAIL MODAL
+// ══════════════════════════════════════════════
+async function openTeacherModal(teacherId) {
+  var modal = document.getElementById('teacher-modal');
+  modal.classList.add('show');
+  document.body.style.overflow = 'hidden';
+
+  // Reset content
+  document.getElementById('tmdl-av').innerHTML = '⏳';
+  document.getElementById('tmdl-name').textContent = '...';
+  document.getElementById('tmdl-spec').textContent = '';
+  document.getElementById('tmdl-chips').innerHTML = '';
+  document.getElementById('tmdl-bio-sec').style.display = 'none';
+  document.getElementById('tmdl-grades-body').innerHTML =
+    '<div style="text-align:center;padding:24px;color:#9CA3AF;">⏳ جاري التحميل...</div>';
+
+  try {
+    // 1) جلب بيانات المعلم — بدون phone
+    var profRes = await window._sb
+      .from('profiles')
+      .select('id, full_name, avatar_url, specialization, experience_years, bio')
+      .eq('id', teacherId)
+      .single();
+    if (profRes.error) throw profRes.error;
+    var p = profRes.data;
+
+    // Fill header
+    var avEl = document.getElementById('tmdl-av');
+    if (p.avatar_url) {
+      avEl.innerHTML = '<img src="' + p.avatar_url + '" alt="">';
+    } else {
+      avEl.textContent = ini(p.full_name);
+    }
+    document.getElementById('tmdl-name').textContent = p.full_name || 'معلم';
+    document.getElementById('tmdl-spec').textContent = p.specialization || '';
+
+    var chips = '';
+    if (p.experience_years) chips += '<span class="tmdl-chip">⏱ ' + p.experience_years + ' خبرة</span>';
+    document.getElementById('tmdl-chips').innerHTML = chips;
+
+    // Bio
+    if (p.bio) {
+      document.getElementById('tmdl-bio').textContent = p.bio;
+      document.getElementById('tmdl-bio-sec').style.display = 'block';
+    }
+
+    // 2) جلب المواد والصفوف
+    var subjRes = await window._sb
+      .from('teacher_subjects')
+      .select('id, name, teacher_grades(id, name, group_name, schedule_days, schedule_time, max_students)')
+      .eq('teacher_id', teacherId);
+    var subjects = subjRes.data || [];
+
+    // 3) جلب الحصص القادمة
+    var now = new Date().toISOString();
+    var sessRes = await window._sb
+      .from('teacher_sessions')
+      .select('id, title, scheduled_at, duration_min, subject_name, grade_name, status')
+      .eq('teacher_id', teacherId)
+      .gte('scheduled_at', now)
+      .order('scheduled_at', { ascending: true })
+      .limit(10);
+    var sessions = sessRes.data || [];
+
+    // Build grades+sessions UI
+    var html = '';
+
+    if (subjects.length === 0 && sessions.length === 0) {
+      html = '<div class="tmdl-no-sess">لم يتم إضافة صفوف أو مجموعات بعد</div>';
+    } else {
+      // Group sessions by grade_name for quick lookup
+      var sessByGrade = {};
+      sessions.forEach(function(s) {
+        var key = s.grade_name || '__general__';
+        if (!sessByGrade[key]) sessByGrade[key] = [];
+        sessByGrade[key].push(s);
+      });
+
+      subjects.forEach(function(subj) {
+        var grades = subj.teacher_grades || [];
+        if (grades.length === 0) return;
+        grades.forEach(function(g) {
+          var gradeSessions = sessByGrade[g.name] || [];
+          var sessHtml = '';
+          if (gradeSessions.length > 0) {
+            sessHtml = gradeSessions.slice(0,4).map(function(s) {
+              var dt = new Date(s.scheduled_at);
+              var dateStr = dt.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long' });
+              var timeStr = dt.toLocaleTimeString('ar-EG', { hour:'2-digit', minute:'2-digit' });
+              var isLive = s.status === 'live';
+              return '<div class="tmdl-sess-item">' +
+                '<div class="tmdl-sess-dot ' + (isLive ? 'live' : 'upcoming') + '"></div>' +
+                '<div class="tmdl-sess-info">' +
+                  '<div class="tmdl-sess-title">' + (s.title || 'حصة دراسية') + '</div>' +
+                  '<div class="tmdl-sess-meta">📅 ' + dateStr + ' · ⏰ ' + timeStr + (s.duration_min ? ' · ' + s.duration_min + ' دقيقة' : '') + '</div>' +
+                '</div>' +
+                (isLive ? '<span style="background:#D1FAE5;color:#065F46;padding:3px 10px;border-radius:50px;font-size:.7rem;font-weight:700;">🔴 الآن</span>' : '') +
+              '</div>';
+            }).join('');
+          } else if (g.schedule_days || g.schedule_time) {
+            // Show schedule info from grade record
+            var schedInfo = '';
+            if (g.schedule_days) schedInfo += '📅 ' + g.schedule_days;
+            if (g.schedule_time) schedInfo += (schedInfo ? ' · ' : '') + '⏰ ' + g.schedule_time;
+            sessHtml = '<div class="tmdl-sess-item">' +
+              '<div class="tmdl-sess-dot upcoming"></div>' +
+              '<div class="tmdl-sess-info"><div class="tmdl-sess-title">مواعيد المجموعة</div>' +
+              '<div class="tmdl-sess-meta">' + schedInfo + '</div></div>' +
+            '</div>';
+          } else {
+            sessHtml = '<div class="tmdl-no-sess" style="font-size:.8rem;">لا توجد حصص قادمة</div>';
+          }
+
+          html += '<div class="tmdl-grade-card">' +
+            '<div class="tmdl-grade-head">' +
+              '<div class="tmdl-grade-icon">' + (g.name||'').slice(0,2) + '</div>' +
+              '<div>' +
+                '<div class="tmdl-grade-name">' + (g.name || 'مجموعة') + (g.group_name ? ' — ' + g.group_name : '') + '</div>' +
+                '<div class="tmdl-grade-subj">📚 ' + (subj.name || '') + (g.max_students ? ' · 👥 حتى ' + g.max_students + ' طالب' : '') + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="tmdl-sess-list">' + sessHtml + '</div>' +
+          '</div>';
+        });
+      });
+
+      // Sessions not linked to a grade
+      var ungradedSessions = sessions.filter(function(s) {
+        return !subjects.some(function(subj) {
+          return (subj.teacher_grades||[]).some(function(g) { return g.name === s.grade_name; });
+        });
+      });
+      if (ungradedSessions.length > 0) {
+        html += '<div class="tmdl-grade-card">' +
+          '<div class="tmdl-grade-head">' +
+            '<div class="tmdl-grade-icon">📅</div>' +
+            '<div><div class="tmdl-grade-name">حصص عامة</div></div>' +
+          '</div>' +
+          '<div class="tmdl-sess-list">' +
+          ungradedSessions.slice(0,4).map(function(s) {
+            var dt = new Date(s.scheduled_at);
+            var dateStr = dt.toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long' });
+            var timeStr = dt.toLocaleTimeString('ar-EG', { hour:'2-digit', minute:'2-digit' });
+            return '<div class="tmdl-sess-item">' +
+              '<div class="tmdl-sess-dot upcoming"></div>' +
+              '<div class="tmdl-sess-info">' +
+                '<div class="tmdl-sess-title">' + (s.title||'حصة') + '</div>' +
+                '<div class="tmdl-sess-meta">📅 ' + dateStr + ' · ⏰ ' + timeStr + '</div>' +
+              '</div></div>';
+          }).join('') +
+          '</div></div>';
+      }
+
+      if (!html) {
+        html = '<div class="tmdl-no-sess">لم يتم إضافة صفوف أو مجموعات بعد</div>';
+      }
+    }
+
+    document.getElementById('tmdl-grades-body').innerHTML = html;
+  } catch(e) {
+    console.error('Teacher modal error:', e);
+    document.getElementById('tmdl-grades-body').innerHTML =
+      '<div style="color:#EF4444;text-align:center;padding:20px;">خطأ في تحميل البيانات</div>';
+  }
+}
+
+function closeTeacherModal() {
+  document.getElementById('teacher-modal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+// Close on backdrop click
+document.getElementById('teacher-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeTeacherModal();
+});
+// Close on ESC
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeTeacherModal();
+});
 
 function renderCourses() {
   var grid = document.getElementById('coursesGrid');
@@ -1785,7 +2116,7 @@ function renderCourses() {
 }
 
 window.addEventListener('DOMContentLoaded', function() {
-  renderTeachers();
+  renderTeachers();  // async — جلب من Supabase
   renderCourses();
   var gradeSelect = document.getElementById('sel-grade');
   if (gradeSelect) {
@@ -1795,6 +2126,31 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+
+<!-- ══ TEACHER DETAIL MODAL ══ -->
+<div id="teacher-modal">
+  <div class="tmdl-box">
+    <div class="tmdl-cover">
+      <button class="tmdl-close" onclick="closeTeacherModal()">✕</button>
+      <div class="tmdl-av" id="tmdl-av">م</div>
+      <div class="tmdl-name" id="tmdl-name">...</div>
+      <div class="tmdl-spec" id="tmdl-spec">...</div>
+      <div class="tmdl-chips" id="tmdl-chips"></div>
+    </div>
+    <div class="tmdl-body">
+      <div class="tmdl-section" id="tmdl-bio-sec" style="display:none">
+        <div class="tmdl-section-title">👤 نبذة عن المعلم</div>
+        <div class="tmdl-bio" id="tmdl-bio"></div>
+      </div>
+      <div class="tmdl-section">
+        <div class="tmdl-section-title">📚 الصفوف والمجموعات والمواعيد</div>
+        <div id="tmdl-grades-body">
+          <div style="text-align:center;padding:24px;color:#9CA3AF;">⏳ جاري التحميل...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="pwa-register.js" defer></script>
 </body>
