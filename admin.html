@@ -1844,7 +1844,7 @@ async function openStudentDetail(studentId) {
   })[st] || '<span class="badge b-gray">'+st+'</span>';
 
   body.innerHTML = `
-    <!-- Avatar + Name -->
+    
     <div style="text-align:center;padding:10px 0 16px">
       <div class="t-mdl-av" style="background:linear-gradient(135deg,var(--green),#0B8A5F)">
         ${s.avatar_url ? `<img src="${s.avatar_url}">` : ini(s.full_name)}
@@ -1853,7 +1853,7 @@ async function openStudentDetail(studentId) {
       <div class="t-mdl-spec">🎓 طالب</div>
     </div>
 
-    <!-- Info Grid -->
+    
     <div class="t-info-grid">
       <div class="t-info-item">
         <div class="t-info-lbl">📱 رقم الهاتف</div>
@@ -1873,7 +1873,7 @@ async function openStudentDetail(studentId) {
       </div>
     </div>
 
-    <!-- Subscription Requests + clickable approved ones -->
+    
     <div style="margin-bottom:14px">
       <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">
         📤 سجل طلبات الاشتراك (${reqs.length})
@@ -1909,7 +1909,7 @@ async function openStudentDetail(studentId) {
       }
     </div>
 
-    <!-- Teacher Enrollments (إن وُجدت) -->
+    
     ${enrs.length ? `
     <div style="margin-bottom:14px">
       <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">👨‍🏫 تسجيلات إضافية (${enrs.length})</div>
@@ -2076,7 +2076,7 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
 
     // بناء HTML التفاصيل
     body.innerHTML = `
-      <!-- رأس المعلومات -->
+      
       <div style="background:linear-gradient(135deg,#EBF5FF,#F0FDF4);border:1px solid #BFDBFE;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:14px">
         <div style="width:52px;height:52px;border-radius:13px;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">📚</div>
         <div style="flex:1">
@@ -2086,7 +2086,7 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
         </div>
       </div>
 
-      <!-- إحصائيات سريعة -->
+      
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
         <div style="background:var(--blue-light);border:1px solid #BFDBFE;border-radius:10px;padding:12px;text-align:center">
           <div style="font-size:1.4rem;font-weight:900;color:var(--blue)">${totalSess}</div>
@@ -2102,7 +2102,7 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
         </div>
       </div>
 
-      <!-- مواعيد الحصص والحضور -->
+      
       <div style="margin-bottom:18px">
         <div style="font-size:.85rem;font-weight:900;color:var(--dark);margin-bottom:10px;display:flex;align-items:center;gap:8px">
           🗓️ مواعيد الحصص والحضور
@@ -2161,7 +2161,6 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
               }).join('')}
             </div>`
         }
-<!-- ملخص الحضور -->
           <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
             <span style="font-size:.76rem;background:var(--green-light);color:#065F46;padding:4px 12px;border-radius:50px;font-weight:700">✅ حضر: ${totalAtt}</span>
             <span style="font-size:.76rem;background:var(--red-light);color:var(--red);padding:4px 12px;border-radius:50px;font-weight:700">❌ غاب: ${totalAbs}</span>
@@ -2194,7 +2193,6 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
                     <span style="font-size:.88rem;font-weight:900;color:${r.percentage>=60?'var(--green)':'var(--red)'}">${r.percentage}%</span>
                   </div>
                 </div>`).join('')}
-              <!-- متوسط -->
               <div style="padding:10px 14px;background:${Number(avgScore)>=60?'#ECFDF5':'#FEF2F2'};border-top:2px solid ${Number(avgScore)>=60?'#6EE7B7':'#FECACA'};display:flex;justify-content:space-between;align-items:center">
                 <span style="font-size:.82rem;font-weight:700;color:var(--gray)">📊 المتوسط العام</span>
                 <span style="font-size:1rem;font-weight:900;color:${Number(avgScore)>=60?'var(--green)':'var(--red)'}">${avgScore}%</span>
@@ -2843,9 +2841,9 @@ async function deleteSubscription() {
 </script>
 <script src="pwa-register.js" defer></script>
 
-<!-- ══════════════════════════════════════════════════════════ -->
-<!-- MODAL: إضافة اشتراك يدوي                                  -->
-<!-- ══════════════════════════════════════════════════════════ -->
+
+
+
 <div class="mdl" id="mdl-manual-enroll" style="z-index:1100">
   <div class="mdl-box wide" style="max-width:580px;max-height:90vh;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-shrink:0">
@@ -2857,7 +2855,7 @@ async function deleteSubscription() {
     </div>
     <div style="overflow-y:auto;flex:1;padding-left:4px">
 
-      <!-- خطوة 1: الطالب -->
+      
       <div style="background:var(--blue-light);border:1px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-bottom:14px">
         <div style="font-size:.78rem;font-weight:700;color:var(--blue);margin-bottom:8px">① اختر الطالب</div>
         <div class="fg" style="margin-bottom:0">
@@ -2867,7 +2865,7 @@ async function deleteSubscription() {
         </div>
       </div>
 
-      <!-- خطوة 2: المادة والمعلم -->
+      
       <div style="background:var(--purple-light);border:1px solid #DDD6FE;border-radius:10px;padding:12px 14px;margin-bottom:14px">
         <div style="font-size:.78rem;font-weight:700;color:var(--purple);margin-bottom:10px">② المادة والمعلم</div>
         <div class="fg-row">
@@ -2894,7 +2892,7 @@ async function deleteSubscription() {
         </div>
       </div>
 
-      <!-- خطوة 3: تفاصيل إضافية -->
+      
       <div style="background:var(--gold-light);border:1px solid #FCD34D;border-radius:10px;padding:12px 14px;margin-bottom:14px">
         <div style="font-size:.78rem;font-weight:700;color:#92400E;margin-bottom:10px">③ تفاصيل الاشتراك (اختياري)</div>
         <div class="fg-row">
