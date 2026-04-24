@@ -1433,7 +1433,7 @@ S.allSessions   = [];
 
 async function loadAdminSessions() {
   const el = document.getElementById('sess-admin-body');
-  el.innerHTML = '<div style="padding:20px">' + '<div class="skel" style="height:58px;margin-bottom:10px;border-radius:8px"></div>'.repeat(4) + '</div>';
+  if(el) el.innerHTML = '<div style="padding:20px">' + '<div class="skel" style="height:58px;margin-bottom:10px;border-radius:8px"></div>'.repeat(4) + '</div>';
 
   try {
     // ── جلب حصص المعلمين وجداول الطلاب بالتوازي ──
@@ -1483,7 +1483,8 @@ async function loadAdminSessions() {
     renderAdminSessions();
     renderStudentSchedules();
   } catch(e) {
-    el.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`;
+    console.error('loadAdminSessions:', e);
+    if(el) el.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`;
   }
 }
 
@@ -2613,8 +2614,8 @@ async function revokeTeacher(teacherId) {
 
     updateHdr();
 
-    // تحميل كل البيانات معاً في وقت واحد لتعبئة النظرة العامة
-    await Promise.all([
+    // تحميل كل البيانات معاً — كل function بتعالج أخطاءها بنفسها
+    await Promise.allSettled([
       loadRequests(),
       loadCourses(),
       loadTeachers(),
