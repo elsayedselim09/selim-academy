@@ -1,6 +1,6 @@
 /*
  * ═══════════════════════════════════════════════════════
- *  Selim Academy — pwa-register.js
+ *  Selim Academy — pwa-register.js  (نسخة محدّثة ✅)
  *  ضع هذا الملف في: /selim-academy/pwa-register.js
  *  واستدعه من آخر <body> في كل صفحة HTML
  * ═══════════════════════════════════════════════════════
@@ -12,7 +12,6 @@
   // ── تسجيل Service Worker ──
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      // المسار صحيح لـ GitHub Pages subfolder
       navigator.serviceWorker
         .register('/selim-academy/sw.js', {
           scope: '/selim-academy/'
@@ -20,7 +19,6 @@
         .then(function (registration) {
           console.log('[PWA] Service Worker registered. Scope:', registration.scope);
 
-          // كشف التحديثات: إذا وُجد SW جديد في الانتظار
           registration.addEventListener('updatefound', function () {
             var newWorker = registration.installing;
             newWorker.addEventListener('statechange', function () {
@@ -35,7 +33,6 @@
           console.error('[PWA] Service Worker registration failed:', error);
         });
 
-      // إعادة تحميل الصفحة عند تفعيل SW جديد
       var refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', function () {
         if (!refreshing) {
@@ -50,10 +47,31 @@
   var deferredPrompt = null;
   var installBanner  = null;
 
+  // ✅ مدة الإخفاء بعد الرفض: 3 أيام بالميلي ثانية
+  var DISMISS_DURATION = 3 * 24 * 60 * 60 * 1000;
+  var STORAGE_KEY      = 'pwa-banner-dismissed';
+
+  function wasDismissedRecently() {
+    try {
+      var ts = localStorage.getItem(STORAGE_KEY);
+      if (!ts) return false;
+      return (Date.now() - parseInt(ts, 10)) < DISMISS_DURATION;
+    } catch (e) {
+      return false;
+    }
+  }
+
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferredPrompt = e;
     console.log('[PWA] beforeinstallprompt captured');
+
+    // ✅ التحقق قبل العرض — الإصلاح الرئيسي
+    if (wasDismissedRecently()) {
+      console.log('[PWA] Banner was dismissed recently — skipping.');
+      return;
+    }
+
     showInstallBanner();
   });
 
@@ -61,31 +79,38 @@
     console.log('[PWA] App installed successfully!');
     hideInstallBanner();
     deferredPrompt = null;
+    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
   });
 
   // ── بناء شريط التثبيت ──
   function showInstallBanner() {
-    if (installBanner) return; // لا تعرضه مرتين
+    if (installBanner) return;
 
     installBanner = document.createElement('div');
     installBanner.id = 'pwa-install-banner';
     installBanner.innerHTML =
       '<div style="display:flex;align-items:center;gap:12px;">' +
-        '<span style="font-size:1.4rem;">📱</span>' +
+        '<span style="font-size:1.6rem;">📱</span>' +
         '<div>' +
-          '<div style="font-weight:700;font-size:.92rem;">أضف التطبيق للشاشة الرئيسية</div>' +
-          '<div style="font-size:.78rem;opacity:.85;">تجربة أفضل وأسرع بدون متصفح</div>' +
+          '<div style="font-weight:700;font-size:.95rem;">أضف التطبيق للشاشة الرئيسية</div>' +
+          '<div style="font-size:.8rem;opacity:.85;margin-top:2px;">تجربة أفضل وأسرع بدون متصفح</div>' +
         '</div>' +
+        '<button id="pwa-close-x" style="' +
+          'margin-right:auto;background:transparent;border:none;color:#fff;' +
+          'font-size:1.1rem;cursor:pointer;line-height:1;padding:4px 8px;' +
+          'opacity:.7;' +
+        '">✕</button>' +
       '</div>' +
-      '<div style="display:flex;gap:8px;margin-top:10px;">' +
+      '<div style="display:flex;gap:8px;margin-top:12px;">' +
         '<button id="pwa-install-btn" style="' +
-          'flex:1;padding:9px;background:#fff;color:#1A56DB;border:none;' +
-          'border-radius:8px;font-weight:700;font-size:.88rem;cursor:pointer;' +
-          'font-family:Cairo,sans-serif;' +
+          'flex:1;padding:10px;background:#fff;color:#1A56DB;border:none;' +
+          'border-radius:8px;font-weight:700;font-size:.9rem;cursor:pointer;' +
+          'font-family:Cairo,sans-serif;display:flex;align-items:center;' +
+          'justify-content:center;gap:6px;' +
         '">⬇️ تثبيت الآن</button>' +
         '<button id="pwa-dismiss-btn" style="' +
-          'padding:9px 14px;background:rgba(255,255,255,.2);color:#fff;' +
-          'border:1px solid rgba(255,255,255,.4);border-radius:8px;' +
+          'padding:10px 16px;background:rgba(255,255,255,.15);color:#fff;' +
+          'border:1px solid rgba(255,255,255,.35);border-radius:8px;' +
           'font-size:.88rem;cursor:pointer;font-family:Cairo,sans-serif;' +
         '">لاحقاً</button>' +
       '</div>';
@@ -95,15 +120,25 @@
       bottom:       '20px',
       right:        '16px',
       left:         '16px',
-      background:   '#1A56DB',
+      background:   'linear-gradient(135deg, #1342B0, #1A56DB)',
       color:        '#fff',
-      padding:      '16px',
-      borderRadius: '14px',
-      boxShadow:    '0 8px 32px rgba(0,0,0,0.25)',
+      padding:      '16px 18px',
+      borderRadius: '16px',
+      boxShadow:    '0 8px 40px rgba(26,86,219,0.45)',
       zIndex:       '9999',
       fontFamily:   'Cairo, sans-serif',
       direction:    'rtl',
+      animation:    'pwaSlideUp .4s cubic-bezier(.34,1.56,.64,1)',
     });
+
+    // إضافة animation keyframes
+    if (!document.getElementById('pwa-styles')) {
+      var style = document.createElement('style');
+      style.id = 'pwa-styles';
+      style.textContent =
+        '@keyframes pwaSlideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}';
+      document.head.appendChild(style);
+    }
 
     document.body.appendChild(installBanner);
 
@@ -118,11 +153,13 @@
       }
     });
 
-    document.getElementById('pwa-dismiss-btn').addEventListener('click', function () {
+    function dismissBanner() {
       hideInstallBanner();
-      // لا تعرضه مجدداً لمدة 3 أيام
-      localStorage.setItem('pwa-banner-dismissed', Date.now());
-    });
+      try { localStorage.setItem(STORAGE_KEY, Date.now()); } catch(e) {}
+    }
+
+    document.getElementById('pwa-dismiss-btn').addEventListener('click', dismissBanner);
+    document.getElementById('pwa-close-x').addEventListener('click', dismissBanner);
   }
 
   function hideInstallBanner() {
@@ -138,7 +175,7 @@
     updateBar.innerHTML =
       '🔄 يوجد تحديث جديد للأكاديمية &nbsp;' +
       '<button onclick="window.location.reload()" style="' +
-        'background:#fff;color:#1A56DB;border:none;padding:6px 14px;' +
+        'background:#fff;color:#1342B0;border:none;padding:6px 16px;' +
         'border-radius:6px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif;' +
       '">تحديث الآن</button>';
 
