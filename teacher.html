@@ -3207,32 +3207,59 @@ async function saveAttendance() {
       .filter(r => r.status === 'absent' && oldMap[r.student_id] === 'present')
       .map(r => r.student_id);
 
-    // ── 4. خصم / استرداد الحصص ──
+    // ── 4. خصم / استرداد الحصص حسب نوع الحصة ──
+    //   • فردي  → يُخصم فقط عند الحضور  (الغياب لا يُخصم)
+    //   • مجموعة / أونلاين / أي نوع آخر → يُخصم عند الحضور والغياب معاً
     if(newlyPresent.length > 0 || newlyAbsent.length > 0) {
-      // جلب اشتراكات الطلاب المرتبطة بهذا المعلم وهذا الصف
-      const allAffected = [...newlyPresent, ...newlyAbsent];
+      const allAffected = [...new Set([...newlyPresent, ...newlyAbsent])];
       const { data: subs } = await sb.from('subscription_requests')
-        .select('id, user_id, sessions_remaining')
+        .select('id, user_id, sessions_remaining, session_type')
         .eq('status', 'approved')
         .eq('assigned_teacher_id', ST.user.id)
         .in('user_id', allAffected);
 
       if(subs && subs.length > 0) {
-        // تحديث كل اشتراك على حدة
         const updatePromises = subs.map(sub => {
+          if(sub.sessions_remaining == null) return Promise.resolve();
+
+          const isPrivate = (sub.session_type || '').includes('فردي');
           const isPresent = newlyPresent.includes(sub.user_id);
           const isAbsent  = newlyAbsent.includes(sub.user_id);
-          if(sub.sessions_remaining == null) return Promise.resolve(); // لا يوجد رصيد للخصم
+
           let newVal = sub.sessions_remaining;
-          if(isPresent) newVal = Math.max(0, newVal - 1);  // خصم حصة
-          if(isAbsent)  newVal = newVal + 1;               // استرداد حصة
+
+          if(isPresent) {
+            // الحضور → خصم دائماً (فردي أو مجموعة)
+            newVal = Math.max(0, newVal - 1);
+          } else if(isAbsent) {
+            if(!isPrivate) {
+              // مجموعة: الغياب يُخصم أيضاً
+              newVal = Math.max(0, newVal - 1);
+            }
+            // فردي: الغياب لا يُخصم — لا تغيير
+          }
+
+          // إذا لم يتغير الرقم لا نرسل طلب
+          if(newVal === sub.sessions_remaining) return Promise.resolve();
+
           return sb.from('subscription_requests')
-            .update({ sessions_remaining: newVal })
+            .update({ sessions_remaining: newVal, updated_at: new Date().toISOString() })
             .eq('id', sub.id);
         });
         await Promise.all(updatePromises);
       }
     }
+
+    // ── 5. إشعار لكل طالب تم تسجيل حضوره/غيابه ──
+    const notifRows = rows.map(r => ({
+      user_id : r.student_id,
+      icon    : r.status === 'present' ? '✅' : '❌',
+      text    : r.status === 'present'
+        ? `تم تسجيل حضورك بتاريخ ${date}`
+        : `تم تسجيل غيابك بتاريخ ${date}`,
+      is_read : false,
+    }));
+    await sb.from('notifications').insert(notifRows).then(() => {});
 
     toast('✅ تم حفظ الحضور وتحديث رصيد الحصص');
   } catch(e) {

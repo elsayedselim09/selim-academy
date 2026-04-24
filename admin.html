@@ -1990,10 +1990,17 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
     const [sessRes, attRes, examRes, enrollRes] = await Promise.all([
       sessQuery,
 
-      // سجل حضور الطالب
-      sb.from('attendance')
-        .select('session_id,status,created_at')
-        .eq('student_id', studentId),
+      // ── سجل حضور الطالب من teacher_attendance (النظام الجديد) ──
+      teacherId
+        ? sb.from('teacher_attendance')
+            .select('session_date, status, note, created_at')
+            .eq('student_id', studentId)
+            .eq('teacher_id', teacherId)
+            .order('session_date', { ascending: false })
+        : sb.from('teacher_attendance')
+            .select('session_date, status, note, created_at')
+            .eq('student_id', studentId)
+            .order('session_date', { ascending: false }),
 
       // نتائج اختبارات الطالب
       sb.from('exam_results')
@@ -2012,19 +2019,36 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
       (!subjectName || (s.subject_name||'').includes(subjectName) || subjectName.includes(s.subject_name||'')) &&
       (!gradeId || s.grade_id === gradeId || !s.grade_id)
     );
-    // إذا لم توجد حصص بالفلتر، اعرض كل حصص المعلم
     if (!sessions.length) sessions = sessRes.data || [];
 
+    // ── بناء خريطة الحضور من teacher_attendance (مفتاحها التاريخ) ──
+    const attRecordsRaw = attRes.data || [];
+    // خريطة date → status
+    const attByDate = {};
+    attRecordsRaw.forEach(a => { attByDate[a.session_date] = a; });
+
+    // مطابقة الحصص بسجلات الحضور عبر التاريخ (YYYY-MM-DD)
     const sessIds = sessions.map(s => s.id);
-    const attMap  = {};
-    (attRes.data || []).forEach(a => { attMap[a.session_id] = a.status; });
+    const attMap  = {};   // session_id → status  (للتوافق مع كود العرض القديم)
+    sessions.forEach(s => {
+      if(!s.scheduled_at) return;
+      const dateKey = s.scheduled_at.slice(0, 10);
+      if(attByDate[dateKey]) attMap[s.id] = attByDate[dateKey].status;
+    });
 
     // إحصائيات الحضور
-    const attended = sessIds.filter(id => attMap[id] === 'present').length;
-    const absent   = sessIds.filter(id => attMap[id] === 'absent').length;
-    const notMarked= sessIds.filter(id => !attMap[id]).length;
-    const totalSess= sessions.length;
-    const attPct   = totalSess > 0 ? Math.round((attended / totalSess) * 100) : 0;
+    const attended  = sessIds.filter(id => attMap[id] === 'present').length;
+    const absent    = sessIds.filter(id => attMap[id] === 'absent').length;
+    const notMarked = sessIds.filter(id => !attMap[id]).length;
+
+    // إذا لم توجد حصص مجدولة، احسب الإحصائيات من teacher_attendance مباشرة
+    const directPresent = attRecordsRaw.filter(a => a.status === 'present').length;
+    const directAbsent  = attRecordsRaw.filter(a => a.status === 'absent').length;
+
+    const totalSess = sessions.length > 0 ? sessions.length : attRecordsRaw.length;
+    const totalAtt  = sessions.length > 0 ? attended  : directPresent;
+    const totalAbs  = sessions.length > 0 ? absent    : directAbsent;
+    const attPct    = totalSess > 0 ? Math.round((totalAtt / totalSess) * 100) : 0;
 
     // اختبارات هذه المادة — جلب عناوين الاختبارات
     let exams = [], examResultsFiltered = [];
@@ -2084,8 +2108,9 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
           <span style="background:var(--blue-light);color:var(--blue);border-radius:50px;padding:2px 10px;font-size:.72rem;font-weight:700">${totalSess} حصة</span>
         </div>
         ${totalSess === 0
-          ? `<div style="text-align:center;padding:24px;color:var(--gray);font-size:.85rem;background:var(--gray-light);border-radius:10px">📭 لا توجد حصص مسجلة لهذه المادة</div>`
-          : `<div style="border:1px solid var(--gray-mid);border-radius:10px;overflow:hidden">
+          ? `<div style="text-align:center;padding:24px;color:var(--gray);font-size:.85rem;background:var(--gray-light);border-radius:10px">📭 لا توجد حصص أو سجلات حضور لهذه المادة بعد</div>`
+          : sessions.length > 0
+          ? `<div style="border:1px solid var(--gray-mid);border-radius:10px;overflow:hidden">
               <div style="display:grid;grid-template-columns:1fr 120px 80px 80px;gap:0;background:var(--gray-light);padding:9px 14px;font-size:.74rem;font-weight:700;color:var(--gray);border-bottom:1px solid var(--gray-mid)">
                 <div>الحصة</div><div style="text-align:center">الموعد</div><div style="text-align:center">المدة</div><div style="text-align:center">الحضور</div>
               </div>
@@ -2115,11 +2140,30 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
                   <div style="text-align:center">${badge}</div>
                 </div>`;
               }).join('')}
-            </div>
-          <!-- ملخص الحضور -->
+            </div>`
+          : `<div style="border:1px solid var(--gray-mid);border-radius:10px;overflow:hidden">
+              <div style="display:grid;grid-template-columns:1fr 120px 80px;gap:0;background:var(--gray-light);padding:9px 14px;font-size:.74rem;font-weight:700;color:var(--gray);border-bottom:1px solid var(--gray-mid)">
+                <div>التاريخ</div><div style="text-align:center">سجل في</div><div style="text-align:center">الحضور</div>
+              </div>
+              ${attRecordsRaw.map((a, i) => {
+                const badge = a.status === 'present'
+                  ? `<span style="background:var(--green-light);color:#065F46;border:1px solid #6EE7B7;padding:3px 10px;border-radius:50px;font-size:.71rem;font-weight:700">✅ حاضر</span>`
+                  : `<span style="background:var(--red-light);color:var(--red);border:1px solid #FECACA;padding:3px 10px;border-radius:50px;font-size:.71rem;font-weight:700">❌ غائب</span>`;
+                const d = new Date(a.session_date + 'T00:00:00');
+                const dateStr = d.toLocaleDateString('ar-EG',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+                const createdStr = a.created_at ? new Date(a.created_at).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
+                return `<div style="display:grid;grid-template-columns:1fr 120px 80px;gap:0;padding:10px 14px;border-bottom:${i<attRecordsRaw.length-1?'1px solid var(--gray-mid)':'none'};background:${i%2===0?'#fff':'#fafafa'};align-items:center">
+                  <div style="font-size:.84rem;font-weight:700;color:var(--dark)">${dateStr}</div>
+                  <div style="text-align:center;font-size:.76rem;color:var(--gray)">${createdStr}</div>
+                  <div style="text-align:center">${badge}</div>
+                </div>`;
+              }).join('')}
+            </div>`
+        }
+<!-- ملخص الحضور -->
           <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
-            <span style="font-size:.76rem;background:var(--green-light);color:#065F46;padding:4px 12px;border-radius:50px;font-weight:700">✅ حضر: ${attended}</span>
-            <span style="font-size:.76rem;background:var(--red-light);color:var(--red);padding:4px 12px;border-radius:50px;font-weight:700">❌ غاب: ${absent}</span>
+            <span style="font-size:.76rem;background:var(--green-light);color:#065F46;padding:4px 12px;border-radius:50px;font-weight:700">✅ حضر: ${totalAtt}</span>
+            <span style="font-size:.76rem;background:var(--red-light);color:var(--red);padding:4px 12px;border-radius:50px;font-weight:700">❌ غاب: ${totalAbs}</span>
             <span style="font-size:.76rem;background:var(--gray-light);color:var(--gray);padding:4px 12px;border-radius:50px;font-weight:700">— غير مسجل: ${notMarked}</span>
           </div>`
         }
