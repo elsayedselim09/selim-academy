@@ -1433,7 +1433,7 @@ S.allSessions   = [];
 
 async function loadAdminSessions() {
   const el = document.getElementById('sess-admin-body');
-  if(el) el.innerHTML = '<div style="padding:20px">' + '<div class="skel" style="height:58px;margin-bottom:10px;border-radius:8px"></div>'.repeat(4) + '</div>';
+  el.innerHTML = '<div style="padding:20px">' + '<div class="skel" style="height:58px;margin-bottom:10px;border-radius:8px"></div>'.repeat(4) + '</div>';
 
   try {
     // ── جلب حصص المعلمين وجداول الطلاب بالتوازي ──
@@ -1483,8 +1483,7 @@ async function loadAdminSessions() {
     renderAdminSessions();
     renderStudentSchedules();
   } catch(e) {
-    console.error('loadAdminSessions:', e);
-    if(el) el.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`;
+    el.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`;
   }
 }
 
@@ -1844,7 +1843,7 @@ async function openStudentDetail(studentId) {
   })[st] || '<span class="badge b-gray">'+st+'</span>';
 
   body.innerHTML = `
-    
+    <!-- Avatar + Name -->
     <div style="text-align:center;padding:10px 0 16px">
       <div class="t-mdl-av" style="background:linear-gradient(135deg,var(--green),#0B8A5F)">
         ${s.avatar_url ? `<img src="${s.avatar_url}">` : ini(s.full_name)}
@@ -1853,7 +1852,7 @@ async function openStudentDetail(studentId) {
       <div class="t-mdl-spec">🎓 طالب</div>
     </div>
 
-    
+    <!-- Info Grid -->
     <div class="t-info-grid">
       <div class="t-info-item">
         <div class="t-info-lbl">📱 رقم الهاتف</div>
@@ -1873,7 +1872,7 @@ async function openStudentDetail(studentId) {
       </div>
     </div>
 
-    
+    <!-- Subscription Requests + clickable approved ones -->
     <div style="margin-bottom:14px">
       <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">
         📤 سجل طلبات الاشتراك (${reqs.length})
@@ -1909,7 +1908,7 @@ async function openStudentDetail(studentId) {
       }
     </div>
 
-    
+    <!-- Teacher Enrollments (إن وُجدت) -->
     ${enrs.length ? `
     <div style="margin-bottom:14px">
       <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">👨‍🏫 تسجيلات إضافية (${enrs.length})</div>
@@ -2076,7 +2075,7 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
 
     // بناء HTML التفاصيل
     body.innerHTML = `
-      
+      <!-- رأس المعلومات -->
       <div style="background:linear-gradient(135deg,#EBF5FF,#F0FDF4);border:1px solid #BFDBFE;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:14px">
         <div style="width:52px;height:52px;border-radius:13px;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">📚</div>
         <div style="flex:1">
@@ -2086,7 +2085,7 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
         </div>
       </div>
 
-      
+      <!-- إحصائيات سريعة -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
         <div style="background:var(--blue-light);border:1px solid #BFDBFE;border-radius:10px;padding:12px;text-align:center">
           <div style="font-size:1.4rem;font-weight:900;color:var(--blue)">${totalSess}</div>
@@ -2102,7 +2101,7 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
         </div>
       </div>
 
-      
+      <!-- مواعيد الحصص والحضور -->
       <div style="margin-bottom:18px">
         <div style="font-size:.85rem;font-weight:900;color:var(--dark);margin-bottom:10px;display:flex;align-items:center;gap:8px">
           🗓️ مواعيد الحصص والحضور
@@ -2159,12 +2158,15 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
                   <div style="text-align:center">${badge}</div>
                 </div>`;
               }).join('')}
-            </div>`}
+            </div>`
+        }
+<!-- ملخص الحضور -->
           <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
             <span style="font-size:.76rem;background:var(--green-light);color:#065F46;padding:4px 12px;border-radius:50px;font-weight:700">✅ حضر: ${totalAtt}</span>
             <span style="font-size:.76rem;background:var(--red-light);color:var(--red);padding:4px 12px;border-radius:50px;font-weight:700">❌ غاب: ${totalAbs}</span>
             <span style="font-size:.76rem;background:var(--gray-light);color:var(--gray);padding:4px 12px;border-radius:50px;font-weight:700">— غير مسجل: ${notMarked}</span>
-          </div>
+          </div>`
+        }
       </div>
 
       <!-- درجات الاختبارات -->
@@ -2191,6 +2193,7 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
                     <span style="font-size:.88rem;font-weight:900;color:${r.percentage>=60?'var(--green)':'var(--red)'}">${r.percentage}%</span>
                   </div>
                 </div>`).join('')}
+              <!-- متوسط -->
               <div style="padding:10px 14px;background:${Number(avgScore)>=60?'#ECFDF5':'#FEF2F2'};border-top:2px solid ${Number(avgScore)>=60?'#6EE7B7':'#FECACA'};display:flex;justify-content:space-between;align-items:center">
                 <span style="font-size:.82rem;font-weight:700;color:var(--gray)">📊 المتوسط العام</span>
                 <span style="font-size:1rem;font-weight:900;color:${Number(avgScore)>=60?'var(--green)':'var(--red)'}">${avgScore}%</span>
@@ -2287,7 +2290,7 @@ async function loadTeachers() {
   try {
     const { data, error } = await sb
       .from('profiles')
-      .select('id,full_name,phone,avatar_url,specialization,experience_years,bio,teacher_approved,created_at,role')
+      .select('id,full_name,phone,avatar_url,specialization,experience_years,bio,teacher_approved,profile_visibility,created_at,role')
       .eq('role','teacher')
       .order('created_at', { ascending:false });
     if(error) throw error;
@@ -2402,6 +2405,13 @@ function renderTeachersTable() {
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
         ${statusBadge[getTeacherStatus(t)] || ''}
+        ${(()=>{
+          const v = t.profile_visibility || 'full';
+          const vMap = { full:'🌐 ظهور كامل', count_only:'🔢 عدد الصفوف', hidden:'🙈 مخفي' };
+          const cMap = { full:'var(--green)', count_only:'var(--blue)', hidden:'var(--red)' };
+          const bgMap= { full:'var(--green-light)', count_only:'var(--blue-light)', hidden:'var(--red-light)' };
+          return `<span style="font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:50px;background:${bgMap[v]};color:${cMap[v]};border:1px solid ${cMap[v]}33">${vMap[v]}</span>`;
+        })()}
         <div class="t-acts" id="tacts-${t.id}" onclick="event.stopPropagation()">${actionBtns(t)}</div>
       </div>
     </div>`).join('') + `</div>`;
@@ -2502,7 +2512,25 @@ async function openTeacherDetail(teacherId) {
           <span style="font-size:.82rem;font-weight:600;flex:1">${s.subject_name||''}</span>
           <span style="font-size:.76rem;color:var(--gray)">${fdt(s.scheduled_at)}</span>
         </div>`).join('')}
-    </div>` : ''}`;
+    </div>` : ''}
+
+    <!-- إعداد الخصوصية — تحكم الأدمين -->
+    <div style="background:linear-gradient(135deg,#F5F3FF,#EDE9FE);border:1px solid #DDD6FE;border-radius:12px;padding:14px 16px;margin-top:6px">
+      <div style="font-size:.78rem;font-weight:900;color:var(--purple,#7C3AED);margin-bottom:10px">🔒 إعداد ظهور المعلم في الموقع</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        ${['full','count_only','hidden'].map(v => {
+          const cur = t.profile_visibility || 'full';
+          const labels = { full:'🌐 كامل', count_only:'🔢 العدد فقط', hidden:'🙈 مخفي' };
+          const active = cur === v;
+          const col = v==='hidden' ? '#EF4444' : v==='count_only' ? '#3B82F6' : '#10B981';
+          return `<button onclick="adminSetVisibility('${t.id}','${v}',this)"
+            style="padding:7px 14px;border-radius:50px;font-family:Cairo,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;border:2px solid ${active?col:'#DDD6FE'};background:${active?col+'22':'#fff'};color:${active?col:'#6B7280'};transition:all .2s">
+            ${labels[v]}
+          </button>`;
+        }).join('')}
+      </div>
+      <div style="font-size:.72rem;color:#9CA3AF">يمكنك تجاوز إعداد المعلم وتغيير مستوى ظهوره في الموقع مباشرة</div>
+    </div>`;
 
   // Action buttons
   acts.innerHTML = `
@@ -2511,6 +2539,37 @@ async function openTeacherDetail(teacherId) {
     ${st === 'approved' ? `<button class="mdl-confirm" style="background:var(--gold);color:#fff" onclick="revokeTeacher('${t.id}');document.getElementById('mdl-teacher-detail').classList.remove('show')">🔄 سحب الاعتماد</button>` : ''}
     ${st === 'rejected' ? `<button class="mdl-confirm mc-approve" onclick="approveTeacher('${t.id}');document.getElementById('mdl-teacher-detail').classList.remove('show')">✅ إعادة قبول</button>` : ''}
     <button class="mdl-cancel" onclick="document.getElementById('mdl-teacher-detail').classList.remove('show')">إغلاق</button>`;
+}
+
+async function adminSetVisibility(teacherId, value, btn) {
+  // تحديث الأزرار بصرياً فوراً
+  const allBtns = btn.parentElement.querySelectorAll('button');
+  const colMap = { full:'#10B981', count_only:'#3B82F6', hidden:'#EF4444' };
+  allBtns.forEach(b => {
+    const v = b.getAttribute('onclick').match(/'([^']+)'/g)[1].replace(/'/g,'');
+    const isActive = v === value;
+    const col = colMap[v] || '#6B7280';
+    b.style.borderColor = isActive ? col : '#DDD6FE';
+    b.style.background  = isActive ? col+'22' : '#fff';
+    b.style.color       = isActive ? col : '#6B7280';
+  });
+
+  try {
+    const { error } = await sb.from('profiles')
+      .update({ profile_visibility: value })
+      .eq('id', teacherId);
+    if(error) throw error;
+
+    // تحديث البيانات المحلية
+    const idx = S.teachers.findIndex(t => t.id === teacherId);
+    if(idx !== -1) S.teachers[idx].profile_visibility = value;
+
+    const labels = { full:'🌐 ظهور كامل', count_only:'🔢 عدد الصفوف', hidden:'🙈 مخفي' };
+    toast(`✅ تم تغيير ظهور المعلم إلى "${labels[value]}"`);
+    renderTeachersTable();
+  } catch(e) {
+    toast('❌ خطأ: ' + e.message, 'err');
+  }
 }
 
 async function approveTeacher(teacherId) {
@@ -2610,8 +2669,8 @@ async function revokeTeacher(teacherId) {
 
     updateHdr();
 
-    // تحميل كل البيانات معاً — كل function بتعالج أخطاءها بنفسها
-    await Promise.allSettled([
+    // تحميل كل البيانات معاً في وقت واحد لتعبئة النظرة العامة
+    await Promise.all([
       loadRequests(),
       loadCourses(),
       loadTeachers(),
@@ -2839,9 +2898,9 @@ async function deleteSubscription() {
 </script>
 <script src="pwa-register.js" defer></script>
 
-
-
-
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- MODAL: إضافة اشتراك يدوي                                  -->
+<!-- ══════════════════════════════════════════════════════════ -->
 <div class="mdl" id="mdl-manual-enroll" style="z-index:1100">
   <div class="mdl-box wide" style="max-width:580px;max-height:90vh;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-shrink:0">
@@ -2853,7 +2912,7 @@ async function deleteSubscription() {
     </div>
     <div style="overflow-y:auto;flex:1;padding-left:4px">
 
-      
+      <!-- خطوة 1: الطالب -->
       <div style="background:var(--blue-light);border:1px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-bottom:14px">
         <div style="font-size:.78rem;font-weight:700;color:var(--blue);margin-bottom:8px">① اختر الطالب</div>
         <div class="fg" style="margin-bottom:0">
@@ -2863,7 +2922,7 @@ async function deleteSubscription() {
         </div>
       </div>
 
-      
+      <!-- خطوة 2: المادة والمعلم -->
       <div style="background:var(--purple-light);border:1px solid #DDD6FE;border-radius:10px;padding:12px 14px;margin-bottom:14px">
         <div style="font-size:.78rem;font-weight:700;color:var(--purple);margin-bottom:10px">② المادة والمعلم</div>
         <div class="fg-row">
@@ -2890,7 +2949,7 @@ async function deleteSubscription() {
         </div>
       </div>
 
-      
+      <!-- خطوة 3: تفاصيل إضافية -->
       <div style="background:var(--gold-light);border:1px solid #FCD34D;border-radius:10px;padding:12px 14px;margin-bottom:14px">
         <div style="font-size:.78rem;font-weight:700;color:#92400E;margin-bottom:10px">③ تفاصيل الاشتراك (اختياري)</div>
         <div class="fg-row">

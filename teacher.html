@@ -1170,6 +1170,45 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
           <div class="fg"><label>سنوات الخبرة</label><input type="text" id="prof-exp" placeholder="مثال: 5 سنوات"></div>
         </div>
         <div class="fg"><label>نبذة عنك</label><textarea id="prof-bio" rows="4" placeholder="اكتب نبذة مختصرة عن نفسك وأسلوبك في التدريس..."></textarea></div>
+
+        <!-- ══ إعداد الخصوصية ══ -->
+        <div style="background:linear-gradient(135deg,#F5F3FF,#EDE9FE);border:1px solid #DDD6FE;border-radius:12px;padding:16px 18px;margin-bottom:4px">
+          <div style="font-size:.82rem;font-weight:900;color:var(--purple,#7C3AED);margin-bottom:12px;display:flex;align-items:center;gap:7px">
+            🔒 إعداد الظهور في الموقع
+            <span style="font-size:.72rem;font-weight:600;color:#9CA3AF;font-weight:500">— اختر ما يراه الطلاب عنك</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px" id="visibility-options">
+
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;background:#fff;border:2px solid #DDD6FE;border-radius:10px;padding:12px 14px;transition:border-color .2s" id="vis-opt-full">
+              <input type="radio" name="prof-visibility" value="full" style="margin-top:3px;accent-color:var(--blue,#3B82F6);flex-shrink:0">
+              <div>
+                <div style="font-size:.88rem;font-weight:700;color:var(--dark,#1F2937)">🌐 ظهور كامل</div>
+                <div style="font-size:.76rem;color:#6B7280;margin-top:3px">يظهر اسمك + جميع أسماء صفوفك ومجموعاتك للطلاب</div>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;background:#fff;border:2px solid #DDD6FE;border-radius:10px;padding:12px 14px;transition:border-color .2s" id="vis-opt-count">
+              <input type="radio" name="prof-visibility" value="count_only" style="margin-top:3px;accent-color:var(--blue,#3B82F6);flex-shrink:0">
+              <div>
+                <div style="font-size:.88rem;font-weight:700;color:var(--dark,#1F2937)">🔢 عدد الصفوف فقط</div>
+                <div style="font-size:.76rem;color:#6B7280;margin-top:3px">يظهر اسمك + عدد الصفوف فقط بدون أسمائها (مثال: ٣ صفوف دراسية)</div>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;background:#fff;border:2px solid #DDD6FE;border-radius:10px;padding:12px 14px;transition:border-color .2s" id="vis-opt-hidden">
+              <input type="radio" name="prof-visibility" value="hidden" style="margin-top:3px;accent-color:var(--red,#EF4444);flex-shrink:0">
+              <div>
+                <div style="font-size:.88rem;font-weight:700;color:var(--red,#EF4444)">🙈 إخفاء تام</div>
+                <div style="font-size:.76rem;color:#6B7280;margin-top:3px">لا يظهر اسمك في قائمة المدرسين — الطلاب لن يتمكنوا من رؤيتك في الموقع</div>
+              </div>
+            </label>
+
+          </div>
+          <div style="font-size:.72rem;color:#9CA3AF;margin-top:10px;padding-top:10px;border-top:1px solid #EDE9FE">
+            💡 يمكنك تغيير هذا الإعداد في أي وقت — يُطبَّق فوراً على الموقع
+          </div>
+        </div>
+
         <div id="prof-msg"></div>
         <div class="mdl-btns" style="margin-top:0;justify-content:flex-start">
           <button class="btn-primary" id="save-prof-btn" onclick="saveProfile()">💾 حفظ التغييرات</button>
@@ -3294,6 +3333,17 @@ async function loadProfile() {
   fill('prof-spec',  p.specialization);
   fill('prof-exp',   p.experience_years);
   fill('prof-bio',   p.bio);
+  // تحديد إعداد الخصوصية
+  const vis = p.profile_visibility || 'full';
+  const visRadio = document.querySelector(`input[name="prof-visibility"][value="${vis}"]`);
+  if(visRadio) visRadio.checked = true;
+  // تلوين الخيار المختار
+  ['full','count_only','hidden'].forEach(v => {
+    const opt = document.getElementById('vis-opt-' + (v==='count_only'?'count':v));
+    if(!opt) return;
+    opt.style.borderColor = v === vis ? 'var(--blue,#3B82F6)' : '#DDD6FE';
+    opt.style.background  = v === vis ? '#EBF5FF' : '#fff';
+  });
   // Also fill settings fields
   fill('sett-name',  p.full_name);
   fill('sett-phone', p.phone);
@@ -3479,12 +3529,14 @@ async function removeAvatar(e) {
 async function saveProfile() {
   const btn = document.getElementById('save-prof-btn');
   btn.disabled = true; btn.textContent = '⏳...';
+  const selVis = document.querySelector('input[name="prof-visibility"]:checked');
   const payload = {
-    full_name:        document.getElementById('prof-name')?.value.trim(),
-    phone:            document.getElementById('prof-phone')?.value.trim(),
-    specialization:   document.getElementById('prof-spec')?.value.trim(),
-    experience_years: document.getElementById('prof-exp')?.value.trim(),
-    bio:              document.getElementById('prof-bio')?.value.trim(),
+    full_name:          document.getElementById('prof-name')?.value.trim(),
+    phone:              document.getElementById('prof-phone')?.value.trim(),
+    specialization:     document.getElementById('prof-spec')?.value.trim(),
+    experience_years:   document.getElementById('prof-exp')?.value.trim(),
+    bio:                document.getElementById('prof-bio')?.value.trim(),
+    profile_visibility: selVis ? selVis.value : 'full',
   };
   try {
     const { error } = await sb.from('profiles').update(payload).eq('id', ST.user.id);
@@ -3619,8 +3671,7 @@ window.goTo = async function(name) {
   if(name === 'sessions') await loadSessions();
   if(name === 'students') await loadStudents();
   if(name === 'exams')    await loadExams();
-  if(name === 'profile')  await loadProfile();
-  if(name === 'settings') await loadProfile();
+  if(name === 'profile' || name === 'settings') await loadProfile();
 };
 
 // ══════════════════════════════════════════════
@@ -4136,6 +4187,22 @@ async function viewExamResults(examId, examTitle) {
       </div>`;
   } catch(e) { rv.innerHTML = `<p style="color:var(--red);text-align:center">خطأ: ${e.message}</p>`; }
 }
+
+// ══════════════════════════════════════════════
+// VISIBILITY RADIO — تلوين الخيار المحدد
+// ══════════════════════════════════════════════
+document.querySelectorAll('input[name="prof-visibility"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    ['full','count_only','hidden'].forEach(v => {
+      const opt = document.getElementById('vis-opt-' + (v === 'count_only' ? 'count' : v));
+      if(!opt) return;
+      const isSelected = v === this.value;
+      const isHidden   = v === 'hidden';
+      opt.style.borderColor = isSelected ? (isHidden ? 'var(--red,#EF4444)' : 'var(--blue,#3B82F6)') : '#DDD6FE';
+      opt.style.background  = isSelected ? (isHidden ? '#FEF2F2'            : '#EBF5FF')             : '#fff';
+    });
+  });
+});
 
 // ══════════════════════════════════════════════
 // INIT

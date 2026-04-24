@@ -10,7 +10,7 @@
   gtag("config", "G-L6VC6WK189");
 </script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <meta name="google-site-verification" content="1r542uW4eXyHqclun7ylKGNeYMiQ3VN_nA1tcr2lZIE" />
 
 <!-- ═══ SEO الأساسي ═══ -->
@@ -479,35 +479,111 @@ footer{background:var(--dark);padding:60px 5% 30px;}
 .scroll-top.show{opacity:1;}
 .scroll-top:hover{background:var(--blue-dark);transform:translateY(-2px);}
 
-@media(max-width:900px){
-  .hero-inner{grid-template-columns:1fr;}
-  .hero-left{display:none;}
-  .stats-grid{grid-template-columns:repeat(2,1fr);}
-  .stages-grid{grid-template-columns:1fr;}
-  .footer-top{grid-template-columns:1fr 1fr;}
-  .cta-inner{grid-template-columns:1fr;}
-  .contact-grid{grid-template-columns:1fr;}
-  nav .nav-links{display:none;}
-  .booking-top-row{grid-template-columns:1fr;}
-  .day-time-row{grid-template-columns:1fr 1fr;}
-  .form-row{grid-template-columns:1fr;}
-  .pricing-cards{grid-template-columns:repeat(2,1fr);}
-  /* المدرسين — عمودان على التاب والموبايل */
-  .teachers-grid{grid-template-columns:repeat(2,1fr);gap:14px;max-width:100%;}
-  .teacher-card-body{padding:12px 14px;}
-  .teacher-name{font-size:.95rem;}
-  .teacher-bio{-webkit-line-clamp:2;}
+/* ══════════════════════════════════════
+   RESPONSIVE — TABLET (max 1024px)
+══════════════════════════════════════ */
+@media (max-width:1024px){
+  .hero-inner{gap:36px;}
+  .hero-title{font-size:clamp(1.7rem,3vw,2.4rem);}
+  .footer-top{grid-template-columns:1fr 1fr;gap:28px;}
+  .stages-grid{grid-template-columns:repeat(3,1fr);gap:18px;}
+  .stage-card{padding:28px 20px;}
 }
-@media(max-width:480px){
-  /* موبايل صغير — عمودان مضغوطان */
-  .teachers-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
-  .teacher-avatar{font-size:2rem;}
-  .teacher-card-body{padding:10px 12px;}
-  .teacher-name{font-size:.88rem;}
-  .teacher-subject{font-size:.75rem;margin-bottom:6px;}
-  .teacher-stars{font-size:.8rem;margin-bottom:6px;}
-  .teacher-bio{font-size:.75rem;-webkit-line-clamp:2;margin-bottom:10px;}
-  .teacher-btn{font-size:.75rem;padding:7px;}
+
+/* ══════════════════════════════════════
+   RESPONSIVE — MOBILE (max 768px)
+══════════════════════════════════════ */
+@media (max-width:768px){
+  /* NAV */
+  nav{padding:0 4%;}
+  .nav-links{display:none;}
+  .nav-inner{height:56px;}
+  .nav-logo{font-size:1.1rem;}
+  .btn-login{display:none;}
+  .btn-register{padding:7px 14px;font-size:.82rem;}
+
+  /* HERO */
+  #hero{padding:80px 4% 48px;min-height:auto;}
+  .hero-inner{grid-template-columns:1fr;gap:32px;}
+  .hero-left{order:-1;}
+  .hero-img-card img{height:260px;}
+  .hero-float-1{bottom:10px;right:-8px;}
+  .hero-float-2{top:10px;left:-8px;}
+  .hero-title{font-size:clamp(1.5rem,5vw,2rem);}
+  .hero-sub{font-size:.9rem;}
+  .hero-btns{flex-direction:column;gap:10px;}
+  .btn-primary,.btn-secondary{width:100%;justify-content:center;}
+  .hero-stats{gap:16px;}
+  .hero-stat-num{font-size:1.3rem;}
+
+  /* STATS BAR */
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .stat-item{border-left:none;border-bottom:1px solid rgba(255,255,255,.15);padding:14px;}
+  .stat-item:nth-child(odd){border-left:1px solid rgba(255,255,255,.15);}
+  .stat-item:nth-last-child(-n+2){border-bottom:none;}
+  .stat-num{font-size:1.7rem;}
+
+  /* SECTIONS */
+  section{padding:52px 4%;}
+  .section-title{font-size:clamp(1.3rem,4vw,1.8rem);}
+
+  /* TEACHERS */
+  .teachers-grid{grid-template-columns:repeat(2,1fr);gap:14px;}
+
+  /* STAGES */
+  .stages-grid{grid-template-columns:1fr;gap:18px;}
+  .stage-card{padding:32px 24px;}
+
+  /* COURSES */
+  .courses-grid{grid-template-columns:1fr;}
+
+  /* CONTACT */
+  .contact-grid{grid-template-columns:1fr;gap:24px;}
+
+  /* CTA */
+  .cta-inner{grid-template-columns:1fr;}
+  .cta-left{border-left:none;border-bottom:1px solid var(--gray-mid);padding:32px 24px;}
+  .cta-right{padding:32px 24px;}
+
+  /* FOOTER */
+  .footer-top{grid-template-columns:1fr 1fr;gap:24px;}
+  .footer-bottom{flex-direction:column;text-align:center;}
+
+  /* PRICING */
+  .pricing-cards{grid-template-columns:1fr;max-width:320px;}
+  .booking-box{padding:24px 16px;}
+  .booking-top-row{grid-template-columns:1fr;}
+  .form-row{grid-template-columns:1fr;}
+  .day-time-row{grid-template-columns:1fr 1fr auto;gap:10px;}
+
+  /* FLOATING WA */
+  .wa-float{bottom:20px;left:16px;padding:10px 16px 10px 12px;font-size:.85rem;}
+  .wa-float .wa-label{display:none;}
+  .scroll-top{bottom:20px;right:16px;}
+
+  /* METHOD */
+  .method-grid{grid-template-columns:1fr 1fr;}
+
+  /* CURRICULUM TABS */
+  .curr-tab{padding:8px 14px;font-size:.85rem;}
+}
+
+/* ══════════════════════════════════════
+   RESPONSIVE — SMALL MOBILE (max 480px)
+══════════════════════════════════════ */
+@media (max-width:480px){
+  .teachers-grid{grid-template-columns:1fr;}
+  .method-grid{grid-template-columns:1fr;}
+  .hero-stats{flex-direction:row;flex-wrap:wrap;gap:12px;}
+  .hero-stat{min-width:80px;}
+  .nav-btns .btn-register{font-size:.78rem;padding:6px 10px;}
+  .footer-top{grid-template-columns:1fr;}
+  .pricing-cards{max-width:100%;}
+  .stage-card{padding:24px 18px;}
+  .stage-icon{width:64px;height:64px;font-size:1.8rem;}
+  .tmdl-box{border-radius:16px;}
+  .tmdl-cover{padding:24px 18px 20px;}
+  .tmdl-body{padding:18px 16px;}
 }
 
 /* ══════════════════════════════════════
@@ -806,7 +882,7 @@ footer{background:var(--dark);padding:60px 5% 30px;}
 .cf-group input,.cf-group select,.cf-group textarea{width:100%;background:var(--white);border:1.5px solid var(--gray-mid);border-radius:10px;padding:10px 14px;font-family:'Cairo',sans-serif;font-size:.9rem;color:var(--navy);outline:none;box-sizing:border-box;transition:border-color .2s;}
 .cf-group input:focus,.cf-group select:focus,.cf-group textarea:focus{border-color:var(--blue);}
 .cf-group textarea{resize:vertical;min-height:100px;}
-@media(max-width:900px){.contact-grid{grid-template-columns:1fr;}}
+
 
   .price-max {
     font-size:.72rem; font-weight:700;
@@ -1916,9 +1992,10 @@ async function renderTeachers() {
     // جلب المعلمين المعتمدين فقط — بدون رقم الموبايل
     var res = await window._sb
       .from('profiles')
-      .select('id, full_name, avatar_url, specialization, experience_years, bio, role, teacher_approved')
+      .select('id, full_name, avatar_url, specialization, experience_years, bio, role, teacher_approved, profile_visibility')
       .eq('role', 'teacher')
-      .eq('teacher_approved', true);
+      .eq('teacher_approved', true)
+      .neq('profile_visibility', 'hidden');  // استثناء من اختار الإخفاء
 
     if (res.error) {
       console.error('Supabase teachers error:', res.error);
@@ -1996,10 +2073,10 @@ async function openTeacherModal(teacherId) {
     '<div style="text-align:center;padding:24px;color:#9CA3AF;">⏳ جاري التحميل...</div>';
 
   try {
-    // 1) بيانات المعلم
+    // 1) بيانات المعلم (مع profile_visibility)
     var profRes = await window._sb
       .from('profiles')
-      .select('id, full_name, avatar_url, specialization, experience_years, bio')
+      .select('id, full_name, avatar_url, specialization, experience_years, bio, profile_visibility')
       .eq('id', teacherId)
       .single();
     if (profRes.error) throw profRes.error;
@@ -2025,7 +2102,9 @@ async function openTeacherModal(teacherId) {
       document.getElementById('tmdl-bio-sec').style.display = 'block';
     }
 
-    // 2) المواد والصفوف فقط — بدون حصص
+    // 2) المواد والصفوف — حسب إعداد الخصوصية
+    var visibility = p.profile_visibility || 'full';
+
     var subjRes = await window._sb
       .from('teacher_subjects')
       .select('id, name, icon, level, teacher_grades(id, name, description)')
@@ -2033,40 +2112,70 @@ async function openTeacherModal(teacherId) {
       .eq('is_approved', true);
 
     var subjects = subjRes.data || [];
+
+    // حساب إجمالي عدد الصفوف
+    var totalGrades = subjects.reduce(function(sum, s) {
+      return sum + (s.teacher_grades ? s.teacher_grades.length : 0);
+    }, 0);
+
     var html = '';
 
-    if (subjects.length === 0) {
-      html = '<div class="tmdl-no-sess">لم يتم إضافة صفوف أو مجموعات بعد</div>';
-    } else {
-      subjects.forEach(function(subj) {
-        var grades = subj.teacher_grades || [];
-        if (grades.length === 0) {
-          html += '<div class="tmdl-grade-card">' +
-            '<div class="tmdl-grade-head">' +
-              '<div class="tmdl-grade-icon">' + (subj.icon || '📚') + '</div>' +
-              '<div>' +
-                '<div class="tmdl-grade-name">' + (subj.name || 'مادة') + '</div>' +
-                (subj.level ? '<div class="tmdl-grade-subj">' + subj.level + '</div>' : '') +
-              '</div>' +
-            '</div>' +
+    if (visibility === 'count_only') {
+      // يظهر فقط عدد الصفوف بدون أسمائها
+      if (totalGrades === 0 && subjects.length === 0) {
+        html = '<div class="tmdl-no-sess">لم يتم إضافة مواد بعد</div>';
+      } else {
+        html = '<div style="text-align:center;padding:28px 20px;background:linear-gradient(135deg,#EBF5FF,#F0FDF4);border-radius:14px;border:1px solid #BFDBFE;">' +
+          '<div style="font-size:2.5rem;font-weight:900;color:var(--blue,#3B82F6);">' + (totalGrades || subjects.length) + '</div>' +
+          '<div style="font-size:.9rem;color:#6B7280;margin-top:6px;font-weight:700;">صف دراسي متاح</div>' +
+          '<div style="font-size:.78rem;color:#9CA3AF;margin-top:8px;">تواصل معنا للاستفسار عن المجموعات المتاحة</div>' +
+        '</div>';
+        // عرض أسماء المواد فقط بدون الصفوف
+        if (subjects.length > 0) {
+          html += '<div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">' +
+            subjects.map(function(s) {
+              return '<span style="background:var(--blue-light,#EBF5FF);color:var(--blue,#3B82F6);border:1px solid #BFDBFE;padding:6px 14px;border-radius:50px;font-size:.82rem;font-weight:700;">' +
+                (s.icon || '📚') + ' ' + (s.name || 'مادة') +
+              '</span>';
+            }).join('') +
           '</div>';
-          return;
         }
-        grades.forEach(function(g) {
-          html += '<div class="tmdl-grade-card">' +
-            '<div class="tmdl-grade-head">' +
-              '<div class="tmdl-grade-icon">' + (subj.icon || '📚') + '</div>' +
-              '<div>' +
-                '<div class="tmdl-grade-name">' + (g.name || 'مجموعة') + '</div>' +
-                '<div class="tmdl-grade-subj">📚 ' + (subj.name || '') +
-                  (subj.level ? ' · ' + subj.level : '') +
-                  (g.description ? ' · ' + g.description : '') +
+      }
+    } else {
+      // full — يظهر كل شيء
+      if (subjects.length === 0) {
+        html = '<div class="tmdl-no-sess">لم يتم إضافة صفوف أو مجموعات بعد</div>';
+      } else {
+        subjects.forEach(function(subj) {
+          var grades = subj.teacher_grades || [];
+          if (grades.length === 0) {
+            html += '<div class="tmdl-grade-card">' +
+              '<div class="tmdl-grade-head">' +
+                '<div class="tmdl-grade-icon">' + (subj.icon || '📚') + '</div>' +
+                '<div>' +
+                  '<div class="tmdl-grade-name">' + (subj.name || 'مادة') + '</div>' +
+                  (subj.level ? '<div class="tmdl-grade-subj">' + subj.level + '</div>' : '') +
                 '</div>' +
               '</div>' +
-            '</div>' +
-          '</div>';
+            '</div>';
+            return;
+          }
+          grades.forEach(function(g) {
+            html += '<div class="tmdl-grade-card">' +
+              '<div class="tmdl-grade-head">' +
+                '<div class="tmdl-grade-icon">' + (subj.icon || '📚') + '</div>' +
+                '<div>' +
+                  '<div class="tmdl-grade-name">' + (g.name || 'مجموعة') + '</div>' +
+                  '<div class="tmdl-grade-subj">📚 ' + (subj.name || '') +
+                    (subj.level ? ' · ' + subj.level : '') +
+                    (g.description ? ' · ' + g.description : '') +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+          });
         });
-      });
+      }
     }
 
     document.getElementById('tmdl-grades-body').innerHTML = html;
