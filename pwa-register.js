@@ -61,14 +61,51 @@
     }
   }
 
+  // ── الدالة المشتركة لتشغيل التثبيت ──
+  function triggerInstall() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function (result) {
+        console.log('[PWA] User choice:', result.outcome);
+        deferredPrompt = null;
+        hideInstallBanner();
+        hideHeroBtn();
+      });
+    } else {
+      // إذا لم يكن الـ prompt متاحًا، اعرض تعليمات يدوية
+      alert('لتثبيت التطبيق:\n• كروم: اضغط ⋮ ثم "تثبيت التطبيق"\n• سفاري (iOS): اضغط □↑ ثم "إضافة إلى الشاشة الرئيسية"');
+    }
+  }
+
+  // ✅ كشف الدالة لزرار الـ Hero في HTML
+  window.__pwaInstall = triggerInstall;
+
+  // ── إظهار/إخفاء زرار Hero ──
+  function showHeroBtn() {
+    var btn = document.getElementById('hero-install-btn');
+    if (btn) {
+      btn.style.display = 'inline-flex';
+    }
+  }
+
+  function hideHeroBtn() {
+    var btn = document.getElementById('hero-install-btn');
+    if (btn) {
+      btn.style.display = 'none';
+    }
+  }
+
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferredPrompt = e;
     console.log('[PWA] beforeinstallprompt captured');
 
-    // ✅ التحقق قبل العرض — الإصلاح الرئيسي
+    // ✅ إظهار زرار Hero دائمًا عند توفر الـ prompt
+    showHeroBtn();
+
+    // ✅ التحقق قبل العرض — تجنب الـ popup إذا رُفض مؤخرًا
     if (wasDismissedRecently()) {
-      console.log('[PWA] Banner was dismissed recently — skipping.');
+      console.log('[PWA] Banner was dismissed recently — skipping popup.');
       return;
     }
 
@@ -78,11 +115,46 @@
   window.addEventListener('appinstalled', function () {
     console.log('[PWA] App installed successfully!');
     hideInstallBanner();
+    hideHeroBtn();
     deferredPrompt = null;
     try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
   });
 
-  // ── بناء شريط التثبيت ──
+  // ── CSS لزرار Hero (يُضاف مرة واحدة) ──
+  function injectStyles() {
+    if (document.getElementById('pwa-styles')) return;
+    var style = document.createElement('style');
+    style.id = 'pwa-styles';
+    style.textContent =
+      '@keyframes pwaSlideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}' +
+      '#hero-install-btn{' +
+        'display:none;' +
+        'align-items:center;' +
+        'gap:8px;' +
+        'padding:12px 28px;' +
+        'background:rgba(255,255,255,0.15);' +
+        'color:#fff;' +
+        'border:2px solid rgba(255,255,255,0.6);' +
+        'border-radius:50px;' +
+        'font-size:.95rem;' +
+        'font-weight:700;' +
+        'cursor:pointer;' +
+        'font-family:Cairo,sans-serif;' +
+        'transition:all .3s ease;' +
+        'backdrop-filter:blur(4px);' +
+      '}' +
+      '#hero-install-btn:hover{background:rgba(255,255,255,0.28);transform:translateY(-2px);}';
+    document.head.appendChild(style);
+  }
+
+  // حقن الـ CSS بمجرد أن يكون الـ DOM جاهزاً
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectStyles);
+  } else {
+    injectStyles();
+  }
+
+  // ── بناء شريط التثبيت (Popup) ──
   function showInstallBanner() {
     if (installBanner) return;
 
@@ -97,8 +169,7 @@
         '</div>' +
         '<button id="pwa-close-x" style="' +
           'margin-right:auto;background:transparent;border:none;color:#fff;' +
-          'font-size:1.1rem;cursor:pointer;line-height:1;padding:4px 8px;' +
-          'opacity:.7;' +
+          'font-size:1.1rem;cursor:pointer;line-height:1;padding:4px 8px;opacity:.7;' +
         '">✕</button>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:12px;">' +
@@ -131,27 +202,9 @@
       animation:    'pwaSlideUp .4s cubic-bezier(.34,1.56,.64,1)',
     });
 
-    // إضافة animation keyframes
-    if (!document.getElementById('pwa-styles')) {
-      var style = document.createElement('style');
-      style.id = 'pwa-styles';
-      style.textContent =
-        '@keyframes pwaSlideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}';
-      document.head.appendChild(style);
-    }
-
     document.body.appendChild(installBanner);
 
-    document.getElementById('pwa-install-btn').addEventListener('click', function () {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(function (result) {
-          console.log('[PWA] User choice:', result.outcome);
-          deferredPrompt = null;
-          hideInstallBanner();
-        });
-      }
-    });
+    document.getElementById('pwa-install-btn').addEventListener('click', triggerInstall);
 
     function dismissBanner() {
       hideInstallBanner();
@@ -204,6 +257,12 @@
   if (isStandalone) {
     console.log('[PWA] Running in standalone mode ✅');
     document.documentElement.classList.add('pwa-standalone');
+    // إخفاء زرار التثبيت إذا كان التطبيق مثبتًا بالفعل
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', hideHeroBtn);
+    } else {
+      hideHeroBtn();
+    }
   }
 
 })();
