@@ -1448,8 +1448,8 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
     </div>
     <!-- Tabs -->
     <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--gray-mid);padding-bottom:0">
-      <button id="tab-att-btn" onclick="switchStuTab('att')" style="padding:8px 18px;border:none;background:none;font-family:Cairo,sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;color:var(--blue);border-bottom:2.5px solid var(--blue);margin-bottom:-2px">📋 الحضور</button>
-      <button id="tab-exam-btn" onclick="switchStuTab('exam')" style="padding:8px 18px;border:none;background:none;font-family:Cairo,sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;color:var(--gray);border-bottom:2.5px solid transparent;margin-bottom:-2px">📝 الاختبارات</button>
+      <button id="tab-att-btn" onclick="switchDetailTab('att')" style="padding:8px 18px;border:none;background:none;font-family:Cairo,sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;color:var(--blue);border-bottom:2.5px solid var(--blue);margin-bottom:-2px">📋 الحضور</button>
+      <button id="tab-exam-btn" onclick="switchDetailTab('exam')" style="padding:8px 18px;border:none;background:none;font-family:Cairo,sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;color:var(--gray);border-bottom:2.5px solid transparent;margin-bottom:-2px">📝 الاختبارات</button>
     </div>
     <!-- Tab: Attendance -->
     <div id="tab-att">
@@ -2920,7 +2920,7 @@ async function loadStudentsList(gradeId) {
 }
 
 // ── Student Detail Modal ──
-function switchStuTab(tab) {
+function switchDetailTab(tab) {
   document.getElementById('tab-att').style.display    = tab === 'att'  ? 'block' : 'none';
   document.getElementById('tab-exam').style.display   = tab === 'exam' ? 'block' : 'none';
   document.getElementById('tab-att-btn').style.color  = tab === 'att'  ? 'var(--blue)' : 'var(--gray)';
@@ -2935,7 +2935,7 @@ async function openStudentDetail(studentId, name, gradeName) {
   document.getElementById('stu-detail-grade').textContent = gradeName || '—';
   document.getElementById('stu-att-records').innerHTML  = `<div class="skel" style="height:40px;margin-bottom:8px"></div>`.repeat(4);
   document.getElementById('stu-exam-records').innerHTML = `<div class="skel" style="height:56px;margin-bottom:8px;border-radius:10px"></div>`.repeat(3);
-  switchStuTab('att');
+  switchDetailTab('att');
   document.getElementById('mdl-student').classList.add('show');
 
   document.getElementById('det-sessions-wrap').style.display = 'none';
@@ -3193,7 +3193,7 @@ async function saveAttendance() {
 
     // ── 2. حفظ الحضور ──
     const { error } = await sb.from('teacher_attendance')
-      .upsert(rows, { onConflict: 'teacher_id,student_id,grade_id,session_date' });
+      .upsert(rows, { onConflict: 'teacher_id,student_id,session_date' });
     if(error) throw error;
 
     // ── 3. تحديد الطلاب الذين أصبحوا "حضر" الآن ولم يكونوا حضراً سابقاً ──
