@@ -78,11 +78,11 @@ body {
 }
 .logo-icon {
   width:36px; height:36px;
-  background:var(--blue);
   border-radius:8px;
-  display:flex; align-items:center; justify-content:center;
-  color:#fff; font-size:.9rem; font-weight:900;
+  overflow:hidden;
+  flex-shrink:0;
 }
+.logo-icon img{width:100%;height:100%;object-fit:cover;display:block;}
 .back-link {
   font-size:.88rem;
   color:var(--gray);
@@ -491,7 +491,7 @@ body {
 <!-- TOP BAR -->
 <div class="top-bar">
   <a href="index.html" class="logo">
-    <div class="logo-icon">أس</div>
+    <div class="logo-icon"><img src="/selim-academy/icon-192x192.png" alt="سليم أكاديمية"></div>
     أكاديمية سليم
   </a>
   <a href="index.html" class="back-link">

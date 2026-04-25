@@ -43,11 +43,23 @@
     font-size: 1.1rem;
     font-weight: 900;
     color: #1A56DB;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
   }
+  .logo-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .logo-icon img { width:100%; height:100%; object-fit:cover; display:block; }
 </style>
 </head>
 <body>
-<div class="logo">📚 أكاديمية سليم</div>
+<a href="index.html" class="logo"><div class="logo-icon"><img src="/selim-academy/icon-192x192.png" alt="سليم أكاديمية"></div> أكاديمية سليم</a>
 <div class="icon">📶</div>
 <h1>أنت غير متصل بالإنترنت</h1>
 <p>يبدو أن اتصالك بالإنترنت منقطع. تحقق من اتصالك ثم أعد المحاولة.</p>
