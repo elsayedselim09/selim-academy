@@ -7,7 +7,7 @@
  */
 
 // ── اسم الـ Cache — غيّر الرقم عند أي تحديث للموقع ──
-const CACHE_NAME    = 'selim-academy-v3';
+const CACHE_NAME    = 'selim-academy-v4';
 const OFFLINE_PAGE  = '/selim-academy/offline.html';
 
 // ── الملفات التي تُحفظ فوراً عند تثبيت الـ SW ──
