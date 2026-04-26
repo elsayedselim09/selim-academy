@@ -46,6 +46,8 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dar
 .user-mini{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:8px}
 .user-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-mid));display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;font-weight:900;flex-shrink:0;overflow:hidden}
 .user-av img{width:100%;height:100%;object-fit:cover}
+img[src=""], img:not([src]), img.avatar-img:-moz-broken, img:-moz-broken, img:is([src*="supabase"]):not([complete]) { display: none !important; }
+img.avatar-img { display:block }
 .user-mini-name{font-size:.85rem;font-weight:700;color:#fff}
 .user-mini-role{font-size:.72rem;color:rgba(255,255,255,.4)}
 .btn-logout{width:100%;padding:10px 16px;background:rgba(239,68,68,.15);color:#FCA5A5;border:1px solid rgba(239,68,68,.25);border-radius:10px;font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
@@ -1945,6 +1947,8 @@ async function openStudentSubjectDetailFromReq(studentId, teacherId, subjectName
       .select('grade_id')
       .eq('student_id', studentId)
       .eq('teacher_id', teacherId)
+      .ilike('subject_name', `%${subjectName}%`)
+      .limit(1)
       .maybeSingle();
     gradeId = enrData?.grade_id || '';
   }
@@ -1994,6 +1998,8 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
           .select('enrolled_at,subject_name,grade_name')
           .eq('student_id', studentId)
           .eq('teacher_id', teacherId)
+          .ilike('subject_name', `%${subjectName}%`)
+          .limit(1)
           .maybeSingle()
       : sb.from('subscription_requests')
           .select('created_at,subject,grade')
