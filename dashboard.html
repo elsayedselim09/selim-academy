@@ -517,9 +517,9 @@ function daysLeft(iso) {
 }
 function sessionStatus(s) {
   if (s.status === 'ended') return 'ended';
-  const diff = (new Date(s.scheduled_at) - Date.now()) / 60000;
+  const diff = (new Date(s.scheduled_at) - Date.now()) / 60000; // دقائق حتى بدء الحصة
   if (s.status === 'live' || (diff >= -90 && diff <= 0)) return 'live';
-  if (diff > 0 && diff <= 30) return 'soon';
+  if (diff > 0 && diff <= 10) return 'soon';  // ← 10 دقائق قبل البدء = مفتوح للدخول
   if (new Date(s.scheduled_at) < Date.now()) return 'ended';
   return 'upcoming';
 }
@@ -1436,13 +1436,14 @@ function renderSessionItem(s) {
   const tbStyle = ended ? 'background:var(--gray-light);border-color:var(--gray-mid)' : '';
   const txStyle = ended ? 'color:var(--gray)' : '';
   let btn = '';
-  if (st === 'live' && s.zoom_link)
+  if ((st === 'live' || st === 'soon') && s.zoom_link)
+    // ← يُتاح الدخول قبل الموعد بـ 10 دقائق
     btn = `<button class="btn-join btn-live" data-zoom="${s.zoom_link.replace(/"/g,'&quot;')}" onclick="openZoomLink(this.dataset.zoom)" style="display:inline-flex;align-items:center;justify-content:center;">🎥 ادخل</button>`;
   else if (st === 'soon')     btn = `<button class="btn-join btn-soon" disabled>قريباً</button>`;
   else if (st === 'upcoming') btn = `<button class="btn-join btn-dis"  disabled>لم يبدأ</button>`;
   else                        btn = `<button class="btn-join btn-end"  disabled>انتهت</button>`;
-  const cd = st === 'live' ? '<div class="countdown">🟢 الحصة تبدأ الآن!</div>'
-           : st === 'soon' ? '<div class="countdown">⏳ ستبدأ قريباً</div>' : '';
+  const cd = st === 'live'   ? '<div class="countdown">🟢 الحصة تبدأ الآن!</div>'
+           : st === 'soon'   ? '<div class="countdown" style="color:var(--green)">🔓 يمكنك الدخول الآن — تبدأ خلال دقائق</div>' : '';
   return `
     <div class="session-item">
       <div class="session-time-box" style="${tbStyle}">

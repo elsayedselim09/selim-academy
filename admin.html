@@ -1937,8 +1937,19 @@ async function openStudentSubjectDetailFromReq(studentId, teacherId, subjectName
       .maybeSingle();
     teacherId = reqData?.assigned_teacher_id || '';
   }
-  // فتح نافذة التفاصيل — بدون grade_id (لأنها قادمة من طلب اشتراك)
-  openStudentSubjectDetail(studentId, teacherId, subjectName, gradeName, '', reqId);
+
+  // ── جلب grade_id الفعلي من teacher_enrollments لتفعيل فلتر الصف ──
+  let gradeId = '';
+  if (teacherId && studentId) {
+    const { data: enrData } = await sb.from('teacher_enrollments')
+      .select('grade_id')
+      .eq('student_id', studentId)
+      .eq('teacher_id', teacherId)
+      .maybeSingle();
+    gradeId = enrData?.grade_id || '';
+  }
+
+  openStudentSubjectDetail(studentId, teacherId, subjectName, gradeName, gradeId, reqId);
 }
 
 async function openStudentSubjectDetail(studentId, teacherId, subjectName, gradeName, gradeId, reqId) {
@@ -1961,17 +1972,22 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
 
     // جلب البيانات بالتوازي
     // إذا لم يكن هناك معلم محدد، نجلب الحصص بناءً على اسم المادة فقط
-    // جلب حصص المعلم المفلترة حسب المادة + المعلم معاً
-    const sessQuery = teacherId
-      ? sb.from('teacher_sessions')
-          .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,teacher_id')
-          .eq('teacher_id', teacherId)
-          .ilike('subject_name', `%${subjectName}%`)   // ← فلتر المادة
-          .order('scheduled_at', {ascending: false})
-      : sb.from('teacher_sessions')
-          .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,teacher_id')
-          .ilike('subject_name', `%${subjectName}%`)
-          .order('scheduled_at', {ascending: false});
+    // جلب حصص المعلم مفلترة بـ: teacher_id + grade_id (إن وُجد) + subject_name
+    let sessQueryBase = sb.from('teacher_sessions')
+      .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,grade_id,teacher_id');
+
+    if (teacherId && gradeId) {
+      // الحالة المثالية: لدينا المعلم والصف — فلتر مزدوج دقيق
+      sessQueryBase = sessQueryBase.eq('teacher_id', teacherId).eq('grade_id', gradeId);
+    } else if (teacherId) {
+      // لدينا المعلم فقط — فلتر بالمادة
+      sessQueryBase = sessQueryBase.eq('teacher_id', teacherId)
+        .ilike('subject_name', `%${subjectName}%`);
+    } else {
+      // لا يوجد معلم — فلتر باسم المادة فقط
+      sessQueryBase = sessQueryBase.ilike('subject_name', `%${subjectName}%`);
+    }
+    const sessQuery = sessQueryBase.order('scheduled_at', {ascending: false});
 
     const enrollQuery = teacherId
       ? sb.from('teacher_enrollments')
