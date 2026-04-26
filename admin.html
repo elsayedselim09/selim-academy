@@ -1975,23 +1975,8 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
     const studentName = student?.full_name || 'الطالب';
 
     // جلب البيانات بالتوازي
-    // إذا لم يكن هناك معلم محدد، نجلب الحصص بناءً على اسم المادة فقط
-    // جلب حصص المعلم مفلترة بـ: teacher_id + grade_id (إن وُجد) + subject_name
-    let sessQueryBase = sb.from('teacher_sessions')
-      .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,grade_id,teacher_id');
-
-    if (teacherId && gradeId) {
-      // الحالة المثالية: لدينا المعلم والصف — فلتر مزدوج دقيق
-      sessQueryBase = sessQueryBase.eq('teacher_id', teacherId).eq('grade_id', gradeId);
-    } else if (teacherId) {
-      // لدينا المعلم فقط — فلتر بالمادة
-      sessQueryBase = sessQueryBase.eq('teacher_id', teacherId)
-        .ilike('subject_name', `%${subjectName}%`);
-    } else {
-      // لا يوجد معلم — فلتر باسم المادة فقط
-      sessQueryBase = sessQueryBase.ilike('subject_name', `%${subjectName}%`);
-    }
-    const sessQuery = sessQueryBase.order('scheduled_at', {ascending: false});
+    // ── الاستراتيجية الصحيحة: نجلب أولاً سجلات حضور الطالب مع هذا المدرس،
+    //    ثم نجلب بيانات الحصص فقط لهذه السجلات (مش كل حصص المدرس) ──
 
     const enrollQuery = teacherId
       ? sb.from('teacher_enrollments')
@@ -2008,18 +1993,16 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
           .eq('status', 'approved')
           .maybeSingle();
 
-    const [sessRes, attRes, examRes, enrollRes] = await Promise.all([
-      sessQuery,
-
-      // ── سجل حضور الطالب من teacher_attendance (النظام الجديد) ──
+    const [attRes, examRes, enrollRes] = await Promise.all([
+      // ── سجل حضور الطالب من teacher_attendance مع هذا المدرس فقط ──
       teacherId
         ? sb.from('teacher_attendance')
-            .select('session_date, status, note, created_at')
+            .select('session_id, session_date, status, note, created_at')
             .eq('student_id', studentId)
             .eq('teacher_id', teacherId)
             .order('session_date', { ascending: false })
         : sb.from('teacher_attendance')
-            .select('session_date, status, note, created_at')
+            .select('session_id, session_date, status, note, created_at')
             .eq('student_id', studentId)
             .order('session_date', { ascending: false }),
 
@@ -2035,24 +2018,49 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
       ? enrollRes.data?.enrolled_at
       : enrollRes.data?.created_at;
 
-    // الحصص — بعد الفلتر في الـ query، نُطبق فلتر grade_id إضافي إن وُجد
-    let sessions = (sessRes.data || []).filter(s =>
-      (!gradeId || s.grade_id === gradeId || !s.grade_id)
-    );
-
-    // ── بناء خريطة الحضور من teacher_attendance (مفتاحها التاريخ) ──
+    // ── جلب بيانات الحصص فقط للحصص التي لدى الطالب سجل حضور فيها ──
     const attRecordsRaw = attRes.data || [];
-    // خريطة date → status
-    const attByDate = {};
-    attRecordsRaw.forEach(a => { attByDate[a.session_date] = a; });
+    const sessionIdsFromAtt = attRecordsRaw
+      .map(a => a.session_id)
+      .filter(Boolean);
 
-    // مطابقة الحصص بسجلات الحضور عبر التاريخ (YYYY-MM-DD)
+    let sessions = [];
+    if (sessionIdsFromAtt.length > 0) {
+      // جلب بيانات الحصص بالـ IDs المستخرجة من سجلات الحضور فقط
+      const { data: sessData } = await sb.from('teacher_sessions')
+        .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,grade_id,teacher_id')
+        .in('id', sessionIdsFromAtt)
+        .order('scheduled_at', { ascending: false });
+      sessions = sessData || [];
+    } else if (!teacherId) {
+      // fallback: لا يوجد معلم محدد — نبحث بالمادة
+      const { data: sessData } = await sb.from('teacher_sessions')
+        .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,grade_id,teacher_id')
+        .ilike('subject_name', `%${subjectName}%`)
+        .order('scheduled_at', { ascending: false });
+      sessions = sessData || [];
+    }
+    // ملاحظة: إذا لم يكن هناك سجلات حضور ولم يكن هناك session_id مرتبط،
+    // نعتمد على attRecordsRaw مباشرة لعرض الحضور (الحالة التي يسجل فيها المدرس الحضور يدوياً بالتاريخ)
+
+    // ── بناء خريطة الحضور من teacher_attendance ──
+    // الأولوية: session_id المباشر → ثم التاريخ كـ fallback
+    const attBySessionId = {};
+    const attByDate = {};
+    attRecordsRaw.forEach(a => {
+      if (a.session_id) attBySessionId[a.session_id] = a.status;
+      if (a.session_date) attByDate[a.session_date] = a.status;
+    });
+
     const sessIds = sessions.map(s => s.id);
-    const attMap  = {};   // session_id → status  (للتوافق مع كود العرض القديم)
+    const attMap  = {};   // session_id → status
     sessions.forEach(s => {
-      if(!s.scheduled_at) return;
-      const dateKey = s.scheduled_at.slice(0, 10);
-      if(attByDate[dateKey]) attMap[s.id] = attByDate[dateKey].status;
+      if (attBySessionId[s.id]) {
+        attMap[s.id] = attBySessionId[s.id];
+      } else if (s.scheduled_at) {
+        const dateKey = s.scheduled_at.slice(0, 10);
+        if (attByDate[dateKey]) attMap[s.id] = attByDate[dateKey];
+      }
     });
 
     // إحصائيات الحضور
