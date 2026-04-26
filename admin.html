@@ -2021,31 +2021,26 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
       ? enrollRes.data?.enrolled_at
       : enrollRes.data?.created_at;
 
-    // ── الخطوة 2: جلب الحصص بنفس طريقة dashboard.html ──
-    // فلتر بـ grade_id مباشرة (الحصص التي أنشأها المعلم لهذا الصف)
+    // ── الخطوة 2: جلب الحصص بفلتر دقيق (grade_id أو grade_name) ──
+    const resolvedGradeName = enrollRes.data?.grade_name || gradeName || null;
     let sessions = [];
-    if (resolvedGradeId && teacherId) {
-      // الحالة المثالية: grade_id + teacher_id — نفس ما يراه الطالب في dashboard
-      const { data: sessData } = await sb.from('teacher_sessions')
+    if (teacherId) {
+      let q = sb.from('teacher_sessions')
         .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,grade_id,teacher_id')
-        .eq('teacher_id', teacherId)
-        .eq('grade_id', resolvedGradeId)
-        .order('scheduled_at', { ascending: false });
-      sessions = sessData || [];
-    } else if (resolvedGradeId) {
-      // grade_id بدون teacher_id
-      const { data: sessData } = await sb.from('teacher_sessions')
-        .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,grade_id,teacher_id')
-        .eq('grade_id', resolvedGradeId)
-        .order('scheduled_at', { ascending: false });
-      sessions = sessData || [];
-    } else if (teacherId) {
-      // fallback: teacher_id + subject_name إن لم يكن هناك grade_id
-      const { data: sessData } = await sb.from('teacher_sessions')
-        .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,grade_id,teacher_id')
-        .eq('teacher_id', teacherId)
-        .ilike('subject_name', `%${subjectName}%`)
-        .order('scheduled_at', { ascending: false });
+        .eq('teacher_id', teacherId);
+
+      if (resolvedGradeId) {
+        // الحالة المثالية: فلتر بـ grade_id
+        q = q.eq('grade_id', resolvedGradeId);
+      } else if (resolvedGradeName) {
+        // فلتر بـ grade_name — يمنع جلب حصص كل الصفوف
+        q = q.ilike('grade_name', `%${resolvedGradeName}%`);
+      } else {
+        // آخر حل: subject_name فقط
+        q = q.ilike('subject_name', `%${subjectName}%`);
+      }
+
+      const { data: sessData } = await q.order('scheduled_at', { ascending: false });
       sessions = sessData || [];
     }
 
