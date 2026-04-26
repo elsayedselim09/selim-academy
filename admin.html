@@ -1961,10 +1961,12 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
 
     // جلب البيانات بالتوازي
     // إذا لم يكن هناك معلم محدد، نجلب الحصص بناءً على اسم المادة فقط
+    // جلب حصص المعلم المفلترة حسب المادة + المعلم معاً
     const sessQuery = teacherId
       ? sb.from('teacher_sessions')
           .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,teacher_id')
           .eq('teacher_id', teacherId)
+          .ilike('subject_name', `%${subjectName}%`)   // ← فلتر المادة
           .order('scheduled_at', {ascending: false})
       : sb.from('teacher_sessions')
           .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,teacher_id')
@@ -2011,12 +2013,10 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
       ? enrollRes.data?.enrolled_at
       : enrollRes.data?.created_at;
 
-    // الحصص المرتبطة بهذه المادة
+    // الحصص — بعد الفلتر في الـ query، نُطبق فلتر grade_id إضافي إن وُجد
     let sessions = (sessRes.data || []).filter(s =>
-      (!subjectName || (s.subject_name||'').includes(subjectName) || subjectName.includes(s.subject_name||'')) &&
       (!gradeId || s.grade_id === gradeId || !s.grade_id)
     );
-    if (!sessions.length) sessions = sessRes.data || [];
 
     // ── بناء خريطة الحضور من teacher_attendance (مفتاحها التاريخ) ──
     const attRecordsRaw = attRes.data || [];
