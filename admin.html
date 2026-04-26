@@ -1912,7 +1912,7 @@ async function openStudentDetail(studentId) {
     <div style="margin-bottom:14px">
       <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">👨‍🏫 تسجيلات إضافية (${enrs.length})</div>
       ${enrs.map(e => `
-        <div onclick="openStudentSubjectDetail('${studentId}','${e.teacher_id}','${(e.subject_name||'').replace(/'/g,"\\'")}','${(e.grade_name||'').replace(/'/g,"\\'")}','${e.grade_id||''}')"
+        <div onclick="openStudentSubjectDetailFromEnr('${studentId}','${e.teacher_id}','${(e.subject_name||'').replace(/'/g,"\\'")}','${(e.grade_name||'').replace(/'/g,"\\'")}','${e.grade_id||''}')"
           style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--blue-light);border:1.5px solid #BFDBFE;border-radius:10px;margin-bottom:7px;cursor:pointer;transition:all .2s"
           onmouseover="this.style.background='#DBEAFE'" onmouseout="this.style.background='var(--blue-light)'">
           <span style="font-size:1.1rem">📖</span>
@@ -1930,45 +1930,22 @@ async function openStudentDetail(studentId) {
 // ══════════════════════════════════
 
 // نقطة دخول من طلب الاشتراك المقبول (قد لا يوجد teacher_enrollments)
+// ── نقطة دخول من طلب الاشتراك ──
 async function openStudentSubjectDetailFromReq(studentId, teacherId, subjectName, gradeName, reqId) {
-  // جلب معرف المعلم إذا لم يكن موجوداً
   if (!teacherId) {
-    const { data: reqData } = await sb.from('subscription_requests')
-      .select('assigned_teacher_id')
-      .eq('id', reqId)
-      .maybeSingle();
-    teacherId = reqData?.assigned_teacher_id || '';
+    const { data: d } = await sb.from('subscription_requests')
+      .select('assigned_teacher_id').eq('id', reqId).maybeSingle();
+    teacherId = d?.assigned_teacher_id || '';
   }
-
-  // ── جلب grade_id و grade_name الفعليين من teacher_enrollments ──
-  // نجرب بدون فلتر subject_name أولاً (أشمل) ثم نضيقه إن وُجدت نتائج متعددة
-  let gradeId = '';
-  let resolvedGradeName = gradeName || '';
-
-  if (teacherId && studentId) {
-    // أولاً: نجيب كل enrollments هذا الطالب مع هذا المدرس
-    const { data: enrRows } = await sb.from('teacher_enrollments')
-      .select('grade_id, grade_name, subject_name')
-      .eq('student_id', studentId)
-      .eq('teacher_id', teacherId);
-
-    if (enrRows && enrRows.length > 0) {
-      // نحاول نطابق بالـ subject_name
-      const matched = enrRows.find(e =>
-        (e.subject_name || '').toLowerCase().includes((subjectName || '').toLowerCase()) ||
-        (subjectName || '').toLowerCase().includes((e.subject_name || '').toLowerCase())
-      ) || enrRows[0]; // نأخذ الأول إن لم نجد تطابق
-
-      gradeId          = matched.grade_id   || '';
-      resolvedGradeName = matched.grade_name || gradeName || '';
-    }
-  }
-
-  openStudentSubjectDetail(studentId, teacherId, subjectName, resolvedGradeName, gradeId, reqId);
+  openStudentSubjectDetail(studentId, teacherId, subjectName, gradeName, reqId);
 }
 
-async function openStudentSubjectDetail(studentId, teacherId, subjectName, gradeName, gradeId, reqId) {
-  // إغلاق نافذة تفاصيل الطالب وفتح نافذة تفاصيل المادة
+// ── نقطة دخول من teacher_enrollments (بيجي مع grade_id مباشرة) ──
+function openStudentSubjectDetailFromEnr(studentId, teacherId, subjectName, gradeName, gradeId) {
+  openStudentSubjectDetail(studentId, teacherId, subjectName, gradeName, null, gradeId);
+}
+
+async function openStudentSubjectDetail(studentId, teacherId, subjectName, gradeName, reqId, gradeId) {
   document.getElementById('mdl-student-detail').classList.remove('show');
   const modal = document.getElementById('mdl-student-subject-detail');
   const body  = document.getElementById('stu-subj-detail-body');
@@ -1985,83 +1962,49 @@ async function openStudentSubjectDetail(studentId, teacherId, subjectName, grade
     const student = S.students.find(x => x.id === studentId);
     const studentName = student?.full_name || 'الطالب';
 
-    // ── الخطوة 1: جلب بيانات التسجيل للحصول على grade_id الدقيق ──
-    // نفس المنطق المستخدم في صفحة الطالب (dashboard.html)
-    let resolvedGradeId = gradeId || null;
+    // ── الخطوة 1: جلب كل enrollments الطالب مع هذا المدرس لنحصل على grade_id ──
+    // نجيب بدون فلتر subject عشان نتجنب مشكلة اختلاف صياغة الأسماء
+    let resolvedGradeId   = gradeId  || null;
+    let resolvedGradeName = gradeName || null;
+    let enrolledAt        = null;
 
-    // ── جلب enrollment: نجيب كل enrollments هذا الطالب مع المدرس بدون فلتر subject ──
-    // ثم نطابق يدوياً عشان نتجنب فشل الـ ilike بسبب اختلاف صياغة اسم المادة
-    const enrollQueryPromise = teacherId
-      ? sb.from('teacher_enrollments')
-          .select('enrolled_at, subject_name, grade_name, grade_id')
-          .eq('student_id', studentId)
-          .eq('teacher_id', teacherId)
-      : sb.from('subscription_requests')
-          .select('created_at, subject, grade')
-          .eq('user_id', studentId)
-          .eq('status', 'approved')
-          .maybeSingle();
-
-    const [enrollRes, attRes, examRes] = await Promise.all([
-      enrollQueryPromise,
-
-      // ── سجل حضور الطالب مع هذا المدرس ──
-      teacherId
-        ? sb.from('teacher_attendance')
-            .select('session_date, status, note, created_at')
-            .eq('student_id', studentId)
-            .eq('teacher_id', teacherId)
-            .order('session_date', { ascending: false })
-        : sb.from('teacher_attendance')
-            .select('session_date, status, note, created_at')
-            .eq('student_id', studentId)
-            .order('session_date', { ascending: false }),
-
-      // نتائج اختبارات الطالب
-      sb.from('exam_results')
-        .select('id,exam_id,score,total_questions,percentage,time_spent,created_at')
-        .eq('student_id', studentId),
-    ]);
-
-    // ── معالجة نتيجة الـ enrollment ──
-    let enrollRecord = null;
     if (teacherId) {
-      // نتيجة array — نطابق بالـ subject_name
-      const rows = enrollRes.data || [];
-      enrollRecord = rows.find(e =>
-        (e.subject_name || '').toLowerCase().includes((subjectName || '').toLowerCase()) ||
-        (subjectName || '').toLowerCase().includes((e.subject_name || '').toLowerCase())
-      ) || rows[0] || null;
-    } else {
-      enrollRecord = enrollRes.data || null;
-    }
-
-    if (enrollRecord?.grade_id)   resolvedGradeId = enrollRecord.grade_id;
-
-    const enrolledAt = teacherId
-      ? enrollRecord?.enrolled_at
-      : enrollRecord?.created_at;
-
-    // ── الخطوة 2: جلب الحصص بفلتر دقيق (grade_id أو grade_name) ──
-    const resolvedGradeName = enrollRecord?.grade_name || gradeName || null;
-    let sessions = [];
-    if (teacherId) {
-      let q = sb.from('teacher_sessions')
-        .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,grade_id,teacher_id')
+      const { data: enrRows } = await sb.from('teacher_enrollments')
+        .select('grade_id, grade_name, subject_name, enrolled_at')
+        .eq('student_id', studentId)
         .eq('teacher_id', teacherId);
 
-      if (resolvedGradeId) {
-        // الحالة المثالية: فلتر بـ grade_id
-        q = q.eq('grade_id', resolvedGradeId);
-      } else if (resolvedGradeName) {
-        // فلتر بـ grade_name — يمنع جلب حصص كل الصفوف
-        q = q.ilike('grade_name', `%${resolvedGradeName}%`);
-      } else {
-        // آخر حل: subject_name فقط
-        q = q.ilike('subject_name', `%${subjectName}%`);
-      }
+      const rows = enrRows || [];
+      // نطابق بالـ subject_name — أو نأخذ الأول لو صف واحد
+      const enr = rows.find(e =>
+        (e.subject_name||'').toLowerCase().includes((subjectName||'').toLowerCase()) ||
+        (subjectName||'').toLowerCase().includes((e.subject_name||'').toLowerCase())
+      ) || rows[0] || null;
 
-      const { data: sessData } = await q.order('scheduled_at', { ascending: false });
+      if (enr) {
+        resolvedGradeId   = enr.grade_id   || resolvedGradeId;
+        resolvedGradeName = enr.grade_name  || resolvedGradeName;
+        enrolledAt        = enr.enrolled_at;
+      }
+    }
+
+    // ── الخطوة 2: جلب الحصص بـ grade_id (نفس منطق dashboard.html تماماً) ──
+    let sessions = [];
+    if (resolvedGradeId) {
+      // ✅ الفلتر الدقيق: teacher_id + grade_id — نفس ما يراه الطالب في ملفه
+      const { data: sessData } = await sb.from('teacher_sessions')
+        .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,grade_id,teacher_id')
+        .eq('teacher_id', teacherId)
+        .eq('grade_id', resolvedGradeId)
+        .order('scheduled_at', { ascending: false });
+      sessions = sessData || [];
+    } else if (teacherId && resolvedGradeName) {
+      // fallback: grade_name نصي
+      const { data: sessData } = await sb.from('teacher_sessions')
+        .select('id,title,scheduled_at,duration_min,zoom_link,video_url,status,subject_name,grade_name,grade_id,teacher_id')
+        .eq('teacher_id', teacherId)
+        .ilike('grade_name', `%${resolvedGradeName}%`)
+        .order('scheduled_at', { ascending: false });
       sessions = sessData || [];
     }
 
