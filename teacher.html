@@ -2378,33 +2378,62 @@ async function uploadFile() {
   const btn = document.getElementById('upload-file-btn');
   btn.disabled = true; btn.textContent = '⏳ جاري الرفع...';
   document.getElementById('file-upload-progress').style.display = 'block';
+  document.getElementById('file-upload-bar').style.width = '0%';
 
   try {
-    const ext  = file.name.split('.').pop();
-    const safeName = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '.' + ext;
-    const path = `teacher_materials/${ST.user.id}/${ST.curGradeId}/${safeName}`;
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token;
 
-    const { error: upErr } = await sb.storage.from('teacher-content').upload(path, file, { upsert:false });
-    if(upErr) throw upErr;
+    // رفع على Google Drive عبر Edge Function
+    const uploadResult = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'file'); // نوع الملف (مش فيديو)
 
-    document.getElementById('file-upload-bar').style.width = '70%';
-    const { data: urlData } = sb.storage.from('teacher-content').getPublicUrl(path);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 90);
+          document.getElementById('file-upload-bar').style.width = pct + '%';
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText)); }
+          catch { reject(new Error('استجابة غير صحيحة من الخادم')); }
+        } else {
+          try {
+            const err = JSON.parse(xhr.responseText);
+            reject(new Error(err.error || 'فشل الرفع'));
+          } catch { reject(new Error('فشل الرفع — كود: ' + xhr.status)); }
+        }
+      };
+      xhr.onerror = () => reject(new Error('خطأ في الشبكة'));
+
+      xhr.open('POST', 'https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/upload-to-drive');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhr.send(formData);
+    });
+
+    if (!uploadResult.success) throw new Error(uploadResult.error || 'فشل الرفع على Drive');
+
+    document.getElementById('file-upload-bar').style.width = '95%';
 
     const { error: dbErr } = await sb.from('teacher_materials').insert({
-      teacher_id: ST.user.id,
-      grade_id:   ST.curGradeId,
-      subject_id: ST.curSubjectId,
-      type:       'file',
-      title:      title || file.name,
-      url:        urlData.publicUrl,
-      file_name:  file.name,
-      file_size:  file.size,
-      storage_path: path,
+      teacher_id:   ST.user.id,
+      grade_id:     ST.curGradeId,
+      subject_id:   ST.curSubjectId,
+      type:         'file',
+      title:        title || file.name,
+      url:          uploadResult.viewUrl,
+      file_name:    file.name,
+      file_size:    file.size,
+      storage_path: 'gdrive:' + uploadResult.fileId, // نحفظ Drive ID للمرجعية
     });
     if(dbErr) throw dbErr;
 
     document.getElementById('file-upload-bar').style.width = '100%';
-    toast('✅ تم رفع الملف بنجاح');
+    toast('✅ تم رفع الملف على Google Drive بنجاح');
     closeUploadFileModal();
     await loadContent('files');
   } catch(e) {
@@ -2611,19 +2640,36 @@ async function runConfirm() {
   if(!ST.pendingConfirm) return;
   const { type, id } = ST.pendingConfirm;
   closeConfirm();
+
+  // دالة مساعدة لحذف ملف من Google Drive
+  async function deleteDriveFile(storagePath) {
+    if (!storagePath) return;
+    // storage_path بتبدأ بـ gdrive: → استخرج fileId
+    if (!storagePath.startsWith('gdrive:')) return;
+    const fileId = storagePath.replace('gdrive:', '');
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      await fetch('https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/delete-drive-file', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + session?.access_token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ fileId })
+      });
+    } catch(e) { /* حذف Drive اختياري، لا يوقف العملية */ }
+  }
+
   try {
     if(type === 'subject') {
-      // Fetch grades to delete files safely
       const { data: grades } = await sb.from('teacher_grades').select('id').eq('subject_id', id);
       const gradeIds = (grades || []).map(g => g.id);
 
       if(gradeIds.length > 0) {
-        // Find materials with files to remove from storage
         const { data: mats } = await sb.from('teacher_materials').select('storage_path').in('grade_id', gradeIds);
-        const paths = (mats || []).map(m => m.storage_path).filter(Boolean);
-        if(paths.length > 0) await sb.storage.from('teacher-content').remove(paths);
+        // حذف الملفات من Drive بشكل غير متزامن
+        (mats || []).forEach(m => deleteDriveFile(m.storage_path));
 
-        // Delete materials
         const { error: errMats } = await sb.from('teacher_materials').delete().in('grade_id', gradeIds);
         if(errMats) throw errMats;
       }
@@ -2642,27 +2688,22 @@ async function runConfirm() {
       
       await loadSubjects();
     } else if(type === 'grade') {
-      // Find materials to delete storage files
       const { data: mats } = await sb.from('teacher_materials').select('storage_path').eq('grade_id', id);
-      const paths = (mats || []).map(m => m.storage_path).filter(Boolean);
-      if(paths.length > 0) await sb.storage.from('teacher-content').remove(paths);
+      (mats || []).forEach(m => deleteDriveFile(m.storage_path));
 
-      // Delete materials
       const { error: errMats } = await sb.from('teacher_materials').delete().eq('grade_id', id);
       if(errMats) throw errMats;
 
-      // Delete grade itself
       const { error } = await sb.from('teacher_grades').delete().eq('id',id);
       if(error) throw error;
       toast('✅ تم حذف الصف وكل محتوياته');
       
-      // Check if we are viewing this specific grade
       if(ST.curGradeId === id) showSubjectGrades(ST.curSubjectId);
       
       await loadSubjects();
     } else if(type === 'material') {
       const { data } = await sb.from('teacher_materials').select('storage_path,type').eq('id',id).single();
-      if(data?.storage_path) await sb.storage.from('teacher-content').remove([data.storage_path]);
+      deleteDriveFile(data?.storage_path);
       const { error } = await sb.from('teacher_materials').delete().eq('id',id);
       if(error) throw error;
       toast('✅ تم الحذف بنجاح');
