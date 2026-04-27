@@ -1612,15 +1612,29 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 <!-- ══ MODAL: Upload Video ══ -->
 <div class="mdl" id="mdl-upload-video">
   <div class="mdl-box wide" style="position:relative">
-    <div class="mdl-title">🎬 إضافة فيديو</div>
+    <div class="mdl-title">🎬 رفع فيديو</div>
     <input type="hidden" id="upload-video-path">
     <div class="fg">
       <label>عنوان الفيديو *</label>
       <input type="text" id="video-title" placeholder="مثال: شرح درس المثلثات — الجزء الأول">
     </div>
     <div class="fg">
-      <label>رابط الفيديو (YouTube / Google Drive / الرابط المباشر) *</label>
-      <input type="url" id="video-url" placeholder="https://www.youtube.com/watch?v=..." style="direction:ltr">
+      <label>اختر ملف الفيديو *</label>
+      <div class="upload-zone" id="video-drop-zone"
+        onclick="document.getElementById('video-file-input').click()"
+        ondragover="handleDragOver(event,'video-drop-zone')"
+        ondragleave="handleDragLeave('video-drop-zone')"
+        ondrop="handleVideoDrop(event)">
+        <div class="uz-icon" id="video-zone-icon">🎬</div>
+        <div class="uz-text" id="video-zone-text">اضغط لاختيار فيديو أو اسحبه هنا</div>
+        <div class="uz-sub">MP4, MOV, AVI, MKV, WebM — حجم أقصى 2 GB</div>
+        <input type="file" id="video-file-input" style="display:none"
+          accept="video/*" onchange="handleVideoSelected(this)">
+      </div>
+      <div class="upload-progress" id="video-upload-progress" style="display:none">
+        <div class="upload-progress-bar" id="video-upload-bar" style="width:0%"></div>
+      </div>
+      <div id="video-upload-speed" style="font-size:.75rem;color:var(--gray);margin-top:6px;display:none"></div>
     </div>
     <div class="fg">
       <label>ملاحظات (اختياري)</label>
@@ -1629,7 +1643,7 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
     <div id="video-upload-msg"></div>
     <div class="mdl-btns">
       <button class="btn-secondary" onclick="closeUploadVideoModal()">إلغاء</button>
-      <button class="btn-primary" id="upload-video-btn" onclick="saveVideo()">💾 حفظ الفيديو</button>
+      <button class="btn-primary" id="upload-video-btn" onclick="uploadVideoToDrive()">⬆️ رفع الفيديو</button>
     </div>
   </div>
 </div>
@@ -2389,43 +2403,133 @@ async function uploadFile() {
 }
 
 // ══════════════════════════════════════════════
-// UPLOAD VIDEO (link only)
+// UPLOAD VIDEO — Google Drive via Edge Function
 // ══════════════════════════════════════════════
+let ST_videoFile = null;
+
 function openUploadVideoModal() {
   document.getElementById('video-title').value = '';
-  document.getElementById('video-url').value = '';
   document.getElementById('video-note').value = '';
   document.getElementById('video-upload-msg').innerHTML = '';
+  document.getElementById('video-upload-progress').style.display = 'none';
+  document.getElementById('video-upload-bar').style.width = '0%';
+  document.getElementById('video-upload-speed').style.display = 'none';
+  document.getElementById('video-zone-icon').textContent = '🎬';
+  document.getElementById('video-zone-text').textContent = 'اضغط لاختيار فيديو أو اسحبه هنا';
+  document.getElementById('video-file-input').value = '';
+  ST_videoFile = null;
   document.getElementById('mdl-upload-video').classList.add('show');
   setTimeout(() => document.getElementById('video-title').focus(), 100);
 }
-function closeUploadVideoModal() { document.getElementById('mdl-upload-video').classList.remove('show'); }
+function closeUploadVideoModal() {
+  document.getElementById('mdl-upload-video').classList.remove('show');
+  ST_videoFile = null;
+}
 
-async function saveVideo() {
+function handleVideoDrop(e) {
+  e.preventDefault();
+  handleDragLeave('video-drop-zone');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('video/')) {
+    ST_videoFile = file;
+    document.getElementById('video-zone-icon').textContent = '✅';
+    document.getElementById('video-zone-text').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+  } else {
+    setMsg('video-upload-msg', 'يرجى اختيار ملف فيديو فقط', 'err');
+  }
+}
+
+function handleVideoSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  ST_videoFile = file;
+  document.getElementById('video-zone-icon').textContent = '✅';
+  document.getElementById('video-zone-text').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+}
+
+async function uploadVideoToDrive() {
   const title = document.getElementById('video-title').value.trim();
-  const url   = document.getElementById('video-url').value.trim();
-  if(!title) { setMsg('video-upload-msg','عنوان الفيديو مطلوب','err'); return; }
-  if(!url)   { setMsg('video-upload-msg','رابط الفيديو مطلوب','err'); return; }
+  if (!title) { setMsg('video-upload-msg', 'عنوان الفيديو مطلوب', 'err'); return; }
+  if (!ST_videoFile) { setMsg('video-upload-msg', 'يرجى اختيار ملف فيديو أولاً', 'err'); return; }
 
   const btn = document.getElementById('upload-video-btn');
-  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الرفع...';
+  document.getElementById('video-upload-progress').style.display = 'block';
+  document.getElementById('video-upload-speed').style.display = 'block';
+  setMsg('video-upload-msg', '', '');
 
   try {
-    const { error } = await sb.from('teacher_materials').insert({
+    // Upload via XMLHttpRequest to track progress
+    const formData = new FormData();
+    formData.append('file', ST_videoFile);
+
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token;
+
+    const uploadResult = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const startTime = Date.now();
+      let lastLoaded = 0;
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          document.getElementById('video-upload-bar').style.width = pct + '%';
+
+          const elapsed = (Date.now() - startTime) / 1000;
+          const speed = (e.loaded - lastLoaded) / 1024 / 1024;
+          lastLoaded = e.loaded;
+          const remaining = ((e.total - e.loaded) / 1024 / 1024 / (speed || 0.1)).toFixed(0);
+          document.getElementById('video-upload-speed').textContent =
+            `${pct}% — ${(e.loaded/1024/1024).toFixed(1)} MB من ${(e.total/1024/1024).toFixed(1)} MB`;
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText)); }
+          catch { reject(new Error('استجابة غير صحيحة من الخادم')); }
+        } else {
+          try {
+            const err = JSON.parse(xhr.responseText);
+            reject(new Error(err.error || 'فشل الرفع'));
+          } catch { reject(new Error('فشل الرفع — كود: ' + xhr.status)); }
+        }
+      };
+      xhr.onerror = () => reject(new Error('خطأ في الشبكة'));
+
+      xhr.open('POST', 'https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/upload-to-drive');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhr.send(formData);
+    });
+
+    if (!uploadResult.success) throw new Error(uploadResult.error || 'فشل الرفع على Drive');
+
+    // Save to Supabase DB
+    const { error: dbErr } = await sb.from('teacher_materials').insert({
       teacher_id: ST.user.id,
       grade_id:   ST.curGradeId,
       subject_id: ST.curSubjectId,
       type:       'video',
       title,
-      url,
+      url:        uploadResult.embedUrl,
+      file_name:  ST_videoFile.name,
+      file_size:  ST_videoFile.size,
       note: document.getElementById('video-note').value.trim() || null,
     });
-    if(error) throw error;
-    toast('✅ تم إضافة الفيديو بنجاح');
+    if (dbErr) throw dbErr;
+
+    toast('✅ تم رفع الفيديو على Google Drive بنجاح!');
     closeUploadVideoModal();
     await loadContent('videos');
-  } catch(e) { setMsg('video-upload-msg', e.message, 'err'); }
-  finally { btn.disabled = false; btn.textContent = '💾 حفظ الفيديو'; }
+  } catch(e) {
+    setMsg('video-upload-msg', e.message, 'err');
+    document.getElementById('video-upload-progress').style.display = 'none';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⬆️ رفع الفيديو';
+  }
 }
 
 // ══════════════════════════════════════════════

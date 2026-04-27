@@ -1254,7 +1254,7 @@ function subjectMaterials() {
             <div class="mat-title">${v.title}</div>
             <div class="mat-meta">${v.note ? v.note + ' · ' : ''}${new Date(v.created_at).toLocaleDateString('ar-EG')}</div>
           </div>
-          <a href="${v.url}" target="_blank" class="mat-btn mat-btn-video">▶ مشاهدة</a>
+          <button class="mat-btn mat-btn-video" onclick="playVideo('${v.url}','${v.title.replace(/'/g,"\\'")}')">▶ مشاهدة</button>
         </div>`).join('');
 
   const filesHTML = files.length === 0
@@ -1796,5 +1796,48 @@ document.addEventListener('keydown', function(e){
 });
 </script>
 <script src="pwa-register.js" defer></script>
+<!-- ══ VIDEO PLAYER MODAL ══ -->
+<div id="video-player-overlay" style="
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(8px);
+  z-index:2000;align-items:center;justify-content:center;padding:20px;flex-direction:column;gap:14px
+" onclick="closeVideoPlayer(event)">
+  <div style="width:100%;max-width:900px;position:relative">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div id="video-player-title" style="color:#fff;font-size:1.05rem;font-weight:700;font-family:'Cairo',sans-serif"></div>
+      <button onclick="closeVideoPlayer(null,true)" style="
+        background:rgba(255,255,255,.15);border:none;color:#fff;
+        width:36px;height:36px;border-radius:50%;font-size:1.2rem;
+        cursor:pointer;display:flex;align-items:center;justify-content:center;
+      ">✕</button>
+    </div>
+    <div style="position:relative;padding-bottom:56.25%;height:0;border-radius:14px;overflow:hidden;background:#000">
+      <iframe id="video-player-frame"
+        style="position:absolute;top:0;left:0;width:100%;height:100%;border:none"
+        allowfullscreen
+        allow="autoplay; encrypted-media; fullscreen"
+        src=""></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+function playVideo(url, title) {
+  document.getElementById('video-player-title').textContent = title || 'فيديو';
+  document.getElementById('video-player-frame').src = url;
+  const ov = document.getElementById('video-player-overlay');
+  ov.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeVideoPlayer(e, force) {
+  if (!force && e && e.target !== document.getElementById('video-player-overlay')) return;
+  document.getElementById('video-player-frame').src = '';
+  document.getElementById('video-player-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeVideoPlayer(null, true);
+});
+</script>
 </body>
 </html>
