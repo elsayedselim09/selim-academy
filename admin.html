@@ -581,7 +581,13 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <div id="student-detail-body" style="max-height:520px;overflow-y:auto">
       <div class="skel" style="height:180px;border-radius:12px"></div>
     </div>
-    <div class="mdl-btns" style="margin-top:18px">
+    <div style="display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:18px">
+      <button id="student-detail-edit-btn"
+        onclick="openStudentManageModal()"
+        style="padding:10px 20px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .2s"
+        onmouseover="this.style.background='var(--blue-dark)'" onmouseout="this.style.background='var(--blue)'">
+        ✏️ تعديل / إدارة الاشتراكات
+      </button>
       <button class="mdl-cancel" onclick="document.getElementById('mdl-student-detail').classList.remove('show')">إغلاق</button>
     </div>
   </div>
@@ -600,6 +606,76 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <div class="mdl-btns">
       <button class="mdl-cancel" onclick="document.getElementById('mdl-delete-student').classList.remove('show')">إلغاء</button>
       <button class="mdl-confirm mc-danger" id="del-student-btn" onclick="confirmDeleteStudent()">🗑️ حذف نهائياً</button>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT MANAGE MODAL (Edit + Remove from subject/group) -->
+<div class="mdl" id="mdl-student-manage">
+  <div class="mdl-box wide" style="max-width:560px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button onclick="document.getElementById('mdl-student-manage').classList.remove('show');document.getElementById('mdl-student-detail').classList.add('show')"
+          style="background:var(--gray-light);border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:700;color:var(--gray);display:flex;align-items:center;gap:5px">← رجوع</button>
+        <div class="mdl-title" style="margin-bottom:0" id="manage-student-title">✏️ إدارة الطالب</div>
+      </div>
+      <button onclick="document.getElementById('mdl-student-manage').classList.remove('show')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
+    </div>
+
+    <!-- بيانات الطالب -->
+    <div id="manage-student-info" style="background:var(--blue-light);border-radius:12px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:13px">
+      <div id="manage-student-av" style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--green),#0B8A5F);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;font-weight:900;flex-shrink:0;overflow:hidden"></div>
+      <div>
+        <div id="manage-student-name" style="font-size:.95rem;font-weight:900;color:var(--dark)"></div>
+        <div id="manage-student-phone" style="font-size:.78rem;color:var(--gray);margin-top:2px"></div>
+      </div>
+    </div>
+
+    <!-- تبويبات -->
+    <div style="display:flex;gap:8px;margin-bottom:18px;border-bottom:2px solid var(--gray-mid);padding-bottom:0">
+      <button id="smtab-subs" onclick="smSwitchTab('subs')"
+        style="padding:9px 18px;border:none;border-bottom:2px solid var(--blue);margin-bottom:-2px;background:none;font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;color:var(--blue);cursor:pointer">
+        📚 الاشتراكات والمواد
+      </button>
+      <button id="smtab-groups" onclick="smSwitchTab('groups')"
+        style="padding:9px 18px;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;background:none;font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;color:var(--gray);cursor:pointer">
+        👥 المجموعات
+      </button>
+    </div>
+
+    <!-- محتوى تبويب الاشتراكات -->
+    <div id="smtab-subs-body" style="max-height:340px;overflow-y:auto">
+      <div class="skel" style="height:80px;border-radius:10px;margin-bottom:10px"></div>
+    </div>
+
+    <!-- محتوى تبويب المجموعات -->
+    <div id="smtab-groups-body" style="max-height:340px;overflow-y:auto;display:none">
+      <div class="skel" style="height:80px;border-radius:10px;margin-bottom:10px"></div>
+    </div>
+
+    <div id="manage-student-msg" style="margin-top:12px"></div>
+
+    <div class="mdl-btns" style="margin-top:16px">
+      <button class="mdl-cancel" onclick="document.getElementById('mdl-student-manage').classList.remove('show')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM REMOVE FROM SUBJECT MODAL -->
+<div class="mdl" id="mdl-confirm-remove-subject">
+  <div class="mdl-box" style="max-width:420px">
+    <div class="mdl-icon">📚</div>
+    <div class="mdl-title" id="crs-title">إزالة من المادة</div>
+    <div class="mdl-sub" id="crs-sub">هل أنت متأكد من إزالة الطالب من هذه المادة؟</div>
+    <div style="background:var(--gold-light);border:1px solid #FCD34D;border-radius:9px;padding:10px 14px;font-size:.82rem;color:#92400E;margin-bottom:16px;text-align:center">
+      ⚠️ سيتم إزالة الطالب من المادة/المجموعة فقط — لن يتم حذف حسابه من المنصة
+    </div>
+    <div id="crs-msg"></div>
+    <div class="mdl-btns">
+      <button class="mdl-cancel" onclick="document.getElementById('mdl-confirm-remove-subject').classList.remove('show')">إلغاء</button>
+      <button class="mdl-confirm" id="crs-confirm-btn"
+        style="background:var(--gold);color:#fff"
+        onclick="confirmRemoveFromSubject()">🗑️ نعم، إزالة من المادة</button>
     </div>
   </div>
 </div>
@@ -1840,6 +1916,7 @@ async function openStudentDetail(studentId) {
 
   const modal = document.getElementById('mdl-student-detail');
   const body  = document.getElementById('student-detail-body');
+  modal._currentStudentId = studentId; // ← حفظ معرف الطالب للاستخدام في نافذة الإدارة
   modal.classList.add('show');
   body.innerHTML = '<div class="skel" style="height:200px;border-radius:12px"></div>';
 
@@ -1944,8 +2021,252 @@ async function openStudentDetail(studentId) {
 }
 
 // ══════════════════════════════════
-// STUDENT SUBJECT DETAIL
+// STUDENT MANAGE MODAL
 // ══════════════════════════════════
+var _smStudentId = null;
+var _smCurrentTab = 'subs';
+var _smReqs = [];
+var _smEnrs = [];
+var _smRemoveCtx = null;
+
+async function openStudentManageModal() {
+  const detailModal = document.getElementById('mdl-student-detail');
+  const s = S.students.find(x => x.id === (detailModal._currentStudentId));
+  if (!s) return;
+
+  _smStudentId = s.id;
+  _smCurrentTab = 'subs';
+
+  // ملء بيانات الطالب في الهيدر
+  document.getElementById('manage-student-title').textContent = '✏️ إدارة: ' + (s.full_name || '—');
+  document.getElementById('manage-student-name').textContent = s.full_name || '—';
+  document.getElementById('manage-student-phone').textContent = s.phone ? '📱 ' + s.phone : '📱 لا يوجد رقم';
+  const avEl = document.getElementById('manage-student-av');
+  avEl.innerHTML = s.avatar_url ? `<img src="${s.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : ini(s.full_name);
+
+  // إعادة ضبط التبويبات
+  smSwitchTab('subs', false);
+
+  // إغلاق نافذة التفاصيل وفتح نافذة الإدارة
+  detailModal.classList.remove('show');
+  document.getElementById('mdl-student-manage').classList.add('show');
+  document.getElementById('manage-student-msg').innerHTML = '';
+
+  // تحميل البيانات
+  await smLoadData();
+}
+
+async function smLoadData() {
+  document.getElementById('smtab-subs-body').innerHTML = '<div class="skel" style="height:80px;border-radius:10px;margin-bottom:10px"></div><div class="skel" style="height:80px;border-radius:10px"></div>';
+  document.getElementById('smtab-groups-body').innerHTML = '<div class="skel" style="height:80px;border-radius:10px;margin-bottom:10px"></div>';
+
+  try {
+    const [reqRes, enrRes] = await Promise.all([
+      sb.from('subscription_requests')
+        .select('id,status,subject,grade,session_type,days_info,assigned_teacher_id,created_at,end_date,sessions_remaining,admin_notes')
+        .eq('user_id', _smStudentId)
+        .order('created_at', { ascending: false }),
+      sb.from('teacher_enrollments')
+        .select('id,teacher_id,grade_id,grade_name,subject_name,enrolled_at')
+        .eq('student_id', _smStudentId)
+    ]);
+
+    _smReqs = reqRes.data || [];
+    _smEnrs = enrRes.data || [];
+
+    smRenderSubs();
+    smRenderGroups();
+  } catch(e) {
+    document.getElementById('manage-student-msg').innerHTML = `<div class="msg-err">❌ فشل تحميل البيانات: ${e.message}</div>`;
+  }
+}
+
+function smSwitchTab(tab, renderOnly = true) {
+  _smCurrentTab = tab;
+  const subsBtn  = document.getElementById('smtab-subs');
+  const grpBtn   = document.getElementById('smtab-groups');
+  const subsBody = document.getElementById('smtab-subs-body');
+  const grpBody  = document.getElementById('smtab-groups-body');
+
+  if (tab === 'subs') {
+    subsBtn.style.color = 'var(--blue)';
+    subsBtn.style.borderBottom = '2px solid var(--blue)';
+    grpBtn.style.color = 'var(--gray)';
+    grpBtn.style.borderBottom = '2px solid transparent';
+    subsBody.style.display = 'block';
+    grpBody.style.display = 'none';
+  } else {
+    grpBtn.style.color = 'var(--blue)';
+    grpBtn.style.borderBottom = '2px solid var(--blue)';
+    subsBtn.style.color = 'var(--gray)';
+    subsBtn.style.borderBottom = '2px solid transparent';
+    grpBody.style.display = 'block';
+    subsBody.style.display = 'none';
+  }
+}
+
+function smRenderSubs() {
+  const el = document.getElementById('smtab-subs-body');
+  if (!_smReqs.length) {
+    el.innerHTML = `<div class="empty-box" style="padding:30px"><div class="ei">📭</div><div class="et">لا توجد اشتراكات</div></div>`;
+    return;
+  }
+
+  const statusColor = { approved: 'var(--green)', pending: 'var(--gold)', rejected: 'var(--red)' };
+  const statusBg    = { approved: 'var(--green-light)', pending: 'var(--gold-light)', rejected: 'var(--red-light)' };
+  const statusLabel = { approved: '✅ مقبول', pending: '⏳ معلق', rejected: '❌ مرفوض' };
+
+  el.innerHTML = _smReqs.map(r => {
+    const teacherName = (S.teachers.find(t => t.id === r.assigned_teacher_id)?.full_name) || '—';
+    return `
+    <div style="border:1.5px solid ${statusColor[r.status]||'var(--gray-mid)'};border-radius:12px;padding:14px 16px;margin-bottom:10px;background:${statusBg[r.status]||'var(--gray-light)'}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+        <div>
+          <div style="font-size:.92rem;font-weight:900;color:var(--dark)">📚 ${r.subject || '—'}</div>
+          ${r.grade ? `<div style="font-size:.76rem;color:var(--gray);margin-top:2px">🏫 ${r.grade}</div>` : ''}
+        </div>
+        <span class="badge" style="background:${statusBg[r.status]||'var(--gray-light)'};color:${statusColor[r.status]||'var(--gray)'};border:1px solid ${statusColor[r.status]||'var(--gray-mid)'}">
+          ${statusLabel[r.status] || r.status}
+        </span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.76rem;color:var(--gray);margin-bottom:10px">
+        ${r.session_type ? `<span>🎯 ${r.session_type}</span>` : ''}
+        ${r.days_info    ? `<span>📅 ${r.days_info}</span>`    : ''}
+        ${r.end_date     ? `<span>🗓️ ينتهي: ${fds(r.end_date)}</span>` : ''}
+        ${r.sessions_remaining != null ? `<span>🔢 حصص متبقية: ${r.sessions_remaining}</span>` : ''}
+        ${r.assigned_teacher_id ? `<span>👨‍🏫 ${teacherName}</span>` : ''}
+      </div>
+      ${r.status === 'approved' ? `
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="smOpenEditSub('${r.id}')"
+          style="padding:7px 14px;background:var(--blue-light);color:var(--blue);border:1px solid #BFDBFE;border-radius:8px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px"
+          onmouseover="this.style.background='var(--blue)';this.style.color='#fff'"
+          onmouseout="this.style.background='var(--blue-light)';this.style.color='var(--blue)'">
+          ✏️ تعديل الاشتراك
+        </button>
+        <button onclick="smAskRemoveSub('${r.id}','${(r.subject||'').replace(/'/g,"\\'")}','${_smStudentId}')"
+          style="padding:7px 14px;background:var(--red-light);color:var(--red);border:1px solid #FECACA;border-radius:8px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px"
+          onmouseover="this.style.background='var(--red)';this.style.color='#fff'"
+          onmouseout="this.style.background='var(--red-light)';this.style.color='var(--red)'">
+          🗑️ إزالة من المادة
+        </button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function smRenderGroups() {
+  const el = document.getElementById('smtab-groups-body');
+  if (!_smEnrs.length) {
+    el.innerHTML = `<div class="empty-box" style="padding:30px"><div class="ei">👥</div><div class="et">لا توجد تسجيلات في مجموعات</div><div class="ed">يتم التسجيل تلقائياً عند قبول الطالب في مادة مع معلم</div></div>`;
+    return;
+  }
+
+  el.innerHTML = _smEnrs.map(e => {
+    const teacherName = (S.teachers.find(t => t.id === e.teacher_id)?.full_name) || '—';
+    return `
+    <div style="border:1.5px solid #BFDBFE;border-radius:12px;padding:14px 16px;margin-bottom:10px;background:var(--blue-light)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div>
+          <div style="font-size:.92rem;font-weight:900;color:var(--dark)">📖 ${e.subject_name || '—'}</div>
+          <div style="font-size:.75rem;color:var(--gray);margin-top:2px">
+            ${e.grade_name ? `🏫 ${e.grade_name} · ` : ''}
+            👨‍🏫 ${teacherName}
+          </div>
+        </div>
+        <div style="font-size:.73rem;color:var(--gray)">📅 ${fds(e.enrolled_at)}</div>
+      </div>
+      <button onclick="smAskRemoveEnrollment('${e.id}','${(e.subject_name||'').replace(/'/g,"\\'")}','${teacherName.replace(/'/g,"\\'")}')"
+        style="padding:7px 14px;background:var(--red-light);color:var(--red);border:1px solid #FECACA;border-radius:8px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px"
+        onmouseover="this.style.background='var(--red)';this.style.color='#fff'"
+        onmouseout="this.style.background='var(--red-light)';this.style.color='var(--red)'">
+        🗑️ إزالة من المجموعة
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function smOpenEditSub(reqId) {
+  const req = _smReqs.find(r => r.id === reqId);
+  if (!req) return;
+
+  // إضافة الطلب إلى S.requests إن لم يكن موجوداً (لأن openEditSubscription تبحث فيه)
+  if (!S.requests.find(r => r.id === reqId)) {
+    S.requests.push({
+      ...req,
+      student_name: S.students.find(s => s.id === _smStudentId)?.full_name || '',
+      profiles: S.students.find(s => s.id === _smStudentId)
+    });
+  }
+
+  // إغلاق نافذة الإدارة وفتح نافذة التعديل الموجودة
+  document.getElementById('mdl-student-manage').classList.remove('show');
+  openEditSubscription(reqId);
+}
+
+function smAskRemoveSub(reqId, subjectName, studentId) {
+  _smRemoveCtx = { type: 'subscription', reqId, subjectName, studentId };
+  document.getElementById('crs-title').textContent = `إزالة من مادة "${subjectName}"`;
+  document.getElementById('crs-sub').textContent = `هل تريد إزالة الطالب من مادة "${subjectName}"؟ سيتم حذف اشتراكه وتسجيله مع المعلم.`;
+  document.getElementById('crs-msg').innerHTML = '';
+  const btn = document.getElementById('crs-confirm-btn');
+  btn.disabled = false; btn.textContent = '🗑️ نعم، إزالة من المادة';
+  document.getElementById('mdl-confirm-remove-subject').classList.add('show');
+}
+
+function smAskRemoveEnrollment(enrollId, subjectName, teacherName) {
+  _smRemoveCtx = { type: 'enrollment', enrollId, subjectName, teacherName };
+  document.getElementById('crs-title').textContent = `إزالة من مجموعة "${subjectName}"`;
+  document.getElementById('crs-sub').textContent = `هل تريد إزالة الطالب من مجموعة "${subjectName}" مع ${teacherName}؟`;
+  document.getElementById('crs-msg').innerHTML = '';
+  const btn = document.getElementById('crs-confirm-btn');
+  btn.disabled = false; btn.textContent = '🗑️ نعم، إزالة من المجموعة';
+  document.getElementById('mdl-confirm-remove-subject').classList.add('show');
+}
+
+async function confirmRemoveFromSubject() {
+  if (!_smRemoveCtx) return;
+  const btn = document.getElementById('crs-confirm-btn');
+  const msg = document.getElementById('crs-msg');
+  btn.disabled = true; btn.textContent = '⏳ جاري الإزالة...';
+  msg.innerHTML = '';
+
+  try {
+    if (_smRemoveCtx.type === 'subscription') {
+      // 1. حذف teacher_enrollment المرتبط
+      await sb.from('teacher_enrollments')
+        .delete()
+        .eq('student_id', _smRemoveCtx.studentId);
+
+      // 2. تغيير حالة طلب الاشتراك إلى rejected بدلاً من حذفه كلياً (للتتبع)
+      await sb.from('subscription_requests')
+        .update({ status: 'rejected', admin_notes: 'تم إزالة الطالب من المادة بواسطة الإدارة - ' + new Date().toLocaleDateString('ar-EG') })
+        .eq('id', _smRemoveCtx.reqId);
+
+      toast(`✅ تم إزالة الطالب من مادة "${_smRemoveCtx.subjectName}" بنجاح`);
+
+    } else if (_smRemoveCtx.type === 'enrollment') {
+      // حذف التسجيل في المجموعة فقط
+      await sb.from('teacher_enrollments')
+        .delete()
+        .eq('id', _smRemoveCtx.enrollId);
+
+      toast(`✅ تم إزالة الطالب من مجموعة "${_smRemoveCtx.subjectName}" بنجاح`);
+    }
+
+    document.getElementById('mdl-confirm-remove-subject').classList.remove('show');
+    _smRemoveCtx = null;
+
+    // إعادة تحميل البيانات
+    await smLoadData();
+
+  } catch(e) {
+    msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+    btn.disabled = false; btn.textContent = '🗑️ نعم، إزالة';
+  }
+}
+
+
 
 // نقطة دخول من طلب الاشتراك المقبول (قد لا يوجد teacher_enrollments)
 async function openStudentSubjectDetailFromReq(studentId, teacherId, subjectName, gradeName, reqId) {
