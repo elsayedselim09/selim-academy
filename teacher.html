@@ -1505,15 +1505,29 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 <div class="mdl" id="mdl-intro-video">
   <div class="mdl-box" style="position:relative">
     <div class="mdl-title">🎬 فيديو التعريف بك</div>
-    <p style="font-size:.84rem;color:var(--gray);margin-bottom:18px">أضف رابط فيديو تعريفي عنك ليشاهده الطلاب. يمكن أن يكون YouTube أو Google Drive.</p>
+    <p style="font-size:.84rem;color:var(--gray);margin-bottom:18px">ارفع فيديو تعريفي عنك ليشاهده الطلاب — سيتم تخزينه على Google Drive.</p>
     <div class="fg">
-      <label>رابط الفيديو *</label>
-      <input type="url" id="intro-video-url" placeholder="https://www.youtube.com/watch?v=..." style="direction:ltr">
+      <label>اختر ملف الفيديو *</label>
+      <div class="upload-zone" id="intro-video-drop-zone"
+        onclick="document.getElementById('intro-video-file-input').click()"
+        ondragover="handleDragOver(event,'intro-video-drop-zone')"
+        ondragleave="handleDragLeave('intro-video-drop-zone')"
+        ondrop="handleIntroVideoDrop(event)">
+        <div class="uz-icon" id="intro-video-zone-icon">🎬</div>
+        <div class="uz-text" id="intro-video-zone-text">اضغط لاختيار فيديو أو اسحبه هنا</div>
+        <div class="uz-sub">MP4, MOV, AVI, MKV, WebM — حجم أقصى 2 GB</div>
+        <input type="file" id="intro-video-file-input" style="display:none"
+          accept="video/*" onchange="handleIntroVideoSelected(this)">
+      </div>
+      <div class="upload-progress" id="intro-video-progress" style="display:none">
+        <div class="upload-progress-bar" id="intro-video-bar" style="width:0%"></div>
+      </div>
+      <div id="intro-video-speed" style="font-size:.75rem;color:var(--gray);margin-top:6px;display:none"></div>
     </div>
     <div id="intro-video-msg"></div>
     <div class="mdl-btns">
       <button class="btn-secondary" onclick="closeIntroVideoModal()">إلغاء</button>
-      <button class="btn-primary" id="save-intro-btn" onclick="saveIntroVideo()">💾 حفظ الرابط</button>
+      <button class="btn-primary" id="save-intro-btn" onclick="uploadIntroVideoToDrive()">⬆️ رفع الفيديو</button>
     </div>
   </div>
 </div>
@@ -3653,28 +3667,113 @@ async function saveProfile() {
 }
 
 // Intro video
+let ST_introVideoFile = null;
+
 function openIntroVideoModal() {
-  document.getElementById('intro-video-url').value = ST.profile?.intro_video_url || '';
   document.getElementById('intro-video-msg').innerHTML = '';
+  document.getElementById('intro-video-progress').style.display = 'none';
+  document.getElementById('intro-video-bar').style.width = '0%';
+  document.getElementById('intro-video-speed').style.display = 'none';
+  document.getElementById('intro-video-zone-icon').textContent = '🎬';
+  document.getElementById('intro-video-zone-text').textContent = 'اضغط لاختيار فيديو أو اسحبه هنا';
+  document.getElementById('intro-video-file-input').value = '';
+  ST_introVideoFile = null;
   document.getElementById('mdl-intro-video').classList.add('show');
 }
-function closeIntroVideoModal() { document.getElementById('mdl-intro-video').classList.remove('show'); }
-async function saveIntroVideo() {
-  const url = document.getElementById('intro-video-url').value.trim();
-  if(!url) { setMsg('intro-video-msg','الرجاء إدخال الرابط','err'); return; }
-  const btn = document.getElementById('save-intro-btn');
-  btn.disabled = true; btn.textContent = '⏳...';
-  try {
-    const { error } = await sb.from('profiles').update({ intro_video_url: url }).eq('id', ST.user.id);
-    if(error) throw error;
-    ST.profile = { ...ST.profile, intro_video_url: url };
-    const vsEl = document.getElementById('intro-video-status');
-    if(vsEl) vsEl.textContent = '🎬 فيديو مرفوع — انقر للتعديل';
-    closeIntroVideoModal();
-    toast('✅ تم حفظ الفيديو التعريفي');
-  } catch(e) { setMsg('intro-video-msg', e.message, 'err'); }
-  finally { btn.disabled = false; btn.textContent = '💾 حفظ الرابط'; }
+function closeIntroVideoModal() {
+  document.getElementById('mdl-intro-video').classList.remove('show');
+  ST_introVideoFile = null;
 }
+
+function handleIntroVideoDrop(e) {
+  e.preventDefault();
+  handleDragLeave('intro-video-drop-zone');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('video/')) {
+    ST_introVideoFile = file;
+    document.getElementById('intro-video-zone-icon').textContent = '✅';
+    document.getElementById('intro-video-zone-text').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+  } else {
+    setMsg('intro-video-msg', 'يرجى اختيار ملف فيديو فقط', 'err');
+  }
+}
+
+function handleIntroVideoSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  ST_introVideoFile = file;
+  document.getElementById('intro-video-zone-icon').textContent = '✅';
+  document.getElementById('intro-video-zone-text').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+}
+
+async function uploadIntroVideoToDrive() {
+  if (!ST_introVideoFile) { setMsg('intro-video-msg', 'يرجى اختيار ملف فيديو أولاً', 'err'); return; }
+
+  const btn = document.getElementById('save-intro-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الرفع...';
+  document.getElementById('intro-video-progress').style.display = 'block';
+  document.getElementById('intro-video-speed').style.display = 'block';
+  setMsg('intro-video-msg', '', '');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', ST_introVideoFile);
+
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token;
+
+    const uploadResult = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          document.getElementById('intro-video-bar').style.width = pct + '%';
+          document.getElementById('intro-video-speed').textContent =
+            `${pct}% — ${(e.loaded/1024/1024).toFixed(1)} MB من ${(e.total/1024/1024).toFixed(1)} MB`;
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText)); }
+          catch { reject(new Error('استجابة غير صحيحة من الخادم')); }
+        } else {
+          try {
+            const err = JSON.parse(xhr.responseText);
+            reject(new Error(err.error || 'فشل الرفع'));
+          } catch { reject(new Error('فشل الرفع — كود: ' + xhr.status)); }
+        }
+      };
+      xhr.onerror = () => reject(new Error('خطأ في الشبكة'));
+
+      xhr.open('POST', 'https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/upload-to-drive');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhr.send(formData);
+    });
+
+    if (!uploadResult.success) throw new Error(uploadResult.error || 'فشل الرفع على Drive');
+
+    // Save embed URL to profile
+    const { error } = await sb.from('profiles').update({ intro_video_url: uploadResult.embedUrl }).eq('id', ST.user.id);
+    if (error) throw error;
+
+    ST.profile = { ...ST.profile, intro_video_url: uploadResult.embedUrl };
+    const vsEl = document.getElementById('intro-video-status');
+    if (vsEl) vsEl.textContent = '🎬 فيديو مرفوع — انقر للتعديل';
+    closeIntroVideoModal();
+    toast('✅ تم رفع الفيديو التعريفي على Google Drive!');
+  } catch(e) {
+    setMsg('intro-video-msg', e.message, 'err');
+    document.getElementById('intro-video-progress').style.display = 'none';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⬆️ رفع الفيديو';
+  }
+}
+
+async function saveIntroVideo() { await uploadIntroVideoToDrive(); }
 
 function updateHeaderUI() {
   const name = ST.profile?.full_name || 'معلم';
