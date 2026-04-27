@@ -587,6 +587,23 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   </div>
 </div>
 
+<!-- DELETE STUDENT MODAL -->
+<div class="mdl" id="mdl-delete-student">
+  <div class="mdl-box" style="max-width:420px">
+    <div class="mdl-icon">🗑️</div>
+    <div class="mdl-title">حذف الطالب نهائياً</div>
+    <div class="mdl-sub">
+      هل أنت متأكد من حذف الطالب <strong id="del-student-name"></strong>؟<br>
+      <span style="color:var(--red);font-size:.82rem">⚠️ سيتم حذف جميع بياناته واشتراكاته بشكل نهائي ولا يمكن التراجع</span>
+    </div>
+    <div id="del-student-msg"></div>
+    <div class="mdl-btns">
+      <button class="mdl-cancel" onclick="document.getElementById('mdl-delete-student').classList.remove('show')">إلغاء</button>
+      <button class="mdl-confirm mc-danger" id="del-student-btn" onclick="confirmDeleteStudent()">🗑️ حذف نهائياً</button>
+    </div>
+  </div>
+</div>
+
 <!-- STUDENT SUBJECT DETAIL MODAL -->
 <div class="mdl" id="mdl-student-subject-detail">
   <div class="mdl-box wide" style="max-width:620px">
@@ -1808,6 +1825,7 @@ async function loadStudents() {
               ? `<button class="btn-assign" onclick="event.stopPropagation();openAssignTeacher('${firstReq.id}','${s.id}','${(firstReq.subject||'').replace(/'/g,'')}')">👨‍🏫 ${firstReq.assigned_teacher_id ? 'تغيير معلم' : 'تعيين معلم'}</button>`
               : `<span class="badge b-gray" style="font-size:.7rem">لا طلبات مقبولة</span>`
             }
+            <button class="btn-rm" onclick="event.stopPropagation();openDeleteStudent('${s.id}','${(s.full_name||'').replace(/'/g,"\\'")}')">🗑️ حذف</button>
           </div>
         </td>
       </tr>`;
@@ -3230,6 +3248,54 @@ async function saveManualEnroll() {
     msgEl.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
   } finally {
     btn.disabled = false; btn.textContent = '✅ إضافة الاشتراك';
+  }
+}
+
+// ── DELETE STUDENT ──
+var _deleteStudentId = null;
+
+function openDeleteStudent(studentId, studentName) {
+  _deleteStudentId = studentId;
+  document.getElementById('del-student-name').textContent = studentName;
+  document.getElementById('del-student-msg').innerHTML = '';
+  var btn = document.getElementById('del-student-btn');
+  btn.disabled = false;
+  btn.textContent = '🗑️ حذف نهائياً';
+  document.getElementById('mdl-delete-student').classList.add('show');
+}
+
+async function confirmDeleteStudent() {
+  if (!_deleteStudentId) return;
+  var btn = document.getElementById('del-student-btn');
+  var msg = document.getElementById('del-student-msg');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الحذف...';
+  msg.innerHTML = '';
+
+  try {
+    // 1. حذف الإشعارات
+    await sb.from('notifications').delete().eq('user_id', _deleteStudentId);
+    // 2. حذف طلبات الاشتراك
+    await sb.from('subscription_requests').delete().eq('user_id', _deleteStudentId);
+    // 3. حذف التسجيلات مع المعلمين
+    await sb.from('teacher_enrollments').delete().eq('student_id', _deleteStudentId);
+    // 4. حذف الـ profile
+    await sb.from('profiles').delete().eq('id', _deleteStudentId);
+    // 5. حذف المستخدم من auth عبر RPC
+    await sb.rpc('delete_user_by_id', { target_user_id: _deleteStudentId }).catch(function(){});
+
+    document.getElementById('mdl-delete-student').classList.remove('show');
+    toast('✅ تم حذف الطالب بنجاح');
+
+    // تحديث القائمة المحلية وإعادة التحميل
+    S.students = S.students.filter(function(s){ return s.id !== _deleteStudentId; });
+    refreshStats();
+    loadStudents();
+    _deleteStudentId = null;
+  } catch(e) {
+    msg.innerHTML = '<div class="msg-err">❌ ' + e.message + '</div>';
+    btn.disabled = false;
+    btn.textContent = '🗑️ حذف نهائياً';
   }
 }
 </script>
