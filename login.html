@@ -621,7 +621,7 @@ body {
         <label>أنا <span class="req">*</span></label>
         <div class="input-wrap">
           <span class="input-icon">🎭</span>
-          <select id="reg-role">
+          <select id="reg-role" onchange="toggleStudentFields()">
             <option value="" disabled selected>— اختر نوع حسابك —</option>
             <option value="student">🎓 طالب</option>
             <option value="teacher">👨‍🏫 مدرس</option>
@@ -629,6 +629,56 @@ body {
         </div>
         <div class="field-error" id="err-role">من فضلك اختر نوع حسابك</div>
       </div>
+
+      <!-- حقول الطالب (تظهر فقط إذا اختار طالب) -->
+      <div id="student-fields" style="display:none">
+
+        <!-- المنهج -->
+        <div class="form-group">
+          <label>المنهج الدراسي <span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">📖</span>
+            <select id="reg-curriculum" onchange="onCurriculumChange()">
+              <option value="" disabled selected>— اختر منهجك —</option>
+              <option value="المنهج المصري">🇪🇬 المنهج المصري</option>
+              <option value="المنهج السعودي">🇸🇦 المنهج السعودي</option>
+              <option value="المنهج الأردني">🇯🇴 المنهج الأردني</option>
+              <option value="المنهج الكويتي">🇰🇼 المنهج الكويتي</option>
+              <option value="المنهج الإماراتي">🇦🇪 المنهج الإماراتي</option>
+            </select>
+          </div>
+          <div class="field-error" id="err-curriculum">من فضلك اختر المنهج</div>
+        </div>
+
+        <!-- الصف الدراسي -->
+        <div class="form-group" id="grade-group" style="display:none">
+          <label>الصف الدراسي <span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">🏫</span>
+            <select id="reg-grade" onchange="onGradeChange()">
+              <option value="" disabled selected>— اختر صفك الدراسي —</option>
+            </select>
+          </div>
+          <div class="field-error" id="err-grade">من فضلك اختر الصف الدراسي</div>
+        </div>
+
+        <!-- التخصص (علمي/أدبي) — للثانوي فقط -->
+        <div class="form-group" id="stream-group" style="display:none">
+          <label>التخصص <span class="req">*</span></label>
+          <div style="display:flex;gap:12px;margin-top:4px">
+            <label style="flex:1;cursor:pointer;display:flex;align-items:center;gap:10px;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:12px 14px;transition:all .2s" id="stream-sci-lbl">
+              <input type="radio" name="reg-stream" value="علمي" id="stream-sci" onchange="updateStreamStyle()">
+              <div><div style="font-size:.88rem;font-weight:700">🔬 علمي</div><div style="font-size:.73rem;color:var(--gray)">رياضيات · فيزياء · كيمياء</div></div>
+            </label>
+            <label style="flex:1;cursor:pointer;display:flex;align-items:center;gap:10px;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:12px 14px;transition:all .2s" id="stream-lit-lbl">
+              <input type="radio" name="reg-stream" value="أدبي" id="stream-lit" onchange="updateStreamStyle()">
+              <div><div style="font-size:.88rem;font-weight:700">📖 أدبي</div><div style="font-size:.73rem;color:var(--gray)">تاريخ · جغرافيا · فلسفة</div></div>
+            </label>
+          </div>
+          <div class="field-error" id="err-stream">من فضلك اختر التخصص</div>
+        </div>
+
+      </div><!-- /student-fields -->
 
       <!-- Password -->
       <div class="form-group">
@@ -973,6 +1023,123 @@ async function handleLogin() {
   }
 }
 
+// ══════════════════════════════════════════
+// STUDENT FIELDS LOGIC (Grade / Curriculum / Stream)
+// ══════════════════════════════════════════
+
+// الصفوف حسب المرحلة
+var GRADES = {
+  primary: [
+    'الصف الأول الابتدائي',
+    'الصف الثاني الابتدائي',
+    'الصف الثالث الابتدائي',
+    'الصف الرابع الابتدائي',
+    'الصف الخامس الابتدائي',
+    'الصف السادس الابتدائي',
+  ],
+  middle: [
+    'الصف الأول الإعدادي',
+    'الصف الثاني الإعدادي',
+    'الصف الثالث الإعدادي',
+  ],
+  secondary: [
+    'الصف الأول الثانوي',
+    'الصف الثاني الثانوي',
+    'الصف الثالث الثانوي',
+  ]
+};
+
+// اسماء الصفوف مختلفة للمناهج الخليجية
+var GRADES_GULF = {
+  primary: [
+    'الصف الأول الابتدائي',
+    'الصف الثاني الابتدائي',
+    'الصف الثالث الابتدائي',
+    'الصف الرابع الابتدائي',
+    'الصف الخامس الابتدائي',
+    'الصف السادس الابتدائي',
+  ],
+  middle: [
+    'الصف الأول المتوسط',
+    'الصف الثاني المتوسط',
+    'الصف الثالث المتوسط',
+  ],
+  secondary: [
+    'الصف الأول الثانوي',
+    'الصف الثاني الثانوي',
+    'الصف الثالث الثانوي',
+  ]
+};
+
+var SECONDARY_GRADES_LABELS = ['الصف الأول الثانوي','الصف الثاني الثانوي','الصف الثالث الثانوي'];
+
+function toggleStudentFields() {
+  var role = document.getElementById('reg-role').value;
+  document.getElementById('student-fields').style.display = role === 'student' ? 'block' : 'none';
+}
+
+function onCurriculumChange() {
+  var curr = document.getElementById('reg-curriculum').value;
+  if(!curr) return;
+
+  // اختر الصفوف المناسبة
+  var isGulf = ['المنهج السعودي','المنهج الكويتي','المنهج الإماراتي'].includes(curr);
+  var gradeSet = isGulf ? GRADES_GULF : GRADES;
+  var allGrades = [...gradeSet.primary, ...gradeSet.middle, ...gradeSet.secondary];
+
+  var gradeSel = document.getElementById('reg-grade');
+  gradeSel.innerHTML = '<option value="" disabled selected>— اختر صفك الدراسي —</option>';
+  
+  // إضافة الصفوف مجمّعة
+  function addGroup(label, arr) {
+    var grp = document.createElement('optgroup');
+    grp.label = label;
+    arr.forEach(function(g) {
+      var opt = document.createElement('option');
+      opt.value = g; opt.textContent = g;
+      grp.appendChild(opt);
+    });
+    gradeSel.appendChild(grp);
+  }
+  addGroup('المرحلة الابتدائية', gradeSet.primary);
+  addGroup(isGulf ? 'المرحلة المتوسطة' : 'المرحلة الإعدادية', gradeSet.middle);
+  addGroup('المرحلة الثانوية', gradeSet.secondary);
+
+  document.getElementById('grade-group').style.display = 'block';
+  document.getElementById('stream-group').style.display = 'none';
+}
+
+function onGradeChange() {
+  var grade = document.getElementById('reg-grade').value;
+  var isSecondary = SECONDARY_GRADES_LABELS.some(function(g) {
+    return grade && grade.includes(g.replace('الصف','').trim());
+  });
+  // نتحقق إذا الصف من المرحلة الثانوية
+  var isSecondaryGrade = grade && (
+    grade.includes('الثانوي') || 
+    grade.includes('ثانو')
+  );
+  document.getElementById('stream-group').style.display = isSecondaryGrade ? 'block' : 'none';
+  if(!isSecondaryGrade) {
+    // reset stream
+    document.querySelectorAll('input[name="reg-stream"]').forEach(function(r){ r.checked = false; });
+    document.getElementById('stream-sci-lbl').style.borderColor = 'var(--gray-mid)';
+    document.getElementById('stream-sci-lbl').style.background  = 'var(--gray-light)';
+    document.getElementById('stream-lit-lbl').style.borderColor = 'var(--gray-mid)';
+    document.getElementById('stream-lit-lbl').style.background  = 'var(--gray-light)';
+  }
+}
+
+function updateStreamStyle() {
+  var sel = document.querySelector('input[name="reg-stream"]:checked');
+  var sciLbl = document.getElementById('stream-sci-lbl');
+  var litLbl = document.getElementById('stream-lit-lbl');
+  sciLbl.style.borderColor = sel && sel.value === 'علمي' ? 'var(--blue)' : 'var(--gray-mid)';
+  sciLbl.style.background  = sel && sel.value === 'علمي' ? 'var(--blue-light)' : 'var(--gray-light)';
+  litLbl.style.borderColor = sel && sel.value === 'أدبي' ? 'var(--blue)' : 'var(--gray-mid)';
+  litLbl.style.background  = sel && sel.value === 'أدبي' ? 'var(--blue-light)' : 'var(--gray-light)';
+}
+
 // ── REGISTER HANDLER ──
 async function handleRegister() {
   clearErrors();
@@ -985,6 +1152,11 @@ async function handleRegister() {
   var conf  = document.getElementById('reg-confirm').value;
   var terms = document.getElementById('terms').checked;
   var ok    = true;
+
+  // Extra student fields
+  var curriculum = '';
+  var gradeLevel = '';
+  var stream     = '';
 
   if (!fn) { markError('reg-firstname','err-firstname','مطلوب'); ok=false; }
   if (!ln) { markError('reg-lastname','err-lastname','مطلوب'); ok=false; }
@@ -999,6 +1171,31 @@ async function handleRegister() {
     document.getElementById('reg-role').classList.add('error');
     showErr('err-role', 'من فضلك اختر نوع حسابك');
     ok=false;
+  }
+  // ✅ التحقق من حقول الطالب
+  if(role === 'student') {
+    curriculum = document.getElementById('reg-curriculum') ? document.getElementById('reg-curriculum').value : '';
+    gradeLevel = document.getElementById('reg-grade') ? document.getElementById('reg-grade').value : '';
+    if(!curriculum) {
+      var currEl = document.getElementById('reg-curriculum');
+      if(currEl) currEl.classList.add('error');
+      showErr('err-curriculum','من فضلك اختر المنهج الدراسي');
+      ok=false;
+    }
+    if(curriculum && !gradeLevel) {
+      var gradeEl = document.getElementById('reg-grade');
+      if(gradeEl) gradeEl.classList.add('error');
+      showErr('err-grade','من فضلك اختر الصف الدراسي');
+      ok=false;
+    }
+    if(gradeLevel && gradeLevel.includes('الثانوي')) {
+      var streamEl = document.querySelector('input[name="reg-stream"]:checked');
+      stream = streamEl ? streamEl.value : '';
+      if(!stream) {
+        showErr('err-stream','من فضلك اختر التخصص (علمي / أدبي)');
+        ok=false;
+      }
+    }
   }
   if (!pwd || pwd.length < 8) {
     markError('reg-password','err-password','كلمة المرور يجب أن تكون 8 أحرف على الأقل'); ok=false;
@@ -1073,6 +1270,12 @@ async function handleRegister() {
     };
     if (role === 'teacher') {
       profilePayload.teacher_approved = null;
+    }
+    // ✅ حفظ بيانات الطالب التعليمية
+    if(role === 'student') {
+      if(curriculum) profilePayload.curriculum = curriculum;
+      if(gradeLevel) profilePayload.grade_level = stream ? (gradeLevel + ' - ' + stream) : gradeLevel;
+      if(stream)     profilePayload.grade_stream = stream;
     }
     await _sb.from('profiles').upsert(profilePayload);
 

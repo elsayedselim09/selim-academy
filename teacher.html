@@ -1432,6 +1432,16 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       <label>رابط Zoom / Google Meet (اختياري)</label>
       <input type="url" id="sess-zoom" placeholder="https://zoom.us/j/..." style="direction:ltr">
     </div>
+    <!-- ✅ خيار الحصة المجانية -->
+    <div style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border:1.5px solid #6EE7B7;border-radius:12px;padding:14px 18px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:12px;cursor:pointer">
+        <input type="checkbox" id="sess-is-free" style="width:20px;height:20px;accent-color:var(--green);cursor:pointer">
+        <div>
+          <div style="font-size:.92rem;font-weight:900;color:#065F46">🎁 حصة مجانية للجميع</div>
+          <div style="font-size:.78rem;color:#047857;margin-top:2px">ستظهر هذه الحصة في صفحة المحتوى المجاني وتكون متاحة لجميع الطلاب بدون تسجيل</div>
+        </div>
+      </label>
+    </div>
     <div id="sess-mdl-msg"></div>
     <div class="mdl-btns">
       <button class="btn-secondary" onclick="closeSessionModal()">إلغاء</button>
@@ -1616,6 +1626,16 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       </div>
     </div>
     <div id="file-upload-msg"></div>
+    <!-- ✅ خيار المجاني -->
+    <div style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border:1.5px solid #6EE7B7;border-radius:12px;padding:12px 16px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <input type="checkbox" id="file-is-free" style="width:18px;height:18px;accent-color:var(--green);cursor:pointer">
+        <div>
+          <div style="font-size:.88rem;font-weight:900;color:#065F46">🎁 محتوى مجاني للجميع</div>
+          <div style="font-size:.75rem;color:#047857">سيظهر في صفحة المحتوى المجاني ويتاح لكل الطلاب</div>
+        </div>
+      </label>
+    </div>
     <div class="mdl-btns">
       <button class="btn-secondary" onclick="closeUploadFileModal()">إلغاء</button>
       <button class="btn-primary" id="upload-file-btn" onclick="uploadFile()">⬆️ رفع الملف</button>
@@ -1655,6 +1675,16 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       <input type="text" id="video-note" placeholder="مثال: مدة الفيديو 45 دقيقة">
     </div>
     <div id="video-upload-msg"></div>
+    <!-- ✅ خيار المجاني -->
+    <div style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border:1.5px solid #6EE7B7;border-radius:12px;padding:12px 16px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <input type="checkbox" id="video-is-free" style="width:18px;height:18px;accent-color:var(--green);cursor:pointer">
+        <div>
+          <div style="font-size:.88rem;font-weight:900;color:#065F46">🎁 فيديو مجاني للجميع</div>
+          <div style="font-size:.75rem;color:#047857">سيظهر في صفحة المحتوى المجاني ويتاح لكل الطلاب</div>
+        </div>
+      </label>
+    </div>
     <div class="mdl-btns">
       <button class="btn-secondary" onclick="closeUploadVideoModal()">إلغاء</button>
       <button class="btn-primary" id="upload-video-btn" onclick="uploadVideoToDrive()">⬆️ رفع الفيديو</button>
@@ -2167,7 +2197,7 @@ function renderFiles() {
         <div class="file-num">${i+1}</div>
         <div class="file-icon">${getFileIcon(f.file_name||f.url)}</div>
         <div class="file-info">
-          <div class="file-name">${f.title||f.file_name||'ملف'}</div>
+          <div class="file-name">${f.title||f.file_name||'ملف'} ${f.is_free ? '<span style="display:inline-flex;align-items:center;gap:3px;background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7;border-radius:50px;padding:2px 8px;font-size:.68rem;font-weight:900;margin-right:6px">🟢 مجاني</span>' : ''}</div>
           <div class="file-meta">${f.file_size ? fsize(f.file_size) : ''} ${f.file_name ? '· '+f.file_name : ''}</div>
         </div>
         <div class="file-date">${fds(f.created_at)}</div>
@@ -2199,7 +2229,7 @@ function renderVideos() {
             <div class="video-play" onclick="window.open('${v.url}','_blank')">▶️</div>
           </div>
           <div class="video-body">
-            <div class="video-title">${v.title||'فيديو'}</div>
+            <div class="video-title">${v.title||'فيديو'} ${v.is_free ? '<span style="display:inline-flex;align-items:center;gap:3px;background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7;border-radius:50px;padding:2px 8px;font-size:.68rem;font-weight:900">🟢 مجاني</span>' : ''}</div>
             <div class="video-meta">${v.note||''} · ${fds(v.created_at)}</div>
             <div class="video-acts">
               <a class="btn-sm btn-edit" href="${v.url}" target="_blank">🔗 فتح</a>
@@ -2343,6 +2373,7 @@ function openUploadFileModal() {
   document.getElementById('file-upload-msg').innerHTML = '';
   document.getElementById('file-upload-progress').style.display = 'none';
   document.getElementById('file-input').value = '';
+  document.getElementById('file-is-free').checked = false;
   document.getElementById('mdl-upload-file').classList.add('show');
 }
 function closeUploadFileModal() { document.getElementById('mdl-upload-file').classList.remove('show'); }
@@ -2428,7 +2459,10 @@ async function uploadFile() {
       url:          uploadResult.viewUrl,
       file_name:    file.name,
       file_size:    file.size,
-      storage_path: 'gdrive:' + uploadResult.fileId, // نحفظ Drive ID للمرجعية
+      storage_path: 'gdrive:' + uploadResult.fileId,
+      is_free:      document.getElementById('file-is-free').checked,
+      subject_name: ST.subjects.find(s=>s.id===ST.curSubjectId)?.name || null,
+      grade_name:   ST.subjects.find(s=>s.id===ST.curSubjectId)?.teacher_grades?.find(g=>g.id===ST.curGradeId)?.name || null,
     });
     if(dbErr) throw dbErr;
 
@@ -2460,6 +2494,7 @@ function openUploadVideoModal() {
   document.getElementById('video-zone-icon').textContent = '🎬';
   document.getElementById('video-zone-text').textContent = 'اضغط لاختيار فيديو أو اسحبه هنا';
   document.getElementById('video-file-input').value = '';
+  document.getElementById('video-is-free').checked = false;
   ST_videoFile = null;
   document.getElementById('mdl-upload-video').classList.add('show');
   setTimeout(() => document.getElementById('video-title').focus(), 100);
@@ -2560,6 +2595,9 @@ async function uploadVideoToDrive() {
       file_name:  ST_videoFile.name,
       file_size:  ST_videoFile.size,
       note: document.getElementById('video-note').value.trim() || null,
+      is_free: document.getElementById('video-is-free').checked,
+      subject_name: ST.subjects.find(s=>s.id===ST.curSubjectId)?.name || null,
+      grade_name:   ST.subjects.find(s=>s.id===ST.curSubjectId)?.teacher_grades?.find(g=>g.id===ST.curGradeId)?.name || null,
     });
     if (dbErr) throw dbErr;
 
@@ -2844,7 +2882,7 @@ function renderSessionsData(data) {
             ${s.zoom_link    ? `<span><button onclick="openZoomLink('${s.zoom_link}')" style="background:none;border:none;cursor:pointer;color:var(--blue)">🔗 انضم</button></span>` : ''}
           </div>
         </div>
-        <div class="sc-status">${stateMap[st]||''}</div>
+        <div class="sc-status">${stateMap[st]||''}${s.is_free ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7;border-radius:50px;padding:3px 10px;font-size:.7rem;font-weight:900;margin-top:4px">🟢 مجاني</span>` : ''}</div>
         <div class="sc-acts">
           <button class="btn-sm btn-edit" onclick="editSession('${s.id}')">✏️</button>
           <button class="btn-sm btn-del"  onclick="confirmDelete('session','${s.id}','${s.title.replace(/'/g,'')}')">🗑️</button>
@@ -2891,6 +2929,7 @@ function openSessionModal(id) {
 
   document.getElementById('sess-duration').value = s?.duration_min || 60;
   document.getElementById('sess-zoom').value = s?.zoom_link || '';
+  document.getElementById('sess-is-free').checked = s?.is_free || false;
   document.getElementById('sess-mdl-msg').innerHTML = '';
 
   // Populate subject dropdown
@@ -2968,6 +3007,7 @@ async function saveSession() {
     subject_name: subj?.name || null,
     grade_id:     gradeId || null,
     grade_name:   grade?.name || null,
+    is_free:      document.getElementById('sess-is-free').checked,
   };
 
   const btn = document.getElementById('save-sess-btn');
