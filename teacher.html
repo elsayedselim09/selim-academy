@@ -1377,10 +1377,24 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
   <div class="mdl-box wide" style="position:relative">
     <div class="mdl-title" id="sess-mdl-title">➕ إضافة حصة</div>
     <input type="hidden" id="sess-edit-id">
+
+    <!-- ✅ حصة مجانية — أعلى النافذة -->
+    <div style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border:1.5px solid #6EE7B7;border-radius:12px;padding:14px 18px;margin-bottom:18px">
+      <label style="display:flex;align-items:center;gap:12px;cursor:pointer">
+        <input type="checkbox" id="sess-is-free" style="width:22px;height:22px;accent-color:var(--green);cursor:pointer" onchange="toggleFreeSession(this.checked)">
+        <div>
+          <div style="font-size:.95rem;font-weight:900;color:#065F46">🎁 حصة مجانية للجميع</div>
+          <div style="font-size:.78rem;color:#047857;margin-top:2px">ستظهر في صفحة المحتوى المجاني وتكون متاحة لجميع الطلاب بدون تسجيل</div>
+        </div>
+      </label>
+    </div>
+
     <div class="fg">
       <label>عنوان الحصة *</label>
       <input type="text" id="sess-title" placeholder="مثال: شرح درس المعادلات التربيعية">
     </div>
+
+    <!-- المادة — تظهر دائماً -->
     <div class="fg-row">
       <div class="fg">
         <label>المادة</label>
@@ -1388,13 +1402,39 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
           <option value="">— اختر المادة —</option>
         </select>
       </div>
-      <div class="fg">
+      <!-- الصف العادي (من مجموعات المعلم) — يظهر عندما المجاني غير مفعّل -->
+      <div class="fg" id="sess-grade-normal-wrap">
         <label>الصف</label>
         <select id="sess-grade-sel">
           <option value="">— اختر الصف —</option>
         </select>
       </div>
+      <!-- الصف المجاني (ابتدائي→ثانوي) — يظهر عند تفعيل المجاني -->
+      <div class="fg" id="sess-free-grade-wrap" style="display:none">
+        <label>الصف *</label>
+        <select id="sess-free-grade-sel">
+          <optgroup label="المرحلة الابتدائية">
+            <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+            <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+            <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+            <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+            <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+            <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+          </optgroup>
+          <optgroup label="المرحلة الإعدادية">
+            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+            <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+          </optgroup>
+          <optgroup label="المرحلة الثانوية">
+            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+            <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+          </optgroup>
+        </select>
+      </div>
     </div>
+
     <div class="fg-row">
       <div class="fg">
         <label>نوع الحصة *</label>
@@ -1432,16 +1472,7 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       <label>رابط Zoom / Google Meet (اختياري)</label>
       <input type="url" id="sess-zoom" placeholder="https://zoom.us/j/..." style="direction:ltr">
     </div>
-    <!-- ✅ خيار الحصة المجانية -->
-    <div style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border:1.5px solid #6EE7B7;border-radius:12px;padding:14px 18px;margin-bottom:14px">
-      <label style="display:flex;align-items:center;gap:12px;cursor:pointer">
-        <input type="checkbox" id="sess-is-free" style="width:20px;height:20px;accent-color:var(--green);cursor:pointer">
-        <div>
-          <div style="font-size:.92rem;font-weight:900;color:#065F46">🎁 حصة مجانية للجميع</div>
-          <div style="font-size:.78rem;color:#047857;margin-top:2px">ستظهر هذه الحصة في صفحة المحتوى المجاني وتكون متاحة لجميع الطلاب بدون تسجيل</div>
-        </div>
-      </label>
-    </div>
+
     <div id="sess-mdl-msg"></div>
     <div class="mdl-btns">
       <button class="btn-secondary" onclick="closeSessionModal()">إلغاء</button>
@@ -2929,7 +2960,14 @@ function openSessionModal(id) {
 
   document.getElementById('sess-duration').value = s?.duration_min || 60;
   document.getElementById('sess-zoom').value = s?.zoom_link || '';
-  document.getElementById('sess-is-free').checked = s?.is_free || false;
+  const isFreeVal = s?.is_free || false;
+  document.getElementById('sess-is-free').checked = isFreeVal;
+  toggleFreeSession(isFreeVal);
+  // لو حصة مجانية محفوظة — اعرض اسم الصف في القائمة المجانية
+  if (isFreeVal && s?.grade_name) {
+    const fsel = document.getElementById('sess-free-grade-sel');
+    for (let opt of fsel.options) { if (opt.value === s.grade_name) { opt.selected = true; break; } }
+  }
   document.getElementById('sess-mdl-msg').innerHTML = '';
 
   // Populate subject dropdown
@@ -2956,6 +2994,16 @@ function updateSessionGradeDropdown(subjId, selectedGradeId) {
 }
 
 function closeSessionModal() { document.getElementById('mdl-session').classList.remove('show'); }
+
+function toggleFreeSession(isFree) {
+  document.getElementById('sess-grade-normal-wrap').style.display = isFree ? 'none' : '';
+  document.getElementById('sess-free-grade-wrap').style.display   = isFree ? ''     : 'none';
+  if (!isFree) {
+    // أعد تعيين الـ subject onchange لتحديث الصف العادي
+    const subjSel = document.getElementById('sess-subject-sel');
+    subjSel.onchange = () => updateSessionGradeDropdown(subjSel.value);
+  }
+}
 
 function editSession(id) { openSessionModal(id); }
 
@@ -2994,10 +3042,19 @@ async function saveSession() {
     }
   }
 
+  const isFree  = document.getElementById('sess-is-free').checked;
   const subjId  = document.getElementById('sess-subject-sel').value;
-  const gradeId = document.getElementById('sess-grade-sel').value;
   const subj    = ST.subjects.find(s => s.id === subjId);
-  const grade   = subj?.teacher_grades?.find(g => g.id === gradeId);
+
+  let gradeId, gradeName;
+  if (isFree) {
+    // الحصة المجانية: الصف من القائمة الثابتة (ابتدائي→ثانوي)
+    gradeId   = null;
+    gradeName = document.getElementById('sess-free-grade-sel').value || null;
+  } else {
+    gradeId   = document.getElementById('sess-grade-sel').value || null;
+    gradeName = subj?.teacher_grades?.find(g => g.id === gradeId)?.name || null;
+  }
 
   const basePayload = {
     teacher_id:   ST.user.id,
@@ -3005,9 +3062,9 @@ async function saveSession() {
     duration_min: parseInt(document.getElementById('sess-duration').value) || 60,
     zoom_link:    document.getElementById('sess-zoom').value.trim() || null,
     subject_name: subj?.name || null,
-    grade_id:     gradeId || null,
-    grade_name:   grade?.name || null,
-    is_free:      document.getElementById('sess-is-free').checked,
+    grade_id:     gradeId,
+    grade_name:   gradeName,
+    is_free:      isFree,
   };
 
   const btn = document.getElementById('save-sess-btn');
