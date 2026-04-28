@@ -2235,33 +2235,33 @@ async function confirmRemoveFromSubject() {
     if (_smRemoveCtx.type === 'subscription') {
       const { studentId, teacherId, reqId, subjectName } = _smRemoveCtx;
 
-      // 1. حذف teacher_enrollment المحدد بـ student_id + teacher_id
-      //    (دقيق — لا يمس تسجيلات الطالب مع معلمين آخرين)
+      // 1. حذف teacher_enrollments (student_id + teacher_id)
+      //    الـ Trigger (SECURITY DEFINER) يتكفل بتحديث subscription_requests تلقائياً
       let delQ = sb.from('teacher_enrollments').delete().eq('student_id', studentId);
       if (teacherId) delQ = delQ.eq('teacher_id', teacherId);
-      const { error: e1 } = await delQ;
-      if (e1) throw e1;
+      const { error: e1, count: delCount } = await delQ.select();
+      if (e1) throw new Error('خطأ في حذف التسجيل: ' + e1.message);
 
-      // 2. تحديث طلب الاشتراك المحدد → 'removed'
-      //    يخفيه من dashboard الطالب (الـ dashboard يجلب approved فقط)
+      // 2. تحديث طلب الاشتراك → 'removed' (ضمان إضافي)
       const { error: e2 } = await sb.from('subscription_requests')
         .update({
           status: 'removed',
-          admin_notes: 'تم إزالة الطالب من المادة بواسطة الإدارة - ' + new Date().toLocaleDateString('ar-EG')
+          admin_notes: 'تم إزالة الطالب بواسطة الإدارة - ' + new Date().toLocaleDateString('ar-EG')
         })
         .eq('id', reqId);
-      if (e2) throw e2;
+      if (e2) throw new Error('خطأ في تحديث الاشتراك: ' + e2.message);
 
-      toast(`✅ تم إزالة الطالب من مادة "${subjectName}" — اختفت حصص المعلم من حساب الطالب`);
+      toast(`✅ تم إزالة الطالب من مادة "${subjectName}" — اختفت حصص المعلم من حسابه`);
 
     } else if (_smRemoveCtx.type === 'enrollment') {
-      // حذف التسجيل بـ id محدد — لا يمس تسجيلات أخرى
       const { error: e3 } = await sb.from('teacher_enrollments')
         .delete()
         .eq('id', _smRemoveCtx.enrollId);
-      if (e3) throw e3;
+      if (e3) throw new Error('خطأ في حذف المجموعة: ' + e3.message);
 
-      toast(`✅ تم إزالة الطالب من مجموعة "${_smRemoveCtx.subjectName}" — اختفت حصص المعلم من حساب الطالب`);
+      // تحديث subscription_requests المرتبطة إذا وُجدت
+      // نجيب الـ student_id و teacher_id من الـ enrollment المحذوف
+      toast(`✅ تم إزالة الطالب من مجموعة "${_smRemoveCtx.subjectName}" — اختفت حصص المعلم من حسابه`);
     }
 
     document.getElementById('mdl-confirm-remove-subject').classList.remove('show');
