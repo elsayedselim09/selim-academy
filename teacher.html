@@ -878,6 +878,52 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
   border:3px solid rgba(255,255,255,.2); flex-shrink:0;
   background:#111;
 }
+
+/* ══════════════════════════════════════════
+   OFFLINE EXAMS — اختبارات ورقية
+══════════════════════════════════════════ */
+.exam-tabs { display:flex; gap:0; border:1.5px solid var(--gray-mid); border-radius:10px; overflow:hidden; margin-bottom:22px; display:inline-flex }
+.exam-tab  { padding:9px 22px; background:none; border:none; font-family:'Cairo',sans-serif; font-size:.85rem; font-weight:700; cursor:pointer; color:var(--gray); transition:all .2s }
+.exam-tab.active { background:var(--blue); color:#fff }
+
+.oex-card {
+  background:#fff; border:1px solid var(--gray-mid); border-radius:var(--radius);
+  padding:18px 20px; margin-bottom:12px; display:flex; align-items:center; gap:16px;
+  transition:all .25s;
+}
+.oex-card:hover { box-shadow:var(--shadow-md); border-color:var(--blue-mid); transform:translateY(-2px) }
+.oex-icon { width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#FFFBEB,#FEF3C7); display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0 }
+.oex-info { flex:1 }
+.oex-title { font-size:.95rem; font-weight:900; color:var(--dark); margin-bottom:3px }
+.oex-meta  { font-size:.76rem; color:var(--gray) }
+.oex-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:50px; font-size:.72rem; font-weight:700 }
+.oex-badge.draft   { background:var(--gray-light); color:var(--gray) }
+.oex-badge.graded  { background:var(--green-light); color:var(--green) }
+.oex-badge.partial { background:var(--gold-light); color:#92400E }
+
+.grade-table { width:100%; border-collapse:collapse }
+.grade-table th { background:var(--gray-light); padding:10px 14px; text-align:right; font-size:.78rem; font-weight:700; color:var(--gray); border-bottom:2px solid var(--gray-mid) }
+.grade-table td { padding:10px 14px; border-bottom:1px solid var(--gray-mid); vertical-align:middle }
+.grade-table tr:last-child td { border-bottom:none }
+.grade-table tr:hover td { background:#F8FAFF }
+.grade-input {
+  width:90px; padding:7px 10px; border:1.5px solid var(--gray-mid);
+  border-radius:8px; font-family:'Cairo',sans-serif; font-size:.9rem;
+  text-align:center; outline:none; transition:border-color .2s; color:var(--dark);
+}
+.grade-input:focus { border-color:var(--blue); background:#fff }
+.grade-input.over-max { border-color:var(--red); background:var(--red-light) }
+.grade-input.filled   { border-color:var(--green); background:var(--green-light) }
+.stu-rank-badge { width:28px; height:28px; border-radius:50%; background:var(--blue-light); color:var(--blue); display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:900; flex-shrink:0 }
+
+.solution-upload-zone {
+  border:2px dashed var(--gray-mid); border-radius:10px; padding:10px 14px;
+  display:flex; align-items:center; gap:8px; cursor:pointer; transition:all .2s;
+  background:var(--gray-light); font-size:.8rem; color:var(--gray); font-weight:600;
+  white-space:nowrap;
+}
+.solution-upload-zone:hover { border-color:var(--blue); background:var(--blue-light); color:var(--blue) }
+.solution-upload-zone.has-file { border-color:var(--green); background:var(--green-light); color:var(--green) }
 </style>
 </head>
 <body>
@@ -1283,6 +1329,14 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 
   <!-- ════ EXAMS ════ -->
   <div class="page" id="page-exams">
+    <!-- التبويبات الرئيسية -->
+    <div class="exam-tabs" style="margin-bottom:22px">
+      <button class="exam-tab active" id="etab-online"  onclick="switchExamTab('online')">📝 اختبارات إلكترونية</button>
+      <button class="exam-tab"        id="etab-offline" onclick="switchExamTab('offline')">📄 اختبارات ورقية</button>
+    </div>
+
+    <!-- ── الاختبارات الإلكترونية ── -->
+    <div id="exams-online-wrap">
     <div id="exams-main-view">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
         <div>
@@ -1299,6 +1353,31 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       <div id="exams-list"><div class="skel" style="height:120px;border-radius:14px;margin-bottom:12px"></div></div>
     </div>
     <div id="exam-results-view" style="display:none"></div>
+    </div>
+
+    <!-- ── الاختبارات الورقية ── -->
+    <div id="exams-offline-wrap" style="display:none">
+      <div id="offline-main-view">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+          <div>
+            <div class="page-title">الاختبارات الورقية 📄</div>
+            <p class="page-sub" style="margin-bottom:0">أدخل درجات الطلاب للاختبارات التي أجريتها خارج المنصة</p>
+          </div>
+          <button class="btn-primary" onclick="openOfflineExamModal()">➕ إنشاء اختبار ورقي</button>
+        </div>
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:22px">
+          <div class="stat-card"><div class="stat-icon si-gold">📄</div><div><div class="stat-num" id="ost-total">0</div><div class="stat-label">إجمالي الاختبارات</div></div></div>
+          <div class="stat-card"><div class="stat-icon si-green">✅</div><div><div class="stat-num" id="ost-graded">0</div><div class="stat-label">تم إدخال درجاتها</div></div></div>
+          <div class="stat-card"><div class="stat-icon si-blue">👥</div><div><div class="stat-num" id="ost-students">0</div><div class="stat-label">إجمالي الطلاب المُقيَّمين</div></div></div>
+        </div>
+        <div id="offline-exams-list">
+          <div class="skel" style="height:80px;border-radius:14px;margin-bottom:10px"></div>
+          <div class="skel" style="height:80px;border-radius:14px;margin-bottom:10px"></div>
+        </div>
+      </div>
+      <!-- تفاصيل اختبار ورقي (إدخال الدرجات) -->
+      <div id="offline-detail-view" style="display:none"></div>
+    </div>
   </div>
 
 </main>
@@ -4549,6 +4628,513 @@ document.querySelectorAll('input[name="prof-visibility"]').forEach(radio => {
 // ══════════════════════════════════════════════
 boot();
 
+// ══════════════════════════════════════════════
+// OFFLINE EXAMS — اختبارات ورقية
+// ══════════════════════════════════════════════
+
+// ── Tab Switch ──
+function switchExamTab(tab) {
+  document.getElementById('etab-online').classList.toggle('active', tab === 'online');
+  document.getElementById('etab-offline').classList.toggle('active', tab === 'offline');
+  document.getElementById('exams-online-wrap').style.display  = tab === 'online'  ? 'block' : 'none';
+  document.getElementById('exams-offline-wrap').style.display = tab === 'offline' ? 'block' : 'none';
+  if (tab === 'offline') loadOfflineExams();
+}
+
+// ── Modal: Create Offline Exam ──
+function openOfflineExamModal() {
+  // Populate subjects
+  const subSel = document.getElementById('oex-subject-sel');
+  subSel.innerHTML = '<option value="">— اختر المادة —</option>';
+  (ST.subjects || []).forEach(s => {
+    subSel.innerHTML += `<option value="${s.id}">${s.icon || '📚'} ${s.name}</option>`;
+  });
+  document.getElementById('oex-grade-sel').innerHTML = '<option value="">— اختر المجموعة —</option>';
+  document.getElementById('oex-title').value = '';
+  document.getElementById('oex-max-grade').value = '';
+  document.getElementById('oex-notes').value = '';
+  document.getElementById('oex-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('oex-msg').innerHTML = '';
+  document.getElementById('mdl-offline-exam').classList.add('show');
+}
+function closeOfflineExamModal() {
+  document.getElementById('mdl-offline-exam').classList.remove('show');
+}
+function updateOfflineGrades() {
+  const subId = document.getElementById('oex-subject-sel').value;
+  const sub   = (ST.subjects || []).find(s => s.id === subId);
+  const gradeSel = document.getElementById('oex-grade-sel');
+  gradeSel.innerHTML = '<option value="">— اختر المجموعة —</option>';
+  (sub?.teacher_grades || []).forEach(g => {
+    gradeSel.innerHTML += `<option value="${g.id}" data-name="${g.name}">${g.name}</option>`;
+  });
+}
+
+async function saveOfflineExam() {
+  const title    = document.getElementById('oex-title').value.trim();
+  const subId    = document.getElementById('oex-subject-sel').value;
+  const gradeId  = document.getElementById('oex-grade-sel').value;
+  const maxGrade = parseFloat(document.getElementById('oex-max-grade').value);
+  const dateVal  = document.getElementById('oex-date').value;
+  const notes    = document.getElementById('oex-notes').value.trim();
+
+  if (!title)    { setMsg('oex-msg', 'اسم الاختبار مطلوب', 'err'); return; }
+  if (!subId)    { setMsg('oex-msg', 'اختر المادة', 'err'); return; }
+  if (!gradeId)  { setMsg('oex-msg', 'اختر المجموعة', 'err'); return; }
+  if (!maxGrade || maxGrade <= 0) { setMsg('oex-msg', 'أدخل الدرجة الكاملة', 'err'); return; }
+
+  const sub   = (ST.subjects || []).find(s => s.id === subId);
+  const grade = (sub?.teacher_grades || []).find(g => g.id === gradeId);
+
+  const btn = document.getElementById('oex-save-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+  try {
+    const { error } = await sb.from('offline_exams').insert({
+      teacher_id:   ST.user.id,
+      title,
+      subject_id:   subId,
+      subject_name: sub?.name || '',
+      grade_id:     gradeId,
+      grade_name:   grade?.name || '',
+      max_grade:    maxGrade,
+      exam_date:    dateVal || null,
+      notes:        notes || null
+    });
+    if (error) throw error;
+    toast('✅ تم إنشاء الاختبار الورقي');
+    closeOfflineExamModal();
+    loadOfflineExams();
+  } catch(e) {
+    setMsg('oex-msg', e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 إنشاء الاختبار';
+  }
+}
+
+// ── Load Offline Exams List ──
+async function loadOfflineExams() {
+  const el = document.getElementById('offline-exams-list');
+  el.innerHTML = `<div class="skel" style="height:80px;border-radius:14px;margin-bottom:10px"></div>`.repeat(3);
+  try {
+    const { data: exams, error } = await sb.from('offline_exams')
+      .select('*').eq('teacher_id', ST.user.id)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    // جلب إحصائيات الدرجات
+    const examIds = (exams || []).map(e => e.id);
+    let gradesMap = {};
+    if (examIds.length) {
+      const { data: grades } = await sb.from('offline_exam_grades')
+        .select('exam_id, student_id').in('exam_id', examIds);
+      (grades || []).forEach(g => {
+        if (!gradesMap[g.exam_id]) gradesMap[g.exam_id] = 0;
+        gradesMap[g.exam_id]++;
+      });
+    }
+
+    // إحصائيات header
+    const totalStudentsGraded = Object.values(gradesMap).reduce((s, v) => s + v, 0);
+    const gradedExams = (exams || []).filter(e => (gradesMap[e.id] || 0) > 0).length;
+    document.getElementById('ost-total').textContent   = (exams || []).length;
+    document.getElementById('ost-graded').textContent  = gradedExams;
+    document.getElementById('ost-students').textContent = totalStudentsGraded;
+
+    if (!exams || !exams.length) {
+      el.innerHTML = `<div class="empty-box"><div class="ei">📄</div><div class="et">لا توجد اختبارات ورقية بعد</div><div class="ed">اضغط "إنشاء اختبار ورقي" لإضافة اختبار وإدخال درجات الطلاب</div></div>`;
+      return;
+    }
+
+    el.innerHTML = exams.map(ex => {
+      const cnt    = gradesMap[ex.id] || 0;
+      const badgeCls = cnt === 0 ? 'draft' : 'graded';
+      const badgeTxt = cnt === 0 ? '⬜ لم تُدخَل درجات' : `✅ ${cnt} طالب مُقيَّم`;
+      return `
+        <div class="oex-card" onclick="openOfflineExamDetail('${ex.id}')">
+          <div class="oex-icon">📄</div>
+          <div class="oex-info">
+            <div class="oex-title">${ex.title}</div>
+            <div class="oex-meta">
+              📚 ${ex.subject_name || ''}
+              ${ex.grade_name ? ' · 👥 ' + ex.grade_name : ''}
+              ${ex.exam_date ? ' · 📅 ' + fds(ex.exam_date) : ''}
+              · الدرجة الكاملة: <strong>${ex.max_grade}</strong>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
+            <span class="oex-badge ${badgeCls}">${badgeTxt}</span>
+            <div style="display:flex;gap:6px">
+              <button class="btn-sm btn-edit" onclick="event.stopPropagation();openOfflineExamDetail('${ex.id}')">✏️ إدخال درجات</button>
+              <button class="btn-sm btn-del"  onclick="event.stopPropagation();deleteOfflineExam('${ex.id}','${ex.title.replace(/'/g,"\\'")}')">🗑️</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div class="msg-err">خطأ: ${e.message}</div>`;
+  }
+}
+
+// ── Open Detail: grade entry per student ──
+async function openOfflineExamDetail(examId) {
+  const mainView   = document.getElementById('offline-main-view');
+  const detailView = document.getElementById('offline-detail-view');
+  mainView.style.display   = 'none';
+  detailView.style.display = 'block';
+  detailView.innerHTML = `<div style="text-align:center;padding:40px"><div class="spinner" style="border-top-color:var(--blue);margin:0 auto 12px"></div><div style="color:var(--gray);font-size:.88rem">جاري التحميل...</div></div>`;
+
+  try {
+    // جلب بيانات الاختبار
+    const { data: exam, error: e1 } = await sb.from('offline_exams').select('*').eq('id', examId).single();
+    if (e1) throw e1;
+
+    // جلب طلاب المجموعة
+    const { data: enData } = await sb.from('teacher_enrollments')
+      .select('student_id').eq('teacher_id', ST.user.id).eq('grade_id', exam.grade_id);
+    const studentIds = (enData || []).map(e => e.student_id).filter(Boolean);
+
+    let profilesMap = {};
+    if (studentIds.length) {
+      const { data: profs } = await sb.from('profiles').select('id,full_name').in('id', studentIds);
+      (profs || []).forEach(p => { profilesMap[p.id] = p; });
+    }
+
+    // جلب الدرجات الموجودة
+    const { data: existingGrades } = await sb.from('offline_exam_grades')
+      .select('*').eq('exam_id', examId);
+    const gradesMap = {};
+    (existingGrades || []).forEach(g => { gradesMap[g.student_id] = g; });
+
+    // جلب ملفات الحلول الموجودة
+    const solutionsMap = {};
+    (existingGrades || []).forEach(g => {
+      if (g.solution_url) solutionsMap[g.student_id] = g.solution_url;
+    });
+
+    detailView.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+        <button class="btn-secondary" onclick="backToOfflineList()" style="padding:8px 16px">→ رجوع</button>
+        <div>
+          <div class="page-title" style="margin-bottom:0">📄 ${exam.title}</div>
+          <div style="font-size:.82rem;color:var(--gray);margin-top:2px">
+            📚 ${exam.subject_name || ''} · 👥 ${exam.grade_name || ''} · الدرجة الكاملة: <strong>${exam.max_grade}</strong>
+            ${exam.exam_date ? ' · 📅 ' + fds(exam.exam_date) : ''}
+          </div>
+        </div>
+        <button class="btn-primary" id="save-grades-btn" onclick="saveAllGrades('${examId}', ${exam.max_grade})" style="margin-right:auto">💾 حفظ جميع الدرجات</button>
+      </div>
+
+      ${!studentIds.length ? `
+        <div class="empty-box"><div class="ei">👥</div><div class="et">لا يوجد طلاب في هذه المجموعة</div><div class="ed">أضف طلاباً للمجموعة أولاً من صفحة الطلاب</div></div>
+      ` : `
+        <!-- ملف الحل الرسمي -->
+        <div class="section-card" style="margin-bottom:20px">
+          <div class="section-head"><h3>📎 ملف الحل النموذجي (اختياري)</h3></div>
+          <div class="section-body" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div style="flex:1;min-width:220px">
+              <div style="font-size:.85rem;color:var(--gray);margin-bottom:10px">ارفع ملف الحل الرسمي — سيظهر للطلاب عند نشر الدرجات</div>
+              <div class="solution-upload-zone ${exam.solution_url ? 'has-file' : ''}" id="official-sol-zone" onclick="document.getElementById('official-sol-input').click()">
+                <span style="font-size:1.2rem">${exam.solution_url ? '✅' : '📤'}</span>
+                <span id="official-sol-label">${exam.solution_url ? 'تم رفع الحل — انقر للتغيير' : 'انقر لرفع ملف الحل'}</span>
+              </div>
+              <input type="file" id="official-sol-input" accept=".pdf,.jpg,.jpeg,.png,.docx" style="display:none" onchange="uploadOfficialSolution(this,'${examId}')">
+            </div>
+            ${exam.solution_url ? `<a href="${exam.solution_url}" target="_blank" class="btn-sm btn-edit" style="flex-shrink:0">👁️ عرض الحل</a>` : ''}
+          </div>
+        </div>
+
+        <!-- جدول إدخال الدرجات -->
+        <div class="section-card">
+          <div class="section-head">
+            <h3>✏️ إدخال درجات الطلاب</h3>
+            <div style="font-size:.8rem;color:var(--gray)">
+              <span id="grades-filled-count">${Object.keys(gradesMap).length}</span> / ${studentIds.length} أُدخلت
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="grade-table">
+              <thead>
+                <tr>
+                  <th style="width:40px">#</th>
+                  <th>اسم الطالب</th>
+                  <th style="text-align:center">الدرجة (من ${exam.max_grade})</th>
+                  <th style="text-align:center">ملف إجابة الطالب</th>
+                  <th style="text-align:center">ملاحظة</th>
+                  <th style="text-align:center">الحالة</th>
+                </tr>
+              </thead>
+              <tbody id="grades-tbody">
+                ${studentIds.map((sid, i) => {
+                  const p   = profilesMap[sid] || {};
+                  const g   = gradesMap[sid];
+                  const hasGrade = g && g.grade !== null && g.grade !== undefined;
+                  const hasSol   = g?.student_solution_url;
+                  return `
+                    <tr id="row-${sid}">
+                      <td><div class="stu-rank-badge">${i + 1}</div></td>
+                      <td>
+                        <div style="display:flex;align-items:center;gap:10px">
+                          <div class="stu-av" style="width:34px;height:34px;font-size:.75rem">${ini(p.full_name)}</div>
+                          <div style="font-weight:700;font-size:.88rem">${p.full_name || '—'}</div>
+                        </div>
+                      </td>
+                      <td style="text-align:center">
+                        <input type="number"
+                          class="grade-input ${hasGrade ? 'filled' : ''}"
+                          id="grade-inp-${sid}"
+                          value="${hasGrade ? g.grade : ''}"
+                          min="0" max="${exam.max_grade}" step="0.5"
+                          placeholder="—"
+                          oninput="onGradeInput(this, ${exam.max_grade}, '${sid}')">
+                      </td>
+                      <td style="text-align:center">
+                        <div class="solution-upload-zone ${hasSol ? 'has-file' : ''}" id="sol-zone-${sid}"
+                          style="justify-content:center;padding:7px 12px;font-size:.75rem"
+                          onclick="document.getElementById('sol-inp-${sid}').click()">
+                          ${hasSol ? '✅ مرفوع' : '📤 رفع'}
+                        </div>
+                        <input type="file" id="sol-inp-${sid}" accept=".pdf,.jpg,.jpeg,.png" style="display:none"
+                          onchange="uploadStudentSolution(this,'${examId}','${sid}')">
+                        ${hasSol ? `<a href="${g.student_solution_url}" target="_blank" style="font-size:.72rem;color:var(--blue);display:block;margin-top:3px">👁️ عرض</a>` : ''}
+                      </td>
+                      <td>
+                        <input type="text" id="note-inp-${sid}"
+                          style="width:100%;padding:6px 10px;border:1.5px solid var(--gray-mid);border-radius:8px;font-family:Cairo,sans-serif;font-size:.8rem;outline:none;direction:rtl"
+                          placeholder="ملاحظة..." value="${g?.note || ''}">
+                      </td>
+                      <td style="text-align:center" id="status-${sid}">
+                        ${hasGrade
+                          ? `<span style="background:var(--green-light);color:var(--green);padding:4px 10px;border-radius:50px;font-size:.72rem;font-weight:700">✅ مُدخَل</span>`
+                          : `<span style="background:var(--gray-light);color:var(--gray);padding:4px 10px;border-radius:50px;font-size:.72rem;font-weight:700">⬜ فارغ</span>`}
+                      </td>
+                    </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:16px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;border-top:1px solid var(--gray-mid)">
+            <div id="save-grades-msg"></div>
+            <button class="btn-primary" id="save-grades-btn2" onclick="saveAllGrades('${examId}', ${exam.max_grade})">💾 حفظ جميع الدرجات</button>
+          </div>
+        </div>
+
+        <!-- إعداد الظهور -->
+        <div class="section-card">
+          <div class="section-head"><h3>👁️ إعداد ظهور الدرجات للطلاب</h3></div>
+          <div class="section-body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <div style="flex:1;font-size:.87rem;color:var(--gray);line-height:1.7">
+              عند تفعيل الظهور، يستطيع كل طالب رؤية درجته فقط في صفحته الشخصية
+            </div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0">
+              <div style="position:relative;width:48px;height:26px">
+                <input type="checkbox" id="oex-publish-toggle" style="opacity:0;position:absolute;inset:0;cursor:pointer;z-index:1;margin:0"
+                  ${exam.is_published ? 'checked' : ''}
+                  onchange="toggleOfflineExamPublish('${examId}', this.checked)">
+                <div id="oex-toggle-track" style="position:absolute;inset:0;border-radius:13px;background:${exam.is_published ? 'var(--green)' : 'var(--gray-mid)'};transition:background .2s"></div>
+                <div id="oex-toggle-thumb" style="position:absolute;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:left .2s;left:${exam.is_published ? '25px' : '3px'}"></div>
+              </div>
+              <span style="font-weight:700;font-size:.88rem;color:${exam.is_published ? 'var(--green)' : 'var(--gray)'}" id="oex-publish-lbl">
+                ${exam.is_published ? '✅ الدرجات ظاهرة للطلاب' : '🔒 الدرجات مخفية'}
+              </span>
+            </label>
+          </div>
+        </div>
+      `}
+    `;
+  } catch(e) {
+    detailView.innerHTML = `<div class="msg-err" style="padding:20px">خطأ: ${e.message}</div>`;
+  }
+}
+
+function backToOfflineList() {
+  document.getElementById('offline-main-view').style.display   = 'block';
+  document.getElementById('offline-detail-view').style.display = 'none';
+  loadOfflineExams();
+}
+
+// ── Grade Input: live validation ──
+function onGradeInput(input, maxGrade, studentId) {
+  const val = parseFloat(input.value);
+  input.classList.remove('filled', 'over-max');
+  if (input.value === '' || isNaN(val)) {
+    document.getElementById('status-' + studentId).innerHTML =
+      `<span style="background:var(--gray-light);color:var(--gray);padding:4px 10px;border-radius:50px;font-size:.72rem;font-weight:700">⬜ فارغ</span>`;
+  } else if (val > maxGrade || val < 0) {
+    input.classList.add('over-max');
+    document.getElementById('status-' + studentId).innerHTML =
+      `<span style="background:var(--red-light);color:var(--red);padding:4px 10px;border-radius:50px;font-size:.72rem;font-weight:700">❌ خطأ</span>`;
+  } else {
+    input.classList.add('filled');
+    document.getElementById('status-' + studentId).innerHTML =
+      `<span style="background:var(--green-light);color:var(--green);padding:4px 10px;border-radius:50px;font-size:.72rem;font-weight:700">✅ مُدخَل</span>`;
+  }
+  // update counter
+  const allInputs = document.querySelectorAll('.grade-input.filled');
+  const cntEl = document.getElementById('grades-filled-count');
+  if (cntEl) cntEl.textContent = allInputs.length;
+}
+
+// ── Save All Grades ──
+async function saveAllGrades(examId, maxGrade) {
+  const tbody = document.getElementById('grades-tbody');
+  if (!tbody) return;
+  const rows = tbody.querySelectorAll('tr[id^="row-"]');
+
+  let records = [];
+  let hasError = false;
+  rows.forEach(row => {
+    const sid = row.id.replace('row-', '');
+    const inp = document.getElementById('grade-inp-' + sid);
+    const noteInp = document.getElementById('note-inp-' + sid);
+    if (!inp) return;
+    const val  = inp.value.trim();
+    const note = noteInp ? noteInp.value.trim() : '';
+    if (val === '' || val === null) return; // skip empty
+    const grade = parseFloat(val);
+    if (isNaN(grade) || grade < 0 || grade > maxGrade) { hasError = true; return; }
+    records.push({ exam_id: examId, student_id: sid, grade, note: note || null });
+  });
+
+  if (hasError) { setMsg('save-grades-msg', 'بعض الدرجات خاطئة — تأكد أن الدرجات بين 0 و ' + maxGrade, 'err'); return; }
+  if (!records.length) { setMsg('save-grades-msg', 'لم تُدخَل أي درجات بعد', 'err'); return; }
+
+  const btns = document.querySelectorAll('#save-grades-btn,#save-grades-btn2');
+  btns.forEach(b => { b.disabled = true; b.textContent = '⏳ جاري الحفظ...'; });
+  try {
+    const { error } = await sb.from('offline_exam_grades').upsert(records, { onConflict: 'exam_id,student_id' });
+    if (error) throw error;
+    setMsg('save-grades-msg', `✅ تم حفظ ${records.length} درجة بنجاح`, 'ok');
+    toast(`✅ تم حفظ ${records.length} درجة`);
+  } catch(e) {
+    setMsg('save-grades-msg', e.message, 'err');
+  } finally {
+    btns.forEach(b => { b.disabled = false; b.textContent = '💾 حفظ جميع الدرجات'; });
+  }
+}
+
+// ── Upload Student Solution ──
+async function uploadStudentSolution(input, examId, studentId) {
+  const file = input.files[0];
+  if (!file) return;
+  const zone = document.getElementById('sol-zone-' + studentId);
+  zone.textContent = '⏳ جاري الرفع...';
+  try {
+    const ext  = file.name.split('.').pop();
+    const path = `offline-solutions/${examId}/${studentId}.${ext}`;
+    const { error: upErr } = await sb.storage.from('solutions').upload(path, file, { upsert: true });
+    if (upErr) throw upErr;
+    const { data: urlData } = sb.storage.from('solutions').getPublicUrl(path);
+    const publicUrl = urlData.publicUrl;
+    // save to grade record
+    await sb.from('offline_exam_grades').upsert({ exam_id: examId, student_id: studentId, student_solution_url: publicUrl }, { onConflict: 'exam_id,student_id' });
+    zone.innerHTML = '✅ مرفوع';
+    zone.classList.add('has-file');
+    toast('✅ تم رفع ملف إجابة الطالب');
+  } catch(e) {
+    zone.innerHTML = '❌ فشل الرفع';
+    toast('فشل الرفع: ' + e.message, 'err');
+  }
+}
+
+// ── Upload Official Solution ──
+async function uploadOfficialSolution(input, examId) {
+  const file = input.files[0];
+  if (!file) return;
+  const zone  = document.getElementById('official-sol-zone');
+  const label = document.getElementById('official-sol-label');
+  label.textContent = '⏳ جاري الرفع...';
+  try {
+    const ext  = file.name.split('.').pop();
+    const path = `offline-solutions/official/${examId}.${ext}`;
+    const { error: upErr } = await sb.storage.from('solutions').upload(path, file, { upsert: true });
+    if (upErr) throw upErr;
+    const { data: urlData } = sb.storage.from('solutions').getPublicUrl(path);
+    const publicUrl = urlData.publicUrl;
+    const { error } = await sb.from('offline_exams').update({ solution_url: publicUrl }).eq('id', examId);
+    if (error) throw error;
+    label.textContent = 'تم رفع الحل — انقر للتغيير';
+    zone.classList.add('has-file');
+    toast('✅ تم رفع ملف الحل الرسمي');
+  } catch(e) {
+    label.textContent = '❌ فشل الرفع';
+    toast('فشل الرفع: ' + e.message, 'err');
+  }
+}
+
+// ── Toggle Publish ──
+async function toggleOfflineExamPublish(examId, publish) {
+  try {
+    const { error } = await sb.from('offline_exams').update({ is_published: publish }).eq('id', examId);
+    if (error) throw error;
+    const track = document.getElementById('oex-toggle-track');
+    const thumb = document.getElementById('oex-toggle-thumb');
+    const lbl   = document.getElementById('oex-publish-lbl');
+    if (track) track.style.background = publish ? 'var(--green)' : 'var(--gray-mid)';
+    if (thumb) thumb.style.left = publish ? '25px' : '3px';
+    if (lbl)   { lbl.textContent = publish ? '✅ الدرجات ظاهرة للطلاب' : '🔒 الدرجات مخفية'; lbl.style.color = publish ? 'var(--green)' : 'var(--gray)'; }
+    toast(publish ? '✅ الدرجات أصبحت ظاهرة للطلاب' : '🔒 تم إخفاء الدرجات');
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
+}
+
+// ── Delete Offline Exam ──
+async function deleteOfflineExam(examId, title) {
+  if (!confirm(`هل تريد حذف "${title}" وجميع درجاته؟`)) return;
+  try {
+    await sb.from('offline_exam_grades').delete().eq('exam_id', examId);
+    const { error } = await sb.from('offline_exams').delete().eq('id', examId);
+    if (error) throw error;
+    toast('✅ تم الحذف');
+    loadOfflineExams();
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
+}
+
 </script>
+
+<!-- ══ MODAL: Create Offline Exam ══ -->
+<div class="mdl" id="mdl-offline-exam">
+  <div class="mdl-box" style="position:relative;max-width:520px">
+    <button class="mdl-close" onclick="closeOfflineExamModal()">✕ إغلاق</button>
+    <div class="mdl-title">📄 إنشاء اختبار ورقي جديد</div>
+    <div class="fg">
+      <label>اسم الاختبار *</label>
+      <input type="text" id="oex-title" placeholder="مثال: اختبار الفصل الثاني — فيزياء">
+    </div>
+    <div class="fg-row">
+      <div class="fg">
+        <label>المادة *</label>
+        <select id="oex-subject-sel" onchange="updateOfflineGrades()">
+          <option value="">— اختر المادة —</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>المجموعة / الصف *</label>
+        <select id="oex-grade-sel">
+          <option value="">— اختر المجموعة —</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg-row">
+      <div class="fg">
+        <label>الدرجة الكاملة *</label>
+        <input type="number" id="oex-max-grade" placeholder="مثال: 100" min="1" max="9999">
+      </div>
+      <div class="fg">
+        <label>تاريخ الاختبار</label>
+        <input type="date" id="oex-date">
+      </div>
+    </div>
+    <div class="fg">
+      <label>ملاحظات (اختياري)</label>
+      <textarea id="oex-notes" rows="2" placeholder="أي ملاحظات إضافية..."></textarea>
+    </div>
+    <div id="oex-msg"></div>
+    <div class="mdl-btns">
+      <button class="btn-secondary" onclick="closeOfflineExamModal()">إلغاء</button>
+      <button class="btn-primary" id="oex-save-btn" onclick="saveOfflineExam()">💾 إنشاء الاختبار</button>
+    </div>
+  </div>
+</div>
+
+<script src="pwa-register.js" defer></script>
 </body>
 </html>
