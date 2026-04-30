@@ -631,27 +631,13 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       </div>
     </div>
 
-    <!-- تبويبات -->
-    <div style="display:flex;gap:8px;margin-bottom:18px;border-bottom:2px solid var(--gray-mid);padding-bottom:0">
-      <button id="smtab-subs" onclick="smSwitchTab('subs')"
-        style="padding:9px 18px;border:none;border-bottom:2px solid var(--blue);margin-bottom:-2px;background:none;font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;color:var(--blue);cursor:pointer">
-        📚 الاشتراكات والمواد
-      </button>
-      <button id="smtab-groups" onclick="smSwitchTab('groups')"
-        style="padding:9px 18px;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;background:none;font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;color:var(--gray);cursor:pointer">
-        👥 المجموعات
-      </button>
-    </div>
-
-    <!-- محتوى تبويب الاشتراكات -->
-    <div id="smtab-subs-body" style="max-height:340px;overflow-y:auto">
+    <!-- محتوى الاشتراكات -->
+    <div id="smtab-subs-body" style="max-height:400px;overflow-y:auto">
       <div class="skel" style="height:80px;border-radius:10px;margin-bottom:10px"></div>
     </div>
 
-    <!-- محتوى تبويب المجموعات -->
-    <div id="smtab-groups-body" style="max-height:340px;overflow-y:auto;display:none">
-      <div class="skel" style="height:80px;border-radius:10px;margin-bottom:10px"></div>
-    </div>
+    <!-- محتوى تبويب المجموعات (مخفي - للتوافق) -->
+    <div id="smtab-groups-body" style="display:none"></div>
 
     <div id="manage-student-msg" style="margin-top:12px"></div>
 
@@ -2058,51 +2044,28 @@ async function openStudentManageModal() {
 
 async function smLoadData() {
   document.getElementById('smtab-subs-body').innerHTML = '<div class="skel" style="height:80px;border-radius:10px;margin-bottom:10px"></div><div class="skel" style="height:80px;border-radius:10px"></div>';
-  document.getElementById('smtab-groups-body').innerHTML = '<div class="skel" style="height:80px;border-radius:10px;margin-bottom:10px"></div>';
 
   try {
-    const [reqRes, enrRes] = await Promise.all([
-      sb.from('subscription_requests')
-        .select('id,status,subject,grade,session_type,days_info,assigned_teacher_id,created_at,end_date,sessions_remaining,admin_notes')
-        .eq('user_id', _smStudentId)
-        .order('created_at', { ascending: false }),
-      sb.from('teacher_enrollments')
-        .select('id,teacher_id,grade_id,grade_name,subject_name,enrolled_at')
-        .eq('student_id', _smStudentId)
-    ]);
+    const reqRes = await sb.from('subscription_requests')
+      .select('id,status,subject,grade,session_type,days_info,assigned_teacher_id,created_at,end_date,sessions_remaining,admin_notes')
+      .eq('user_id', _smStudentId)
+      .order('created_at', { ascending: false });
 
     _smReqs = reqRes.data || [];
-    _smEnrs = enrRes.data || [];
+    _smEnrs = [];
 
     smRenderSubs();
-    smRenderGroups();
   } catch(e) {
     document.getElementById('manage-student-msg').innerHTML = `<div class="msg-err">❌ فشل تحميل البيانات: ${e.message}</div>`;
   }
 }
 
 function smSwitchTab(tab, renderOnly = true) {
-  _smCurrentTab = tab;
-  const subsBtn  = document.getElementById('smtab-subs');
-  const grpBtn   = document.getElementById('smtab-groups');
+  _smCurrentTab = 'subs';
   const subsBody = document.getElementById('smtab-subs-body');
-  const grpBody  = document.getElementById('smtab-groups-body');
-
-  if (tab === 'subs') {
-    subsBtn.style.color = 'var(--blue)';
-    subsBtn.style.borderBottom = '2px solid var(--blue)';
-    grpBtn.style.color = 'var(--gray)';
-    grpBtn.style.borderBottom = '2px solid transparent';
-    subsBody.style.display = 'block';
-    grpBody.style.display = 'none';
-  } else {
-    grpBtn.style.color = 'var(--blue)';
-    grpBtn.style.borderBottom = '2px solid var(--blue)';
-    subsBtn.style.color = 'var(--gray)';
-    subsBtn.style.borderBottom = '2px solid transparent';
-    grpBody.style.display = 'block';
-    subsBody.style.display = 'none';
-  }
+  if (subsBody) subsBody.style.display = 'block';
+  const grpBody = document.getElementById('smtab-groups-body');
+  if (grpBody) grpBody.style.display = 'none';
 }
 
 function smRenderSubs() {
