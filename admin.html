@@ -3242,12 +3242,44 @@ async function deleteSubscription() {
         </div>
       </div>
 
-      <!-- خطوة 2: المادة والمعلم -->
+      <!-- خطوة 2: المنهج -->
+      <div style="background:#F0FDF4;border:1px solid #86EFAC;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:.78rem;font-weight:700;color:#166534;margin-bottom:10px">② المنهج الدراسي</div>
+        <div class="fg" style="margin-bottom:0">
+          <label style="font-size:.78rem">المنهج / الكتاب</label>
+          <select id="me-curriculum" onchange="handleManualCurriculumSelect()" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:var(--white)">
+            <option value="">— اختر المنهج —</option>
+            <optgroup label="📘 المناهج المصرية">
+              <option value="المنهج المصري">المنهج المصري</option>
+              <option value="المنهج المصري القديم">المنهج المصري القديم</option>
+              <option value="المنهج المصري الجديد">المنهج المصري الجديد</option>
+            </optgroup>
+            <optgroup label="🌍 المناهج الدولية">
+              <option value="البريطاني">البريطاني (IGCSE)</option>
+              <option value="الأمريكي">الأمريكي (SAT / AP)</option>
+              <option value="الدولي IB">الدولي (IB)</option>
+              <option value="الفرنسي">الفرنسي (Bac)</option>
+              <option value="الألماني">الألماني</option>
+            </optgroup>
+            <optgroup label="🏫 مناهج أخرى">
+              <option value="الأزهري">الأزهري</option>
+              <option value="التجريبي">التجريبي (لغات)</option>
+              <option value="المنهج السعودي">المنهج السعودي</option>
+              <option value="المنهج الكويتي">المنهج الكويتي</option>
+              <option value="المنهج الإماراتي">المنهج الإماراتي</option>
+            </optgroup>
+            <option value="__other__">✏️ كتابة يدوية...</option>
+          </select>
+          <input type="text" id="me-curriculum-custom" placeholder="اكتب المنهج يدوياً..." style="width:100%;padding:9px 13px;border:1.5px solid #22C55E;border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;display:none;margin-top:6px">
+        </div>
+      </div>
+
+      <!-- خطوة 3: المادة والمعلم -->
       <div style="background:var(--purple-light);border:1px solid #DDD6FE;border-radius:10px;padding:12px 14px;margin-bottom:14px">
-        <div style="font-size:.78rem;font-weight:700;color:var(--purple);margin-bottom:10px">② المادة والمعلم</div>
+        <div style="font-size:.78rem;font-weight:700;color:var(--purple);margin-bottom:10px">③ المادة والمعلم</div>
         <div class="fg-row">
           <div class="fg" style="margin-bottom:0">
-            <label style="font-size:.78rem">المادة *</label>
+            <label style="font-size:.78rem">المادة <span style="color:var(--gray);font-weight:400">(اختياري)</span></label>
             <input type="text" id="me-subject" placeholder="مثال: رياضيات، فيزياء..." style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none">
           </div>
           <div class="fg" style="margin-bottom:0">
@@ -3291,9 +3323,9 @@ async function deleteSubscription() {
         </div>
       </div>
 
-      <!-- خطوة 3: تفاصيل إضافية -->
+      <!-- خطوة 4: تفاصيل إضافية -->
       <div style="background:var(--gold-light);border:1px solid #FCD34D;border-radius:10px;padding:12px 14px;margin-bottom:14px">
-        <div style="font-size:.78rem;font-weight:700;color:#92400E;margin-bottom:10px">③ تفاصيل الاشتراك (اختياري)</div>
+        <div style="font-size:.78rem;font-weight:700;color:#92400E;margin-bottom:10px">④ تفاصيل الاشتراك (اختياري)</div>
         <div class="fg-row">
           <div class="fg" style="margin-bottom:0">
             <label style="font-size:.78rem">نوع الحصة</label>
@@ -3326,10 +3358,7 @@ async function deleteSubscription() {
             <label style="font-size:.78rem">تاريخ انتهاء الاشتراك</label>
             <input type="date" id="me-end-date" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;direction:ltr">
           </div>
-          <div class="fg" style="margin-bottom:0">
-            <label style="font-size:.78rem">المنهج / الكتاب</label>
-            <input type="text" id="me-curriculum" placeholder="مثال: المنهج الوطني" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none">
-          </div>
+          <div class="fg" style="margin-bottom:0"><!-- spacer --></div>
         </div>
         <div class="fg" style="margin-bottom:0;margin-top:10px">
           <label style="font-size:.78rem">ملاحظات الإدارة</label>
@@ -3366,6 +3395,9 @@ function openManualEnroll() {
   document.getElementById('me-grade-text').value = '';
   document.getElementById('me-grade-text-custom').value = '';
   document.getElementById('me-grade-text-custom').style.display = 'none';
+  document.getElementById('me-curriculum').value = '';
+  document.getElementById('me-curriculum-custom').value = '';
+  document.getElementById('me-curriculum-custom').style.display = 'none';
   document.getElementById('me-student-list').style.display = 'none';
   document.getElementById('me-student-list').innerHTML = '';
   const selDiv = document.getElementById('me-student-selected');
@@ -3454,6 +3486,18 @@ async function loadManualGrades() {
     (grades || []).map(g => `<option value="${g.id}">${g.name}</option>`).join('');
 }
 
+function handleManualCurriculumSelect() {
+  const sel = document.getElementById('me-curriculum');
+  const custom = document.getElementById('me-curriculum-custom');
+  if (sel.value === '__other__') {
+    custom.style.display = 'block';
+    custom.focus();
+  } else {
+    custom.style.display = 'none';
+    custom.value = '';
+  }
+}
+
 function handleManualGradeSelect() {
   const sel = document.getElementById('me-grade-text');
   const custom = document.getElementById('me-grade-text-custom');
@@ -3476,9 +3520,6 @@ async function saveManualEnroll() {
     msgEl.innerHTML = '<div class="msg-err">❌ اختر الطالب أولاً</div>'; return;
   }
   const subject = document.getElementById('me-subject').value.trim();
-  if (!subject) {
-    msgEl.innerHTML = '<div class="msg-err">❌ اكتب اسم المادة</div>'; return;
-  }
   const teacherId = document.getElementById('me-teacher-sel').value;
   if (!teacherId) {
     msgEl.innerHTML = '<div class="msg-err">❌ اختر المعلم</div>'; return;
@@ -3497,7 +3538,9 @@ async function saveManualEnroll() {
     const sessionType  = document.getElementById('me-session-type').value || null;
     const daysInfo     = document.getElementById('me-days-info').value.trim() || null;
     const endDate      = document.getElementById('me-end-date').value || null;
-    const curriculum   = document.getElementById('me-curriculum').value.trim() || null;
+    const curriculumSelVal = document.getElementById('me-curriculum').value;
+    const curriculumCustom = document.getElementById('me-curriculum-custom').value.trim();
+    const curriculum = (curriculumSelVal === '__other__' ? curriculumCustom : curriculumSelVal) || null;
     const notes        = document.getElementById('me-notes').value.trim() || null;
     const sessRem      = document.getElementById('me-sessions-rem').value;
     const sessTotal    = document.getElementById('me-sessions-total').value;
