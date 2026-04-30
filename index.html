@@ -1787,15 +1787,37 @@ async function onSubjectChange() {
   loading.style.display = 'inline';
 
   try {
-    // جيب المعلمين اللي عندهم نفس المادة (بأي تطابق جزئي في الاسم)
-    var { data, error } = await _sbTeacher
+    // حذف "ال" التعريف من أول الكلمة للمقارنة
+    // مثال: "الرياضيات" → "رياضيات"، "اللغة العربية" → "لغة"
+    function stripAl(word) {
+      return word.replace(/^ال/, '').replace(/^إل/, '');
+    }
+    // كلمات البحث: الكلمة الأولى بعد حذف ال التعريف + الكلمة الثانية لو موجودة
+    var words = subject.trim().split(/\s+/);
+    var keyword1 = stripAl(words[0]);          // مثال: "رياضيات"
+    var keyword2 = words[1] ? stripAl(words[1]) : null; // مثال: "العربية" → "عربية"
+
+    // جيب كل المواد وافلتر محلياً بالكلمات المفتاحية
+    var { data: allSubjects, error } = await _sbTeacher
       .from('teacher_subjects')
       .select('teacher_id, name, level')
-      .ilike('name', '%' + subject.split(' ')[0] + '%');
+      .eq('is_approved', true);
 
     loading.style.display = 'none';
 
-    if (error || !data || data.length === 0) {
+    if (error) { noMsg.style.display = 'block'; sel.style.display = 'none'; return; }
+
+    // فلترة محلية: المادة في Supabase تحتوي على الكلمة المفتاحية
+    var data = (allSubjects || []).filter(function(d) {
+      var dbName = d.name ? d.name.toLowerCase() : '';
+      // شرط 1: الكلمة الأولى موجودة في اسم المادة
+      var match1 = dbName.includes(keyword1.toLowerCase());
+      // شرط 2: لو فيه كلمة ثانية، لازم تكون موجودة كمان (مثال: "عربية" في "اللغة العربية")
+      var match2 = keyword2 ? dbName.includes(keyword2.toLowerCase()) : true;
+      return match1 && match2;
+    });
+
+    if (data.length === 0) {
       noMsg.style.display = 'block';
       sel.style.display = 'none';
       return;
