@@ -774,6 +774,28 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 .settings-head { padding:16px 22px; border-bottom:1px solid var(--gray-mid); background:var(--gray-light); font-size:.92rem; font-weight:700; color:var(--dark); display:flex; align-items:center; gap:8px }
 .settings-body { padding:24px 22px }
 
+/* ── Multi-select chips (مواد / مراحل / مناهج) ── */
+.multi-chip { display:inline-flex; align-items:center; cursor:pointer; }
+.multi-chip input[type=checkbox] { display:none; }
+.multi-chip span {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:7px 14px; border-radius:50px;
+  border:1.5px solid var(--gray-mid,#E5E7EB);
+  background:#fff; font-size:.82rem; font-weight:700;
+  color:var(--gray,#6B7280); transition:all .18s; user-select:none;
+}
+.multi-chip input:checked + span {
+  background:var(--blue,#1A56DB); color:#fff;
+  border-color:var(--blue,#1A56DB);
+  box-shadow:0 2px 8px rgba(26,86,219,.25);
+}
+.multi-chip:hover span { border-color:var(--blue,#1A56DB); color:var(--blue,#1A56DB); }
+.multi-chip input:checked + span:hover { background:var(--blue-dark,#1342B0); }
+
+/* Subject checkbox chip (مربع بدل دائري) */
+.subj-chip span { border-radius:10px; }
+
+
 /* ══════════════════════════════════════════
    SUPPORT PAGE
 ══════════════════════════════════════════ */
@@ -1211,9 +1233,42 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
           <div class="fg"><label>رقم الموبايل</label><input type="tel" id="prof-phone" placeholder="05xxxxxxxxx" style="direction:ltr"></div>
         </div>
         <div class="fg-row">
-          <div class="fg"><label>التخصص</label><input type="text" id="prof-spec" placeholder="رياضيات، فيزياء..."></div>
           <div class="fg"><label>سنوات الخبرة</label><input type="text" id="prof-exp" placeholder="مثال: 5 سنوات"></div>
+          <input type="hidden" id="prof-spec">
         </div>
+
+        <!-- ══ التخصص (مواد) ══ -->
+        <div class="fg" style="margin-bottom:18px;">
+          <label style="font-size:.82rem;font-weight:700;color:var(--dark,#111928);display:block;margin-bottom:8px;">📚 التخصص — المواد التي تدرّسها</label>
+          <div id="prof-subjects-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;">
+            <!-- يُبنى ديناميكياً -->
+          </div>
+        </div>
+
+        <!-- ══ المرحلة الدراسية ══ -->
+        <div class="fg" style="margin-bottom:18px;">
+          <label style="font-size:.82rem;font-weight:700;color:var(--dark,#111928);display:block;margin-bottom:8px;">🎓 المرحلة الدراسية التي تدرّسها <span style="font-size:.72rem;color:var(--gray,#6B7280);font-weight:500">(يمكن اختيار أكثر من مرحلة)</span></label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;" id="prof-grades-wrap">
+            <label class="multi-chip"><input type="checkbox" name="prof-grade" value="ابتدائي"><span>🎒 ابتدائي</span></label>
+            <label class="multi-chip"><input type="checkbox" name="prof-grade" value="إعدادي"><span>📚 إعدادي / متوسط</span></label>
+            <label class="multi-chip"><input type="checkbox" name="prof-grade" value="ثانوي"><span>🎓 ثانوي</span></label>
+          </div>
+        </div>
+
+        <!-- ══ المنهج ══ -->
+        <div class="fg" style="margin-bottom:18px;">
+          <label style="font-size:.82rem;font-weight:700;color:var(--dark,#111928);display:block;margin-bottom:8px;">🌍 المنهج الذي تدرّسه <span style="font-size:.72rem;color:var(--gray,#6B7280);font-weight:500">(يمكن اختيار أكثر من منهج)</span></label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;" id="prof-curr-wrap">
+            <label class="multi-chip"><input type="checkbox" name="prof-curr" value="مصر"><span>🇪🇬 مصري</span></label>
+            <label class="multi-chip"><input type="checkbox" name="prof-curr" value="السعودية"><span>🇸🇦 سعودي</span></label>
+            <label class="multi-chip"><input type="checkbox" name="prof-curr" value="الإمارات"><span>🇦🇪 إماراتي</span></label>
+            <label class="multi-chip"><input type="checkbox" name="prof-curr" value="الكويت"><span>🇰🇼 كويتي</span></label>
+            <label class="multi-chip"><input type="checkbox" name="prof-curr" value="قطر"><span>🇶🇦 قطري</span></label>
+            <label class="multi-chip"><input type="checkbox" name="prof-curr" value="عُمان"><span>🇴🇲 عُماني</span></label>
+            <label class="multi-chip"><input type="checkbox" name="prof-curr" value="دولة أخرى"><span>🌐 أخرى</span></label>
+          </div>
+        </div>
+
         <div class="fg"><label>نبذة عنك</label><textarea id="prof-bio" rows="4" placeholder="اكتب نبذة مختصرة عن نفسك وأسلوبك في التدريس..."></textarea></div>
 
         <!-- ══ إعداد الخصوصية ══ -->
@@ -1275,9 +1330,40 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
           <div class="fg"><label>رقم الموبايل</label><input type="tel" id="sett-phone" placeholder="05xxxxxxxxx" style="direction:ltr"></div>
         </div>
         <div class="fg-row">
-          <div class="fg"><label>التخصص</label><input type="text" id="sett-spec" placeholder="التخصص الدراسي"></div>
           <div class="fg"><label>سنوات الخبرة</label><input type="text" id="sett-exp" placeholder="5 سنوات"></div>
+          <input type="hidden" id="sett-spec">
         </div>
+
+        <!-- ══ التخصص ══ -->
+        <div class="fg" style="margin-bottom:14px;">
+          <label style="font-size:.82rem;font-weight:700;color:var(--dark,#111928);display:block;margin-bottom:8px;">📚 المواد التي تدرّسها</label>
+          <div id="sett-subjects-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;"></div>
+        </div>
+
+        <!-- ══ المرحلة ══ -->
+        <div class="fg" style="margin-bottom:14px;">
+          <label style="font-size:.82rem;font-weight:700;color:var(--dark,#111928);display:block;margin-bottom:8px;">🎓 المرحلة الدراسية <span style="font-size:.72rem;color:var(--gray,#6B7280);font-weight:500">(متعدد)</span></label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <label class="multi-chip"><input type="checkbox" name="sett-grade" value="ابتدائي"><span>🎒 ابتدائي</span></label>
+            <label class="multi-chip"><input type="checkbox" name="sett-grade" value="إعدادي"><span>📚 إعدادي / متوسط</span></label>
+            <label class="multi-chip"><input type="checkbox" name="sett-grade" value="ثانوي"><span>🎓 ثانوي</span></label>
+          </div>
+        </div>
+
+        <!-- ══ المنهج ══ -->
+        <div class="fg" style="margin-bottom:14px;">
+          <label style="font-size:.82rem;font-weight:700;color:var(--dark,#111928);display:block;margin-bottom:8px;">🌍 المنهج <span style="font-size:.72rem;color:var(--gray,#6B7280);font-weight:500">(متعدد)</span></label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <label class="multi-chip"><input type="checkbox" name="sett-curr" value="مصر"><span>🇪🇬 مصري</span></label>
+            <label class="multi-chip"><input type="checkbox" name="sett-curr" value="السعودية"><span>🇸🇦 سعودي</span></label>
+            <label class="multi-chip"><input type="checkbox" name="sett-curr" value="الإمارات"><span>🇦🇪 إماراتي</span></label>
+            <label class="multi-chip"><input type="checkbox" name="sett-curr" value="الكويت"><span>🇰🇼 كويتي</span></label>
+            <label class="multi-chip"><input type="checkbox" name="sett-curr" value="قطر"><span>🇶🇦 قطري</span></label>
+            <label class="multi-chip"><input type="checkbox" name="sett-curr" value="عُمان"><span>🇴🇲 عُماني</span></label>
+            <label class="multi-chip"><input type="checkbox" name="sett-curr" value="دولة أخرى"><span>🌐 أخرى</span></label>
+          </div>
+        </div>
+
         <div class="fg"><label>نبذة عنك</label><textarea id="sett-bio" rows="3" placeholder="نبذة مختصرة..."></textarea></div>
         <div id="sett-info-msg"></div>
         <button class="btn-primary" onclick="saveSettingsInfo()">💾 حفظ البيانات</button>
@@ -3656,7 +3742,8 @@ async function loadProfile() {
   const nameEl = document.getElementById('prof-display-name');
   if(nameEl) nameEl.textContent = p.full_name || '...';
   const specEl = document.getElementById('prof-display-spec');
-  if(specEl) specEl.textContent = (p.specialization || '') + (p.experience_years ? ' · ' + p.experience_years + ' سنوات خبرة' : '');
+  const subjDisplay = (p.subjects_list||[]).length ? (p.subjects_list||[]).join('، ') : (p.specialization||'');
+  if(specEl) specEl.textContent = subjDisplay + (p.experience_years ? ' · ' + p.experience_years + ' سنوات خبرة' : '');
   // Intro video
   const vsEl = document.getElementById('intro-video-status');
   if(vsEl) vsEl.textContent = p.intro_video_url ? '🎬 فيديو مرفوع — انقر للتعديل' : 'لم يتم رفع فيديو بعد';
@@ -3667,6 +3754,36 @@ async function loadProfile() {
   fill('prof-spec',  p.specialization);
   fill('prof-exp',   p.experience_years);
   fill('prof-bio',   p.bio);
+
+  // ── بناء checkboxes المواد ──
+  const ALL_SUBJECTS = ['اللغة العربية','الرياضيات','اللغة الإنجليزية','العلوم','الدراسات الاجتماعية','فيزياء','كيمياء','أحياء','التاريخ','الجغرافيا','الحاسب الآلي','التربية الإسلامية','التربية الفنية','التربية البدنية'];
+  const savedSubjects = p.subjects_list || [];
+  ['prof-subjects-grid','sett-subjects-grid'].forEach(gridId => {
+    const grid = document.getElementById(gridId);
+    if(!grid) return;
+    const pfx = gridId.startsWith('prof') ? 'prof' : 'sett';
+    grid.innerHTML = ALL_SUBJECTS.map(s => {
+      const checked = savedSubjects.includes(s) ? 'checked' : '';
+      return `<label class="multi-chip subj-chip"><input type="checkbox" name="${pfx}-subject" value="${s}" ${checked}><span>${s}</span></label>`;
+    }).join('');
+  });
+
+  // ── تحديد المراحل ──
+  const savedGrades = p.grade_levels || [];
+  ['prof','sett'].forEach(pfx => {
+    document.querySelectorAll(`input[name="${pfx}-grade"]`).forEach(cb => {
+      cb.checked = savedGrades.includes(cb.value);
+    });
+  });
+
+  // ── تحديد المناهج ──
+  const savedCurr = p.curriculums || [];
+  ['prof','sett'].forEach(pfx => {
+    document.querySelectorAll(`input[name="${pfx}-curr"]`).forEach(cb => {
+      cb.checked = savedCurr.includes(cb.value);
+    });
+  });
+
   // تحديد إعداد الخصوصية
   const vis = p.profile_visibility || 'full';
   const visRadio = document.querySelector(`input[name="prof-visibility"][value="${vis}"]`);
@@ -3864,10 +3981,17 @@ async function saveProfile() {
   const btn = document.getElementById('save-prof-btn');
   btn.disabled = true; btn.textContent = '⏳...';
   const selVis = document.querySelector('input[name="prof-visibility"]:checked');
+  // جمع المواد المختارة
+  const selSubjects = [...document.querySelectorAll('input[name="prof-subject"]:checked')].map(c=>c.value);
+  const selGrades   = [...document.querySelectorAll('input[name="prof-grade"]:checked')].map(c=>c.value);
+  const selCurrs    = [...document.querySelectorAll('input[name="prof-curr"]:checked')].map(c=>c.value);
   const payload = {
     full_name:          document.getElementById('prof-name')?.value.trim(),
     phone:              document.getElementById('prof-phone')?.value.trim(),
-    specialization:     document.getElementById('prof-spec')?.value.trim(),
+    specialization:     selSubjects.join('، '), // نص مختصر للتوافق مع القديم
+    subjects_list:      selSubjects,
+    grade_levels:       selGrades,
+    curriculums:        selCurrs,
     experience_years:   document.getElementById('prof-exp')?.value.trim(),
     bio:                document.getElementById('prof-bio')?.value.trim(),
     profile_visibility: selVis ? selVis.value : 'full',
@@ -4002,10 +4126,16 @@ function updateHeaderUI() {
 // SETTINGS
 // ══════════════════════════════════════════════
 async function saveSettingsInfo() {
+  const selSubjects = [...document.querySelectorAll('input[name="sett-subject"]:checked')].map(c=>c.value);
+  const selGrades   = [...document.querySelectorAll('input[name="sett-grade"]:checked')].map(c=>c.value);
+  const selCurrs    = [...document.querySelectorAll('input[name="sett-curr"]:checked')].map(c=>c.value);
   const payload = {
     full_name:        document.getElementById('sett-name')?.value.trim(),
     phone:            document.getElementById('sett-phone')?.value.trim(),
-    specialization:   document.getElementById('sett-spec')?.value.trim(),
+    specialization:   selSubjects.join('، '),
+    subjects_list:    selSubjects,
+    grade_levels:     selGrades,
+    curriculums:      selCurrs,
     experience_years: document.getElementById('sett-exp')?.value.trim(),
     bio:              document.getElementById('sett-bio')?.value.trim(),
   };

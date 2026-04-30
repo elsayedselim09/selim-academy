@@ -1766,20 +1766,20 @@ function selectCurriculum(el, country) {
 var _sbTeacher = window._sb; // reuse existing client
 
 async function onSubjectChange() {
-  var subject = document.getElementById('sel-subject').value;
-  var group   = document.getElementById('teacher-select-group');
-  var sel     = document.getElementById('sel-teacher');
-  var loading = document.getElementById('teacher-loading');
-  var noMsg   = document.getElementById('no-teachers-msg');
+  var subject    = document.getElementById('sel-subject').value;
+  var curriculum = document.getElementById('sel-curriculum').value;
+  var gradeVal   = document.getElementById('sel-grade').value;
+  var group      = document.getElementById('teacher-select-group');
+  var sel        = document.getElementById('sel-teacher');
+  var loading    = document.getElementById('teacher-loading');
+  var noMsg      = document.getElementById('no-teachers-msg');
 
-  // إخفاء الخانة لو مفيش مادة مختارة
   if (!subject || subject === 'اختار الصف أولاً' || subject === 'اختار المادة' || subject === 'اختار الفصل أولاً') {
     group.style.display = 'none';
     sel.innerHTML = '<option value="">اختار المعلم</option>';
     return;
   }
 
-  // إظهار الخانة وتحميل المعلمين
   group.style.display = 'block';
   sel.innerHTML = '<option value="">اختار المعلم</option>';
   sel.style.display = 'block';
@@ -1787,67 +1787,82 @@ async function onSubjectChange() {
   loading.style.display = 'inline';
 
   try {
-    // حذف "ال" التعريف من أول الكلمة للمقارنة
-    // مثال: "الرياضيات" → "رياضيات"، "اللغة العربية" → "لغة"
-    function stripAl(word) {
-      return word.replace(/^ال/, '').replace(/^إل/, '');
-    }
-    // كلمات البحث: الكلمة الأولى بعد حذف ال التعريف + الكلمة الثانية لو موجودة
-    var words = subject.trim().split(/\s+/);
-    var keyword1 = stripAl(words[0]);          // مثال: "رياضيات"
-    var keyword2 = words[1] ? stripAl(words[1]) : null; // مثال: "العربية" → "عربية"
+    // تحويل كود الصف → مرحلة
+    var gradeLevel = '';
+    if (gradeVal && gradeVal.startsWith('prim')) gradeLevel = 'ابتدائي';
+    else if (gradeVal && gradeVal.startsWith('mid'))  gradeLevel = 'إعدادي';
+    else if (gradeVal && gradeVal.startsWith('high')) gradeLevel = 'ثانوي';
 
-    // جيب كل المواد وافلتر محلياً بالكلمات المفتاحية
-    var { data: allSubjects, error } = await _sbTeacher
-      .from('teacher_subjects')
-      .select('teacher_id, name, level')
-      .eq('is_approved', true);
+    // تطبيع المادة (حذف ال التعريف)
+    function stripAl(w){ return w.replace(/^ال/, '').replace(/^إل/, ''); }
+    var words = subject.trim().split(/\s+/);
+    var kw1   = stripAl(words[0]).toLowerCase();
+    var kw2   = words[1] ? stripAl(words[1]).toLowerCase() : null;
+
+    // جيب المعلمين مع بياناتهم الجديدة
+    var { data: teachers, error } = await _sbTeacher
+      .from('profiles')
+      .select('id, full_name, subjects_list, grade_levels, curriculums, specialization')
+      .eq('role', 'teacher');
 
     loading.style.display = 'none';
+    if (error || !teachers) { noMsg.style.display = 'block'; sel.style.display = 'none'; return; }
 
-    if (error) { noMsg.style.display = 'block'; sel.style.display = 'none'; return; }
+    var filtered = teachers.filter(function(t) {
+      // فحص المادة
+      var subjArr  = t.subjects_list || [];
+      var specText = (t.specialization || '').toLowerCase();
+      var matchSubj = subjArr.some(function(s){
+        var sn = s.toLowerCase();
+        return sn.includes(kw1) && (!kw2 || sn.includes(kw2));
+      }) || (specText.includes(kw1) && (!kw2 || specText.includes(kw2)));
 
-    // فلترة محلية: المادة في Supabase تحتوي على الكلمة المفتاحية
-    var data = (allSubjects || []).filter(function(d) {
-      var dbName = d.name ? d.name.toLowerCase() : '';
-      // شرط 1: الكلمة الأولى موجودة في اسم المادة
-      var match1 = dbName.includes(keyword1.toLowerCase());
-      // شرط 2: لو فيه كلمة ثانية، لازم تكون موجودة كمان (مثال: "عربية" في "اللغة العربية")
-      var match2 = keyword2 ? dbName.includes(keyword2.toLowerCase()) : true;
-      return match1 && match2;
+      // فحص المرحلة (لو المعلم ما حددش مراحل → يظهر دايمًا)
+      var gradeArr  = t.grade_levels || [];
+      var matchGrade = gradeArr.length === 0 || !gradeLevel || gradeArr.includes(gradeLevel);
+
+      // فحص المنهج (لو المعلم ما حددش مناهج → يظهر دايمًا)
+      var currArr   = t.curriculums || [];
+      var matchCurr = currArr.length === 0 || !curriculum || currArr.some(function(c){
+        return c === curriculum || c.includes(curriculum) || curriculum.includes(c);
+      });
+
+      return matchSubj && matchGrade && matchCurr;
     });
 
-    if (data.length === 0) {
-      noMsg.style.display = 'block';
-      sel.style.display = 'none';
-      return;
+    // Fallback: لو مفيش نتيجة ابحث في teacher_subjects القديم
+    if (filtered.length === 0) {
+      var { data: oldSubjs } = await _sbTeacher
+        .from('teacher_subjects').select('teacher_id, name, level').eq('is_approved', true);
+      var legData = (oldSubjs||[]).filter(function(d){
+        var n=(d.name||'').toLowerCase();
+        return n.includes(kw1)&&(!kw2||n.includes(kw2));
+      });
+      if (!legData.length) { noMsg.style.display='block'; sel.style.display='none'; return; }
+      var legIds = [...new Set(legData.map(function(d){return d.teacher_id;}))];
+      var { data: profs } = await _sbTeacher.from('profiles').select('id,full_name').in('id',legIds);
+      var pm={}; (profs||[]).forEach(function(p){pm[p.id]=p.full_name;});
+      var seen={};
+      sel.innerHTML='<option value="">اختار المعلم</option>';
+      legData.forEach(function(d){
+        if(seen[d.teacher_id])return; seen[d.teacher_id]=true;
+        var o=document.createElement('option'); o.value=d.teacher_id;
+        o.textContent='م. '+(pm[d.teacher_id]||'معلم')+(d.level?' — '+d.level:'');
+        sel.appendChild(o);
+      });
+      noMsg.style.display='none'; sel.style.display='block'; return;
     }
 
-    // جيب أسماء المعلمين
-    var teacherIds = [...new Set(data.map(function(d){ return d.teacher_id; }))];
-    var { data: profs } = await _sbTeacher
-      .from('profiles')
-      .select('id, full_name')
-      .in('id', teacherIds);
-
-    var profMap = {};
-    (profs || []).forEach(function(p){ profMap[p.id] = p.full_name; });
-
-    // ابني قائمة المعلمين
-    var seen = {};
     sel.innerHTML = '<option value="">اختار المعلم</option>';
-    data.forEach(function(d) {
-      if (seen[d.teacher_id]) return;
-      seen[d.teacher_id] = true;
-      var tName = profMap[d.teacher_id] || 'معلم';
+    filtered.forEach(function(t) {
       var opt = document.createElement('option');
-      opt.value = d.teacher_id;
-      opt.textContent = 'م. ' + tName + (d.level ? ' — ' + d.level : '');
+      opt.value = t.id;
+      opt.textContent = 'م. ' + (t.full_name || 'معلم');
       sel.appendChild(opt);
     });
-
     noMsg.style.display = 'none';
     sel.style.display = 'block';
+
   } catch(e) {
     loading.style.display = 'none';
     console.error('Teacher fetch error:', e);
@@ -1894,21 +1909,45 @@ function submitBooking() {
   var p = document.getElementById('f-phone').value.trim();
   var s = document.getElementById('f-school').value.trim();
   if (!n || !p || !s) { alert('من فضلك اكمل كل البيانات المطلوبة.'); return; }
-  var grade = document.getElementById('sel-grade').value;
-  var subject = document.getElementById('sel-subject').value;
-  var type = document.getElementById('sel-type').value;
-  // جيب اسم المعلم المختار
-  var teacherSel  = document.getElementById('sel-teacher');
-  var teacherLine = '';
+  var grade      = document.getElementById('sel-grade').value;
+  var subject    = document.getElementById('sel-subject').value;
+  var curriculum = document.getElementById('sel-curriculum').value;
+  var type       = document.getElementById('sel-type').value;
+  // المعلم المختار
+  var teacherSel    = document.getElementById('sel-teacher');
+  var teacherId     = (teacherSel && teacherSel.value) ? teacherSel.value : null;
+  var teacherLine   = '';
   if (teacherSel && teacherSel.value) {
     teacherLine = '👨‍🏫 *المعلم:* ' + teacherSel.options[teacherSel.selectedIndex].text + '\\n';
   }
   var rows = document.querySelectorAll('.day-time-row');
   var daysText = '';
+  var daysInfo = [];
   rows.forEach(function(r, i) {
     var sels = r.querySelectorAll('select');
     daysText += '\n   • اليوم ' + (i+1) + ': ' + sels[0].value + ' — ' + sels[1].value;
+    daysInfo.push(sels[0].value + ' ' + sels[1].value);
   });
+
+  // ── حفظ في Supabase ──
+  if (window._sb) {
+    var record = {
+      student_name:        n,
+      student_phone:       p,
+      grade:               grade,
+      subject:             subject,
+      curriculum:          curriculum,
+      session_type:        type,
+      days_info:           daysInfo.join(' / '),
+      note:                'مدرسة: ' + s,
+      status:              'pending',
+    };
+    if (teacherId) record.selected_teacher_id = teacherId;
+    window._sb.from('subscription_requests').insert(record).then(function(res) {
+      if (res.error) console.warn('Supabase save error:', res.error.message);
+    });
+  }
+
   var msg =
     '📚 *حجز جديد — أكاديمية سليم*\n' +
     '━━━━━━━━━━━━━━━\n' +
@@ -1916,6 +1955,7 @@ function submitBooking() {
     '📞 *رقم ولي الأمر:* ' + p + '\n' +
     '🏫 *المدرسة:* ' + s + '\n' +
     '━━━━━━━━━━━━━━━\n' +
+    '🌍 *المنهج:* ' + curriculum + '\n' +
     '📖 *الصف:* ' + grade + '\n' +
     '📝 *المادة:* ' + subject + '\n' +
     teacherLine +

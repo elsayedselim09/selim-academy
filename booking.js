@@ -264,7 +264,21 @@
         '<div class="bk-sel-group" id="' + cid + '-sem-group" style="display:none"><label>الفصل الدراسي</label><select id="' + cid + '-semester" onchange="window.__bk_fn.updateSubjects(\'' + cid + '\')"><option value="">اختار الفصل</option><option value="1">الفصل الأول</option><option value="2">الفصل الثاني</option><option value="3">الفصل الثالث</option></select></div>' +
       '</div>' +
       '<div id="' + cid + '-track-group" style="display:none;margin-bottom:14px"><p class="bk-step-label" style="color:#E65100">المسار الدراسي</p><div class="bk-track-btns"><button type="button" class="bk-track-btn" onclick="window.__bk_fn.selectTrack(\'' + cid + '\',\'gen\',this)">📘 المسار العام</button><button type="button" class="bk-track-btn" onclick="window.__bk_fn.selectTrack(\'' + cid + '\',\'adv\',this)">🚀 المسار المتقدم</button></div></div>' +
-      '<div class="bk-sel-group" style="margin-bottom:22px"><label>المادة</label><select id="' + cid + '-subject"><option value="">اختار الصف أولاً</option></select></div>' +
+      '<div class="bk-sel-group" style="margin-bottom:22px"><label>المادة</label><select id="' + cid + '-subject" onchange="window.__bk_fn.loadTeachers(\'' + cid + '\')" ><option value="">اختار الصف أولاً</option></select></div>' +
+
+      // Teacher select (يظهر بعد اختيار المادة)
+      '<div id="' + cid + '-teacher-group" style="display:none;margin-bottom:22px">' +
+        '<div class="bk-sel-group">' +
+          '<label style="display:flex;align-items:center;gap:6px">👨\u200d🏫 المعلم ' +
+          '<span id="' + cid + '-teacher-loading" style="font-size:.72rem;color:#6B7280;display:none">جاري التحميل...</span></label>' +
+          '<select id="' + cid + '-teacher" style="border-color:#1A56DB;width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #1A56DB;font-family:Cairo,sans-serif;font-size:.9rem">' +
+            '<option value="">اختار المعلم</option>' +
+          '</select>' +
+          '<div id="' + cid + '-no-teachers" style="display:none;font-size:.78rem;color:#6B7280;margin-top:6px;padding:8px 12px;background:#F9FAFB;border-radius:8px">' +
+            'لا يوجد معلمون متاحون لهذه المادة حالياً' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
 
       // STEP 3: Days
       '<p class="bk-step-label">📅 الخطوة 3 — اختار الأيام والأوقات</p>' +
@@ -362,6 +376,11 @@
       var subEl    = document.getElementById(cid + '-subject');
       var semGrp   = document.getElementById(cid + '-sem-group');
       var trkGrp   = document.getElementById(cid + '-track-group');
+      // Reset teacher when grade changes
+      var tGroup = document.getElementById(cid + '-teacher-group');
+      var tSel   = document.getElementById(cid + '-teacher');
+      if (tGroup) tGroup.style.display = 'none';
+      if (tSel)   tSel.innerHTML = '<option value="">اختار المعلم</option>';
       if (!gradeVal) { subEl.innerHTML = '<option value="">اختار الصف أولاً</option>'; semGrp.style.display = 'none'; return; }
       var isAEHigh = st.currentCurriculum === 'ae' && (gradeVal === 'ae_h10' || gradeVal === 'ae_h11' || gradeVal === 'ae_h12');
       if (trkGrp) trkGrp.style.display = isAEHigh ? 'block' : 'none';
@@ -412,6 +431,117 @@
       }, 250);
     },
 
+    // ══ فلترة المعلمين حسب المادة + المنهج + المرحلة ══
+    loadTeachers: async function(cid) {
+      var subject    = document.getElementById(cid + '-subject').value;
+      var curriculum = document.getElementById(cid + '-curriculum').value;
+      var gradeVal   = document.getElementById(cid + '-grade').value;
+      var tGroup     = document.getElementById(cid + '-teacher-group');
+      var tSel       = document.getElementById(cid + '-teacher');
+      var tLoading   = document.getElementById(cid + '-teacher-loading');
+      var noTeachers = document.getElementById(cid + '-no-teachers');
+
+      if (!subject || subject.startsWith('اختار')) {
+        tGroup.style.display = 'none';
+        tSel.innerHTML = '<option value="">اختار المعلم</option>';
+        return;
+      }
+
+      tGroup.style.display = 'block';
+      tSel.innerHTML = '<option value="">اختار المعلم</option>';
+      tSel.style.display = 'block';
+      noTeachers.style.display = 'none';
+      tLoading.style.display = 'inline';
+
+      try {
+        // تحديد المرحلة من كود الصف
+        var gradeLevel = '';
+        if      (gradeVal.includes('prim') || gradeVal.includes('ae_p')) gradeLevel = 'ابتدائي';
+        else if (gradeVal.includes('mid')  || gradeVal.includes('ae_m')) gradeLevel = 'إعدادي';
+        else if (gradeVal.includes('high') || gradeVal.includes('ae_h')) gradeLevel = 'ثانوي';
+
+        // تحويل كود المنهج → اسم للمقارنة مع curriculums في profiles
+        var currMap = {sa:'السعودية',ae:'الإمارات',qa:'قطر',om:'عُمان',kw:'الكويت',eg:'مصر',other:'دولة أخرى'};
+        var currName = currMap[curriculum] || curriculum;
+
+        // تطبيع المادة (حذف ال التعريف)
+        function stripAl(w){ return w.replace(/^ال/,'').replace(/^إل/,''); }
+        var words = subject.trim().split(/\s+/);
+        var kw1   = stripAl(words[0]).toLowerCase();
+        var kw2   = words[1] ? stripAl(words[1]).toLowerCase() : null;
+
+        var sb = getSb();
+        if (!sb) { tLoading.style.display = 'none'; noTeachers.style.display = 'block'; tSel.style.display = 'none'; return; }
+
+        // جيب المعلمين مع الأعمدة الجديدة
+        var { data: teachers } = await sb
+          .from('profiles')
+          .select('id, full_name, subjects_list, grade_levels, curriculums, specialization')
+          .eq('role', 'teacher');
+
+        tLoading.style.display = 'none';
+
+        var filtered = (teachers || []).filter(function(t) {
+          // فحص المادة
+          var subjArr  = t.subjects_list || [];
+          var specText = (t.specialization || '').toLowerCase();
+          var matchSubj = subjArr.some(function(s){
+            var sn = s.toLowerCase();
+            return sn.includes(kw1) && (!kw2 || sn.includes(kw2));
+          }) || (specText.includes(kw1) && (!kw2 || specText.includes(kw2)));
+
+          // فحص المرحلة (لو ما حددش → يظهر دايماً)
+          var gradeArr  = t.grade_levels || [];
+          var matchGrade = gradeArr.length === 0 || !gradeLevel || gradeArr.includes(gradeLevel);
+
+          // فحص المنهج (لو ما حددش → يظهر دايماً)
+          var currArr   = t.curriculums || [];
+          var matchCurr = currArr.length === 0 || !currName || currArr.some(function(c){
+            return c === currName || c.includes(currName) || currName.includes(c);
+          });
+
+          return matchSubj && matchGrade && matchCurr;
+        });
+
+        // Fallback على teacher_subjects لو مفيش نتيجة
+        if (filtered.length === 0) {
+          var { data: oldSubjs } = await sb
+            .from('teacher_subjects').select('teacher_id, name, level').eq('is_approved', true);
+          var legData = (oldSubjs || []).filter(function(d){
+            var n = (d.name || '').toLowerCase();
+            return n.includes(kw1) && (!kw2 || n.includes(kw2));
+          });
+          if (!legData.length) {
+            noTeachers.style.display = 'block'; tSel.style.display = 'none'; return;
+          }
+          var legIds = [...new Set(legData.map(function(d){ return d.teacher_id; }))];
+          var { data: profs } = await sb.from('profiles').select('id,full_name').in('id', legIds);
+          var pm = {}; (profs||[]).forEach(function(p){ pm[p.id] = p.full_name; });
+          var seen = {};
+          tSel.innerHTML = '<option value="">اختار المعلم</option>';
+          legData.forEach(function(d){
+            if (seen[d.teacher_id]) return; seen[d.teacher_id] = true;
+            var o = document.createElement('option'); o.value = d.teacher_id;
+            o.textContent = 'م. ' + (pm[d.teacher_id] || 'معلم') + (d.level ? ' — ' + d.level : '');
+            tSel.appendChild(o);
+          });
+          noTeachers.style.display = 'none'; tSel.style.display = 'block'; return;
+        }
+
+        tSel.innerHTML = '<option value="">اختار المعلم</option>';
+        filtered.forEach(function(t) {
+          var o = document.createElement('option'); o.value = t.id;
+          o.textContent = 'م. ' + (t.full_name || 'معلم');
+          tSel.appendChild(o);
+        });
+        noTeachers.style.display = 'none'; tSel.style.display = 'block';
+
+      } catch(e) {
+        tLoading.style.display = 'none';
+        console.error('loadTeachers error:', e);
+      }
+    },
+
     showForm: function(cid) {
       var curriculum = document.getElementById(cid + '-curriculum').value;
       var grade      = document.getElementById(cid + '-grade').value;
@@ -425,8 +555,21 @@
         if (!sels[0].value || !sels[1].value) ok = false;
       });
       if (!ok) { alert('من فضلك اختار اليوم والوقت لكل الأيام المضافة.'); return; }
-      var summary = '<div class="bk-summary-item">🌍 المنهج: <strong>' + curriculum.toUpperCase() + '</strong></div>' +
+
+      // التحقق من المعلم لو الخانة ظاهرة وفيها خيارات
+      var tGroup = document.getElementById(cid + '-teacher-group');
+      var tSel   = document.getElementById(cid + '-teacher');
+      var teacherName = '';
+      if (tGroup && tGroup.style.display !== 'none' && tSel && tSel.options.length > 1) {
+        if (!tSel.value) { alert('من فضلك اختار المعلم.'); return; }
+        teacherName = tSel.options[tSel.selectedIndex].text;
+      }
+
+      // بناء الملخص
+      var currMap = {sa:'🇸🇦 السعودية',ae:'🇦🇪 الإمارات',qa:'🇶🇦 قطر',om:'🇴🇲 عُمان',kw:'🇰🇼 الكويت',eg:'🇪🇬 مصر',other:'🌐 دولة أخرى'};
+      var summary = '<div class="bk-summary-item">🌍 المنهج: <strong>' + (currMap[curriculum] || curriculum) + '</strong></div>' +
                     '<div class="bk-summary-item">📚 الصف: <strong>' + grade + '</strong> — ' + subject + '</div>';
+      if (teacherName) summary += '<div class="bk-summary-item">👨‍🏫 المعلم: <strong>' + teacherName + '</strong></div>';
       rows.forEach(function(r, i) {
         var sels = r.querySelectorAll('select');
         summary += '<div class="bk-summary-item">📅 اليوم ' + toAr(i + 1) + ': <strong>' + sels[0].value + '</strong> — ' + sels[1].value + '</div>';
@@ -481,6 +624,10 @@
       var curric   = document.getElementById(cid + '-curriculum').value;
       var courseEl = document.getElementById(cid + '-fcourse');
       var courseId = (courseEl && courseEl.value) ? courseEl.value : null;
+      // المعلم المختار
+      var tSel      = document.getElementById(cid + '-teacher');
+      var teacherId = (tSel && tSel.value) ? tSel.value : null;
+      var teacherTxt = (tSel && tSel.value) ? tSel.options[tSel.selectedIndex].text : null;
 
       var rows = document.querySelectorAll('#' + cid + '-days .bk-day-row');
       var daysArr = [];
@@ -589,8 +736,9 @@
               'الأيام: '   + daysArr.join(' / ')
             ].join(' | ')
           };
-          if (userId)   record.user_id   = userId;
-          if (courseId) record.course_id = courseId;
+          if (userId)    record.user_id             = userId;
+          if (courseId)  record.course_id            = courseId;
+          if (teacherId) record.selected_teacher_id  = teacherId;
 
           // ✅ insert كـ array — هذا هو الشكل الصحيح في Supabase JS v2
           var insertRes = await sb.from('subscription_requests').insert([record]);
@@ -641,6 +789,7 @@
         '🌍 *المنهج:* '     + curric + '\n' +
         '📖 *الصف:* '       + grade + '\n' +
         '📝 *المادة:* '     + subject + '\n' +
+        (teacherTxt ? '👨‍🏫 *المعلم:* ' + teacherTxt + '\n' : '') +
         '🎯 *نوع الحصة:* '  + type + '\n' +
         '📅 *الأيام والأوقات:*' + daysText + '\n' +
         '━━━━━━━━━━━━━━━\n' +
