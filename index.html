@@ -1375,11 +1375,25 @@ footer{background:var(--dark);padding:60px 5% 30px;}
       </div>
     </div>
 
-    <div class="select-group" style="margin-bottom:24px;">
+    <div class="select-group" style="margin-bottom:16px;">
       <label>المادة</label>
-      <select id="sel-subject">
+      <select id="sel-subject" onchange="onSubjectChange()">
         <option value="">اختار الصف أولاً</option>
       </select>
+    </div>
+
+    <!-- Teacher select — يظهر بعد اختيار المادة -->
+    <div class="select-group" id="teacher-select-group" style="margin-bottom:24px;display:none;">
+      <label style="display:flex;align-items:center;gap:6px;">
+        👨‍🏫 المعلم
+        <span id="teacher-loading" style="font-size:.72rem;color:var(--gray);display:none;">جاري التحميل...</span>
+      </label>
+      <select id="sel-teacher" style="border-color:var(--blue);">
+        <option value="">اختار المعلم</option>
+      </select>
+      <div id="no-teachers-msg" style="display:none;font-size:.78rem;color:var(--gray);margin-top:6px;padding:8px 12px;background:var(--gray-light);border-radius:8px;">
+        لا يوجد معلمون متاحون لهذه المادة حالياً
+      </div>
     </div>
 
     <p style="font-size:.8rem;color:var(--blue);font-weight:700;margin-bottom:12px;">📅 اختار الأيام والأوقات المناسبة</p>
@@ -1748,6 +1762,76 @@ function selectCurriculum(el, country) {
   document.getElementById('sel-curriculum').value = country;
 }
 
+// ── TEACHER SELECT — يجيب المعلمين من Supabase حسب المادة ──
+var _sbTeacher = window._sb; // reuse existing client
+
+async function onSubjectChange() {
+  var subject = document.getElementById('sel-subject').value;
+  var group   = document.getElementById('teacher-select-group');
+  var sel     = document.getElementById('sel-teacher');
+  var loading = document.getElementById('teacher-loading');
+  var noMsg   = document.getElementById('no-teachers-msg');
+
+  // إخفاء الخانة لو مفيش مادة مختارة
+  if (!subject || subject === 'اختار الصف أولاً' || subject === 'اختار المادة' || subject === 'اختار الفصل أولاً') {
+    group.style.display = 'none';
+    sel.innerHTML = '<option value="">اختار المعلم</option>';
+    return;
+  }
+
+  // إظهار الخانة وتحميل المعلمين
+  group.style.display = 'block';
+  sel.innerHTML = '<option value="">اختار المعلم</option>';
+  sel.style.display = 'block';
+  noMsg.style.display = 'none';
+  loading.style.display = 'inline';
+
+  try {
+    // جيب المعلمين اللي عندهم نفس المادة (بأي تطابق جزئي في الاسم)
+    var { data, error } = await _sbTeacher
+      .from('teacher_subjects')
+      .select('teacher_id, name, level')
+      .ilike('name', '%' + subject.split(' ')[0] + '%');
+
+    loading.style.display = 'none';
+
+    if (error || !data || data.length === 0) {
+      noMsg.style.display = 'block';
+      sel.style.display = 'none';
+      return;
+    }
+
+    // جيب أسماء المعلمين
+    var teacherIds = [...new Set(data.map(function(d){ return d.teacher_id; }))];
+    var { data: profs } = await _sbTeacher
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', teacherIds);
+
+    var profMap = {};
+    (profs || []).forEach(function(p){ profMap[p.id] = p.full_name; });
+
+    // ابني قائمة المعلمين
+    var seen = {};
+    sel.innerHTML = '<option value="">اختار المعلم</option>';
+    data.forEach(function(d) {
+      if (seen[d.teacher_id]) return;
+      seen[d.teacher_id] = true;
+      var tName = profMap[d.teacher_id] || 'معلم';
+      var opt = document.createElement('option');
+      opt.value = d.teacher_id;
+      opt.textContent = 'م. ' + tName + (d.level ? ' — ' + d.level : '');
+      sel.appendChild(opt);
+    });
+
+    noMsg.style.display = 'none';
+    sel.style.display = 'block';
+  } catch(e) {
+    loading.style.display = 'none';
+    console.error('Teacher fetch error:', e);
+  }
+}
+
 function showBookingForm() {
   var curriculum = document.getElementById('sel-curriculum').value;
   var grade = document.getElementById('sel-grade').value;
@@ -1761,8 +1845,17 @@ function showBookingForm() {
     if (!sels[0].value || !sels[1].value) daysOk = false;
   });
   if (!daysOk) { alert('من فضلك اختار اليوم والوقت لكل الأيام المضافة.'); return; }
+  // التحقق من المعلم لو الخانة ظاهرة
+  var teacherGroup = document.getElementById('teacher-select-group');
+  var teacherSel   = document.getElementById('sel-teacher');
+  var teacherName  = '';
+  if (teacherGroup && teacherGroup.style.display !== 'none' && teacherSel.options.length > 1) {
+    if (!teacherSel.value) { alert('من فضلك اختار المعلم.'); return; }
+    teacherName = teacherSel.options[teacherSel.selectedIndex].text;
+  }
   var summary = '<div class="summary-item">🌍 المنهج: <strong>' + curriculum + '</strong></div>';
   summary += '<div class="summary-item">📚 <strong>' + grade + '</strong> — ' + subject + '</div>';
+  if (teacherName) summary += '<div class="summary-item">👨‍🏫 المعلم: <strong>' + teacherName + '</strong></div>';
   rows.forEach(function(r, i) {
     var sels = r.querySelectorAll('select');
     summary += '<div class="summary-item">📅 اليوم ' + toArabicNum(i+1) + ': <strong>' + sels[0].value + '</strong> — ' + sels[1].value + '</div>';
@@ -1782,6 +1875,12 @@ function submitBooking() {
   var grade = document.getElementById('sel-grade').value;
   var subject = document.getElementById('sel-subject').value;
   var type = document.getElementById('sel-type').value;
+  // جيب اسم المعلم المختار
+  var teacherSel  = document.getElementById('sel-teacher');
+  var teacherLine = '';
+  if (teacherSel && teacherSel.value) {
+    teacherLine = '👨‍🏫 *المعلم:* ' + teacherSel.options[teacherSel.selectedIndex].text + '\\n';
+  }
   var rows = document.querySelectorAll('.day-time-row');
   var daysText = '';
   rows.forEach(function(r, i) {
@@ -1797,6 +1896,7 @@ function submitBooking() {
     '━━━━━━━━━━━━━━━\n' +
     '📖 *الصف:* ' + grade + '\n' +
     '📝 *المادة:* ' + subject + '\n' +
+    teacherLine +
     '🎯 *نوع الحصة:* ' + type + '\n' +
     '📅 *الأيام والأوقات:*' + daysText + '\n' +
     '━━━━━━━━━━━━━━━\n' +
@@ -1920,7 +2020,10 @@ function updateSubjects() {
   var semVal = document.getElementById('sel-semester').value;
   var subjectSelect = document.getElementById('sel-subject');
   var semGroup = document.getElementById('semester-group');
-  if (!gradeVal) { subjectSelect.innerHTML = '<option value="">اختار الصف أولاً</option>'; semGroup.style.display = 'none'; return; }
+  if (!gradeVal) { subjectSelect.innerHTML = '<option value="">اختار الصف أولاً</option>'; semGroup.style.display = 'none'; 
+    document.getElementById('teacher-select-group').style.display = 'none';
+    document.getElementById('sel-teacher').innerHTML = '<option value="">اختار المعلم</option>';
+    return; }
   var trackGroup = document.getElementById('track-group');
   var isAEHigh = currentCurriculum === 'ae' && (gradeVal === 'ae_h10' || gradeVal === 'ae_h11' || gradeVal === 'ae_h12');
   if (trackGroup) trackGroup.style.display = isAEHigh ? 'block' : 'none';
