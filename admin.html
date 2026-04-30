@@ -1906,19 +1906,14 @@ async function openStudentDetail(studentId) {
   modal.classList.add('show');
   body.innerHTML = '<div class="skel" style="height:200px;border-radius:12px"></div>';
 
-  // جلب طلبات الاشتراك والتسجيلات معاً
-  const [reqRes, enrRes] = await Promise.all([
-    sb.from('subscription_requests')
-      .select('id,status,subject,grade,session_type,days_info,created_at,assigned_teacher_id')
-      .eq('user_id', studentId)
-      .order('created_at', {ascending: false}),
-    sb.from('teacher_enrollments')
-      .select('id,teacher_id,grade_id,grade_name,subject_name,enrolled_at')
-      .eq('student_id', studentId)
-  ]);
+  // جلب طلبات الاشتراك
+  const reqRes = await sb.from('subscription_requests')
+    .select('id,status,subject,grade,session_type,days_info,created_at,assigned_teacher_id')
+    .eq('user_id', studentId)
+    .order('created_at', {ascending: false});
 
   const reqs = reqRes.data || [];
-  const enrs = enrRes.data || [];
+  const enrs = [];
 
   const statusBadge = st => ({
     approved: '<span class="badge b-approved">✅ مقبول</span>',
@@ -1989,21 +1984,7 @@ async function openStudentDetail(studentId) {
       }
     </div>
 
-    ${enrs.length ? `
-    <div style="margin-bottom:14px">
-      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">👨‍🏫 تسجيلات إضافية (${enrs.length})</div>
-      ${enrs.map(e => `
-        <div onclick="openStudentSubjectDetail('${studentId}','${e.teacher_id}','${(e.subject_name||'').replace(/'/g,"\\'")}','${(e.grade_name||'').replace(/'/g,"\\'")}','${e.grade_id||''}')"
-          style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--blue-light);border:1.5px solid #BFDBFE;border-radius:10px;margin-bottom:7px;cursor:pointer;transition:all .2s"
-          onmouseover="this.style.background='#DBEAFE'" onmouseout="this.style.background='var(--blue-light)'">
-          <span style="font-size:1.1rem">📖</span>
-          <div style="flex:1">
-            <div style="font-size:.88rem;font-weight:700;color:var(--dark)">${e.subject_name||'—'}</div>
-            <div style="font-size:.73rem;color:var(--gray);margin-top:2px">${e.grade_name||'غير محدد'}</div>
-          </div>
-          <span style="font-size:.74rem;color:var(--blue);font-weight:700">عرض التفاصيل ←</span>
-        </div>`).join('')}
-    </div>` : ''}`;
+    `;
 }
 
 // ══════════════════════════════════
