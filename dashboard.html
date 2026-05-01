@@ -4,10 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- ══ Security Headers ══ -->
-<meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
-<meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta http-equiv="Referrer-Policy" content="no-referrer">
-<meta http-equiv="Permissions-Policy" content="display-capture=(), camera=(), microphone=()">
 <title>أكاديمية سليم | لوحة التحكم</title>
 <!-- ═══ PWA — Progressive Web App ═══ -->
 <link rel="manifest" href="/selim-academy/manifest.json">
@@ -2109,7 +2106,7 @@ document.addEventListener('contextmenu', function(e){
     </div>
 
     <!-- Video wrapper -->
-    <div id="video-secure-wrap" style="position:relative;padding-bottom:56.25%;height:0;border-radius:14px;overflow:hidden;">
+    <div id="video-secure-wrap" style="position:relative;padding-bottom:56.25%;height:0;border-radius:14px;overflow:hidden;background:#000;">
 
       <!-- الفيديو الفعلي -->
       <video id="secure-video-el"
@@ -2278,9 +2275,12 @@ async function playVideo(rawUrl, title) {
 
     // تحويل الـ URL إلى embed مناسب
     let embedUrl = finalUrl;
-    const idMatch = finalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    // نستخرج الـ file ID من أي صيغة Drive URL
+    const idMatch = finalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+                    finalUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+                    finalUrl.match(/open\?id=([a-zA-Z0-9_-]+)/);
     if(idMatch) {
-      embedUrl = `https://drive.google.com/file/d/${idMatch[1]}/preview`;
+      embedUrl = `https://drive.google.com/file/d/${idMatch[1]}/preview?usp=sharing`;
     }
 
     // نستخدم iframe موجود أو ننشئ واحد
@@ -2289,9 +2289,9 @@ async function playVideo(rawUrl, title) {
       iframe = document.createElement('iframe');
       iframe.id = 'gdrive-video-frame';
       iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;';
-      iframe.allow = 'autoplay; encrypted-media; fullscreen';
-      // منع download toolbar لـ Google Drive
-      iframe.sandbox = 'allow-scripts allow-same-origin allow-presentation';
+      iframe.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture';
+      iframe.allowFullscreen = true;
+      // ملاحظة: sandbox بيمنع Google Drive من التشغيل — لا نستخدمه
       document.getElementById('video-secure-wrap').appendChild(iframe);
     }
     iframe.src = embedUrl;
