@@ -2116,6 +2116,29 @@ document.addEventListener('contextmenu', function(e){
         src="about:blank">
       </iframe>
 
+      <!-- طبقة تحجب شريط Drive العلوي (تحميل/فتح/...) بالكامل -->
+      <div id="gdrive-top-block" style="
+        display:none;
+        position:absolute;top:0;left:0;right:0;
+        height:52px;
+        background:#000;
+        z-index:20;
+      "></div>
+
+      <!-- طبقة شفافة تغطي باقي الـ iframe وتمنع right-click وفتح نافذة خارجية -->
+      <div id="gdrive-overlay-shield" style="
+        display:none;
+        position:absolute;
+        top:52px;left:0;right:0;bottom:0;
+        z-index:19;
+        background:transparent;
+        cursor:default;
+      "
+        oncontextmenu="return false"
+        ondragstart="return false"
+        ondblclick="vcGdriveTogglePlay()"
+      ></div>
+
       <!-- الفيديو الفعلي -->
       <video id="secure-video-el"
         style="position:absolute;top:0;left:0;width:100%;height:100%;background:#000;outline:none;"
@@ -2128,7 +2151,7 @@ document.addEventListener('contextmenu', function(e){
         <source id="secure-video-src" src="" type="video/mp4">
       </video>
 
-      <!-- طبقة شفافة تمنع right-click -->
+      <!-- طبقة شفافة تمنع right-click على الفيديو المباشر -->
       <div id="video-click-shield" oncontextmenu="return false" ondragstart="return false"></div>
 
       <!-- Watermark متحرك -->
@@ -2295,7 +2318,10 @@ async function playVideo(rawUrl, title) {
     const iframe = document.getElementById('gdrive-video-frame');
     iframe.src = embedUrl;
     iframe.style.display = 'block';
-    // إخفاء الـ shield في وضع Drive حتى يعمل الكليك على الفيديو
+    // إظهار الطبقات الحاجبة فوق Drive
+    document.getElementById('gdrive-top-block').style.display = 'block';
+    document.getElementById('gdrive-overlay-shield').style.display = 'block';
+    // إخفاء الـ shield الخاص بالفيديو المباشر
     const shield = document.getElementById('video-click-shield');
     if(shield) shield.style.display = 'none';
     _secureVideo = null;
@@ -2303,7 +2329,10 @@ async function playVideo(rawUrl, title) {
     /* ── وضع HTML5 Video ── */
     const iframe = document.getElementById('gdrive-video-frame');
     if(iframe) { iframe.src = 'about:blank'; iframe.style.display = 'none'; }
-    // إعادة الـ shield في وضع الفيديو المباشر
+    // إخفاء طبقات Drive
+    document.getElementById('gdrive-top-block').style.display = 'none';
+    document.getElementById('gdrive-overlay-shield').style.display = 'none';
+    // إعادة الـ shield الخاص بالفيديو المباشر
     const shield = document.getElementById('video-click-shield');
     if(shield) shield.style.display = 'block';
     videoEl.style.display = 'block';
@@ -2373,15 +2402,26 @@ function closeVideoPlayer(e, force) {
   const vid = document.getElementById('secure-video-el');
   if(vid){ vid.pause(); vid.src=''; }
   document.getElementById('secure-video-src').src = '';
-  // أوقف Google Drive iframe
+  // أوقف Google Drive iframe وأخفِ الطبقات الحاجبة
   const gf = document.getElementById('gdrive-video-frame');
   if(gf){ gf.src='about:blank'; gf.style.display='none'; }
+  document.getElementById('gdrive-top-block').style.display = 'none';
+  document.getElementById('gdrive-overlay-shield').style.display = 'none';
   document.getElementById('video-player-overlay').style.display = 'none';
   document.body.style.overflow = '';
   if(_wmInterval){ clearInterval(_wmInterval); _wmInterval=null; }
   if(_visCheckInt){ clearInterval(_visCheckInt); _visCheckInt=null; }
   _secureVideo = null;
 }
+
+/* دالة play/pause للـ Drive عبر double-click على الـ overlay */
+function vcGdriveTogglePlay() {
+  const iframe = document.getElementById('gdrive-video-frame');
+  if(!iframe) return;
+  // نبعت postMessage للـ iframe علشان يبدأ/يوقف
+  try { iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":[]}','*'); } catch(e){}
+}
+
 
 /* ── 9. تحذير screen capture ── */
 function handleScreenCapture() {
