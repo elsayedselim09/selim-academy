@@ -2327,6 +2327,8 @@ function renderDetailView(subj, grade) {
         <div class="content-actions" id="content-actions-bar">
           <button class="btn-upload btn-upload-file"  onclick="openUploadFileModal()">📎 رفع ملف</button>
           <button class="btn-upload btn-upload-video" onclick="openUploadVideoModal()">🎬 إضافة فيديو</button>
+          <button class="btn-upload" style="background:linear-gradient(135deg,#F5F3FF,#EDE9FE);color:var(--purple);border:1.5px solid #DDD6FE;" onclick="openMyFilesModal('file')">📂 من ملفاتي</button>
+          <button class="btn-upload" style="background:linear-gradient(135deg,#FFF7ED,#FFEDD5);color:var(--orange);border:1.5px solid #FED7AA;" onclick="openMyFilesModal('video')">🗂️ من فيديوهاتي</button>
         </div>
       </div>
       <div id="content-area">
@@ -2612,6 +2614,130 @@ function openUploadFileModal() {
   document.getElementById('mdl-upload-file').classList.add('show');
 }
 function closeUploadFileModal() { document.getElementById('mdl-upload-file').classList.remove('show'); }
+
+// ══════════════════════════════════════════════
+// MY FILES ON PLATFORM (إضافة من ملفاتي)
+// ══════════════════════════════════════════════
+let ST_myFilesType = 'file'; // 'file' or 'video'
+let ST_myFilesAll  = [];     // all fetched items
+
+async function openMyFilesModal(type) {
+  ST_myFilesType = type;
+  const modal = document.getElementById('mdl-my-files');
+  const title = document.getElementById('my-files-modal-title');
+  title.textContent = type === 'file' ? '📂 إضافة من ملفاتي على المنصة' : '🗂️ إضافة من فيديوهاتي على المنصة';
+  document.getElementById('my-files-search').value = '';
+  document.getElementById('my-files-msg').innerHTML = '';
+  document.getElementById('my-files-list').innerHTML =
+    '<div class="skel" style="height:56px;border-radius:10px"></div><div class="skel" style="height:56px;border-radius:10px;margin-top:8px"></div><div class="skel" style="height:56px;border-radius:10px;margin-top:8px"></div>';
+  modal.classList.add('show');
+
+  try {
+    // جيب كل ملفات المعلم من جميع الصفوف (غير محدودة بالصف الحالي)
+    const { data, error } = await sb.from('teacher_materials')
+      .select('id,title,file_name,file_size,url,storage_path,type,is_free,grade_id,subject_id,subject_name,grade_name,created_at,note')
+      .eq('teacher_id', ST.user.id)
+      .eq('type', type)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    // استبعد الملفات المضافة بالفعل لهذا الصف
+    ST_myFilesAll = (data || []).filter(f => f.grade_id !== ST.curGradeId);
+
+    renderMyFilesList(ST_myFilesAll);
+  } catch(e) {
+    document.getElementById('my-files-list').innerHTML =
+      `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ في التحميل</div><div class="ed">${e.message}</div></div>`;
+  }
+}
+
+function closeMyFilesModal() {
+  document.getElementById('mdl-my-files').classList.remove('show');
+  ST_myFilesAll = [];
+}
+
+function filterMyFiles() {
+  const q = document.getElementById('my-files-search').value.trim().toLowerCase();
+  if (!q) { renderMyFilesList(ST_myFilesAll); return; }
+  renderMyFilesList(ST_myFilesAll.filter(f =>
+    (f.title||'').toLowerCase().includes(q) ||
+    (f.file_name||'').toLowerCase().includes(q) ||
+    (f.subject_name||'').toLowerCase().includes(q) ||
+    (f.grade_name||'').toLowerCase().includes(q)
+  ));
+}
+
+function renderMyFilesList(items) {
+  const list = document.getElementById('my-files-list');
+  if (!items.length) {
+    list.innerHTML = `<div class="empty-box"><div class="ei">${ST_myFilesType==='file'?'📎':'🎬'}</div><div class="et">لا توجد ${ST_myFilesType==='file'?'ملفات':'فيديوهات'} أخرى</div><div class="ed">ارفع ${ST_myFilesType==='file'?'ملفاً':'فيديو'} جديداً لتظهر هنا لاحقاً</div></div>`;
+    return;
+  }
+  list.innerHTML = items.map(f => {
+    const icon = ST_myFilesType === 'file' ? getFileIcon(f.file_name||f.url) : '🎬';
+    const meta = [f.subject_name, f.grade_name, f.file_size ? fsize(f.file_size) : null, fds(f.created_at)].filter(Boolean).join(' · ');
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--gray-mid);border-radius:12px;background:#fff;transition:all .2s;cursor:default"
+           onmouseover="this.style.borderColor='var(--purple)';this.style.background='var(--purple-light)'"
+           onmouseout="this.style.borderColor='var(--gray-mid)';this.style.background='#fff'">
+        <div style="font-size:1.5rem;flex-shrink:0">${icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.88rem;font-weight:700;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.title||f.file_name||'بدون عنوان'}</div>
+          <div style="font-size:.74rem;color:var(--gray);margin-top:2px">${meta}</div>
+        </div>
+        <button class="btn-sm" style="background:var(--purple-light);color:var(--purple);border:1.5px solid #DDD6FE;flex-shrink:0;padding:7px 14px"
+          onclick="addFromMyFiles('${f.id}')">➕ إضافة</button>
+      </div>`;
+  }).join('');
+}
+
+async function addFromMyFiles(originalId) {
+  const orig = ST_myFilesAll.find(f => f.id === originalId);
+  if (!orig) return;
+
+  setMsg('my-files-msg', '⏳ جاري الإضافة...', 'ok');
+
+  try {
+    const { error } = await sb.from('teacher_materials').insert({
+      teacher_id:   ST.user.id,
+      grade_id:     ST.curGradeId,
+      subject_id:   ST.curSubjectId,
+      type:         orig.type,
+      title:        orig.title,
+      url:          orig.url,
+      file_name:    orig.file_name,
+      file_size:    orig.file_size,
+      storage_path: orig.storage_path,
+      is_free:      false,
+      note:         orig.note || null,
+      subject_name: ST.subjects.find(s=>s.id===ST.curSubjectId)?.name || null,
+      grade_name:   ST.subjects.find(s=>s.id===ST.curSubjectId)?.teacher_grades?.find(g=>g.id===ST.curGradeId)?.name || null,
+    });
+    if (error) throw error;
+
+    // أزل العنصر من القائمة بعد الإضافة
+    ST_myFilesAll = ST_myFilesAll.filter(f => f.id !== originalId);
+    renderMyFilesList(filterMyFilesItems());
+    setMsg('my-files-msg', `✅ تمت إضافة "${orig.title||orig.file_name}" بنجاح بدون رفع جديد`, 'ok');
+    toast(`✅ تمت إضافة الملف للمجموعة بنجاح`);
+
+    // حدّث المحتوى في الخلفية
+    await loadContent(orig.type === 'file' ? 'files' : 'videos');
+  } catch(e) {
+    setMsg('my-files-msg', '❌ ' + e.message, 'err');
+  }
+}
+
+function filterMyFilesItems() {
+  const q = document.getElementById('my-files-search').value.trim().toLowerCase();
+  if (!q) return ST_myFilesAll;
+  return ST_myFilesAll.filter(f =>
+    (f.title||'').toLowerCase().includes(q) ||
+    (f.file_name||'').toLowerCase().includes(q) ||
+    (f.subject_name||'').toLowerCase().includes(q) ||
+    (f.grade_name||'').toLowerCase().includes(q)
+  );
+}
 
 function handleDragOver(e, zoneId) {
   e.preventDefault();
@@ -5458,6 +5584,25 @@ async function deleteOfflineExam(examId, title) {
       <button class="btn-secondary" onclick="closeOfflineExamModal()">إلغاء</button>
       <button class="btn-primary" id="oex-save-btn" onclick="saveOfflineExam()">💾 إنشاء الاختبار</button>
     </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: My Files on Platform ══ -->
+<div class="mdl" id="mdl-my-files">
+  <div class="mdl-box" style="position:relative;max-width:620px;width:100%">
+    <button class="mdl-close" onclick="closeMyFilesModal()">✕ إغلاق</button>
+    <div class="mdl-title" id="my-files-modal-title">📂 إضافة من ملفاتي على المنصة</div>
+    <p style="font-size:.82rem;color:var(--gray);margin-bottom:16px">اختر ملفاً سبق رفعه — لن يُستهلك إنترنت أو مساحة تخزين إضافية ✅</p>
+    <div style="margin-bottom:14px">
+      <input type="text" id="my-files-search" placeholder="🔍 ابحث باسم الملف..." oninput="filterMyFiles()"
+        style="width:100%;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:10px 14px;font-family:'Cairo',sans-serif;font-size:.86rem;color:var(--dark);outline:none;direction:rtl">
+    </div>
+    <div id="my-files-list" style="max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+      <div class="skel" style="height:56px;border-radius:10px"></div>
+      <div class="skel" style="height:56px;border-radius:10px"></div>
+      <div class="skel" style="height:56px;border-radius:10px"></div>
+    </div>
+    <div id="my-files-msg" style="margin-top:10px"></div>
   </div>
 </div>
 
