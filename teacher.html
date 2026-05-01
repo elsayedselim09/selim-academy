@@ -631,6 +631,18 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
   transition:all .2s; cursor:pointer;
 }
 .stu-card:hover { border-color:var(--blue); box-shadow:var(--shadow) }
+/* زرار تجديد الاشتراك */
+.btn-renew {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:6px 12px; border-radius:50px;
+  background:#F0FDF4; color:#16A34A;
+  border:1.5px solid #86EFAC;
+  font-size:.75rem; font-weight:700; cursor:pointer;
+  font-family:'Cairo',sans-serif; transition:all .18s;
+  white-space:nowrap;
+}
+.btn-renew:hover { background:#16A34A; color:#fff; border-color:#16A34A; }
+.btn-renew.loading { opacity:.6; pointer-events:none; }
 .stu-av {
   width:44px; height:44px; border-radius:50%;
   background:linear-gradient(135deg,var(--blue),var(--purple));
@@ -3470,11 +3482,64 @@ async function loadStudentsList(gradeId) {
               <div class="stu-stat"><div class="stu-stat-num stu-absent-num">${att.absent}</div><div class="stu-stat-lbl">غاب</div></div>
               <div class="stu-stat"><div class="stu-stat-num" style="color:var(--blue)">${pct}%</div><div class="stu-stat-lbl">نسبة</div></div>
             </div>
+            <div onclick="event.stopPropagation()">
+              <button class="btn-renew" id="renew-btn-${en.student_id}" onclick="renewStudentSubscription('${en.student_id}','${(p.full_name||'').replace(/'/g,'')}','${en.grade_id||''}')">
+                🔄 تجديد
+              </button>
+            </div>
           </div>
         `;
       }).join('') + `</div>`;
   } catch(e) {
     el.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`;
+  }
+}
+
+// ── تجديد اشتراك الطالب (مسح الحضور والغياب + تسجيل التجديد) ──
+async function renewStudentSubscription(studentId, studentName, gradeId) {
+  // تأكيد العملية
+  const confirmed = confirm(
+    `🔄 تجديد اشتراك: ${studentName}\n\n` +
+    `سيتم:\n` +
+    `✅ مسح سجل الحضور والغياب الحالي\n` +
+    `✅ البدء من جديد بحضور 0 وغياب 0\n` +
+    `✅ تسجيل تاريخ التجديد\n\n` +
+    `هل أنت متأكد؟`
+  );
+  if (!confirmed) return;
+
+  const btn = document.getElementById(`renew-btn-${studentId}`);
+  if (btn) { btn.classList.add('loading'); btn.textContent = '⏳ جاري...'; }
+
+  try {
+    // 1) احذف سجلات الحضور الخاصة بهذا الطالب عند هذا المعلم
+    let delQuery = sb.from('teacher_attendance')
+      .delete()
+      .eq('teacher_id', ST.user.id)
+      .eq('student_id', studentId);
+    // لو فيه grade_id محدد نفلتر بيه كمان
+    if (gradeId) delQuery = delQuery.eq('grade_id', gradeId);
+    const { error: delErr } = await delQuery;
+    if (delErr) throw delErr;
+
+    // 2) سجّل التجديد في جدول subscription_renewals
+    const { error: logErr } = await sb.from('subscription_renewals').insert({
+      teacher_id: ST.user.id,
+      student_id: studentId,
+      grade_id:   gradeId || null,
+      note:       `تجديد اشتراك — ${studentName}`,
+    });
+    if (logErr) throw logErr;
+
+    toast(`✅ تم تجديد اشتراك ${studentName} بنجاح — الحضور بدأ من جديد`);
+
+    // أعد تحميل قائمة الطلاب لتحديث الأرقام
+    const activeGrade = document.querySelector('.grade-btn.active')?.dataset?.gid || 'all';
+    await loadStudentsList(activeGrade);
+
+  } catch(e) {
+    toast('❌ خطأ أثناء التجديد: ' + e.message, 'err');
+    if (btn) { btn.classList.remove('loading'); btn.textContent = '🔄 تجديد'; }
   }
 }
 
