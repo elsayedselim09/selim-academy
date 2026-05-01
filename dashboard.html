@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ══ Security Headers ══ -->
+<meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="Referrer-Policy" content="no-referrer">
+<meta http-equiv="Permissions-Policy" content="display-capture=(), camera=(), microphone=()">
 <title>أكاديمية سليم | لوحة التحكم</title>
 <!-- ═══ PWA — Progressive Web App ═══ -->
 <link rel="manifest" href="/selim-academy/manifest.json">
@@ -353,6 +358,7 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dar
   box-shadow:0 2px 12px rgba(0,0,0,.07);
   transition:transform .25s,box-shadow .25s;cursor:pointer;
   border:1.5px solid transparent;
+  -webkit-user-select:none;user-select:none;
 }
 .mat-video-card:hover{
   transform:translateY(-4px);
@@ -1398,7 +1404,7 @@ function subjectMaterials() {
   const videosHTML = videos.length === 0
     ? `<div class="empty-box"><div class="ei">🎬</div><div class="et">لا توجد فيديوهات بعد</div><div class="ed">سيضيف المعلم الفيديوهات قريباً</div></div>`
     : `<div class="mat-video-grid">${videos.map((v, i) => `
-        <div class="mat-video-card" onclick="playVideo('${v.url}','${v.title.replace(/'/g,"\\'")}')">
+        <div class="mat-video-card" onclick="playVideoById('${v.id}','${v.title.replace(/'/g,"\\'")}')">
           <div class="mat-video-thumb">
             <span class="mat-video-num">فيديو ${i+1}</span>
             ${v.is_free ? '<span class="mat-free-badge">مجاني</span>' : ''}
@@ -1959,50 +1965,447 @@ function closeBkModal() {
 document.addEventListener('keydown', function(e){
   if (e.key === 'Escape') closeBkModal();
 });
+/* ── منع right-click على كروت الفيديو ── */
+document.addEventListener('contextmenu', function(e){
+  if(e.target.closest('.mat-video-card') || e.target.closest('#video-player-overlay')) {
+    e.preventDefault(); return false;
+  }
+});
 </script>
 <script src="pwa-register.js" defer></script>
-<!-- ══ VIDEO PLAYER MODAL ══ -->
+<!-- ══ SECURE VIDEO PLAYER MODAL ══ -->
+<style>
+/* ── Anti-screenshot / watermark overlay ── */
+#video-player-overlay {
+  -webkit-user-select:none;user-select:none;
+}
+#video-secure-wrap {
+  position:relative;
+  border-radius:14px;
+  overflow:hidden;
+  background:#000;
+}
+/* شبكة مائية شفافة فوق الفيديو */
+#video-secure-wrap::after {
+  content:'';
+  position:absolute;inset:0;
+  background-image:repeating-linear-gradient(
+    45deg,
+    rgba(255,255,255,0.03) 0px,
+    rgba(255,255,255,0.03) 1px,
+    transparent 1px,
+    transparent 20px
+  );
+  pointer-events:none;
+  z-index:10;
+}
+/* طبقة watermark بالاسم */
+#video-watermark {
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;
+  z-index:11;
+  overflow:hidden;
+}
+#video-watermark span {
+  position:absolute;
+  color:rgba(255,255,255,0.07);
+  font-size:1.1rem;
+  font-weight:900;
+  font-family:'Cairo',sans-serif;
+  white-space:nowrap;
+  transform:rotate(-30deg);
+  letter-spacing:2px;
+}
+/* حماية من الـ right-click على الـ canvas */
+#video-player-canvas {
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  border:none;display:block;
+}
+/* طبقة شفافة تمنع الـ right-click مباشرة على الفيديو */
+#video-click-shield {
+  position:absolute;inset:0;z-index:9;
+  background:transparent;
+}
+/* شريط التحكم المخصص */
+#video-controls-bar {
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(transparent,rgba(0,0,0,0.85));
+  padding:24px 16px 10px;
+  display:flex;align-items:center;gap:10px;
+  z-index:12;
+  opacity:0;transition:opacity .3s;
+}
+#video-secure-wrap:hover #video-controls-bar { opacity:1 }
+.vc-btn {
+  background:rgba(255,255,255,.15);border:none;color:#fff;
+  width:34px;height:34px;border-radius:8px;cursor:pointer;
+  font-size:1rem;display:flex;align-items:center;justify-content:center;
+  transition:background .2s;flex-shrink:0;
+}
+.vc-btn:hover { background:rgba(255,255,255,.3) }
+#vc-progress-wrap {
+  flex:1;height:5px;background:rgba(255,255,255,.2);border-radius:3px;
+  cursor:pointer;position:relative;
+}
+#vc-progress-fill {
+  height:100%;background:#3B82F6;border-radius:3px;
+  transition:width .1s linear;pointer-events:none;
+}
+#vc-time { color:rgba(255,255,255,.7);font-size:.72rem;font-family:'Cairo',sans-serif;flex-shrink:0 }
+#vc-vol-wrap { display:flex;align-items:center;gap:6px }
+#vc-vol-slider {
+  width:60px;height:4px;-webkit-appearance:none;appearance:none;
+  background:rgba(255,255,255,.2);border-radius:2px;cursor:pointer;outline:none;
+}
+#vc-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance:none;width:12px;height:12px;border-radius:50%;
+  background:#fff;cursor:pointer;
+}
+/* تحذير تسجيل شاشة */
+#screen-record-warning {
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);
+  z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:16px;
+}
+#screen-record-warning.show { display:flex }
+</style>
+
+<!-- تحذير تسجيل الشاشة -->
+<div id="screen-record-warning">
+  <div style="font-size:3rem">🚫</div>
+  <div style="color:#EF4444;font-size:1.3rem;font-weight:900;font-family:'Cairo',sans-serif">تم اكتشاف تسجيل الشاشة</div>
+  <div style="color:rgba(255,255,255,.7);font-size:.9rem;font-family:'Cairo',sans-serif;text-align:center;max-width:380px">
+    تسجيل المحتوى التعليمي غير مسموح به.<br>تم إيقاف تشغيل الفيديو حماية لحقوق الملكية.
+  </div>
+  <button onclick="dismissScreenWarning()" style="
+    padding:10px 28px;background:#1A56DB;color:#fff;border:none;border-radius:10px;
+    font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:8px;
+  ">حسناً، فهمت</button>
+</div>
+
 <div id="video-player-overlay" style="
   display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,.85);backdrop-filter:blur(8px);
-  z-index:2000;align-items:center;justify-content:center;padding:20px;flex-direction:column;gap:14px
-" onclick="closeVideoPlayer(event)">
+  background:rgba(0,0,0,.88);backdrop-filter:blur(10px);
+  z-index:2000;align-items:center;justify-content:center;
+  padding:20px;flex-direction:column;gap:14px;
+  -webkit-user-select:none;user-select:none;
+" onclick="handleVideoOverlayClick(event)">
+
   <div style="width:100%;max-width:900px;position:relative">
+    <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div id="video-player-title" style="color:#fff;font-size:1.05rem;font-weight:700;font-family:'Cairo',sans-serif"></div>
-      <button onclick="closeVideoPlayer(null,true)" style="
-        background:rgba(255,255,255,.15);border:none;color:#fff;
-        width:36px;height:36px;border-radius:50%;font-size:1.2rem;
-        cursor:pointer;display:flex;align-items:center;justify-content:center;
-      ">✕</button>
+      <div id="video-player-title" style="color:#fff;font-size:1rem;font-weight:700;font-family:'Cairo',sans-serif;display:flex;align-items:center;gap:8px">
+        <span>🔒</span><span id="video-title-text"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="color:rgba(255,255,255,.4);font-size:.72rem;font-family:'Cairo',sans-serif">🔐 محتوى محمي</span>
+        <button onclick="closeVideoPlayer(null,true)" style="
+          background:rgba(255,255,255,.15);border:none;color:#fff;
+          width:36px;height:36px;border-radius:50%;font-size:1.1rem;
+          cursor:pointer;display:flex;align-items:center;justify-content:center;
+        ">✕</button>
+      </div>
     </div>
-    <div style="position:relative;padding-bottom:56.25%;height:0;border-radius:14px;overflow:hidden;background:#000">
-      <iframe id="video-player-frame"
-        style="position:absolute;top:0;left:0;width:100%;height:100%;border:none"
-        allowfullscreen
-        allow="autoplay; encrypted-media; fullscreen"
-        src=""></iframe>
+
+    <!-- Video wrapper -->
+    <div id="video-secure-wrap" style="position:relative;padding-bottom:56.25%;height:0;border-radius:14px;overflow:hidden;">
+
+      <!-- الفيديو الفعلي -->
+      <video id="secure-video-el"
+        style="position:absolute;top:0;left:0;width:100%;height:100%;background:#000;outline:none;"
+        controlsList="nodownload nofullscreen noremoteplayback"
+        disablePictureInPicture
+        disableRemotePlayback
+        preload="metadata"
+        playsinline
+        oncontextmenu="return false">
+        <source id="secure-video-src" src="" type="video/mp4">
+      </video>
+
+      <!-- طبقة شفافة تمنع right-click -->
+      <div id="video-click-shield" oncontextmenu="return false" ondragstart="return false"></div>
+
+      <!-- Watermark متحرك -->
+      <div id="video-watermark">
+        <span id="wm-text-1" style="top:20%;left:10%"></span>
+        <span id="wm-text-2" style="top:55%;left:55%"></span>
+        <span id="wm-text-3" style="top:75%;left:25%"></span>
+      </div>
+
+      <!-- شريط التحكم المخصص -->
+      <div id="video-controls-bar">
+        <button class="vc-btn" id="vc-play-btn" onclick="vcTogglePlay()">▶</button>
+        <div id="vc-progress-wrap" onclick="vcSeek(event)">
+          <div id="vc-progress-fill" style="width:0%"></div>
+        </div>
+        <span id="vc-time">0:00 / 0:00</span>
+        <div id="vc-vol-wrap">
+          <button class="vc-btn" id="vc-mute-btn" onclick="vcToggleMute()">🔊</button>
+          <input type="range" id="vc-vol-slider" min="0" max="1" step="0.05" value="1" oninput="vcSetVolume(this.value)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Info bar -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:10px;flex-wrap:wrap">
+      <span style="color:rgba(255,255,255,.35);font-size:.72rem;font-family:'Cairo',sans-serif">🔒 التحميل والنسخ غير مسموحَين</span>
+      <span style="color:rgba(255,255,255,.35);font-size:.72rem;font-family:'Cairo',sans-serif">📵 تسجيل الشاشة محظور</span>
     </div>
   </div>
 </div>
 
 <script>
-function playVideo(url, title) {
-  document.getElementById('video-player-title').textContent = title || 'فيديو';
-  document.getElementById('video-player-frame').src = url;
-  const ov = document.getElementById('video-player-overlay');
+/* ════════════════════════════════════════
+   SECURE VIDEO PLAYER
+   ════════════════════════════════════════ */
+
+let _secureVideo = null;
+let _wmInterval  = null;
+let _visCheckInt = null;
+
+/* ── 1. منع كليك يمين عام ── */
+document.addEventListener('contextmenu', function(e){
+  if(e.target.closest('#video-player-overlay')) { e.preventDefault(); return false; }
+});
+
+/* ── 2. منع PrintScreen & shortcuts ── */
+document.addEventListener('keydown', function(e){
+  // منع PrintScreen, F12 DevTools, Ctrl+U, Ctrl+S, Ctrl+P
+  if(e.key === 'PrintScreen' ||
+     (e.ctrlKey && ['u','s','p','a','c'].includes(e.key.toLowerCase())) ||
+     e.key === 'F12') {
+    e.preventDefault();
+    return false;
+  }
+  if(e.key === 'Escape') closeVideoPlayer(null, true);
+});
+
+/* ── 3. كشف تسجيل الشاشة (Screen Capture API) ── */
+async function checkScreenCapture() {
+  try {
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) return;
+    // نراقب إذا كان هناك display media نشط
+    if(document.pictureInPictureElement) {
+      handleScreenCapture();
+    }
+  } catch(e){}
+}
+
+/* مراقبة visibility API - لو الصفحة اتخفت فجأة */
+document.addEventListener('visibilitychange', function(){
+  if(_secureVideo && !document.hidden) return;
+  // الفيديو شغال والصفحة اتخفت = احتمال screen share
+});
+
+/* ── 4. Watermark متحرك بالاسم ── */
+function startWatermark() {
+  const userName = STATE?.profile?.full_name || STATE?.studentName || 'طالب';
+  const wm1 = document.getElementById('wm-text-1');
+  const wm2 = document.getElementById('wm-text-2');
+  const wm3 = document.getElementById('wm-text-3');
+  if(wm1) wm1.textContent = userName;
+  if(wm2) wm2.textContent = userName;
+  if(wm3) wm3.textContent = userName;
+
+  // حرّك الـ watermark كل 5 ثوان
+  let positions = [
+    [{top:'15%',left:'5%'},{top:'50%',left:'50%'},{top:'75%',left:'20%'}],
+    [{top:'30%',left:'60%'},{top:'10%',left:'30%'},{top:'65%',left:'70%'}],
+    [{top:'70%',left:'10%'},{top:'25%',left:'70%'},{top:'45%',left:'35%'}],
+  ];
+  let idx = 0;
+  _wmInterval = setInterval(function(){
+    idx = (idx+1) % positions.length;
+    const pos = positions[idx];
+    if(wm1){ wm1.style.top=pos[0].top; wm1.style.left=pos[0].left; }
+    if(wm2){ wm2.style.top=pos[1].top; wm2.style.left=pos[1].left; }
+    if(wm3){ wm3.style.top=pos[2].top; wm3.style.left=pos[2].left; }
+  }, 5000);
+}
+
+/* ── 5. توليد Signed URL من Supabase ── */
+async function getSecureVideoUrl(storagePath) {
+  try {
+    // لو المسار gdrive → إرجع URL مباشر (Google Drive لا يدعم signed URLs)
+    if(storagePath && storagePath.startsWith('gdrive:')) {
+      return storagePath; // fallback
+    }
+    // Supabase signed URL - صالحة لمدة ساعة واحدة فقط
+    const { data, error } = await sb.storage
+      .from('teacher-content')
+      .createSignedUrl(storagePath, 3600); // 3600 ثانية = ساعة
+    if(error || !data) return null;
+    return data.signedUrl;
+  } catch(e) {
+    console.error('Secure URL error:', e);
+    return null;
+  }
+}
+
+/* ── 6. تشغيل الفيديو بأمان ── */
+async function playVideo(rawUrl, title) {
+  const videoEl= document.getElementById('secure-video-el');
+  const src    = document.getElementById('secure-video-src');
+  const ov     = document.getElementById('video-player-overlay');
+  const ctrlBar= document.getElementById('video-controls-bar');
+
+  document.getElementById('video-title-text').textContent = title || 'فيديو';
   ov.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+
+  let finalUrl = rawUrl;
+  const isGdrive = rawUrl && (rawUrl.includes('drive.google.com') || rawUrl.includes('docs.google.com'));
+  const isSupabasePub = rawUrl && rawUrl.includes('supabase') && rawUrl.includes('/object/public/teacher-content/');
+  const isSupabasePath = rawUrl && !rawUrl.startsWith('http') && !rawUrl.startsWith('gdrive:');
+
+  if(isSupabasePath) {
+    finalUrl = await getSecureVideoUrl(rawUrl);
+    if(!finalUrl) { alert('تعذّر تحميل الفيديو. حاول مرة أخرى.'); closeVideoPlayer(null,true); return; }
+  } else if(isSupabasePub) {
+    const match = rawUrl.match(/\/object\/public\/teacher-content\/(.+?)(\?|$)/);
+    if(match && match[1]) {
+      const signed = await getSecureVideoUrl(decodeURIComponent(match[1]));
+      if(signed) finalUrl = signed;
+    }
+  }
+
+  if(isGdrive) {
+    /* ── وضع Google Drive: نستخدم iframe مؤمّن ── */
+    videoEl.style.display = 'none';
+    src.src = '';
+    if(ctrlBar) ctrlBar.style.display = 'none';
+
+    // تحويل الـ URL إلى embed مناسب
+    let embedUrl = finalUrl;
+    const idMatch = finalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if(idMatch) {
+      embedUrl = `https://drive.google.com/file/d/${idMatch[1]}/preview`;
+    }
+
+    // نستخدم iframe موجود أو ننشئ واحد
+    let iframe = document.getElementById('gdrive-video-frame');
+    if(!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'gdrive-video-frame';
+      iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;';
+      iframe.allow = 'autoplay; encrypted-media; fullscreen';
+      // منع download toolbar لـ Google Drive
+      iframe.sandbox = 'allow-scripts allow-same-origin allow-presentation';
+      document.getElementById('video-secure-wrap').appendChild(iframe);
+    }
+    iframe.src = embedUrl;
+    iframe.style.display = 'block';
+    _secureVideo = null;
+  } else {
+    /* ── وضع HTML5 Video ── */
+    let iframe = document.getElementById('gdrive-video-frame');
+    if(iframe) { iframe.src = ''; iframe.style.display = 'none'; }
+    videoEl.style.display = 'block';
+    if(ctrlBar) ctrlBar.style.display = 'flex';
+
+    src.src = finalUrl;
+    videoEl.load();
+    videoEl.play().catch(()=>{});
+    _secureVideo = videoEl;
+    setupVideoControls(videoEl);
+  }
+
+  startWatermark();
+  _visCheckInt = setInterval(checkScreenCapture, 3000);
+}
+
+/* ── 7. Custom Controls ── */
+function setupVideoControls(vid) {
+  const playBtn = document.getElementById('vc-play-btn');
+  const progFill= document.getElementById('vc-progress-fill');
+  const timeEl  = document.getElementById('vc-time');
+
+  function fmt(s){ const m=Math.floor(s/60); const ss=Math.floor(s%60); return m+':'+(ss<10?'0':'')+ss; }
+
+  vid.addEventListener('play',  ()=>{ if(playBtn) playBtn.textContent='⏸'; });
+  vid.addEventListener('pause', ()=>{ if(playBtn) playBtn.textContent='▶'; });
+  vid.addEventListener('timeupdate', ()=>{
+    if(!vid.duration) return;
+    const pct = (vid.currentTime/vid.duration)*100;
+    if(progFill) progFill.style.width = pct+'%';
+    if(timeEl) timeEl.textContent = fmt(vid.currentTime)+' / '+fmt(vid.duration);
+  });
+  // منع download من context menu الفيديو
+  vid.addEventListener('contextmenu', e=>{ e.preventDefault(); return false; });
+}
+
+function vcTogglePlay(){
+  const v = document.getElementById('secure-video-el');
+  if(!v) return;
+  v.paused ? v.play() : v.pause();
+}
+function vcSeek(e){
+  const v = document.getElementById('secure-video-el');
+  if(!v||!v.duration) return;
+  const wrap = document.getElementById('vc-progress-wrap');
+  const rect = wrap.getBoundingClientRect();
+  const pct  = (e.clientX - rect.left) / rect.width;
+  v.currentTime = pct * v.duration;
+}
+function vcToggleMute(){
+  const v = document.getElementById('secure-video-el');
+  if(!v) return;
+  v.muted = !v.muted;
+  document.getElementById('vc-mute-btn').textContent = v.muted ? '🔇' : '🔊';
+}
+function vcSetVolume(val){
+  const v = document.getElementById('secure-video-el');
+  if(v) v.volume = parseFloat(val);
+}
+
+/* ── 8. إغلاق المشغل ── */
+function handleVideoOverlayClick(e) {
+  if(e.target === document.getElementById('video-player-overlay')) closeVideoPlayer(null,true);
 }
 function closeVideoPlayer(e, force) {
-  if (!force && e && e.target !== document.getElementById('video-player-overlay')) return;
-  document.getElementById('video-player-frame').src = '';
+  if(!force && e && e.target !== document.getElementById('video-player-overlay')) return;
+  const vid = document.getElementById('secure-video-el');
+  if(vid){ vid.pause(); vid.src=''; }
+  document.getElementById('secure-video-src').src = '';
+  // أوقف Google Drive iframe
+  const gf = document.getElementById('gdrive-video-frame');
+  if(gf){ gf.src=''; gf.style.display='none'; }
   document.getElementById('video-player-overlay').style.display = 'none';
   document.body.style.overflow = '';
+  if(_wmInterval){ clearInterval(_wmInterval); _wmInterval=null; }
+  if(_visCheckInt){ clearInterval(_visCheckInt); _visCheckInt=null; }
+  _secureVideo = null;
 }
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeVideoPlayer(null, true);
-});
+
+/* ── 9. تحذير screen capture ── */
+function handleScreenCapture() {
+  const vid = document.getElementById('secure-video-el');
+  if(vid) vid.pause();
+  document.getElementById('screen-record-warning').classList.add('show');
+}
+function dismissScreenWarning() {
+  document.getElementById('screen-record-warning').classList.remove('show');
+}
+
+/* ── 10. تشغيل بالـ ID يخفي URL الحقيقي من HTML ── */
+async function playVideoById(videoId, title) {
+  if(!videoId) return;
+  const subj = STATE.currentSubject || {};
+  const mats = subj.materials || [];
+  const vid  = mats.find(m => String(m.id) === String(videoId));
+  if(vid && vid.url) {
+    await playVideo(vid.url, vid.title || title);
+    return;
+  }
+  // fallback: جلب من Supabase
+  try {
+    const { data, error } = await sb.from('teacher_materials')
+      .select('url,title,type').eq('id', videoId).single();
+    if(error || !data || data.type !== 'video') { alert('تعذّر تحميل الفيديو'); return; }
+    await playVideo(data.url, data.title || title);
+  } catch(e) { alert('تعذّر تحميل الفيديو'); }
+}
 </script>
 </body>
 </html>

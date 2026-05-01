@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ══ Security Headers ══ -->
+<meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="Referrer-Policy" content="no-referrer">
+<meta http-equiv="Permissions-Policy" content="display-capture=(), camera=(), microphone=()">
 <title>أكاديمية سليم | لوحة المعلم</title>
 <link rel="manifest" href="/selim-academy/manifest.json">
 <meta name="theme-color" content="#1A56DB">
@@ -4691,12 +4696,23 @@ function handleExamPdfSelected(input) {
   document.getElementById('exam-pdf-selected-name').textContent = '';
 }
 
+/* ════════════════════════════════════════
+   دالة مساعدة: Signed URL آمن من Supabase
+   الـ URL صالح لمدة 24 ساعة فقط
+   ════════════════════════════════════════ */
+async function getSupabaseSignedUrl(bucket, path, expiresIn = 86400) {
+  const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, expiresIn);
+  if (error || !data) throw new Error('تعذّر توليد رابط آمن: ' + (error?.message || ''));
+  return data.signedUrl;
+}
+
 async function uploadImageToSupabase(file, folder) {
   const ext = file.name.split('.').pop();
   const safeName = Date.now() + '_' + Math.random().toString(36).substring(2,8) + '.' + ext;
   const path = folder + '/' + safeName;
   const { error } = await sb.storage.from('teacher-content').upload(path, file, { upsert: false });
   if (error) throw error;
+  // صور الاختبارات تبقى public (مفيش محتوى تعليمي حساس)
   const { data } = sb.storage.from('teacher-content').getPublicUrl(path);
   return data.publicUrl;
 }
@@ -4732,8 +4748,8 @@ async function saveExam() {
       const path = `exam_pdfs/${ST.user.id}/${safeName}`;
       const { error: upErr } = await sb.storage.from('teacher-content').upload(path, pdfFile, { upsert: false });
       if (upErr) throw upErr;
-      const { data: urlData } = sb.storage.from('teacher-content').getPublicUrl(path);
-      mediaUrl = urlData.publicUrl;
+      // استخدم signed URL (صالح 7 أيام) بدل public URL
+      mediaUrl = await getSupabaseSignedUrl('teacher-content', path, 604800);
 
       const count = parseInt(document.getElementById('exam-pdf-qcount').value) || 10;
       for(let i=1; i<=count; i++) {
