@@ -3251,8 +3251,6 @@ async function deleteSubscription() {
             <option value="">— اختر المنهج —</option>
             <optgroup label="📘 المناهج المصرية">
               <option value="المنهج المصري">المنهج المصري</option>
-              <option value="المنهج المصري القديم">المنهج المصري القديم</option>
-              <option value="المنهج المصري الجديد">المنهج المصري الجديد</option>
             </optgroup>
             <optgroup label="🌍 المناهج الدولية">
               <option value="البريطاني">البريطاني (IGCSE)</option>
@@ -3267,6 +3265,8 @@ async function deleteSubscription() {
               <option value="المنهج السعودي">المنهج السعودي</option>
               <option value="المنهج الكويتي">المنهج الكويتي</option>
               <option value="المنهج الإماراتي">المنهج الإماراتي</option>
+              <option value="المنهج القطري">المنهج القطري</option>
+              <option value="المنهج العماني">المنهج العماني</option>
             </optgroup>
             <option value="__other__">✏️ كتابة يدوية...</option>
           </select>
@@ -3274,47 +3274,76 @@ async function deleteSubscription() {
         </div>
       </div>
 
-      <!-- خطوة 3: المادة والمعلم -->
+      <!-- خطوة 3: الصف ← المادة ← المعلم (تسلسل إجباري) -->
       <div style="background:var(--purple-light);border:1px solid #DDD6FE;border-radius:10px;padding:12px 14px;margin-bottom:14px">
-        <div style="font-size:.78rem;font-weight:700;color:var(--purple);margin-bottom:10px">③ المادة والمعلم</div>
-        <div class="fg-row">
-          <div class="fg" style="margin-bottom:0">
-            <label style="font-size:.78rem">المادة <span style="color:var(--gray);font-weight:400">(اختياري)</span></label>
-            <input type="text" id="me-subject" placeholder="مثال: رياضيات، فيزياء..." style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none">
-          </div>
-          <div class="fg" style="margin-bottom:0">
-            <label style="font-size:.78rem">الصف الدراسي *</label>
-            <select id="me-grade-text" onchange="handleManualGradeSelect()" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:var(--white)">
-              <option value="">— اختر الصف —</option>
-              <optgroup label="🏫 المرحلة الابتدائية">
-                <option value="الأول الابتدائي">الأول الابتدائي</option>
-                <option value="الثاني الابتدائي">الثاني الابتدائي</option>
-                <option value="الثالث الابتدائي">الثالث الابتدائي</option>
-                <option value="الرابع الابتدائي">الرابع الابتدائي</option>
-                <option value="الخامس الابتدائي">الخامس الابتدائي</option>
-                <option value="السادس الابتدائي">السادس الابتدائي</option>
-              </optgroup>
-              <optgroup label="🏫 المرحلة الإعدادية">
-                <option value="الأول الإعدادي">الأول الإعدادي</option>
-                <option value="الثاني الإعدادي">الثاني الإعدادي</option>
-                <option value="الثالث الإعدادي">الثالث الإعدادي</option>
-              </optgroup>
-              <optgroup label="🏫 المرحلة الثانوية">
-                <option value="الأول الثانوي">الأول الثانوي</option>
-                <option value="الثاني الثانوي">الثاني الثانوي</option>
-                <option value="الثالث الثانوي">الثالث الثانوي</option>
-              </optgroup>
-              <option value="__other__">✏️ كتابة يدوية...</option>
-            </select>
-            <input type="text" id="me-grade-text-custom" placeholder="اكتب الصف يدوياً..." style="width:100%;padding:9px 13px;border:1.5px solid var(--blue);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;display:none;margin-top:6px">
-          </div>
+        <div style="font-size:.78rem;font-weight:700;color:var(--purple);margin-bottom:10px">③ الصف والمادة والمعلم</div>
+
+        <!-- الصف أولاً -->
+        <div class="fg" style="margin-bottom:10px">
+          <label style="font-size:.78rem">الصف الدراسي *</label>
+          <select id="me-grade-text" onchange="handleManualGradeSelect()" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:var(--white)">
+            <option value="">— اختر الصف —</option>
+            <optgroup label="🏫 المرحلة الابتدائية">
+              <option value="الأول الابتدائي">الأول الابتدائي</option>
+              <option value="الثاني الابتدائي">الثاني الابتدائي</option>
+              <option value="الثالث الابتدائي">الثالث الابتدائي</option>
+              <option value="الرابع الابتدائي">الرابع الابتدائي</option>
+              <option value="الخامس الابتدائي">الخامس الابتدائي</option>
+              <option value="السادس الابتدائي">السادس الابتدائي</option>
+            </optgroup>
+            <optgroup label="🏫 المرحلة الإعدادية">
+              <option value="الأول الإعدادي">الأول الإعدادي</option>
+              <option value="الثاني الإعدادي">الثاني الإعدادي</option>
+              <option value="الثالث الإعدادي">الثالث الإعدادي</option>
+            </optgroup>
+            <optgroup label="🏫 المرحلة الثانوية">
+              <option value="الأول الثانوي">الأول الثانوي</option>
+              <option value="الثاني الثانوي">الثاني الثانوي</option>
+              <option value="الثالث الثانوي">الثالث الثانوي</option>
+            </optgroup>
+            <option value="__other__">✏️ كتابة يدوية...</option>
+          </select>
+          <input type="text" id="me-grade-text-custom" placeholder="اكتب الصف يدوياً..." style="width:100%;padding:9px 13px;border:1.5px solid var(--blue);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;display:none;margin-top:6px">
         </div>
-        <div class="fg" style="margin-bottom:6px;margin-top:10px">
-          <label style="font-size:.78rem">المعلم *</label>
-          <select id="me-teacher-sel" onchange="loadManualGrades()" style="width:100%;padding:10px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:var(--white)">
+
+        <!-- المادة (مقفولة حتى يختار الصف) -->
+        <div class="fg" style="margin-bottom:10px">
+          <label style="font-size:.78rem;display:flex;align-items:center;gap:6px">
+            المادة <span style="color:var(--gray);font-weight:400">(اختياري)</span>
+            <span id="me-subject-lock" style="font-size:.7rem;color:var(--gray);background:var(--gray-light);padding:2px 8px;border-radius:50px">🔒 اختر الصف أولاً</span>
+          </label>
+          <select id="me-subject" disabled onchange="handleManualSubjectSelect()" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:#f3f4f6;color:var(--gray);cursor:not-allowed">
+            <option value="">— اختر المادة —</option>
+            <option value="رياضيات">رياضيات</option>
+            <option value="فيزياء">فيزياء</option>
+            <option value="كيمياء">كيمياء</option>
+            <option value="أحياء">أحياء</option>
+            <option value="عربي">لغة عربية</option>
+            <option value="انجليزي">لغة إنجليزية</option>
+            <option value="فرنساوي">لغة فرنسية</option>
+            <option value="تاريخ">تاريخ</option>
+            <option value="جغرافيا">جغرافيا</option>
+            <option value="دراسات اجتماعية">دراسات اجتماعية</option>
+            <option value="علوم">علوم</option>
+            <option value="دين">تربية دينية</option>
+            <option value="حاسب آلي">حاسب آلي</option>
+            <option value="__other__">✏️ كتابة يدوية...</option>
+          </select>
+          <input type="text" id="me-subject-custom" placeholder="اكتب اسم المادة يدوياً..." style="width:100%;padding:9px 13px;border:1.5px solid var(--purple);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;display:none;margin-top:6px">
+        </div>
+
+        <!-- المعلم (مقفول حتى يختار المادة) -->
+        <div class="fg" style="margin-bottom:10px">
+          <label style="font-size:.78rem;display:flex;align-items:center;gap:6px">
+            المعلم *
+            <span id="me-teacher-lock" style="font-size:.7rem;color:var(--gray);background:var(--gray-light);padding:2px 8px;border-radius:50px">🔒 اختر المادة أولاً</span>
+          </label>
+          <select id="me-teacher-sel" disabled onchange="loadManualGrades()" style="width:100%;padding:10px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:#f3f4f6;color:var(--gray);cursor:not-allowed">
             <option value="">— اختر المعلم —</option>
           </select>
         </div>
+
+        <!-- الصف عند المعلم -->
         <div class="fg" style="margin-bottom:0">
           <label style="font-size:.78rem">الصف عند المعلم (اختياري)</label>
           <select id="me-grade-sel" style="width:100%;padding:10px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:var(--white)">
@@ -3386,7 +3415,7 @@ function openManualEnroll() {
   _meSelectedStudent = null;
 
   // تنظيف الحقول
-  ['me-student-search','me-subject','me-days-info','me-curriculum','me-notes','me-sessions-rem','me-sessions-total'].forEach(id => {
+  ['me-student-search','me-days-info','me-curriculum','me-notes','me-sessions-rem','me-sessions-total'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -3398,21 +3427,26 @@ function openManualEnroll() {
   document.getElementById('me-curriculum').value = '';
   document.getElementById('me-curriculum-custom').value = '';
   document.getElementById('me-curriculum-custom').style.display = 'none';
+
+  // إعادة قفل المادة والمعلم
+  const subjectSel = document.getElementById('me-subject');
+  subjectSel.value = ''; subjectSel.disabled = true;
+  subjectSel.style.background = '#f3f4f6'; subjectSel.style.color = 'var(--gray)'; subjectSel.style.cursor = 'not-allowed';
+  document.getElementById('me-subject-custom').value = '';
+  document.getElementById('me-subject-custom').style.display = 'none';
+  document.getElementById('me-subject-lock').style.display = 'inline';
+
+  const teacherSel = document.getElementById('me-teacher-sel');
+  teacherSel.disabled = true;
+  teacherSel.style.background = '#f3f4f6'; teacherSel.style.color = 'var(--gray)'; teacherSel.style.cursor = 'not-allowed';
+  document.getElementById('me-teacher-lock').style.display = 'inline';
+  document.getElementById('me-grade-sel').innerHTML = '<option value="">— اختر صف المعلم —</option>';
   document.getElementById('me-student-list').style.display = 'none';
   document.getElementById('me-student-list').innerHTML = '';
   const selDiv = document.getElementById('me-student-selected');
   selDiv.style.display = 'none';
   selDiv.innerHTML = '';
   document.getElementById('me-msg').innerHTML = '';
-
-  // تعبئة المعلمين
-  const approvedTeachers = (S.teachers || []).filter(t => t.teacher_approved === true);
-  const tSel = document.getElementById('me-teacher-sel');
-  tSel.innerHTML = '<option value="">— اختر المعلم —</option>' +
-    approvedTeachers.map(t =>
-      `<option value="${t.id}">${t.full_name || '—'} ${t.specialization ? '('+t.specialization+')' : ''}</option>`
-    ).join('');
-  document.getElementById('me-grade-sel').innerHTML = '<option value="">— اختر صف المعلم —</option>';
 
   document.getElementById('mdl-manual-enroll').classList.add('show');
 }
@@ -3499,14 +3533,83 @@ function handleManualCurriculumSelect() {
 }
 
 function handleManualGradeSelect() {
-  const sel = document.getElementById('me-grade-text');
+  const sel    = document.getElementById('me-grade-text');
   const custom = document.getElementById('me-grade-text-custom');
+
   if (sel.value === '__other__') {
     custom.style.display = 'block';
     custom.focus();
   } else {
     custom.style.display = 'none';
     custom.value = '';
+  }
+
+  const hasGrade = sel.value !== '' && sel.value !== '__other__'
+                   || (sel.value === '__other__' && custom.value.trim() !== '');
+
+  // فتح أو قفل خانة المادة
+  const subjectSel  = document.getElementById('me-subject');
+  const subjectLock = document.getElementById('me-subject-lock');
+  if (sel.value && sel.value !== '__other__') {
+    subjectSel.disabled = false;
+    subjectSel.style.background = 'var(--white)';
+    subjectSel.style.color = 'var(--dark)';
+    subjectSel.style.cursor = 'pointer';
+    subjectLock.style.display = 'none';
+  } else {
+    subjectSel.disabled = true;
+    subjectSel.value = '';
+    subjectSel.style.background = '#f3f4f6';
+    subjectSel.style.color = 'var(--gray)';
+    subjectSel.style.cursor = 'not-allowed';
+    subjectLock.style.display = 'inline';
+    // إعادة قفل المعلم كذلك
+    const teacherSel = document.getElementById('me-teacher-sel');
+    teacherSel.disabled = true;
+    teacherSel.style.background = '#f3f4f6';
+    teacherSel.style.color = 'var(--gray)';
+    teacherSel.style.cursor = 'not-allowed';
+    document.getElementById('me-teacher-lock').style.display = 'inline';
+    document.getElementById('me-subject-custom').style.display = 'none';
+    document.getElementById('me-subject-custom').value = '';
+  }
+}
+
+function handleManualSubjectSelect() {
+  const sel    = document.getElementById('me-subject');
+  const custom = document.getElementById('me-subject-custom');
+
+  if (sel.value === '__other__') {
+    custom.style.display = 'block';
+    custom.focus();
+  } else {
+    custom.style.display = 'none';
+    custom.value = '';
+  }
+
+  // فتح أو قفل المعلم
+  const teacherSel  = document.getElementById('me-teacher-sel');
+  const teacherLock = document.getElementById('me-teacher-lock');
+  if (sel.value && sel.value !== '__other__') {
+    // تعبئة قائمة المعلمين وفتحها
+    const approvedTeachers = (S.teachers || []).filter(t => t.teacher_approved === true);
+    teacherSel.innerHTML = '<option value="">— اختر المعلم —</option>' +
+      approvedTeachers.map(t =>
+        `<option value="${t.id}">${t.full_name || '—'} ${t.specialization ? '('+t.specialization+')' : ''}</option>`
+      ).join('');
+    teacherSel.disabled = false;
+    teacherSel.style.background = 'var(--white)';
+    teacherSel.style.color = 'var(--dark)';
+    teacherSel.style.cursor = 'pointer';
+    teacherLock.style.display = 'none';
+  } else {
+    teacherSel.disabled = true;
+    teacherSel.value = '';
+    teacherSel.style.background = '#f3f4f6';
+    teacherSel.style.color = 'var(--gray)';
+    teacherSel.style.cursor = 'not-allowed';
+    teacherLock.style.display = 'inline';
+    document.getElementById('me-grade-sel').innerHTML = '<option value="">— اختر صف المعلم —</option>';
   }
 }
 
@@ -3519,7 +3622,9 @@ async function saveManualEnroll() {
   if (!_meSelectedStudent) {
     msgEl.innerHTML = '<div class="msg-err">❌ اختر الطالب أولاً</div>'; return;
   }
-  const subject = document.getElementById('me-subject').value.trim();
+  const subjectSelVal = document.getElementById('me-subject').value;
+  const subjectCustom = document.getElementById('me-subject-custom').value.trim();
+  const subject = subjectSelVal === '__other__' ? subjectCustom : subjectSelVal;
   const teacherId = document.getElementById('me-teacher-sel').value;
   if (!teacherId) {
     msgEl.innerHTML = '<div class="msg-err">❌ اختر المعلم</div>'; return;
