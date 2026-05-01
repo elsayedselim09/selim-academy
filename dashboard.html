@@ -2108,6 +2108,14 @@ document.addEventListener('contextmenu', function(e){
     <!-- Video wrapper -->
     <div id="video-secure-wrap" style="position:relative;padding-bottom:56.25%;height:0;border-radius:14px;overflow:hidden;background:#000;">
 
+      <!-- Google Drive iframe (مخفي حتى يُطلب) -->
+      <iframe id="gdrive-video-frame"
+        style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;display:none;"
+        allow="autoplay; encrypted-media; fullscreen"
+        allowfullscreen
+        src="about:blank">
+      </iframe>
+
       <!-- الفيديو الفعلي -->
       <video id="secure-video-el"
         style="position:absolute;top:0;left:0;width:100%;height:100%;background:#000;outline:none;"
@@ -2283,24 +2291,21 @@ async function playVideo(rawUrl, title) {
       embedUrl = `https://drive.google.com/file/d/${idMatch[1]}/preview?usp=sharing`;
     }
 
-    // نستخدم iframe موجود أو ننشئ واحد
-    let iframe = document.getElementById('gdrive-video-frame');
-    if(!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = 'gdrive-video-frame';
-      iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;';
-      iframe.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture';
-      iframe.allowFullscreen = true;
-      // ملاحظة: sandbox بيمنع Google Drive من التشغيل — لا نستخدمه
-      document.getElementById('video-secure-wrap').appendChild(iframe);
-    }
+    // نستخدم الـ iframe الموجود في الـ HTML
+    const iframe = document.getElementById('gdrive-video-frame');
     iframe.src = embedUrl;
     iframe.style.display = 'block';
+    // إخفاء الـ shield في وضع Drive حتى يعمل الكليك على الفيديو
+    const shield = document.getElementById('video-click-shield');
+    if(shield) shield.style.display = 'none';
     _secureVideo = null;
   } else {
     /* ── وضع HTML5 Video ── */
-    let iframe = document.getElementById('gdrive-video-frame');
-    if(iframe) { iframe.src = ''; iframe.style.display = 'none'; }
+    const iframe = document.getElementById('gdrive-video-frame');
+    if(iframe) { iframe.src = 'about:blank'; iframe.style.display = 'none'; }
+    // إعادة الـ shield في وضع الفيديو المباشر
+    const shield = document.getElementById('video-click-shield');
+    if(shield) shield.style.display = 'block';
     videoEl.style.display = 'block';
     if(ctrlBar) ctrlBar.style.display = 'flex';
 
@@ -2370,7 +2375,7 @@ function closeVideoPlayer(e, force) {
   document.getElementById('secure-video-src').src = '';
   // أوقف Google Drive iframe
   const gf = document.getElementById('gdrive-video-frame');
-  if(gf){ gf.src=''; gf.style.display='none'; }
+  if(gf){ gf.src='about:blank'; gf.style.display='none'; }
   document.getElementById('video-player-overlay').style.display = 'none';
   document.body.style.overflow = '';
   if(_wmInterval){ clearInterval(_wmInterval); _wmInterval=null; }
