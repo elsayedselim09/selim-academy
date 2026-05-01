@@ -562,6 +562,9 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
   font-size:.82rem; font-weight:700; cursor:pointer; transition:all .2s;
 }
 .sf-btn.active { background:var(--blue); color:#fff; border-color:var(--blue) }
+/* Grade filter buttons in sessions page */
+.sg-btn { padding:6px 14px; border-radius:50px; border:1.5px solid var(--gray-mid); background:#fff; color:var(--gray); font-family:'Cairo',sans-serif; font-size:.78rem; font-weight:700; cursor:pointer; transition:all .18s; white-space:nowrap }
+.sg-btn.active { background:var(--blue); color:#fff; border-color:var(--blue) }
 .session-card {
   background:#fff; border:1px solid var(--gray-mid); border-radius:14px;
   padding:18px 20px; margin-bottom:12px; display:flex; align-items:center;
@@ -1115,7 +1118,26 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
     </div>
     <!-- Calendar Strip -->
     <div class="cal-strip" id="cal-strip"></div>
-    <!-- Filter -->
+    <!-- Grade Filter Bar -->
+    <div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:.82rem;font-weight:700;color:var(--gray)">🏫 الصف:</span>
+        <div id="sess-grade-bar" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="sg-btn active" data-gid="all" onclick="setSessGrade('all')">📋 الكل</button>
+          <!-- يُبنى ديناميكياً -->
+        </div>
+      </div>
+      <!-- زرار حذف حصص الصف المختار -->
+      <div id="sess-delete-bar" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:10px 14px;display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <span id="sess-delete-label" style="font-size:.82rem;color:var(--red);font-weight:700">🗑️ حذف حصص هذا الصف</span>
+        <div style="display:flex;gap:8px">
+          <button onclick="deleteSessionsByGrade()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🗑️ حذف حصص الصف</button>
+          <button onclick="deleteAllSessions()" style="background:#7F1D1D;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🗑️ حذف كل الحصص</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Filter -->
     <div class="sessions-filter">
       <button class="sf-btn active" id="sf-all"      onclick="setSessFilter('all')">📋 الكل</button>
       <button class="sf-btn"        id="sf-upcoming" onclick="setSessFilter('upcoming')">🔵 القادمة</button>
@@ -2959,7 +2981,8 @@ document.addEventListener('keydown', e => {
 // ══════════════════════════════════════════════
 // SESSIONS PAGE
 // ══════════════════════════════════════════════
-let sessFilter   = 'all';
+let sessFilter      = 'all';
+let sessGradeFilter = 'all'; // فلتر الصف
 let sessAllData  = [];
 
 async function loadSessions() {
@@ -2972,9 +2995,49 @@ async function loadSessions() {
       .order('scheduled_at', { ascending: true });
     if(error) throw error;
     sessAllData = data || [];
+    buildSessGradeBar();
     renderCalStrip();
     renderSessions();
   } catch(e) { el.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`; }
+}
+
+// ── بناء فلتر الصفوف ديناميكياً ──
+function buildSessGradeBar() {
+  const bar = document.getElementById('sess-grade-bar');
+  if (!bar) return;
+  // استخرج الصفوف الفريدة
+  const seen = {};
+  const grades = [];
+  sessAllData.forEach(s => {
+    if (s.grade_id && !seen[s.grade_id]) {
+      seen[s.grade_id] = true;
+      grades.push({ id: s.grade_id, name: s.grade_name || s.grade_id });
+    }
+  });
+  // ابنِ الأزرار
+  bar.innerHTML = `<button class="sg-btn ${sessGradeFilter==='all'?'active':''}" data-gid="all" onclick="setSessGrade('all')">📋 الكل</button>` +
+    grades.map(g => `<button class="sg-btn ${sessGradeFilter===g.id?'active':''}" data-gid="${g.id}" onclick="setSessGrade('${g.id}')">${g.name}</button>`).join('');
+}
+
+// ── تغيير فلتر الصف ──
+function setSessGrade(gid) {
+  sessGradeFilter = gid;
+  document.querySelectorAll('.sg-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll(`.sg-btn[data-gid="${gid}"]`).forEach(b => b.classList.add('active'));
+  // إظهار/إخفاء شريط الحذف
+  const delBar   = document.getElementById('sess-delete-bar');
+  const delLabel = document.getElementById('sess-delete-label');
+  if (delBar) {
+    if (gid !== 'all') {
+      const gname = sessAllData.find(s => s.grade_id === gid)?.grade_name || 'هذا الصف';
+      delLabel.textContent = `🗑️ حذف حصص: ${gname}`;
+      delBar.style.display = 'flex';
+    } else {
+      delBar.style.display = 'none';
+    }
+  }
+  renderSessions();
+}
 }
 
 function renderCalStrip() {
@@ -3036,7 +3099,10 @@ function sessStatus(s) {
 
 function renderSessions() {
   let data = sessAllData;
-  if(sessFilter !== 'all') data = data.filter(s => sessStatus(s) === sessFilter);
+  // فلتر الصف
+  if (sessGradeFilter !== 'all') data = data.filter(s => s.grade_id === sessGradeFilter);
+  // فلتر الحالة
+  if (sessFilter !== 'all') data = data.filter(s => sessStatus(s) === sessFilter);
   renderSessionsData(data);
 }
 
@@ -3086,6 +3152,41 @@ function renderSessionsData(data) {
       </div>
     `;
   }).join('');
+}
+
+// ── حذف حصص الصف المختار ──
+async function deleteSessionsByGrade() {
+  if (sessGradeFilter === 'all') return;
+  const gname = sessAllData.find(s => s.grade_id === sessGradeFilter)?.grade_name || 'هذا الصف';
+  const count = sessAllData.filter(s => s.grade_id === sessGradeFilter).length;
+  if (!confirm(`⚠️ هل أنت متأكد من حذف كل حصص "${gname}" (${count} حصة)؟\nلا يمكن التراجع عن هذا الإجراء!`)) return;
+  try {
+    const { error } = await sb.from('teacher_sessions')
+      .delete()
+      .eq('teacher_id', ST.user.id)
+      .eq('grade_id', sessGradeFilter);
+    if (error) throw error;
+    toast(`✅ تم حذف ${count} حصة من "${gname}" بنجاح`);
+    sessGradeFilter = 'all';
+    await loadSessions();
+  } catch(e) { alert('خطأ أثناء الحذف: ' + e.message); }
+}
+
+// ── حذف كل الحصص ──
+async function deleteAllSessions() {
+  const total = sessAllData.length;
+  if (!total) { alert('لا توجد حصص للحذف.'); return; }
+  if (!confirm(`⚠️ تحذير! سيتم حذف كل الحصص (${total} حصة).\nهل أنت متأكد تماماً؟`)) return;
+  if (!confirm('⚠️ تأكيد نهائي: سيتم حذف كل الحصص ولا يمكن التراجع!')) return;
+  try {
+    const { error } = await sb.from('teacher_sessions')
+      .delete()
+      .eq('teacher_id', ST.user.id);
+    if (error) throw error;
+    toast(`✅ تم حذف كل الحصص (${total} حصة) بنجاح`);
+    sessGradeFilter = 'all';
+    await loadSessions();
+  } catch(e) { alert('خطأ أثناء الحذف: ' + e.message); }
 }
 
 // Session Modal
