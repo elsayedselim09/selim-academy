@@ -3401,22 +3401,38 @@ async function openStudentDetail(studentId, name, gradeName) {
 
   try {
     // جلب كل البيانات دفعة واحدة بما فيها اشتراكات الطالب
-    const [enrRes, attRes, examsRes, subReqRes] = await Promise.all([
+    const [enrRes, attRes, subReqRes] = await Promise.all([
       sb.from('teacher_enrollments')
-        .select('subject_name,grade_name,enrolled_at')
+        .select('subject_name,grade_name,grade_id,enrolled_at')
         .eq('teacher_id', ST.user.id).eq('student_id', studentId).limit(5),
       sb.from('teacher_attendance')
         .select('*').eq('teacher_id', ST.user.id).eq('student_id', studentId)
         .order('session_date', { ascending: false }),
-      sb.from('exams')
-        .select('id,title,subject,grade,is_published')
-        .eq('teacher_id', ST.user.id).eq('is_published', true),
       sb.from('subscription_requests')
         .select('sessions_remaining,subject')
         .eq('user_id', studentId)
         .eq('status', 'approved')
         .eq('assigned_teacher_id', ST.user.id),
     ]);
+
+    // ── جلب الاختبارات مفلترة بـ grade_id الطالب ──
+    const enrollments = enrRes.data || [];
+    const studentGradeIds = [...new Set(enrollments.map(e => e.grade_id).filter(Boolean))];
+
+    let examsQuery = sb.from('exams')
+      .select('id,title,subject,grade,grade_id,is_published')
+      .eq('teacher_id', ST.user.id)
+      .eq('is_published', true);
+
+    if (studentGradeIds.length > 0) {
+      // الطالب عنده صف محدد → اعرض اختبارات صفه فقط أو اختبارات بدون صف
+      examsQuery = examsQuery.or('grade_id.in.(' + studentGradeIds.join(',') + '),grade_id.is.null');
+    } else {
+      // مفيش grade_id → اعرض اختبارات بدون صف فقط
+      examsQuery = examsQuery.is('grade_id', null);
+    }
+
+    const examsRes = await examsQuery;
 
     // ── عرض الحصص المتبقية ──
     const subs = subReqRes.data || [];
@@ -3451,7 +3467,6 @@ async function openStudentDetail(studentId, name, gradeName) {
     }
 
     // ── تفاصيل الاشتراك ──
-    const enrollments = enrRes.data || [];
     if (enrollments.length) {
       const enrInfo = enrollments.map(e => [e.subject_name, e.grade_name].filter(Boolean).join(' — ')).join(' | ');
       document.getElementById('stu-detail-grade').textContent = enrInfo || gradeName || '—';
