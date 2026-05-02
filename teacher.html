@@ -1608,7 +1608,7 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       </div>
       <!-- الصف العادي (من مجموعات المعلم) — يظهر عندما المجاني غير مفعّل -->
       <div class="fg" id="sess-grade-normal-wrap">
-        <label>الصف</label>
+        <label>الصف الأساسي</label>
         <select id="sess-grade-sel">
           <option value="">— اختر الصف —</option>
         </select>
@@ -1639,11 +1639,27 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       </div>
     </div>
 
+    <!-- ✅ صفوف إضافية — تظهر فقط عند عدم تفعيل المجاني -->
+    <div id="sess-extra-grades-wrap" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <label style="font-size:.8rem;font-weight:700;color:var(--dark)">📚 صفوف إضافية (اختياري)</label>
+        <button type="button" onclick="addExtraGradeRow()" 
+          style="background:var(--blue-light);color:var(--blue);border:1.5px solid #BFDBFE;border-radius:8px;padding:4px 12px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">
+          ➕ إضافة صف
+        </button>
+      </div>
+      <div id="extra-grades-container" style="display:flex;flex-direction:column;gap:8px">
+        <!-- Extra grade rows added dynamically -->
+      </div>
+      <div style="font-size:.74rem;color:var(--gray);margin-top:4px">💡 لو الحصة لأكثر من صف — أضف الصفوف هنا وستُنشأ الحصة لكل صف تلقائياً</div>
+    </div>
+
     <div class="fg-row">
       <div class="fg">
         <label>نوع الحصة *</label>
         <select id="sess-type" onchange="toggleSessType()">
-          <option value="single">اليوم فقط / لمرة واحدة</option>
+          <option value="single">يوم واحد / لمرة واحدة</option>
+          <option value="multidate">أكثر من يوم (بدون تكرار)</option>
           <option value="recurring" selected>متكررة طوال الشهر (4 أسابيع)</option>
         </select>
       </div>
@@ -1652,10 +1668,27 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
         <input type="time" id="sess-time" style="direction:ltr">
       </div>
     </div>
+
+    <!-- يوم واحد -->
     <div class="fg" id="sess-single-date-div" style="display:none">
       <label>تاريخ الحصة *</label>
       <input type="date" id="sess-date" style="direction:ltr">
     </div>
+
+    <!-- أكثر من يوم (بدون تكرار) -->
+    <div class="fg" id="sess-multidate-div" style="display:none">
+      <label>تواريخ الحصص (أضف كل تاريخ على حدة) *</label>
+      <div id="multidate-container" style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+        <!-- dates added dynamically -->
+      </div>
+      <button type="button" onclick="addMultiDateRow()"
+        style="margin-top:8px;background:var(--blue-light);color:var(--blue);border:1.5px solid #BFDBFE;border-radius:8px;padding:6px 16px;font-family:'Cairo',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;align-self:flex-start">
+        ➕ إضافة تاريخ آخر
+      </button>
+      <div style="font-size:.74rem;color:var(--gray);margin-top:4px">💡 كل تاريخ سيُنشئ حصة مستقلة بدون تكرار</div>
+    </div>
+
+    <!-- متكررة -->
     <div class="fg" id="sess-recurring-days-div">
       <label>أيام التكرار (اختر يوماً أو أكثر) *</label>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
@@ -2627,13 +2660,13 @@ async function openMyFilesModal(type) {
   const title = document.getElementById('my-files-modal-title');
   title.textContent = type === 'file' ? '📂 إضافة من ملفاتي على المنصة' : '🗂️ إضافة من فيديوهاتي على المنصة';
   document.getElementById('my-files-search').value = '';
+  document.getElementById('my-files-grade-filter').value = '';
   document.getElementById('my-files-msg').innerHTML = '';
   document.getElementById('my-files-list').innerHTML =
     '<div class="skel" style="height:56px;border-radius:10px"></div><div class="skel" style="height:56px;border-radius:10px;margin-top:8px"></div><div class="skel" style="height:56px;border-radius:10px;margin-top:8px"></div>';
   modal.classList.add('show');
 
   try {
-    // جيب كل ملفات المعلم من جميع الصفوف (غير محدودة بالصف الحالي)
     const { data, error } = await sb.from('teacher_materials')
       .select('id,title,file_name,file_size,url,storage_path,type,is_free,grade_id,subject_id,subject_name,grade_name,created_at,note')
       .eq('teacher_id', ST.user.id)
@@ -2643,6 +2676,13 @@ async function openMyFilesModal(type) {
 
     // استبعد الملفات المضافة بالفعل لهذا الصف
     ST_myFilesAll = (data || []).filter(f => f.grade_id !== ST.curGradeId);
+
+    // بناء فلتر الصفوف
+    const gradeSel = document.getElementById('my-files-grade-filter');
+    const uniqueGrades = {};
+    ST_myFilesAll.forEach(f => { if (f.grade_id && f.grade_name) uniqueGrades[f.grade_id] = f.grade_name; });
+    gradeSel.innerHTML = '<option value="">📚 كل الصفوف</option>' +
+      Object.entries(uniqueGrades).map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
 
     renderMyFilesList(ST_myFilesAll);
   } catch(e) {
@@ -2657,14 +2697,18 @@ function closeMyFilesModal() {
 }
 
 function filterMyFiles() {
-  const q = document.getElementById('my-files-search').value.trim().toLowerCase();
-  if (!q) { renderMyFilesList(ST_myFilesAll); return; }
-  renderMyFilesList(ST_myFilesAll.filter(f =>
+  const q         = document.getElementById('my-files-search').value.trim().toLowerCase();
+  const gradeId   = document.getElementById('my-files-grade-filter').value;
+  let filtered    = ST_myFilesAll;
+
+  if (gradeId) filtered = filtered.filter(f => f.grade_id === gradeId);
+  if (q)       filtered = filtered.filter(f =>
     (f.title||'').toLowerCase().includes(q) ||
     (f.file_name||'').toLowerCase().includes(q) ||
     (f.subject_name||'').toLowerCase().includes(q) ||
     (f.grade_name||'').toLowerCase().includes(q)
-  ));
+  );
+  renderMyFilesList(filtered);
 }
 
 function renderMyFilesList(items) {
@@ -2729,9 +2773,12 @@ async function addFromMyFiles(originalId) {
 }
 
 function filterMyFilesItems() {
-  const q = document.getElementById('my-files-search').value.trim().toLowerCase();
-  if (!q) return ST_myFilesAll;
-  return ST_myFilesAll.filter(f =>
+  const q       = document.getElementById('my-files-search').value.trim().toLowerCase();
+  const gradeId = document.getElementById('my-files-grade-filter').value;
+  let filtered  = ST_myFilesAll;
+  if (gradeId) filtered = filtered.filter(f => f.grade_id === gradeId);
+  if (!q) return filtered;
+  return filtered.filter(f =>
     (f.title||'').toLowerCase().includes(q) ||
     (f.file_name||'').toLowerCase().includes(q) ||
     (f.subject_name||'').toLowerCase().includes(q) ||
@@ -3334,13 +3381,70 @@ async function deleteAllSessions() {
 // Session Modal
 function toggleSessType() {
   const type = document.getElementById('sess-type').value;
-  if (type === 'single') {
-    document.getElementById('sess-single-date-div').style.display = 'block';
-    document.getElementById('sess-recurring-days-div').style.display = 'none';
-  } else {
-    document.getElementById('sess-single-date-div').style.display = 'none';
-    document.getElementById('sess-recurring-days-div').style.display = 'block';
+  document.getElementById('sess-single-date-div').style.display    = type === 'single'    ? 'block' : 'none';
+  document.getElementById('sess-multidate-div').style.display      = type === 'multidate' ? 'block' : 'none';
+  document.getElementById('sess-recurring-days-div').style.display = type === 'recurring' ? 'block' : 'none';
+  // إذا اخترنا أكثر من يوم وكان الحاوية فارغة، أضف تاريخاً واحداً افتراضياً
+  if (type === 'multidate') {
+    const cont = document.getElementById('multidate-container');
+    if (!cont.children.length) addMultiDateRow();
   }
+}
+
+// ── Multi-date rows ──
+function addMultiDateRow() {
+  const cont = document.getElementById('multidate-container');
+  const idx  = cont.children.length;
+  const row  = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:8px';
+  row.innerHTML = `
+    <input type="date" class="multidate-inp" style="flex:1;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:9px 12px;font-family:'Cairo',sans-serif;font-size:.86rem;direction:ltr;outline:none" />
+    <button type="button" onclick="this.parentElement.remove()"
+      style="background:var(--red-light);color:var(--red);border:1px solid #FECACA;border-radius:8px;padding:7px 12px;font-family:'Cairo',sans-serif;font-size:.8rem;cursor:pointer">✕</button>`;
+  cont.appendChild(row);
+}
+
+// ── Extra grade rows ──
+function addExtraGradeRow() {
+  const isFree = document.getElementById('sess-is-free').checked;
+  if (isFree) return; // الصفوف الإضافية فقط في الوضع العادي
+  const subjId = document.getElementById('sess-subject-sel').value;
+  const subj   = ST.subjects.find(s => s.id === subjId);
+  const grades = subj?.teacher_grades || [];
+
+  const cont = document.getElementById('extra-grades-container');
+  const row  = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:8px';
+
+  const sel = document.createElement('select');
+  sel.className = 'extra-grade-sel';
+  sel.style.cssText = 'flex:1;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:9px 12px;font-family:\'Cairo\',sans-serif;font-size:.86rem;direction:rtl;outline:none';
+  sel.innerHTML = '<option value="">— اختر الصف الإضافي —</option>' +
+    grades.map(g => `<option value="${g.id}" data-name="${g.name}">${g.name}</option>`).join('');
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = '✕';
+  btn.style.cssText = 'background:var(--red-light);color:var(--red);border:1px solid #FECACA;border-radius:8px;padding:7px 12px;font-family:\'Cairo\',sans-serif;font-size:.8rem;cursor:pointer';
+  btn.onclick = () => row.remove();
+
+  row.appendChild(sel);
+  row.appendChild(btn);
+  cont.appendChild(row);
+}
+
+function getExtraGrades(subj) {
+  // يجمع كل الصفوف الإضافية المختارة (بدون تكرار وبدون الصف الأساسي)
+  const mainGradeId = document.getElementById('sess-grade-sel').value;
+  const extras = [];
+  document.querySelectorAll('.extra-grade-sel').forEach(sel => {
+    const val = sel.value;
+    if (val && val !== mainGradeId && !extras.find(e => e.id === val)) {
+      const name = sel.options[sel.selectedIndex]?.dataset?.name || val;
+      extras.push({ id: val, name });
+    }
+  });
+  return extras;
 }
 
 function openSessionModal(id) {
@@ -3364,6 +3468,9 @@ function openSessionModal(id) {
     document.getElementById('sess-time').value = '';
     document.querySelectorAll('.sess-day-cb').forEach(cb => cb.checked = false);
   }
+  // Reset extra grades & multidate
+  document.getElementById('extra-grades-container').innerHTML = '';
+  document.getElementById('multidate-container').innerHTML = '';
   toggleSessType();
 
   document.getElementById('sess-duration').value = s?.duration_min || 60;
@@ -3406,10 +3513,15 @@ function closeSessionModal() { document.getElementById('mdl-session').classList.
 function toggleFreeSession(isFree) {
   document.getElementById('sess-grade-normal-wrap').style.display = isFree ? 'none' : '';
   document.getElementById('sess-free-grade-wrap').style.display   = isFree ? ''     : 'none';
+  document.getElementById('sess-extra-grades-wrap').style.display = isFree ? 'none' : '';
   if (!isFree) {
     // أعد تعيين الـ subject onchange لتحديث الصف العادي
     const subjSel = document.getElementById('sess-subject-sel');
-    subjSel.onchange = () => updateSessionGradeDropdown(subjSel.value);
+    subjSel.onchange = () => {
+      updateSessionGradeDropdown(subjSel.value);
+      // أعد بناء الـ selects الإضافية عند تغيير المادة
+      document.getElementById('extra-grades-container').innerHTML = '';
+    };
   }
 }
 
@@ -3430,6 +3542,16 @@ async function saveSession() {
     let dateVal = document.getElementById('sess-date').value;
     if(!dateVal) { setMsg('sess-mdl-msg','التاريخ مطلوب للحصة الفردية','err'); return; }
     targetDates.push(new Date(dateVal + 'T' + time));
+  } else if (type === 'multidate') {
+    // أكثر من يوم بدون تكرار
+    const dateInputs = document.querySelectorAll('.multidate-inp');
+    dateInputs.forEach(inp => {
+      if (inp.value) targetDates.push(new Date(inp.value + 'T' + time));
+    });
+    if (!targetDates.length) { setMsg('sess-mdl-msg','أضف تاريخاً واحداً على الأقل','err'); return; }
+    // تحقق من عدم التكرار
+    const unique = [...new Set(targetDates.map(d => d.toDateString()))];
+    if (unique.length !== targetDates.length) { setMsg('sess-mdl-msg','لا يمكن تكرار نفس التاريخ','err'); return; }
   } else {
     // Recurring
     const checkedDays = Array.from(document.querySelectorAll('.sess-day-cb:checked')).map(cb => parseInt(cb.value));
@@ -3456,13 +3578,15 @@ async function saveSession() {
 
   let gradeId, gradeName;
   if (isFree) {
-    // الحصة المجانية: الصف من القائمة الثابتة (ابتدائي→ثانوي)
     gradeId   = null;
     gradeName = document.getElementById('sess-free-grade-sel').value || null;
   } else {
     gradeId   = document.getElementById('sess-grade-sel').value || null;
     gradeName = subj?.teacher_grades?.find(g => g.id === gradeId)?.name || null;
   }
+
+  // الصفوف الإضافية
+  const extraGrades = isFree ? [] : getExtraGrades(subj);
 
   const basePayload = {
     teacher_id:   ST.user.id,
@@ -3486,14 +3610,32 @@ async function saveSession() {
       if(error) throw error;
       toast('✅ تم تعديل الحصة');
     } else {
-      // Insert single or multiple
-      const rowsToInsert = targetDates.map(d => ({
-        ...basePayload,
-        scheduled_at: d.toISOString()
-      }));
+      // بناء كل الصفوف (الصف الأساسي + الصفوف الإضافية) × التواريخ
+      const allGrades = [{ id: gradeId, name: gradeName }, ...extraGrades];
+      let rowsToInsert = [];
+
+      targetDates.forEach(d => {
+        allGrades.forEach(g => {
+          rowsToInsert.push({
+            ...basePayload,
+            scheduled_at: d.toISOString(),
+            grade_id:   g.id,
+            grade_name: g.name,
+          });
+        });
+      });
+
       const { error } = await sb.from('teacher_sessions').insert(rowsToInsert);
       if(error) throw error;
-      toast('✅ تم إضافة الحصص بنجاح');
+
+      const totalSessions = rowsToInsert.length;
+      const gradesCount   = allGrades.filter(g => g.id).length;
+      const datesCount    = targetDates.length;
+      if (gradesCount > 1 || datesCount > 1) {
+        toast(`✅ تم إضافة ${totalSessions} حصة (${datesCount} تاريخ × ${gradesCount || 1} صف)`);
+      } else {
+        toast('✅ تم إضافة الحصص بنجاح');
+      }
     }
     closeSessionModal();
     await loadSessions();
@@ -5593,9 +5735,13 @@ async function deleteOfflineExam(examId, title) {
     <button class="mdl-close" onclick="closeMyFilesModal()">✕ إغلاق</button>
     <div class="mdl-title" id="my-files-modal-title">📂 إضافة من ملفاتي على المنصة</div>
     <p style="font-size:.82rem;color:var(--gray);margin-bottom:16px">اختر ملفاً سبق رفعه — لن يُستهلك إنترنت أو مساحة تخزين إضافية ✅</p>
-    <div style="margin-bottom:14px">
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <input type="text" id="my-files-search" placeholder="🔍 ابحث باسم الملف..." oninput="filterMyFiles()"
-        style="width:100%;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:10px 14px;font-family:'Cairo',sans-serif;font-size:.86rem;color:var(--dark);outline:none;direction:rtl">
+        style="flex:1;min-width:180px;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:10px 14px;font-family:'Cairo',sans-serif;font-size:.86rem;color:var(--dark);outline:none;direction:rtl">
+      <select id="my-files-grade-filter" onchange="filterMyFiles()"
+        style="background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:10px 14px;font-family:'Cairo',sans-serif;font-size:.86rem;color:var(--dark);outline:none;direction:rtl;min-width:150px">
+        <option value="">📚 كل الصفوف</option>
+      </select>
     </div>
     <div id="my-files-list" style="max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
       <div class="skel" style="height:56px;border-radius:10px"></div>
