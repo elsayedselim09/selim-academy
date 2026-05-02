@@ -2683,21 +2683,17 @@ async function openMyFilesModal(type) {
     // استبعد الملفات المضافة بالفعل لهذا الصف
     ST_myFilesAll = (data || []).filter(f => f.grade_id !== ST.curGradeId);
 
-    // بناء فلتر الصفوف — يشمل كل الصفوف (سواء grade_id أو grade_name فقط)
+    // بناء فلتر الصفوف — من كل صفوف المعلم في ST.subjects (مش من الملفات بس)
     const gradeSel = document.getElementById('my-files-grade-filter');
-    const seenGrades = new Map(); // key => label
-    ST_myFilesAll.forEach(f => {
-      if (f.grade_id) {
-        if (!seenGrades.has('id:' + f.grade_id))
-          seenGrades.set('id:' + f.grade_id, f.grade_name || f.grade_id);
-      } else if (f.grade_name) {
-        if (!seenGrades.has('name:' + f.grade_name))
-          seenGrades.set('name:' + f.grade_name, f.grade_name);
-      }
+    const allTeacherGrades = new Map(); // grade_id => grade_name
+    (ST.subjects || []).forEach(subj => {
+      (subj.teacher_grades || []).forEach(g => {
+        if (g.id && g.name) allTeacherGrades.set(g.id, g.name);
+      });
     });
-    const gradeOptions = [...seenGrades.entries()]
+    const gradeOptions = [...allTeacherGrades.entries()]
       .sort((a, b) => a[1].localeCompare(b[1], 'ar'))
-      .map(([key, label]) => `<option value="${key}">${label}</option>`)
+      .map(([id, name]) => `<option value="id:${id}">${name}</option>`)
       .join('');
     gradeSel.innerHTML = '<option value="">📚 كل الصفوف</option>' + gradeOptions;
 
