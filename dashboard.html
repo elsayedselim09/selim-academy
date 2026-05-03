@@ -466,6 +466,64 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dar
   cursor:pointer;transition:all .2s;text-decoration:none;margin-top:auto;
 }
 .mat-dl-btn:hover{background:var(--green);color:#fff}
+
+/* ── ATTENDANCE SECTION ── */
+.att-section{
+  margin-top:18px;border-top:1px solid var(--gray-mid);padding-top:16px;
+}
+.att-toggle-btn{
+  width:100%;padding:11px 16px;border-radius:10px;
+  background:var(--blue-light);color:var(--blue);
+  border:1.5px solid #BFDBFE;font-family:'Cairo',sans-serif;
+  font-size:.88rem;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:all .2s;
+}
+.att-toggle-btn:hover{background:var(--blue);color:#fff}
+.att-body{margin-top:14px;animation:fadeIn .25s ease}
+.att-summary{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;
+}
+.att-sum-card{
+  border-radius:10px;padding:12px;text-align:center;
+}
+.att-sum-card.present{background:#ECFDF5;border:1px solid #6EE7B7}
+.att-sum-card.absent{background:#FEF2F2;border:1px solid #FECACA}
+.att-sum-card.total{background:var(--blue-light);border:1px solid #BFDBFE}
+.att-sum-num{font-size:1.6rem;font-weight:900;line-height:1;margin-bottom:3px}
+.att-sum-card.present .att-sum-num{color:var(--green)}
+.att-sum-card.absent  .att-sum-num{color:var(--red)}
+.att-sum-card.total   .att-sum-num{color:var(--blue)}
+.att-sum-label{font-size:.72rem;color:var(--gray);font-weight:700}
+.att-rate-wrap{
+  background:var(--gray-light);border-radius:10px;padding:12px 14px;
+  margin-bottom:14px;display:flex;align-items:center;gap:10px;
+}
+.att-rate-bar{flex:1;height:8px;background:var(--gray-mid);border-radius:50px;overflow:hidden}
+.att-rate-fill{height:100%;border-radius:50px;transition:width .6s ease}
+.att-rate-pct{font-size:.88rem;font-weight:900;flex-shrink:0;min-width:40px;text-align:left}
+.att-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--gray-mid)}
+.att-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.att-table th{
+  background:var(--dark);color:#fff;padding:10px 12px;
+  font-weight:700;font-size:.78rem;white-space:nowrap;
+}
+.att-table th:first-child{border-radius:0 10px 0 0}
+.att-table th:last-child{border-radius:10px 0 0 0}
+.att-table td{
+  padding:10px 12px;border-bottom:1px solid var(--gray-mid);
+  color:var(--dark);white-space:nowrap;
+}
+.att-table tr:last-child td{border-bottom:none}
+.att-table tr:nth-child(even) td{background:#FAFAFA}
+.att-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:50px;font-size:.76rem;font-weight:700;
+}
+.att-badge.present{background:#ECFDF5;color:var(--green)}
+.att-badge.absent{background:#FEF2F2;color:var(--red)}
+.att-badge.late{background:#FFFBEB;color:var(--gold)}
+.att-empty{text-align:center;padding:30px;color:var(--gray);font-size:.85rem}
 </style>
 </head>
 <body>
@@ -1354,13 +1412,23 @@ function subscription() {
         </div>
       </div>` : ''}
 
+      <!-- سجل الحضور والغياب -->
+      <div class="att-section" id="att-section-${req.id}">
+        <button class="att-toggle-btn" id="att-btn-${req.id}" onclick="toggleAttendance('${req.id}','${req.assigned_teacher_id || ''}','${req.subject || ''}')">
+          📋 عرض سجل حضوري وغيابي
+        </button>
+        <div id="att-body-${req.id}" style="display:none"></div>
+      </div>
+
       <!-- زر التجديد -->
-      <button style="width:100%;padding:12px;border:none;border-radius:10px;background:var(--dark);color:#fff;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s"
-        onmouseover="this.style.opacity='.85'"
-        onmouseout="this.style.opacity='1'"
-        onclick="window.open('https://wa.me/201012142749?text=${encodeURIComponent('أريد تجديد اشتراكي في مادة ' + req.subject + (hasSessRem ? ' — تبقّى لي ' + sessRem + ' حصة' : ''))}','_blank')">
-        🔄 طلب تجديد الاشتراك
-      </button>
+      <div style="margin-top:14px">
+        <button style="width:100%;padding:12px;border:none;border-radius:10px;background:var(--dark);color:#fff;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s"
+          onmouseover="this.style.opacity='.85'"
+          onmouseout="this.style.opacity='1'"
+          onclick="window.open('https://wa.me/201012142749?text=${encodeURIComponent('أريد تجديد اشتراكي في مادة ' + req.subject + (hasSessRem ? ' — تبقّى لي ' + sessRem + ' حصة' : ''))}','_blank')">
+          🔄 طلب تجديد الاشتراك
+        </button>
+      </div>
     </div>`;
   }).join('');
 
@@ -1595,6 +1663,163 @@ function bindSupport() {
     document.getElementById('sup-feedback').innerHTML = '<div class="toast-ok">✅ تم فتح واتساب لإرسال رسالتك</div>';
     setTimeout(() => document.getElementById('sup-feedback').innerHTML = '', 4000);
   });
+}
+
+// ── ATTENDANCE ────────────────────────────────────────────────────
+const _attState = {}; // { [reqId]: { open, loaded, data } }
+
+async function toggleAttendance(reqId, teacherId, subjectName) {
+  const bodyEl = document.getElementById(`att-body-${reqId}`);
+  const btnEl  = document.getElementById(`att-btn-${reqId}`);
+  if (!bodyEl || !btnEl) return;
+
+  if (!_attState[reqId]) _attState[reqId] = { open: false, loaded: false, data: [] };
+  const st = _attState[reqId];
+
+  if (st.open) {
+    // إغلاق
+    bodyEl.style.display = 'none';
+    btnEl.innerHTML = '📋 عرض سجل حضوري وغيابي';
+    st.open = false;
+    return;
+  }
+
+  // فتح
+  st.open = true;
+  btnEl.innerHTML = '⏳ جاري التحميل...';
+  btnEl.disabled  = true;
+  bodyEl.style.display = 'block';
+  bodyEl.innerHTML = `<div style="text-align:center;padding:20px;color:var(--gray);font-family:Cairo,sans-serif;font-size:.85rem"><div class="spinner" style="margin:0 auto 8px"></div>جاري تحميل سجل الحضور...</div>`;
+
+  if (!st.loaded) {
+    try {
+      // جلب الحضور من جدول attendance
+      // نحاول أولاً بـ student_id + subject_name، وإلا بـ student_id + teacher_id
+      let query = sb.from('attendance')
+        .select('*')
+        .eq('student_id', STATE.user.id)
+        .order('session_date', { ascending: false })
+        .order('session_number', { ascending: false });
+
+      if (subjectName) query = query.eq('subject_name', subjectName);
+      else if (teacherId && teacherId !== 'null' && teacherId !== 'undefined')
+        query = query.eq('teacher_id', teacherId);
+
+      const { data, error } = await query;
+
+      if (error) {
+        // جرب اسم جدول بديل: student_attendance
+        const { data: d2, error: e2 } = await sb.from('student_attendance')
+          .select('*')
+          .eq('student_id', STATE.user.id)
+          .order('session_date', { ascending: false });
+
+        if (e2) {
+          // جرب اسم ثالث: attendance_records
+          const { data: d3, error: e3 } = await sb.from('attendance_records')
+            .select('*')
+            .eq('student_id', STATE.user.id)
+            .order('created_at', { ascending: false });
+          st.data = e3 ? [] : (d3 || []);
+        } else {
+          st.data = d2 || [];
+        }
+      } else {
+        st.data = data || [];
+      }
+      st.loaded = true;
+    } catch(e) {
+      st.data = [];
+      st.loaded = true;
+    }
+  }
+
+  btnEl.innerHTML = '📋 إخفاء سجل الحضور';
+  btnEl.disabled  = false;
+  bodyEl.innerHTML = renderAttendanceTable(st.data, subjectName);
+}
+
+function renderAttendanceTable(records, subjectName) {
+  if (!records || records.length === 0) {
+    return `<div class="att-body"><div class="att-empty">
+      <div style="font-size:2rem;margin-bottom:8px">📋</div>
+      <div style="font-weight:700;color:var(--dark);margin-bottom:4px">لا يوجد سجل حضور بعد</div>
+      <div>سيظهر هنا سجل حضورك وغيابك بمجرد تسجيله من المعلم</div>
+    </div></div>`;
+  }
+
+  // حساب الإحصائيات
+  const total   = records.length;
+  const present = records.filter(r => (r.status || r.attendance_status || '') === 'present').length;
+  const absent  = records.filter(r => (r.status || r.attendance_status || '') === 'absent').length;
+  const late    = records.filter(r => (r.status || r.attendance_status || '') === 'late').length;
+  const rate    = total > 0 ? Math.round((present / total) * 100) : 0;
+  const rateColor = rate >= 75 ? 'var(--green)' : rate >= 50 ? 'var(--gold)' : 'var(--red)';
+
+  function statusBadge(r) {
+    const s = r.status || r.attendance_status || '';
+    if (s === 'present') return `<span class="att-badge present">✅ حاضر</span>`;
+    if (s === 'absent')  return `<span class="att-badge absent">❌ غائب</span>`;
+    if (s === 'late')    return `<span class="att-badge late">⏰ متأخر</span>`;
+    return `<span class="att-badge" style="background:var(--gray-light);color:var(--gray)">${s || '—'}</span>`;
+  }
+
+  function fmtDate(val) {
+    if (!val) return '—';
+    try { return new Date(val).toLocaleDateString('ar-EG', { year:'numeric', month:'short', day:'numeric', weekday:'short' }); }
+    catch { return val; }
+  }
+
+  const rows = records.map((r, i) => {
+    const sessNum  = r.session_number ?? r.lesson_number ?? (total - i);
+    const sessDate = r.session_date   || r.date || r.created_at || '';
+    const note     = r.note || r.notes || r.teacher_note || '';
+    return `<tr>
+      <td style="font-weight:700;color:var(--blue);text-align:center">${sessNum}</td>
+      <td>${fmtDate(sessDate)}</td>
+      <td style="text-align:center">${statusBadge(r)}</td>
+      ${note ? `<td style="font-size:.78rem;color:var(--gray)">${note}</td>` : '<td style="color:var(--gray)">—</td>'}
+    </tr>`;
+  }).join('');
+
+  return `<div class="att-body">
+    <div class="att-summary">
+      <div class="att-sum-card present">
+        <div class="att-sum-num">${present}</div>
+        <div class="att-sum-label">✅ حضور</div>
+      </div>
+      <div class="att-sum-card absent">
+        <div class="att-sum-num">${absent + late}</div>
+        <div class="att-sum-label">❌ غياب / تأخير</div>
+      </div>
+      <div class="att-sum-card total">
+        <div class="att-sum-num">${total}</div>
+        <div class="att-sum-label">📊 إجمالي الحصص</div>
+      </div>
+    </div>
+
+    <div class="att-rate-wrap">
+      <span style="font-size:.8rem;font-weight:700;color:var(--gray);white-space:nowrap">نسبة الحضور</span>
+      <div class="att-rate-bar">
+        <div class="att-rate-fill" style="width:${rate}%;background:${rateColor}"></div>
+      </div>
+      <span class="att-rate-pct" style="color:${rateColor}">${rate}%</span>
+    </div>
+
+    <div class="att-table-wrap">
+      <table class="att-table">
+        <thead>
+          <tr>
+            <th style="text-align:center;width:60px">رقم الحصة</th>
+            <th>التاريخ</th>
+            <th style="text-align:center">الحالة</th>
+            <th>ملاحظة</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
 }
 
 // ── SHARED RENDERERS ──────────────────────────────────────────────
