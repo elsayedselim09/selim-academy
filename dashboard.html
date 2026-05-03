@@ -1207,7 +1207,6 @@ function requestScheduleChange() {
 
 // ── PROGRESS ─────────────────────────────────────────────────────
 function progress() {
-  // عرض skeleton فوري ثم جلب البيانات
   const enr = STATE.enrollments;
   if (!enr.length) {
     return `
@@ -1219,26 +1218,43 @@ function progress() {
         <div class="ed">اشترك في مادة لتبدأ تتبع تقدمك</div>
       </div>`;
   }
-  // نعرض skeleton مؤقت ونجلب البيانات من الحضور
   setTimeout(() => loadProgressData(), 50);
+
+  // skeleton مؤقت لحين جلب البيانات
+  const skelSubjects = enr.map(e => `
+    <div class="section-card" style="margin-bottom:20px">
+      <div class="section-head" style="display:flex;align-items:center;gap:10px">
+        <div class="skel" style="width:40px;height:40px;border-radius:10px;flex-shrink:0"></div>
+        <div style="flex:1"><div class="skel" style="height:14px;width:35%;margin-bottom:6px"></div>
+        <div class="skel" style="height:10px;width:55%"></div></div>
+      </div>
+      <div class="section-body">
+        <div class="att-summary">
+          <div class="att-sum-card present"><div class="skel" style="height:32px;border-radius:6px"></div></div>
+          <div class="att-sum-card absent"><div class="skel" style="height:32px;border-radius:6px"></div></div>
+          <div class="att-sum-card total"><div class="skel" style="height:32px;border-radius:6px"></div></div>
+        </div>
+        <div class="skel" style="height:8px;margin:14px 0;border-radius:50px"></div>
+        <div class="skel" style="height:120px;border-radius:10px;margin-top:10px"></div>
+      </div>
+    </div>`).join('');
+
   return `
     <div class="page-title">التقدم 📈</div>
-    <p class="page-sub">متابعة تقدمك في جميع الكورسات بناءً على سجل الحضور</p>
+    <p class="page-sub">سجل حضورك وغيابك لكل مادة</p>
+
+    <!-- بطاقات الإحصائيات الكلية -->
     <div class="progress-stat-grid" id="prog-stats-grid">
       <div class="progress-stat"><div class="skel" style="height:44px;margin:0 auto 6px;width:70px;border-radius:8px"></div><div class="big-label">نسبة الحضور الكلية</div></div>
       <div class="progress-stat"><div class="skel" style="height:44px;margin:0 auto 6px;width:70px;border-radius:8px"></div><div class="big-label">حصص حضرتها</div></div>
       <div class="progress-stat"><div class="skel" style="height:44px;margin:0 auto 6px;width:70px;border-radius:8px"></div><div class="big-label">إجمالي الحصص</div></div>
     </div>
-    <div class="section-card" id="prog-detail-card">
-      <div class="section-head"><h3>📚 تفاصيل الحضور لكل مادة</h3></div>
-      <div class="section-body" id="prog-detail-body">
-        ${enr.map(() => `<div class="pcrow"><div class="skel" style="width:42px;height:42px;border-radius:10px;flex-shrink:0"></div><div style="flex:1;margin-right:14px"><div class="skel" style="height:14px;margin-bottom:8px;width:40%"></div><div class="skel" style="height:10px;margin-bottom:10px;width:60%"></div><div class="skel" style="height:8px;border-radius:50px"></div></div></div>`).join('')}
-      </div>
-    </div>`;
+
+    <!-- تفاصيل كل مادة -->
+    <div id="prog-subjects-container">${skelSubjects}</div>`;
 }
 
 async function loadProgressData() {
-  // إذا لم نكن في صفحة التقدم، لا تكمل
   if (STATE.currentPage !== 'progress') return;
   if (!STATE.user) return;
 
@@ -1246,107 +1262,187 @@ async function loadProgressData() {
   if (!enr.length) return;
 
   try {
-    // جلب كل سجلات الحضور للطالب دفعة واحدة
+    // جلب كل سجلات الحضور دفعة واحدة
     const teacherIds = [...new Set(enr.map(e => e.teacher_id).filter(Boolean))];
     let attData = [];
 
     if (teacherIds.length) {
-      const { data } = await sb
+      const { data, error } = await sb
         .from('teacher_attendance')
         .select('teacher_id, student_id, grade_id, session_date, status')
         .eq('student_id', STATE.user.id)
-        .in('teacher_id', teacherIds);
-      attData = data || [];
+        .in('teacher_id', teacherIds)
+        .order('session_date', { ascending: false });
+      if (!error) attData = data || [];
     }
 
-    // حساب الإحصائيات لكل مادة
+    // ── إحصائيات لكل مادة ──
     const subjectStats = enr.map(e => {
-      // تطابق بـ teacher_id و grade_id معاً
       const myRecs = attData.filter(r => {
         const matchTeacher = r.teacher_id === e.teacher_id;
         const matchGrade   = e.grade_id ? r.grade_id === e.grade_id : true;
         return matchTeacher && matchGrade;
       });
-      const total   = myRecs.length;
-      const present = myRecs.filter(r => r.status === 'present').length;
-      const absent  = myRecs.filter(r => r.status === 'absent').length;
+      // ترتيب: الأقدم أولاً لترقيم الحصص
+      const sorted  = [...myRecs].sort((a,b) => new Date(a.session_date) - new Date(b.session_date));
+      const total   = sorted.length;
+      const present = sorted.filter(r => r.status === 'present').length;
+      const absent  = sorted.filter(r => r.status === 'absent').length;
       const pct     = total > 0 ? Math.round((present / total) * 100) : 0;
-      return { enr: e, total, present, absent, pct };
+      return { enr: e, sorted, total, present, absent, pct };
     });
 
-    // الإجماليات
-    const totalPresent = subjectStats.reduce((s, x) => s + x.present, 0);
-    const totalSessions= subjectStats.reduce((s, x) => s + x.total,   0);
-    const overallPct   = totalSessions > 0 ? Math.round((totalPresent / totalSessions) * 100) : 0;
-    const pctColor     = overallPct >= 75 ? 'var(--green)' : overallPct >= 50 ? 'var(--gold)' : 'var(--red)';
-    // حفظ للاستخدام في home
-    STATE._progressPct   = overallPct;
-    STATE._totalPresent  = totalPresent;
+    // ── الإجماليات ──
+    const totalPresent  = subjectStats.reduce((s, x) => s + x.present, 0);
+    const totalSessions = subjectStats.reduce((s, x) => s + x.total,   0);
+    const overallPct    = totalSessions > 0 ? Math.round((totalPresent / totalSessions) * 100) : 0;
+    const pctColor      = overallPct >= 75 ? 'var(--green)' : overallPct >= 50 ? 'var(--gold)' : 'var(--red)';
+    STATE._progressPct  = overallPct;
+    STATE._totalPresent = totalPresent;
 
     // ── تحديث البطاقات العلوية ──
     const statsGrid = document.getElementById('prog-stats-grid');
-    if (statsGrid) {
-      statsGrid.innerHTML =
-        `<div class="progress-stat">
-          <div class="big-num" style="color:${pctColor}">${overallPct}%</div>
-          <div class="big-label">نسبة الحضور الكلية</div>
-        </div>
-        <div class="progress-stat">
-          <div class="big-num" style="color:var(--green)">${totalPresent}</div>
-          <div class="big-label">حصص حضرتها</div>
-        </div>
-        <div class="progress-stat">
-          <div class="big-num">${totalSessions}</div>
-          <div class="big-label">إجمالي الحصص</div>
-        </div>`;
-    }
+    if (statsGrid) statsGrid.innerHTML = `
+      <div class="progress-stat">
+        <div class="big-num" style="color:${pctColor}">${overallPct}%</div>
+        <div class="big-label">نسبة الحضور الكلية</div>
+      </div>
+      <div class="progress-stat">
+        <div class="big-num" style="color:var(--green)">${totalPresent}</div>
+        <div class="big-label">حصص حضرتها</div>
+      </div>
+      <div class="progress-stat">
+        <div class="big-num">${totalSessions}</div>
+        <div class="big-label">إجمالي الحصص</div>
+      </div>`;
 
-    // ── تحديث التفاصيل ──
-    const detailBody = document.getElementById('prog-detail-body');
-    if (!detailBody) return;
+    // ── تفاصيل كل مادة ──
+    const container = document.getElementById('prog-subjects-container');
+    if (!container) return;
 
     if (totalSessions === 0) {
-      detailBody.innerHTML =
-        `<div class="empty-box">
-          <div class="ei">📋</div>
-          <div class="et">لم يُسجَّل أي حضور بعد</div>
-          <div class="ed">سيظهر هنا سجل حضورك بمجرد تسجيله من المعلم</div>
+      container.innerHTML = `
+        <div class="section-card">
+          <div class="section-body">
+            <div class="empty-box">
+              <div class="ei">📋</div>
+              <div class="et">لم يُسجَّل أي حضور بعد</div>
+              <div class="ed">سيظهر هنا سجل حضورك بمجرد تسجيله من المعلم</div>
+            </div>
+          </div>
         </div>`;
       return;
     }
 
-    detailBody.innerHTML = subjectStats.map(({ enr: e, total, present, absent, pct }) => {
-      const color = pct >= 75 ? 'var(--green)' : pct >= 50 ? 'var(--gold)' : 'var(--red)';
-      const bg    = pct >= 75 ? 'linear-gradient(90deg,#0E9F6E,#34D399)' :
-                    pct >= 50 ? 'linear-gradient(90deg,#F59E0B,#FCD34D)' :
-                                'linear-gradient(90deg,#EF4444,#F87171)';
-      const warn  = pct < 75 && total > 0
-        ? `<div style="font-size:.72rem;color:${color};font-weight:700;margin-top:4px">
-            ${pct < 50 ? '⚠️ نسبة حضورك منخفضة جداً!' : '⚡ تحتاج تحسين نسبة حضورك'}
-           </div>` : '';
+    container.innerHTML = subjectStats.map(({ enr: e, sorted, total, present, absent, pct }) => {
+      const color    = pct >= 75 ? 'var(--green)' : pct >= 50 ? 'var(--gold)' : 'var(--red)';
+      const barBg    = pct >= 75 ? 'linear-gradient(90deg,#0E9F6E,#34D399)'
+                     : pct >= 50 ? 'linear-gradient(90deg,#F59E0B,#FCD34D)'
+                     :             'linear-gradient(90deg,#EF4444,#F87171)';
+      const warnBanner = (pct < 75 && total > 0) ? `
+        <div style="background:${pct<50?'var(--red-light)':'var(--gold-light)'};
+             border:1px solid ${pct<50?'#FECACA':'#FCD34D'};border-radius:9px;
+             padding:9px 14px;margin:12px 0;display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:700;
+             color:${pct<50?'var(--red)':'#92400E'}">
+          ${pct<50?'⚠️ نسبة حضورك منخفضة جداً! تواصل مع الأكاديمية':'⚡ نسبة حضورك تحتاج تحسين'}
+        </div>` : '';
+
+      // ── جدول الحصص ──
+      let tableHTML = '';
+      if (total === 0) {
+        tableHTML = `<div class="att-empty">
+          <div style="font-size:1.8rem;margin-bottom:6px">📋</div>
+          <div style="font-weight:700;color:var(--dark);margin-bottom:3px">لم يُسجَّل أي حضور بعد لهذه المادة</div>
+          <div style="font-size:.8rem">سيظهر هنا بمجرد تسجيل المعلم</div>
+        </div>`;
+      } else {
+        function fmtD(v) {
+          try { return new Date(v).toLocaleDateString('ar-EG',{year:'numeric',month:'short',day:'numeric',weekday:'short'}); }
+          catch(e) { return v; }
+        }
+        function badge(s) {
+          if (s==='present') return '<span class="att-badge present">✅ حاضر</span>';
+          if (s==='absent')  return '<span class="att-badge absent">❌ غائب</span>';
+          if (s==='late')    return '<span class="att-badge late">⏰ متأخر</span>';
+          return '<span class="att-badge" style="background:var(--gray-light);color:var(--gray)">' + (s||'—') + '</span>';
+        }
+        const rows = sorted.map((r, i) =>
+          `<tr>
+            <td style="font-weight:900;color:var(--blue);text-align:center">${i + 1}</td>
+            <td style="font-weight:600">${fmtD(r.session_date)}</td>
+            <td style="text-align:center">${badge(r.status)}</td>
+          </tr>`
+        ).join('');
+        tableHTML = `
+          <div class="att-table-wrap" style="margin-top:14px">
+            <table class="att-table">
+              <thead><tr>
+                <th style="text-align:center;width:70px">رقم الحصة</th>
+                <th>التاريخ</th>
+                <th style="text-align:center;width:110px">الحالة</th>
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>`;
+      }
+
       return `
-        <div class="pcrow">
-          <div class="pc-icon" style="background:${e.courses?.icon_bg||'#EBF5FF'};width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${e.courses?.icon||'📚'}</div>
-          <div style="flex:1">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-              <div style="font-size:.9rem;font-weight:900;color:var(--dark)">${e.courses?.name||'—'}</div>
-              <div style="font-size:.8rem;font-weight:900;color:${color}">${pct}%</div>
+        <div class="section-card" style="margin-bottom:20px">
+          <!-- رأس المادة -->
+          <div class="section-head" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div style="width:42px;height:42px;border-radius:11px;background:${e.courses?.icon_bg||'#EBF5FF'};
+                 display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">
+              ${e.courses?.icon||'📚'}
             </div>
-            <div style="font-size:.76rem;color:var(--gray);margin-bottom:7px">
-              ✅ حضر ${present} · ❌ غاب ${absent} · 📊 إجمالي ${total} حصة
+            <div style="flex:1">
+              <div style="font-size:1rem;font-weight:900;color:var(--dark)">${e.courses?.name||'—'}</div>
+              ${e.courses?.teacher_name ? `<div style="font-size:.76rem;color:var(--gray);margin-top:1px">👨‍🏫 ${e.courses.teacher_name}</div>` : ''}
             </div>
-            <div class="pw">
-              <div class="pb"><div class="pf" style="width:${pct}%;background:${bg}"></div></div>
+            <div style="background:${pct>=75?'var(--green-light)':pct>=50?'var(--gold-light)':'var(--red-light)'};
+                 color:${color};border:1px solid ${pct>=75?'#6EE7B7':pct>=50?'#FCD34D':'#FECACA'};
+                 border-radius:50px;padding:5px 14px;font-size:.82rem;font-weight:900">
+              ${pct}% حضور
             </div>
-            ${warn}
+          </div>
+
+          <div class="section-body">
+            <!-- بطاقات الإحصائيات -->
+            <div class="att-summary">
+              <div class="att-sum-card present">
+                <div class="att-sum-num">${present}</div>
+                <div class="att-sum-label">✅ حضور</div>
+              </div>
+              <div class="att-sum-card absent">
+                <div class="att-sum-num">${absent}</div>
+                <div class="att-sum-label">❌ غياب</div>
+              </div>
+              <div class="att-sum-card total">
+                <div class="att-sum-num">${total}</div>
+                <div class="att-sum-label">📊 الإجمالي</div>
+              </div>
+            </div>
+
+            <!-- شريط التقدم -->
+            <div class="att-rate-wrap" style="margin-top:12px">
+              <span style="font-size:.78rem;font-weight:700;color:var(--gray);white-space:nowrap">نسبة الحضور</span>
+              <div class="att-rate-bar">
+                <div class="att-rate-fill" style="width:${pct}%;background:${barBg}"></div>
+              </div>
+              <span class="att-rate-pct" style="color:${color}">${pct}%</span>
+            </div>
+
+            ${warnBanner}
+
+            <!-- جدول الحصص -->
+            ${tableHTML}
           </div>
         </div>`;
     }).join('');
 
   } catch(err) {
-    const detailBody = document.getElementById('prog-detail-body');
-    if (detailBody) detailBody.innerHTML =
-      `<div class="err-box">⚠️ خطأ في جلب بيانات التقدم: ${err.message}</div>`;
+    const container = document.getElementById('prog-subjects-container');
+    if (container) container.innerHTML =
+      `<div class="err-box">⚠️ خطأ: ${err.message}</div>`;
   }
 }
 
@@ -1522,14 +1618,6 @@ function subscription() {
           <div style="font-size:.83rem;color:var(--dark)">${req.admin_notes}</div>
         </div>
       </div>` : ''}
-
-      <!-- سجل الحضور والغياب -->
-      <div class="att-section" id="att-section-${req.id}">
-        <button class="att-toggle-btn" id="att-btn-${req.id}" onclick="toggleAttendance('${req.id}','${req.assigned_teacher_id || ''}','${req.subject || ''}')">
-          📋 عرض سجل حضوري وغيابي
-        </button>
-        <div id="att-body-${req.id}" style="display:none"></div>
-      </div>
 
       <!-- زر التجديد -->
       <div style="margin-top:14px">
