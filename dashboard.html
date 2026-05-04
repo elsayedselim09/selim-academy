@@ -874,8 +874,12 @@ async function refreshSubscription() {
       };
     });
 
+    // ── إعادة فلترة الحصص بناءً على الاشتراكات المحدّثة ──
+    STATE.sessions = filterSessionsByActiveSubscriptions(STATE.sessions, freshReqs || [], teEnr || []);
+
     // إعادة رسم الصفحة الحالية
-    if (STATE.currentPage === 'subscription') renderPage();
+    renderPage();
+    renderNav();
 
     if (btn) { btn.disabled = false; btn.innerHTML = '🔄 تحديث الرصيد'; }
     // إظهار رسالة نجاح مؤقتة
@@ -973,7 +977,8 @@ async function fetchAllData(userId) {
     }
   }
 
-  STATE.sessions      = teacherSessions;
+  // ── فلترة الحصص: تُعرض فقط للمواد التي اشتراكها نشط ──
+  STATE.sessions      = filterSessionsByActiveSubscriptions(teacherSessions, approved, teEnr);
   STATE.activity      = act.data || [];
   STATE.notifications = notif.data || [];
 
@@ -985,6 +990,166 @@ async function fetchAllData(userId) {
     window.location.href = 'admin.html';
     return;
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SUBSCRIPTION ACTIVITY CHECK
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ * يتحقق إذا كان اشتراك الطالب في مادة ما لا يزال نشطاً
+ * الاشتراك منتهٍ إذا: sessions_remaining = 0، أو end_date مضى
+ */
+function isSubscriptionActive(req) {
+  if (!req) return false;
+
+  // ── التحقق من الحصص المتبقية ──
+  const sessRem = req.sessions_remaining;
+  if (sessRem != null && sessRem !== '') {
+    if (Number(sessRem) <= 0) return false; // انتهت الحصص
+  }
+
+  // ── التحقق من تاريخ الانتهاء ──
+  if (req.end_date) {
+    const endDate = new Date(req.end_date);
+    endDate.setHours(23, 59, 59, 999); // نهاية اليوم
+    if (endDate < new Date()) return false; // انتهى الاشتراك
+  }
+
+  return true;
+}
+
+/**
+ * يُصفّي قائمة الحصص ويُبقي فقط حصص المواد التي اشتراكها نشط
+ */
+function filterSessionsByActiveSubscriptions(sessions, approvedReqs, teEnr) {
+  if (!sessions || !sessions.length) return [];
+  if (!approvedReqs || !approvedReqs.length) return [];
+
+  // بناء خريطة grade_id -> req لكل اشتراك مقبول
+  const activeGradeIds = new Set();
+  for (const req of approvedReqs) {
+    if (!isSubscriptionActive(req)) continue; // تجاهل المنتهية
+    // إيجاد grade_id المرتبط بهذا الاشتراك
+    const matched = (teEnr || []).find(
+      te => te.teacher_id === req.assigned_teacher_id && te.subject_name === req.subject
+    );
+    if (matched && matched.grade_id) {
+      activeGradeIds.add(matched.grade_id);
+    }
+  }
+
+  // إبقاء الحصص التي grade_id الخاصة بها في القائمة النشطة فقط
+  return sessions.filter(s => activeGradeIds.has(s.grade_id));
+}
+
+// ══════════════════════════════════════════════════════════════════
+// REALTIME — تحديث تلقائي عند تغيير البيانات في Supabase
+// ══════════════════════════════════════════════════════════════════
+
+let _realtimeChannels = [];
+
+function setupRealtimeUpdates(userId) {
+  // إلغاء أي اشتراكات سابقة
+  _realtimeChannels.forEach(ch => sb.removeChannel(ch));
+  _realtimeChannels = [];
+
+  // ── 1. مراقبة تغييرات الاشتراكات (sessions_remaining / end_date) ──
+  const subChannel = sb.channel('realtime:subscriptions:' + userId)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'subscription_requests',
+      filter: `user_id=eq.${userId}`,
+    }, async (payload) => {
+      console.log('[Realtime] subscription_requests changed:', payload);
+      await refreshAllData(userId);
+    })
+    .subscribe();
+
+  // ── 2. مراقبة تغييرات الحصص (حصص جديدة / محدثة) ──
+  const sessChannel = sb.channel('realtime:sessions:' + userId)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'teacher_sessions',
+    }, async (payload) => {
+      console.log('[Realtime] teacher_sessions changed:', payload);
+      await refreshAllData(userId);
+    })
+    .subscribe();
+
+  // ── 3. مراقبة الإشعارات الجديدة ──
+  const notifChannel = sb.channel('realtime:notifications:' + userId)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'notifications',
+      filter: `user_id=eq.${userId}`,
+    }, async (payload) => {
+      console.log('[Realtime] new notification:', payload);
+      STATE.notifications.unshift(payload.new);
+      document.getElementById('notif-dot').style.display = 'block';
+      renderNav();
+    })
+    .subscribe();
+
+  // ── 4. مراقبة teacher_materials (محتوى جديد) ──
+  const matsChannel = sb.channel('realtime:materials:' + userId)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'teacher_materials',
+    }, async (payload) => {
+      console.log('[Realtime] teacher_materials changed:', payload);
+      // تحديث صفحة المواد إذا كانت مفتوحة
+      if (STATE.currentPage === 'subjectMaterials' && STATE.currentSubject) {
+        const { teacher_id, grade_id, subject_name } = STATE.currentSubject;
+        const { data } = await sb.from('teacher_materials')
+          .select('*')
+          .eq('teacher_id', teacher_id)
+          .eq('grade_id', grade_id)
+          .order('created_at', { ascending: false });
+        STATE.currentSubject.materials = data || [];
+        renderPage();
+      }
+    })
+    .subscribe();
+
+  _realtimeChannels = [subChannel, sessChannel, notifChannel, matsChannel];
+}
+
+/**
+ * تحديث شامل للبيانات وإعادة رسم الصفحة الحالية
+ */
+async function refreshAllData(userId) {
+  try {
+    const uid = userId || STATE.user?.id;
+    if (!uid) return;
+    await fetchAllData(uid);
+    renderPage();
+    renderNav();
+    showRealtimeToast();
+  } catch(e) {
+    console.error('[Realtime] refresh failed:', e);
+  }
+}
+
+function showRealtimeToast() {
+  // تجنب ازدحام التوست
+  if (document.getElementById('rt-toast')) return;
+  const toast = document.createElement('div');
+  toast.id = 'rt-toast';
+  toast.style.cssText = `
+    position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+    background:#111928;color:#fff;padding:10px 22px;border-radius:50px;
+    font-family:Cairo,sans-serif;font-weight:700;font-size:.85rem;
+    z-index:9999;animation:fadeIn .3s ease;box-shadow:0 4px 16px rgba(0,0,0,.25);
+    display:flex;align-items:center;gap:8px;
+  `;
+  toast.innerHTML = '🔄 تم تحديث البيانات تلقائياً';
+  document.body.appendChild(toast);
+  setTimeout(() => toast?.remove(), 2800);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -2134,7 +2299,13 @@ let _authHandled = false;
       updateHeaderUI();
       renderNav();
       renderPage();
+
+      // ── بدء الاستماع للتحديثات الفورية من Supabase Realtime ──
+      setupRealtimeUpdates(session.user.id);
     } else {
+      // ── إيقاف Realtime عند تسجيل الخروج ──
+      _realtimeChannels.forEach(ch => sb.removeChannel(ch));
+      _realtimeChannels = [];
       STATE.user = null;
       document.getElementById('loader').style.display           = 'none';
       document.getElementById('auth-screen').style.display      = 'flex';
