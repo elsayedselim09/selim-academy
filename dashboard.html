@@ -1130,6 +1130,9 @@ async function refreshAllData(userId) {
     renderPage();
     renderNav();
     showRealtimeToast();
+    // إعادة جدولة الإشعارات بعد تحديث البيانات
+    setupInPageSessionWatcher(STATE.sessions);
+    scheduleUpcomingNotifications(STATE.profile?.full_name || "");
   } catch(e) {
     console.error('[Realtime] refresh failed:', e);
   }
@@ -1150,6 +1153,236 @@ function showRealtimeToast() {
   toast.innerHTML = '🔄 تم تحديث البيانات تلقائياً';
   document.body.appendChild(toast);
   setTimeout(() => toast?.remove(), 2800);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PUSH NOTIFICATIONS SYSTEM — نظام الإشعارات
+// ══════════════════════════════════════════════════════════════════
+
+const NOTIF_SW_PATH = '/selim-academy/sw-notifications.js';
+
+let _swRegistration   = null;   // Service Worker registration
+let _notifScheduled   = new Set(); // session IDs التي جُدولت إشعاراتها
+let _notifCheckTimer  = null;   // مؤقت إعادة الجدولة كل ساعة
+
+// ── 1. تسجيل Service Worker وطلب إذن الإشعارات ──
+async function initNotifications(userName) {
+  if (!('Notification' in window)) {
+    console.warn('[Notif] هذا المتصفح لا يدعم الإشعارات');
+    return;
+  }
+  if (!('serviceWorker' in navigator)) {
+    console.warn('[Notif] هذا المتصفح لا يدعم Service Worker');
+    return;
+  }
+
+  // ── طلب الإذن إذا لم يُمنح بعد ──
+  let permission = Notification.permission;
+  if (permission === 'default') {
+    permission = await Notification.requestPermission();
+  }
+  if (permission !== 'granted') {
+    console.warn('[Notif] المستخدم رفض إذن الإشعارات');
+    showNotifPermissionBanner(); // نعرض بانر يطلب الإذن
+    return;
+  }
+
+  // ── تسجيل Service Worker ──
+  try {
+    _swRegistration = await navigator.serviceWorker.register(NOTIF_SW_PATH, { scope: '/selim-academy/' });
+    await navigator.serviceWorker.ready;
+    console.log('[Notif] Service Worker جاهز ✅');
+
+    // استقبال رسائل من SW (مثل نقر الإشعار)
+    navigator.serviceWorker.addEventListener('message', onSwMessage);
+
+    // جدولة الإشعارات للحصص القادمة
+    await scheduleUpcomingNotifications(userName);
+
+    // إعادة الجدولة كل ساعة (في حال تغيرت الحصص)
+    clearInterval(_notifCheckTimer);
+    _notifCheckTimer = setInterval(() => scheduleUpcomingNotifications(userName), 60 * 60 * 1000);
+  } catch(err) {
+    console.error('[Notif] فشل تسجيل Service Worker:', err);
+  }
+}
+
+// ── 2. جدولة إشعارات الحصص القادمة خلال الـ 24 ساعة القادمة ──
+async function scheduleUpcomingNotifications(userName) {
+  if (!_swRegistration) return;
+
+  const sw = _swRegistration.active || _swRegistration.installing || _swRegistration.waiting;
+  if (!sw) return;
+
+  const now      = Date.now();
+  const in24h    = now + 24 * 60 * 60 * 1000;
+
+  // فلترة الحصص القادمة خلال 24 ساعة فقط
+  const upcoming = (STATE.sessions || []).filter(s => {
+    const t = new Date(s.scheduled_at).getTime();
+    return t > now && t <= in24h;
+  });
+
+  if (!upcoming.length) {
+    console.log('[Notif] لا توجد حصص قادمة خلال 24 ساعة');
+    return;
+  }
+
+  // إرسال الحصص للـ Service Worker ليجدول إشعاراتها
+  sw.postMessage({
+    type: 'SCHEDULE_SESSION_NOTIFICATIONS',
+    payload: {
+      sessions: upcoming.map(s => ({
+        id:           s.id,
+        scheduled_at: s.scheduled_at,
+        subject:      s.subject_name || s.subject || 'حصة دراسية',
+        teacher_name: s.teacher_name || '',
+        zoom_link:    s.zoom_link || s.meeting_link || '',
+      })),
+      userName: userName || 'الطالب',
+    }
+  });
+
+  console.log(`[Notif] جُدول ${upcoming.length} إشعار/إشعارات للحصص القادمة`);
+}
+
+// ── 3. استقبال رسائل من الـ Service Worker ──
+function onSwMessage(event) {
+  const { type, sessionId, action, zoomUrl } = event.data || {};
+
+  if (type === 'NOTIFICATION_CLICKED') {
+    if (action === 'join' && zoomUrl) {
+      openZoomLink(zoomUrl);
+    } else {
+      // انتقل لصفحة الحصص
+      STATE.currentPage = 'sessions';
+      renderNav();
+      renderPage();
+    }
+  }
+}
+
+// ── 4. بانر طلب الإذن إذا رفضه المستخدم ──
+function showNotifPermissionBanner() {
+  if (document.getElementById('notif-perm-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'notif-perm-banner';
+  banner.style.cssText = `
+    position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+    background:#1A56DB;color:#fff;padding:14px 20px;border-radius:16px;
+    font-family:Cairo,sans-serif;font-size:.88rem;font-weight:700;
+    z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.25);
+    display:flex;align-items:center;gap:12px;max-width:340px;width:90%;
+    animation:fadeIn .3s ease;
+  `;
+  banner.innerHTML = `
+    <span style="font-size:1.4rem">🔔</span>
+    <span style="flex:1">فعّل الإشعارات لتذكيرك قبل كل حصة</span>
+    <button onclick="Notification.requestPermission().then(p=>{ if(p==='granted'){initNotifications(STATE.profile?.full_name);} document.getElementById('notif-perm-banner')?.remove(); })"
+      style="background:#fff;color:#1A56DB;border:none;border-radius:10px;padding:7px 14px;font-family:Cairo,sans-serif;font-weight:900;cursor:pointer;font-size:.82rem;white-space:nowrap">
+      تفعيل
+    </button>
+    <button onclick="this.parentElement.remove()"
+      style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:.85rem">
+      ✕
+    </button>
+  `;
+  document.body.appendChild(banner);
+  setTimeout(() => banner?.remove(), 12000);
+}
+
+// ── 5. إشعار فوري داخل المتصفح (Fallback عندما الصفحة مفتوحة) ──
+function showInPageSessionAlert(session) {
+  const name    = session.subject_name || session.subject || 'حصة دراسية';
+  const teacher = session.teacher_name ? ` — ${session.teacher_name}` : '';
+  const diff    = Math.round((new Date(session.scheduled_at) - Date.now()) / 60000);
+  const msg     = diff > 0 ? `⏰ حصتك بعد ${diff} دقيقة!` : `🎥 الحصة بدأت الآن!`;
+
+  const alert = document.createElement('div');
+  alert.style.cssText = `
+    position:fixed;top:18px;right:18px;left:18px;max-width:420px;margin:auto;
+    background:#fff;border-radius:16px;padding:16px 18px;
+    box-shadow:0 10px 40px rgba(0,0,0,.18);z-index:99999;
+    font-family:Cairo,sans-serif;border-right:5px solid #1A56DB;
+    animation:fadeIn .3s ease;display:flex;align-items:flex-start;gap:12px;
+  `;
+  alert.innerHTML = `
+    <span style="font-size:1.8rem;line-height:1">${diff > 0 ? '⏰' : '🎥'}</span>
+    <div style="flex:1">
+      <div style="font-weight:900;font-size:1rem;color:#111928">${msg}</div>
+      <div style="color:#6B7280;font-size:.88rem;margin-top:2px">${name}${teacher}</div>
+      ${session.zoom_link || session.meeting_link ? `<button onclick="openZoomLink('${(session.zoom_link||session.meeting_link).replace(/'/g,"\\'")}');this.closest('[style]').remove()"
+        style="margin-top:8px;background:#1A56DB;color:#fff;border:none;border-radius:8px;padding:6px 16px;font-family:Cairo,sans-serif;font-weight:700;cursor:pointer;font-size:.85rem">
+        ▶ ادخل الحصة
+      </button>` : ''}
+    </div>
+    <button onclick="this.parentElement.remove()"
+      style="background:#F3F4F6;border:none;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:.9rem;color:#6B7280">✕</button>
+  `;
+  document.body.appendChild(alert);
+  setTimeout(() => alert?.remove(), 20000);
+}
+
+// ── 6. مراقب الحصص داخل الصفحة (في حال لم يعمل SW) ──
+let _pageNotifTimers  = [];
+let _pageNotifFired   = new Set();
+
+function setupInPageSessionWatcher(sessions) {
+  // إلغاء المراقبة القديمة
+  _pageNotifTimers.forEach(t => clearTimeout(t));
+  _pageNotifTimers = [];
+
+  const now   = Date.now();
+  const in24h = now + 24 * 60 * 60 * 1000;
+
+  (sessions || []).forEach(session => {
+    const sessionTime = new Date(session.scheduled_at).getTime();
+    if (isNaN(sessionTime) || sessionTime > in24h) return;
+
+    // ── قبل 15 دقيقة ──
+    const before15ms = sessionTime - 15 * 60 * 1000 - now;
+    const key15 = `15min-${session.id}`;
+    if (before15ms > 0 && !_pageNotifFired.has(key15)) {
+      const t = setTimeout(() => {
+        _pageNotifFired.add(key15);
+        // إذا الصفحة مفتوحة والمستخدم ليس في وضع SW نشط
+        if (document.visibilityState === 'visible') {
+          showInPageSessionAlert(session);
+        } else if (Notification.permission === 'granted') {
+          // إشعار مباشر بدون SW كـ fallback
+          new Notification(`⏰ حصتك بعد 15 دقيقة!`, {
+            body: `${session.subject_name || session.subject || 'حصة'}${session.teacher_name ? ' — ' + session.teacher_name : ''}`,
+            icon: '/selim-academy/icon-192x192.png',
+            tag:  `fallback-15-${session.id}`,
+            dir:  'rtl',
+          });
+        }
+      }, before15ms);
+      _pageNotifTimers.push(t);
+    }
+
+    // ── عند بدء الحصة ──
+    const startMs = sessionTime - now;
+    const keyStart = `start-${session.id}`;
+    if (startMs > 0 && !_pageNotifFired.has(keyStart)) {
+      const t = setTimeout(() => {
+        _pageNotifFired.add(keyStart);
+        if (document.visibilityState === 'visible') {
+          showInPageSessionAlert(session);
+        } else if (Notification.permission === 'granted') {
+          new Notification(`🎥 الحصة بدأت الآن!`, {
+            body: `${session.subject_name || session.subject || 'حصة'}${session.teacher_name ? ' — ' + session.teacher_name : ''}\nانقر للدخول`,
+            icon: '/selim-academy/icon-192x192.png',
+            tag:  `fallback-start-${session.id}`,
+            dir:  'rtl',
+          });
+        }
+        // تحديث الصفحة لتظهر الحصة كـ live
+        if (STATE.currentPage === 'sessions') renderPage();
+      }, startMs);
+      _pageNotifTimers.push(t);
+    }
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -2302,10 +2535,20 @@ let _authHandled = false;
 
       // ── بدء الاستماع للتحديثات الفورية من Supabase Realtime ──
       setupRealtimeUpdates(session.user.id);
+
+      // ── تفعيل نظام إشعارات الحصص ──
+      const userName = STATE.profile?.full_name || "";
+      initNotifications(userName);
+      setupInPageSessionWatcher(STATE.sessions);
     } else {
       // ── إيقاف Realtime عند تسجيل الخروج ──
       _realtimeChannels.forEach(ch => sb.removeChannel(ch));
       _realtimeChannels = [];
+      // إيقاف مراقبة إشعارات الحصص عند تسجيل الخروج
+      _pageNotifTimers.forEach(t => clearTimeout(t));
+      _pageNotifTimers = [];
+      clearInterval(_notifCheckTimer);
+      if (_swRegistration) { _swRegistration.active?.postMessage({ type: "CANCEL_ALL_NOTIFICATIONS" }); }
       STATE.user = null;
       document.getElementById('loader').style.display           = 'none';
       document.getElementById('auth-screen').style.display      = 'flex';
