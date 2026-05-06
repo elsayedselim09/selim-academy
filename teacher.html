@@ -2441,7 +2441,7 @@ async function loadContent(tab) {
         .select('*')
         .eq('grade_id', ST.curGradeId)
         .eq('type','file')
-        .order('created_at',{ascending:true});
+        .order('created_at',{ascending:false});
       if(error) throw error;
       ST.files = data || [];
       renderFiles();
@@ -2450,7 +2450,7 @@ async function loadContent(tab) {
         .select('*')
         .eq('grade_id', ST.curGradeId)
         .eq('type','video')
-        .order('created_at',{ascending:true});
+        .order('created_at',{ascending:false});
       if(error) throw error;
       ST.videos = data || [];
       renderVideos();
