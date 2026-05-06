@@ -179,108 +179,45 @@ async function staleWhileRevalidate(request) {
 //  رسائل من الصفحة الرئيسية
 // ══════════════════════════════════════
 self.addEventListener('message', (event) => {
-  if (event.data?.action === 'skipWaiting') {
-    self.skipWaiting();
-  }
+  if (event.data?.action === 'skipWaiting') self.skipWaiting();
   if (event.data?.action === 'clearCache') {
-    caches.delete(CACHE_NAME).then(() => {
-      event.ports[0]?.postMessage({ success: true });
-    });
-  }
-
-  // ── إشعارات الحصص ──
-  if (event.data?.type === 'SCHEDULE_SESSION_NOTIFICATIONS') {
-    const { sessions, userName } = event.data.payload || {};
-    scheduleSessionNotifications(sessions, userName);
-  }
-  if (event.data?.type === 'CANCEL_ALL_NOTIFICATIONS') {
-    cancelAllScheduled();
+    caches.delete(CACHE_NAME).then(() => event.ports[0]?.postMessage({ success: true }));
   }
 });
 
 // ══════════════════════════════════════
-//  نظام إشعارات الحصص — Session Alerts
+//  استقبال Push من السيرفر (الجهاز مغلق ✅)
 // ══════════════════════════════════════
+self.addEventListener('push', event => {
+  if (!event.data) return;
 
-let _scheduledTimers = [];
+  let data;
+  try { data = event.data.json(); }
+  catch { data = { title: '🔔 أكاديمية سليم', body: event.data.text() }; }
 
-function cancelAllScheduled() {
-  _scheduledTimers.forEach(t => clearTimeout(t));
-  _scheduledTimers = [];
-  console.log('[SW-Notif] All scheduled notifications cancelled');
-}
+  const { title, body, tag, zoom, sessionId, type } = data;
 
-function scheduleSessionNotifications(sessions, userName) {
-  cancelAllScheduled();
-  if (!sessions?.length) return;
-
-  const now   = Date.now();
-  const in24h = now + 24 * 60 * 60 * 1000;
-
-  sessions.forEach(session => {
-    const sessionTime = new Date(session.scheduled_at).getTime();
-    if (isNaN(sessionTime) || sessionTime > in24h) return;
-
-    const subject = session.subject || 'حصة دراسية';
-    const teacher = session.teacher_name ? ` — ${session.teacher_name}` : '';
-    const zoom    = session.zoom_link || '';
-
-    // ── إشعار 1: قبل 15 دقيقة ──
-    const ms15 = sessionTime - 15 * 60 * 1000 - now;
-    if (ms15 > 0) {
-      const t1 = setTimeout(() => {
-        fireNotification({
-          title : '⏰ حصتك بعد 15 دقيقة!',
-          body  : `${subject}${teacher}\nاستعد الآن`,
-          tag   : `sess-15-${session.id}`,
-          type  : 'before15',
-          zoom,
-          sessionId: session.id,
-        });
-      }, ms15);
-      _scheduledTimers.push(t1);
-      console.log(`[SW-Notif] 15min notif scheduled for "${subject}" in ${Math.round(ms15/60000)}min`);
-    }
-
-    // ── إشعار 2: عند بدء الحصة ──
-    const msStart = sessionTime - now;
-    if (msStart > 0) {
-      const t2 = setTimeout(() => {
-        fireNotification({
-          title : '🎥 الحصة بدأت الآن!',
-          body  : `${subject}${teacher}\nانقر للدخول`,
-          tag   : `sess-start-${session.id}`,
-          type  : 'start',
-          zoom,
-          sessionId: session.id,
-        });
-      }, msStart);
-      _scheduledTimers.push(t2);
-      console.log(`[SW-Notif] Start notif scheduled for "${subject}" in ${Math.round(msStart/60000)}min`);
-    }
-  });
-}
-
-function fireNotification({ title, body, tag, type, zoom, sessionId }) {
-  const actions = type === 'start' && zoom
+  const actions = (type === 'start' && zoom)
     ? [{ action: 'join',    title: '▶ ادخل الحصة' },
        { action: 'dismiss', title: '✕ تجاهل' }]
-    : [{ action: 'open',    title: '👁 عرض' },
+    : [{ action: 'open',    title: '👁 عرض الحصص' },
        { action: 'dismiss', title: '✕ تجاهل' }];
 
-  self.registration.showNotification(title, {
-    body,
-    tag,
-    icon            : '/selim-academy/icon-192x192.png',
-    badge           : '/selim-academy/icon-192x192.png',
-    dir             : 'rtl',
-    lang            : 'ar',
-    requireInteraction: true,
-    vibrate         : [200, 100, 200, 100, 200],
-    actions,
-    data            : { type, zoom, sessionId },
-  }).catch(err => console.error('[SW-Notif] showNotification error:', err));
-}
+  event.waitUntil(
+    self.registration.showNotification(title || '🔔 أكاديمية سليم', {
+      body,
+      tag               : tag || `session-${Date.now()}`,
+      icon              : '/selim-academy/icon-192x192.png',
+      badge             : '/selim-academy/icon-192x192.png',
+      dir               : 'rtl',
+      lang              : 'ar',
+      requireInteraction: true,
+      vibrate           : [200, 100, 200, 100, 200],
+      actions,
+      data              : { zoom: zoom || '', sessionId, type },
+    })
+  );
+});
 
 // ══════════════════════════════════════
 //  نقر المستخدم على الإشعار
@@ -297,22 +234,18 @@ self.addEventListener('notificationclick', event => {
     : `${self.location.origin}/selim-academy/dashboard.html#sessions`;
 
   event.waitUntil(
-    self.clients
-      .matchAll({ type: 'window', includeUncontrolled: true })
-      .then(clients => {
-        // لو الصفحة مفتوحة → ننقل التركيز إليها ونبلغها
-        const existing = clients.find(c => c.url.includes('selim-academy'));
-        if (existing) {
-          existing.focus();
-          existing.postMessage({ type: 'NOTIFICATION_CLICKED', sessionId, action, zoom });
-          return;
-        }
-        // وإلا نفتح نافذة جديدة
-        return self.clients.openWindow(target);
-      })
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+      const existing = clients.find(c => c.url.includes('selim-academy'));
+      if (existing) {
+        existing.focus();
+        existing.postMessage({ type: 'NOTIFICATION_CLICKED', sessionId, action, zoom });
+        return;
+      }
+      return self.clients.openWindow(target);
+    })
   );
 });
 
 self.addEventListener('notificationclose', event => {
-  console.log('[SW-Notif] Notification closed:', event.notification.tag);
+  console.log('[SW] Notification closed:', event.notification.tag);
 });

@@ -1130,8 +1130,6 @@ async function refreshAllData(userId) {
     renderPage();
     renderNav();
     showRealtimeToast();
-    // إعادة جدولة الإشعارات لأن الحصص قد تكون تغيرت
-    _scheduleViaSwAndPage(STATE.profile?.full_name || '');
   } catch(e) {
     console.error('[Realtime] refresh failed:', e);
   }
@@ -1155,205 +1153,72 @@ function showRealtimeToast() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// PUSH NOTIFICATIONS — نظام إشعارات الحصص
-// يعمل مع sw.js الموجود (مدمج فيه)
+// PUSH NOTIFICATIONS — نظام الإشعارات الحقيقي (التطبيق مغلق ✅)
+// السيرفر هو اللي بيبعت — مش الصفحة
 // ══════════════════════════════════════════════════════════════════
 
-let _swReg           = null;   // نفس SW الخاص بـ pwa-register.js
-let _notifCheckTimer = null;
-let _pageTimers      = [];
-let _firedKeys       = new Set();
+const VAPID_PUBLIC_KEY = 'BCldNnBdd3O0e7T6cRj0ZRoaZS_GDY8GPK3PlPsJ1vT6yXtsCa89jKhcf9DWrQ_bZr7TozmwWTdNES1TJFjW14k';
 
-// ── 1. تهيئة نظام الإشعارات (تُستدعى بعد تسجيل الدخول) ──
-async function initNotifications(userName) {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+// ── 1. تهيئة الإشعارات بعد تسجيل الدخول ──
+async function initNotifications(userId) {
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.warn('[Push] المتصفح لا يدعم Push Notifications');
+    return;
+  }
 
-  // طلب الإذن إذا لم يُمنح بعد
   let perm = Notification.permission;
   if (perm === 'default') {
     perm = await Notification.requestPermission();
   }
-
   if (perm !== 'granted') {
-    showNotifPermissionBanner();
+    showNotifPermissionBanner(userId);
     return;
   }
 
+  await _subscribePush(userId);
+}
+
+// ── 2. الاشتراك في Push وحفظ الـ subscription في Supabase ──
+async function _subscribePush(userId) {
   try {
-    // نستخدم نفس الـ SW الذي سجّله pwa-register.js
-    await navigator.serviceWorker.ready;
-    _swReg = await navigator.serviceWorker.getRegistration('/selim-academy/');
-    if (!_swReg) {
-      // fallback: سجّله هنا لو لم يُسجَّل بعد
-      _swReg = await navigator.serviceWorker.register('/selim-academy/sw.js', {
-        scope: '/selim-academy/'
+    const reg = await navigator.serviceWorker.ready;
+
+    // تحقق إذا كان مسجلاً من قبل
+    let sub = await reg.pushManager.getSubscription();
+
+    if (!sub) {
+      // اشتراك جديد
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly     : true,
+        applicationServerKey: _urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
-      await navigator.serviceWorker.ready;
     }
 
-    // استقبال رسائل من الـ SW (نقر الإشعار)
-    navigator.serviceWorker.removeEventListener('message', _onSwMessage);
-    navigator.serviceWorker.addEventListener('message', _onSwMessage);
+    // حفظ في Supabase
+    const subJson = sub.toJSON();
+    const { error } = await sb.from('push_subscriptions').upsert({
+      user_id    : userId,
+      endpoint   : subJson.endpoint,
+      p256dh     : subJson.keys.p256dh,
+      auth_key   : subJson.keys.auth,
+      device_info: navigator.userAgent.substring(0, 200),
+      updated_at : new Date().toISOString(),
+    }, { onConflict: 'user_id,endpoint' });
 
-    console.log('[Notif] SW جاهز — جاري جدولة الإشعارات ✅');
-    await _scheduleViaSwAndPage(userName);
+    if (error) throw error;
+    console.log('[Push] ✅ Subscription محفوظة في Supabase');
 
-    // إعادة الجدولة كل ساعة
-    clearInterval(_notifCheckTimer);
-    _notifCheckTimer = setInterval(() => _scheduleViaSwAndPage(userName), 60 * 60 * 1000);
+    // استقبال رسائل الـ SW (نقر الإشعار)
+    navigator.serviceWorker.removeEventListener('message', _onSwPushMessage);
+    navigator.serviceWorker.addEventListener('message', _onSwPushMessage);
+
   } catch (err) {
-    console.error('[Notif] فشل:', err);
+    console.error('[Push] فشل التسجيل:', err);
   }
 }
 
-// ── 2. إرسال الحصص للـ SW + جدولة احتياطية داخل الصفحة ──
-async function _scheduleViaSwAndPage(userName) {
-  const now   = Date.now();
-  const in24h = now + 24 * 60 * 60 * 1000;
-
-  const upcoming = (STATE.sessions || []).filter(s => {
-    const t = new Date(s.scheduled_at).getTime();
-    return t > now && t <= in24h;
-  });
-
-  // ── إرسال للـ SW (يعمل حتى لو الصفحة في الخلفية) ──
-  const sw = _swReg?.active || _swReg?.installing || _swReg?.waiting;
-  if (sw) {
-    sw.postMessage({
-      type: 'SCHEDULE_SESSION_NOTIFICATIONS',
-      payload: {
-        sessions: upcoming.map(s => ({
-          id:           s.id,
-          scheduled_at: s.scheduled_at,
-          subject:      s.subject_name || s.subject || 'حصة دراسية',
-          teacher_name: s.teacher_name || '',
-          zoom_link:    s.zoom_link || s.meeting_link || '',
-        })),
-        userName: userName || 'الطالب',
-      }
-    });
-    console.log(`[Notif] أُرسل ${upcoming.length} حصة للـ SW للجدولة`);
-  }
-
-  // ── جدولة احتياطية داخل الصفحة (fallback لو الصفحة مفتوحة) ──
-  _setupPageFallback(upcoming);
-}
-
-// ── 3. Fallback داخل الصفحة (لما الصفحة مفتوحة أمام المستخدم) ──
-function _setupPageFallback(sessions) {
-  _pageTimers.forEach(t => clearTimeout(t));
-  _pageTimers = [];
-
-  const now = Date.now();
-
-  sessions.forEach(session => {
-    const sessionTime = new Date(session.scheduled_at).getTime();
-    if (isNaN(sessionTime)) return;
-
-    const subject = session.subject_name || session.subject || 'حصة';
-    const teacher = session.teacher_name || '';
-    const zoom    = session.zoom_link || session.meeting_link || '';
-
-    // قبل 15 دقيقة
-    const ms15  = sessionTime - 15 * 60 * 1000 - now;
-    const key15 = `15-${session.id}`;
-    if (ms15 > 0 && !_firedKeys.has(key15)) {
-      _pageTimers.push(setTimeout(() => {
-        _firedKeys.add(key15);
-        if (document.visibilityState === 'visible') {
-          _showInPageAlert({ subject, teacher, zoom, type: 'before15' });
-        }
-      }, ms15));
-    }
-
-    // عند البدء
-    const msStart  = sessionTime - now;
-    const keyStart = `start-${session.id}`;
-    if (msStart > 0 && !_firedKeys.has(keyStart)) {
-      _pageTimers.push(setTimeout(() => {
-        _firedKeys.add(keyStart);
-        if (document.visibilityState === 'visible') {
-          _showInPageAlert({ subject, teacher, zoom, type: 'start' });
-        }
-        if (STATE.currentPage === 'sessions') renderPage();
-      }, msStart));
-    }
-  });
-}
-
-// ── 4. تنبيه بصري داخل الصفحة ──
-function _showInPageAlert({ subject, teacher, zoom, type }) {
-  const isStart = type === 'start';
-  const emoji   = isStart ? '🎥' : '⏰';
-  const title   = isStart ? 'الحصة بدأت الآن!' : 'حصتك بعد 15 دقيقة!';
-  const sub     = teacher ? `${subject} — ${teacher}` : subject;
-
-  const el = document.createElement('div');
-  el.style.cssText = `
-    position:fixed;top:16px;right:16px;left:16px;max-width:400px;margin:0 auto;
-    background:#fff;border-radius:16px;padding:16px 18px;
-    box-shadow:0 12px 40px rgba(0,0,0,.15);z-index:99999;
-    font-family:Cairo,sans-serif;border-right:5px solid #1A56DB;
-    direction:rtl;display:flex;align-items:flex-start;gap:12px;
-    animation:fadeIn .3s ease;
-  `;
-  el.innerHTML = `
-    <span style="font-size:2rem;line-height:1">${emoji}</span>
-    <div style="flex:1">
-      <div style="font-weight:900;font-size:1rem;color:#111928">${title}</div>
-      <div style="color:#6B7280;font-size:.88rem;margin-top:3px">${sub}</div>
-      ${zoom ? `
-        <button onclick="window.open('${zoom.replace(/'/g,"\\'")}','_blank');this.closest('div[style]').remove()"
-          style="margin-top:10px;background:#1A56DB;color:#fff;border:none;
-          border-radius:8px;padding:7px 18px;font-family:Cairo,sans-serif;
-          font-weight:700;font-size:.85rem;cursor:pointer">
-          ▶ ادخل الحصة
-        </button>` : ''}
-    </div>
-    <button onclick="this.parentElement.remove()"
-      style="background:#F3F4F6;border:none;border-radius:8px;
-      padding:5px 9px;cursor:pointer;color:#6B7280;font-size:.9rem">✕</button>
-  `;
-  document.body.appendChild(el);
-  setTimeout(() => el?.remove(), 25000);
-}
-
-// ── 5. بانر طلب الإذن ──
-function showNotifPermissionBanner() {
-  if (document.getElementById('notif-perm-banner')) return;
-  const b = document.createElement('div');
-  b.id = 'notif-perm-banner';
-  b.style.cssText = `
-    position:fixed;bottom:76px;right:12px;left:12px;max-width:400px;margin:0 auto;
-    background:linear-gradient(135deg,#1342B0,#1A56DB);color:#fff;
-    padding:14px 16px;border-radius:16px;font-family:Cairo,sans-serif;
-    font-size:.88rem;font-weight:700;z-index:9999;
-    box-shadow:0 8px 24px rgba(26,86,219,.35);
-    display:flex;align-items:center;gap:10px;direction:rtl;
-    animation:fadeIn .3s ease;
-  `;
-  b.innerHTML = `
-    <span style="font-size:1.5rem">🔔</span>
-    <span style="flex:1">فعّل الإشعارات لتذكيرك قبل كل حصة تلقائياً</span>
-    <button onclick="Notification.requestPermission().then(p=>{
-        if(p==='granted') initNotifications(STATE.profile?.full_name||'');
-        document.getElementById('notif-perm-banner')?.remove();
-      })"
-      style="background:#fff;color:#1A56DB;border:none;border-radius:10px;
-      padding:7px 14px;font-family:Cairo,sans-serif;font-weight:900;
-      cursor:pointer;font-size:.82rem;white-space:nowrap">
-      تفعيل
-    </button>
-    <button onclick="this.parentElement.remove()"
-      style="background:rgba(255,255,255,.2);color:#fff;border:none;
-      border-radius:8px;padding:6px 10px;cursor:pointer;font-size:.9rem">✕</button>
-  `;
-  document.body.appendChild(b);
-  setTimeout(() => b?.remove(), 15000);
-}
-
-// ── 6. استقبال رسائل من الـ SW (نقر إشعار) ──
-function _onSwMessage(event) {
+// ── 3. استقبال نقر الإشعار من الـ SW ──
+function _onSwPushMessage(event) {
   const { type, sessionId, action, zoom } = event.data || {};
   if (type !== 'NOTIFICATION_CLICKED') return;
   if (action === 'join' && zoom) {
@@ -1365,15 +1230,45 @@ function _onSwMessage(event) {
   }
 }
 
-// ── 7. إيقاف كل شيء عند تسجيل الخروج ──
-function stopNotifications() {
-  _pageTimers.forEach(t => clearTimeout(t));
-  _pageTimers = [];
-  clearInterval(_notifCheckTimer);
-  _firedKeys.clear();
-  const sw = _swReg?.active;
-  if (sw) sw.postMessage({ type: 'CANCEL_ALL_NOTIFICATIONS' });
-  _swReg = null;
+// ── 4. بانر طلب الإذن ──
+function showNotifPermissionBanner(userId) {
+  if (document.getElementById('notif-perm-banner')) return;
+  const b = document.createElement('div');
+  b.id = 'notif-perm-banner';
+  b.style.cssText = `
+    position:fixed;bottom:76px;right:12px;left:12px;max-width:420px;margin:0 auto;
+    background:linear-gradient(135deg,#1342B0,#1A56DB);color:#fff;
+    padding:14px 16px;border-radius:16px;font-family:Cairo,sans-serif;
+    font-size:.88rem;font-weight:700;z-index:9999;direction:rtl;
+    box-shadow:0 8px 24px rgba(26,86,219,.4);
+    display:flex;align-items:center;gap:10px;animation:fadeIn .3s ease;
+  `;
+  b.innerHTML = `
+    <span style="font-size:1.6rem">🔔</span>
+    <span style="flex:1">فعّل الإشعارات عشان تتذكر حصصك حتى لو التطبيق مغلق!</span>
+    <button onclick="Notification.requestPermission().then(p=>{
+        if(p==='granted') _subscribePush('${userId}');
+        document.getElementById('notif-perm-banner')?.remove();
+      })"
+      style="background:#fff;color:#1A56DB;border:none;border-radius:10px;
+      padding:7px 14px;font-family:Cairo,sans-serif;font-weight:900;
+      cursor:pointer;font-size:.82rem;white-space:nowrap">
+      تفعيل 🔔
+    </button>
+    <button onclick="this.parentElement.remove()"
+      style="background:rgba(255,255,255,.2);color:#fff;border:none;
+      border-radius:8px;padding:6px 10px;cursor:pointer;font-size:.9rem">✕</button>
+  `;
+  document.body.appendChild(b);
+  setTimeout(() => b?.remove(), 15000);
+}
+
+// ── 5. Helper: تحويل VAPID key ──
+function _urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -2498,6 +2393,9 @@ let _authHandled = false;
     updateHeaderUI();
     renderNav();
     renderPage();
+
+    // ── تفعيل إشعارات الحصص (حتى لو التطبيق مغلق) ──
+    initNotifications(session.user.id);
   } else {
     document.getElementById('loader').style.display      = 'none';
     document.getElementById('auth-screen').style.display = 'flex';
@@ -2527,17 +2425,12 @@ let _authHandled = false;
       // ── بدء الاستماع للتحديثات الفورية من Supabase Realtime ──
       setupRealtimeUpdates(session.user.id);
 
-      // ── تفعيل نظام إشعارات الحصص ──
-      initNotifications(STATE.profile?.full_name || '');
-
+      // ── تفعيل إشعارات الحصص (حتى لو التطبيق مغلق) ──
+      initNotifications(session.user.id);
     } else {
       // ── إيقاف Realtime عند تسجيل الخروج ──
       _realtimeChannels.forEach(ch => sb.removeChannel(ch));
       _realtimeChannels = [];
-
-      // ── إيقاف إشعارات الحصص ──
-      stopNotifications();
-
       STATE.user = null;
       document.getElementById('loader').style.display           = 'none';
       document.getElementById('auth-screen').style.display      = 'flex';
