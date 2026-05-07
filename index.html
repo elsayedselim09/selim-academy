@@ -75,6 +75,227 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+<!-- ══ ANIMATION STYLES ══ -->
+<style>
+/* ── Page Loader ── */
+#sa-loader{
+  position:fixed;inset:0;background:linear-gradient(135deg,#0f172a,#1342B0);
+  z-index:99999;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:20px;
+  transition:opacity .7s ease,visibility .7s ease;
+}
+#sa-loader.sa-hidden{opacity:0;visibility:hidden;pointer-events:none;}
+.sa-loader-logo{
+  font-family:'Cairo',sans-serif;font-size:2rem;font-weight:900;color:#fff;
+  letter-spacing:2px;animation:sa-logoPulse 1.4s ease-in-out infinite;
+  display:flex;align-items:center;gap:12px;
+}
+.sa-loader-logo-icon{
+  width:52px;height:52px;background:rgba(255,255,255,.15);
+  border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:1.8rem;border:2px solid rgba(255,255,255,.25);
+}
+.sa-loader-bar-wrap{
+  width:220px;height:4px;background:rgba(255,255,255,.12);
+  border-radius:999px;overflow:hidden;
+}
+.sa-loader-bar{
+  height:100%;width:0;
+  background:linear-gradient(90deg,#3b82f6,#06b6d4,#3b82f6);
+  background-size:200% 100%;
+  border-radius:999px;
+  animation:sa-loadBar 1.6s cubic-bezier(.4,0,.2,1) forwards,
+            sa-shimmerBar 1.2s .2s linear infinite;
+}
+.sa-loader-dots{display:flex;gap:8px;margin-top:8px;}
+.sa-loader-dots span{
+  width:8px;height:8px;border-radius:50%;
+  background:rgba(255,255,255,.4);
+  animation:sa-dotBounce .8s ease-in-out infinite;
+}
+.sa-loader-dots span:nth-child(2){animation-delay:.15s;}
+.sa-loader-dots span:nth-child(3){animation-delay:.3s;}
+@keyframes sa-loadBar{to{width:100%;}}
+@keyframes sa-shimmerBar{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes sa-logoPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(.97)}}
+@keyframes sa-dotBounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-8px);opacity:1}}
+
+/* ── Scroll Reveal Base ── */
+.sa-reveal{
+  opacity:0;
+  transition:opacity .75s cubic-bezier(.4,0,.2,1),
+             transform .75s cubic-bezier(.4,0,.2,1);
+  will-change:opacity,transform;
+}
+.sa-reveal-up    { transform:translateY(48px); }
+.sa-reveal-down  { transform:translateY(-36px); }
+.sa-reveal-left  { transform:translateX(56px); }
+.sa-reveal-right { transform:translateX(-56px); }
+.sa-reveal-scale { transform:scale(.87); }
+.sa-reveal-fade  { transform:translateY(0); }
+.sa-reveal-flip  { transform:perspective(600px) rotateX(18deg) translateY(28px); }
+
+.sa-reveal.sa-visible{
+  opacity:1 !important;
+  transform:none !important;
+}
+.sa-d1{transition-delay:.08s!important;}
+.sa-d2{transition-delay:.16s!important;}
+.sa-d3{transition-delay:.26s!important;}
+.sa-d4{transition-delay:.38s!important;}
+.sa-d5{transition-delay:.52s!important;}
+.sa-d6{transition-delay:.68s!important;}
+
+/* ── Hero Entrance ── */
+#hero .hero-badge{animation:sa-heroIn .8s .1s cubic-bezier(.16,1,.3,1) both;}
+#hero .hero-title{animation:sa-heroIn .9s .22s cubic-bezier(.16,1,.3,1) both;}
+#hero .hero-sub{animation:sa-heroIn .9s .38s cubic-bezier(.16,1,.3,1) both;}
+#hero .hero-btns{animation:sa-heroIn .9s .52s cubic-bezier(.16,1,.3,1) both;}
+#hero .hero-stats{animation:sa-heroIn .9s .68s cubic-bezier(.16,1,.3,1) both;}
+#hero .hero-left{animation:sa-heroRight 1s .4s cubic-bezier(.16,1,.3,1) both;}
+@keyframes sa-heroIn{
+  from{opacity:0;transform:translateY(38px) scale(.97);}
+  to{opacity:1;transform:none;}
+}
+@keyframes sa-heroRight{
+  from{opacity:0;transform:translateX(-50px) scale(.95);}
+  to{opacity:1;transform:none;}
+}
+
+/* ── Float Cards Animation ── */
+.hero-float-card{
+  animation:sa-floatCard 3.5s ease-in-out infinite;
+}
+.hero-float-2{animation-delay:1.7s!important;animation-name:sa-floatCardAlt!important;}
+@keyframes sa-floatCard{
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-10px);}
+}
+@keyframes sa-floatCardAlt{
+  0%,100%{transform:translateY(-6px);}
+  50%{transform:translateY(6px);}
+}
+
+/* ── Sticky Navbar with transition ── */
+nav{transition:all .4s cubic-bezier(.4,0,.2,1)!important;}
+nav.sa-scrolled{
+  box-shadow:0 4px 32px rgba(0,0,0,.14)!important;
+  backdrop-filter:blur(18px)!important;
+  background:rgba(255,255,255,.95)!important;
+}
+
+/* ── Button Ripple ── */
+.btn-primary,.btn-secondary,.btn-enroll,.btn-register,.btn-login,.stage-btn{
+  position:relative;overflow:hidden;
+}
+.sa-ripple{
+  position:absolute;border-radius:50%;
+  transform:scale(0);pointer-events:none;
+  background:rgba(255,255,255,.28);
+  animation:sa-rippleAnim .6s linear;
+}
+@keyframes sa-rippleAnim{to{transform:scale(4.5);opacity:0;}}
+
+/* ── Card Hover Enhancement ── */
+.teacher-card,.course-card,.method-card,.stage-card,.price-card,.test-card{
+  transition:transform .35s cubic-bezier(.34,1.46,.64,1),
+             box-shadow .35s ease,
+             border-color .3s ease !important;
+}
+.teacher-card:hover,.course-card:hover,.method-card:hover,.price-card:hover{
+  transform:translateY(-10px) scale(1.015) !important;
+  box-shadow:0 24px 56px rgba(0,0,0,.16) !important;
+}
+.stage-card:hover{
+  transform:translateY(-12px) !important;
+  box-shadow:0 28px 64px rgba(26,86,219,.18) !important;
+}
+
+/* ── Stats Bar Count Animation ── */
+.stat-num{transition:all .3s;}
+
+/* ── Section Title Underline ── */
+.section-title{position:relative;display:inline-block;}
+.section-title::after{
+  content:'';position:absolute;bottom:-6px;right:0;
+  height:3px;width:0;
+  background:linear-gradient(90deg,var(--blue),#06b6d4);
+  border-radius:999px;
+  transition:width .8s cubic-bezier(.4,0,.2,1);
+}
+.sa-title-visible::after{width:100%!important;}
+
+/* ── Stats Bar Glow on reveal ── */
+#statsbar{position:relative;overflow:hidden;}
+#statsbar::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,#1342B0,#1A56DB,#3B82F6);
+  transform:translateX(-100%);
+  transition:transform 1.2s cubic-bezier(.4,0,.2,1);
+}
+#statsbar.sa-visible::before{transform:translateX(0);}
+#statsbar .stats-grid{position:relative;z-index:1;}
+
+/* ── Scroll-to-Top Button ── */
+#sa-scroll-top{
+  position:fixed;bottom:88px;right:20px;
+  width:46px;height:46px;border-radius:50%;
+  background:linear-gradient(135deg,var(--blue),#3b82f6);
+  color:#fff;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;font-weight:900;
+  box-shadow:0 6px 24px rgba(26,86,219,.4);
+  opacity:0;transform:translateY(16px) scale(.8);
+  transition:opacity .4s ease,transform .4s cubic-bezier(.34,1.56,.64,1);
+  z-index:900;font-family:'Cairo',sans-serif;
+}
+#sa-scroll-top.sa-show{opacity:1;transform:translateY(0) scale(1);}
+#sa-scroll-top:hover{transform:translateY(-4px) scale(1.1)!important;box-shadow:0 12px 32px rgba(26,86,219,.5)!important;}
+
+/* ── Floating Particles BG ── */
+#sa-particles{
+  position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden;
+}
+.sa-particle{
+  position:absolute;border-radius:50%;
+  background:linear-gradient(135deg,rgba(26,86,219,.12),rgba(59,130,246,.08));
+  animation:sa-particleFloat linear infinite;
+}
+@keyframes sa-particleFloat{
+  0%{transform:translateY(110%) rotate(0deg) scale(0);opacity:0;}
+  10%{opacity:1;}
+  90%{opacity:.5;}
+  100%{transform:translateY(-10%) rotate(360deg) scale(1.2);opacity:0;}
+}
+
+/* ── Image Shimmer ── */
+.sa-shimmer{
+  background:linear-gradient(90deg,#f0f4f8 25%,#e2eaf4 50%,#f0f4f8 75%);
+  background-size:400% 100%;
+  animation:sa-shimmerImg 1.8s ease infinite;
+}
+@keyframes sa-shimmerImg{0%{background-position:100% 0}100%{background-position:-100% 0}}
+
+/* ── Pricing badge pulse ── */
+.pricing-save-badge{animation:sa-badgePulse 2.5s ease-in-out infinite;}
+@keyframes sa-badgePulse{
+  0%,100%{box-shadow:0 6px 24px rgba(230,81,0,.3);}
+  50%{box-shadow:0 8px 36px rgba(230,81,0,.55);}
+}
+
+/* ── WhatsApp float bounce ── */
+.wa-float{animation:sa-waBounce 2s .5s ease-in-out infinite!important;}
+@keyframes sa-waBounce{
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-6px);}
+}
+
+/* ── nav drawer animate ── */
+.nav-drawer.open{animation:sa-drawerIn .3s cubic-bezier(.16,1,.3,1)!important;}
+@keyframes sa-drawerIn{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:none}}
+</style>
+
 <style>
 :root {
   --blue:       #1A56DB;
@@ -2236,7 +2457,7 @@ async function renderTeachers() {
       .neq('profile_visibility', 'hidden');  // استثناء من اختار الإخفاء
 
     if (res.error) {
-      console.error('Supabase teachers error:', res.error);
+      console.error('Supabase teachers error:', res.error.message || JSON.stringify(res.error));
       grid.innerHTML = '<p style="text-align:center;color:#EF4444;grid-column:1/-1;padding:40px 0;">⚠️ تعذر تحميل المدرسين</p>';
       return;
     }
@@ -2506,5 +2727,236 @@ window.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <script src="pwa-register.js" defer></script>
+
+<!-- ══ PAGE LOADER ══ -->
+<div id="sa-loader">
+  <div class="sa-loader-logo">
+    <div class="sa-loader-logo-icon">🎓</div>
+    أكاديمية سليم
+  </div>
+  <div class="sa-loader-bar-wrap">
+    <div class="sa-loader-bar"></div>
+  </div>
+  <div class="sa-loader-dots">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<!-- ══ SCROLL-TO-TOP ══ -->
+<button id="sa-scroll-top" title="العودة للأعلى" aria-label="العودة للأعلى">↑</button>
+
+<!-- ══ ANIMATIONS SCRIPT ══ -->
+<script>
+(function(){
+
+  /* ── 1. LOADER ── */
+  var loader = document.getElementById('sa-loader');
+  function hideLoader(){ if(loader) loader.classList.add('sa-hidden'); }
+  window.addEventListener('load', function(){ setTimeout(hideLoader, 1400); });
+  setTimeout(hideLoader, 3200);
+
+  /* ── 2. PARTICLES IN HERO ── */
+  function initParticles(){
+    var hero = document.getElementById('hero');
+    if(!hero) return;
+    if(getComputedStyle(hero).position === 'static') hero.style.position = 'relative';
+    var canvas = document.createElement('div');
+    canvas.id = 'sa-particles';
+    hero.insertBefore(canvas, hero.firstChild);
+    for(var i = 0; i < 20; i++){
+      var p = document.createElement('div');
+      p.className = 'sa-particle';
+      var size = Math.random() * 80 + 24;
+      p.style.cssText = [
+        'width:'+size+'px',
+        'height:'+size+'px',
+        'left:'+Math.random()*100+'%',
+        'animation-duration:'+(Math.random()*14+9)+'s',
+        'animation-delay:'+Math.random()*10+'s'
+      ].join(';');
+      canvas.appendChild(p);
+    }
+  }
+
+  /* ── 3. SCROLL REVEAL ── */
+  function initScrollReveal(){
+    var rules = [
+      { sel:'.section-head .section-title',     cls:'sa-reveal sa-reveal-flip' },
+      { sel:'.section-head .section-sub',        cls:'sa-reveal sa-reveal-up sa-d2' },
+      { sel:'.teacher-card',                     cls:'sa-reveal sa-reveal-up' },
+      { sel:'.course-card',                      cls:'sa-reveal sa-reveal-up' },
+      { sel:'.method-card',                      cls:'sa-reveal sa-reveal-up' },
+      { sel:'.stage-card',                       cls:'sa-reveal sa-reveal-scale' },
+      { sel:'.test-card',                        cls:'sa-reveal sa-reveal-up' },
+      { sel:'.price-card,.pricing-solo',         cls:'sa-reveal sa-reveal-scale' },
+      { sel:'.stat-item',                        cls:'sa-reveal sa-reveal-up' },
+      { sel:'.contact-card,.contact-form-box',   cls:'sa-reveal sa-reveal-up' },
+      { sel:'.footer-col',                       cls:'sa-reveal sa-reveal-up' },
+      { sel:'.cta-left,.cta-right',              cls:'sa-reveal sa-reveal-up' },
+      { sel:'.section-tag',                      cls:'sa-reveal sa-reveal-fade sa-d1' },
+      { sel:'.pricing-save-badge,.pricing-savings', cls:'sa-reveal sa-reveal-scale sa-d2' },
+    ];
+    var delays = ['sa-d1','sa-d2','sa-d3','sa-d4','sa-d5'];
+
+    rules.forEach(function(rule){
+      document.querySelectorAll(rule.sel).forEach(function(el, i){
+        if(el.classList.contains('sa-reveal')) return;
+        rule.cls.split(' ').forEach(function(c){ if(c && c.trim()) el.classList.add(c.trim()); });
+        if(!rule.cls.match(/sa-d\d/)) el.classList.add(delays[i % delays.length]);
+      });
+    });
+
+    if(!window.IntersectionObserver){
+      document.querySelectorAll('.sa-reveal').forEach(function(el){ el.classList.add('sa-visible'); });
+      document.querySelectorAll('.section-title').forEach(function(el){ el.classList.add('sa-title-visible'); });
+      return;
+    }
+
+    var revObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ e.target.classList.add('sa-visible'); revObs.unobserve(e.target); }
+      });
+    },{ threshold:0.1, rootMargin:'0px 0px -32px 0px' });
+
+    document.querySelectorAll('.sa-reveal').forEach(function(el){ revObs.observe(el); });
+
+    var titleObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ e.target.classList.add('sa-title-visible'); titleObs.unobserve(e.target); }
+      });
+    },{ threshold:0.5 });
+    document.querySelectorAll('.section-title').forEach(function(el){ titleObs.observe(el); });
+  }
+
+  /* ── 4. COUNTER ANIMATION ── */
+  function initCounters(){
+    if(!window.IntersectionObserver) return;
+    var cObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(!e.isIntersecting) return;
+        var el = e.target;
+        var original = el.textContent.trim();
+        var match = original.match(/(\d[\d,]*)/);
+        if(!match){ cObs.unobserve(el); return; }
+        var target = parseInt(match[1].replace(/,/g,''));
+        if(target < 10){ cObs.unobserve(el); return; }
+        var prefix = original.slice(0, original.indexOf(match[0]));
+        var suffix = original.slice(original.indexOf(match[0]) + match[0].length);
+        var start = null, duration = 1800;
+        function step(ts){
+          if(!start) start = ts;
+          var p = Math.min((ts-start)/duration, 1);
+          var eased = 1 - Math.pow(1-p, 3);
+          el.textContent = prefix + Math.round(eased * target) + suffix;
+          if(p < 1) requestAnimationFrame(step);
+          else el.textContent = original;
+        }
+        requestAnimationFrame(step);
+        cObs.unobserve(el);
+      });
+    },{ threshold:0.6 });
+
+    document.querySelectorAll('.stat-num, .hero-stat-num').forEach(function(el){
+      cObs.observe(el);
+    });
+  }
+
+  /* ── 5. STICKY NAVBAR ── */
+  function initNavbar(){
+    var nav = document.querySelector('nav');
+    if(!nav) return;
+    window.addEventListener('scroll', function(){
+      nav.classList.toggle('sa-scrolled', window.scrollY > 60);
+    },{ passive:true });
+  }
+
+  /* ── 6. BUTTON RIPPLE ── */
+  function initRipple(){
+    document.querySelectorAll('.btn-primary,.btn-secondary,.btn-enroll,.btn-register,.btn-login,.stage-btn,.teacher-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        var rect = btn.getBoundingClientRect();
+        var r = document.createElement('span');
+        r.className = 'sa-ripple';
+        var size = Math.max(rect.width, rect.height) * 1.6;
+        r.style.cssText = 'width:'+size+'px;height:'+size+'px;top:'+(e.clientY-rect.top-size/2)+'px;left:'+(e.clientX-rect.left-size/2)+'px;';
+        btn.appendChild(r);
+        setTimeout(function(){ r.remove(); }, 700);
+      });
+    });
+  }
+
+  /* ── 7. SCROLL-TO-TOP ── */
+  function initScrollTop(){
+    var btn = document.getElementById('sa-scroll-top');
+    if(!btn) return;
+    window.addEventListener('scroll', function(){
+      btn.classList.toggle('sa-show', window.scrollY > 450);
+    },{ passive:true });
+    btn.addEventListener('click', function(){
+      window.scrollTo({ top:0, behavior:'smooth' });
+    });
+  }
+
+  /* ── 8. IMAGE SHIMMER ── */
+  function initImgShimmer(){
+    document.querySelectorAll('img').forEach(function(img){
+      if(img.complete && img.naturalWidth > 0) return;
+      img.classList.add('sa-shimmer');
+      img.addEventListener('load',  function(){ img.classList.remove('sa-shimmer'); });
+      img.addEventListener('error', function(){ img.classList.remove('sa-shimmer'); });
+    });
+  }
+
+  /* ── 9. SMOOTH SCROLL ── */
+  function initSmoothScroll(){
+    document.querySelectorAll('a[href^="#"]').forEach(function(a){
+      a.addEventListener('click', function(e){
+        var id = a.getAttribute('href');
+        if(id === '#') return;
+        var target = document.querySelector(id);
+        if(!target) return;
+        e.preventDefault();
+        var top = target.getBoundingClientRect().top + window.scrollY - 72;
+        window.scrollTo({ top:top, behavior:'smooth' });
+      });
+    });
+  }
+
+  /* ── 10. HERO FLOAT CARDS ENTRANCE ── */
+  function initFloatCards(){
+    document.querySelectorAll('.hero-float-card').forEach(function(c, i){
+      c.style.opacity = '0';
+      c.style.transform = 'scale(.8) translateY(20px)';
+      c.style.transition = 'opacity .7s '+(0.9+i*0.35)+'s cubic-bezier(.34,1.56,.64,1),transform .7s '+(0.9+i*0.35)+'s cubic-bezier(.34,1.56,.64,1)';
+      setTimeout(function(){
+        c.style.opacity = '1';
+        c.style.transform = '';
+      }, 900 + i*350);
+    });
+  }
+
+  /* ── INIT ── */
+  function init(){
+    initParticles();
+    initNavbar();
+    initScrollTop();
+    initRipple();
+    initImgShimmer();
+    initSmoothScroll();
+    initFloatCards();
+    requestAnimationFrame(function(){
+      initScrollReveal();
+      initCounters();
+    });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+</script>
 </body>
 </html>
