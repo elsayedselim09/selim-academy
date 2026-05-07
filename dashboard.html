@@ -524,6 +524,190 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dar
 .att-badge.absent{background:#FEF2F2;color:var(--red)}
 .att-badge.late{background:#FFFBEB;color:var(--gold)}
 .att-empty{text-align:center;padding:30px;color:var(--gray);font-size:.85rem}
+/* ── HOMEWORK SYSTEM ── */
+/* بطاقات المواد في صفحة واجباتي */
+.hw-subjects-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-top:8px;
+}
+.hw-subject-card {
+  background:#fff; border:1.5px solid var(--gray-mid); border-radius:16px;
+  padding:22px 18px; cursor:pointer; transition:all .28s;
+  position:relative; overflow:hidden; display:flex; flex-direction:column; gap:10px;
+}
+.hw-subject-card::after {
+  content:''; position:absolute; bottom:0; left:0; right:0; height:3px;
+  background:linear-gradient(90deg,var(--blue),var(--blue-mid));
+  transform:scaleX(0); transition:transform .3s; transform-origin:right;
+}
+.hw-subject-card:hover::after { transform:scaleX(1) }
+.hw-subject-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(26,86,219,.14); border-color:#BFDBFE; }
+.hw-subj-icon { width:52px; height:52px; border-radius:14px; background:var(--blue-light); display:flex; align-items:center; justify-content:center; font-size:1.6rem; }
+.hw-subj-name { font-size:1rem; font-weight:900; color:var(--dark); }
+.hw-subj-teacher { font-size:.76rem; color:var(--gray); display:flex; align-items:center; gap:5px; }
+.hw-subj-badge { display:inline-flex; align-items:center; gap:5px; font-size:.72rem; font-weight:700; padding:4px 10px; border-radius:50px; background:var(--green-light); color:var(--green); border:1px solid #6EE7B7; }
+
+/* صفحة الوحدات والدروس */
+.hw-back-btn {
+  display:inline-flex; align-items:center; gap:7px;
+  background:var(--gray-light); border:1px solid var(--gray-mid); border-radius:10px;
+  padding:8px 16px; font-family:'Cairo',sans-serif; font-size:.85rem; font-weight:700;
+  color:var(--dark); cursor:pointer; transition:all .2s; margin-bottom:20px;
+}
+.hw-back-btn:hover { background:var(--blue-light); border-color:var(--blue); color:var(--blue); }
+.hw-subject-hero {
+  background:linear-gradient(135deg,#0F172A,#1E3A5F 60%,#1A56DB);
+  border-radius:20px; padding:28px 26px; color:#fff; margin-bottom:24px; position:relative; overflow:hidden;
+}
+.hw-subject-hero::before { content:''; position:absolute; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.05); top:-60px; left:-40px; }
+.hw-hero-title { font-size:1.4rem; font-weight:900; margin-bottom:4px; position:relative; z-index:1; }
+.hw-hero-sub { font-size:.85rem; opacity:.7; position:relative; z-index:1; }
+
+/* الوحدات */
+.hw-unit-wrap { margin-bottom:28px; }
+.hw-unit-header {
+  display:flex; align-items:center; justify-content:space-between;
+  background:#fff; border:1px solid var(--gray-mid); border-radius:14px 14px 0 0;
+  padding:14px 20px; margin-bottom:0;
+}
+.hw-unit-title { font-size:.98rem; font-weight:900; color:var(--dark); }
+.hw-unit-progress {
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--blue-light); color:var(--blue);
+  border:1px solid #BFDBFE; border-radius:50px;
+  padding:4px 12px; font-size:.76rem; font-weight:700;
+}
+
+/* شبكة بطاقات الدروس */
+.hw-lessons-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px;
+  padding:16px; background:#fff; border:1px solid var(--gray-mid);
+  border-top:none; border-radius:0 0 14px 14px;
+}
+/* بطاقة الدرس */
+.hw-lesson-card {
+  background:var(--gray-light); border:1.5px solid var(--gray-mid);
+  border-radius:14px; overflow:hidden; transition:all .25s;
+  display:flex; flex-direction:column;
+}
+.hw-lesson-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.09); border-color:#BFDBFE; }
+
+/* الجزء العلوي من البطاقة */
+.hw-card-top {
+  background:linear-gradient(135deg,#1E1B4B,#1A56DB); padding:14px;
+  display:flex; align-items:flex-start; justify-content:space-between; min-height:80px; position:relative;
+}
+.hw-card-top.done-green { background:linear-gradient(135deg,#064E3B,#059669); }
+.hw-card-top.started-gold { background:linear-gradient(135deg,#78350F,#D97706); }
+/* نجوم */
+.hw-stars { display:flex; gap:2px; }
+.hw-star { font-size:.85rem; color:rgba(255,255,255,.35); }
+.hw-star.active { color:#FCD34D; }
+/* نسبة */
+.hw-score-pct {
+  font-size:.78rem; font-weight:900; color:rgba(255,255,255,.9);
+  background:rgba(0,0,0,.25); border-radius:50px; padding:3px 9px;
+}
+
+/* الجزء السفلي من البطاقة */
+.hw-card-body { padding:12px 14px 14px; flex:1; display:flex; flex-direction:column; gap:10px; }
+.hw-lesson-num { font-size:.68rem; font-weight:700; color:var(--blue); background:var(--blue-light); border-radius:6px; padding:2px 7px; display:inline-block; }
+.hw-lesson-title { font-size:.86rem; font-weight:700; color:var(--dark); line-height:1.4; flex:1; }
+/* زر الحالة */
+.hw-action-btn {
+  width:100%; padding:9px; border:none; border-radius:9px;
+  font-family:'Cairo',sans-serif; font-size:.83rem; font-weight:700;
+  cursor:pointer; transition:all .22s; display:flex; align-items:center; justify-content:center; gap:7px;
+}
+.hw-btn-start { background:var(--blue); color:#fff; }
+.hw-btn-start:hover { background:var(--blue-dark); }
+.hw-btn-continue { background:var(--gold); color:#fff; }
+.hw-btn-continue:hover { background:#D97706; }
+.hw-btn-review { background:var(--green-light); color:var(--green); border:1.5px solid #6EE7B7; }
+.hw-btn-review:hover { background:var(--green); color:#fff; }
+
+/* نافذة الاختبار */
+#hw-quiz-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,.7); backdrop-filter:blur(6px);
+  z-index:3000; align-items:center; justify-content:center; padding:20px;
+}
+#hw-quiz-overlay.show { display:flex; }
+.hw-quiz-box {
+  background:#fff; border-radius:20px; padding:32px; max-width:560px; width:100%;
+  box-shadow:0 24px 80px rgba(0,0,0,.25); animation:fadeIn .3s ease;
+  direction:rtl;
+}
+.hw-quiz-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.hw-quiz-title { font-size:1rem; font-weight:900; color:var(--dark); }
+.hw-quiz-close {
+  background:var(--gray-light); border:none; border-radius:8px;
+  padding:7px 12px; font-size:.8rem; cursor:pointer; color:var(--gray);
+  font-family:'Cairo',sans-serif; font-weight:700;
+}
+.hw-quiz-close:hover { background:var(--red-light); color:var(--red); }
+.hw-q-direction { font-size:.82rem; font-weight:700; color:var(--blue); margin-bottom:8px; }
+.hw-q-text { font-size:1rem; font-weight:700; color:var(--dark); margin-bottom:6px; line-height:1.6; }
+.hw-q-image { width:100%; max-height:200px; object-fit:contain; border-radius:10px; margin-bottom:12px; background:var(--gray-light); }
+.hw-options { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+.hw-option {
+  display:flex; align-items:center; gap:12px; padding:12px 16px;
+  border:2px solid var(--gray-mid); border-radius:12px;
+  cursor:pointer; transition:all .2s; background:#fff;
+  font-family:'Cairo',sans-serif; font-size:.92rem; font-weight:600; color:var(--dark);
+}
+.hw-option:hover { border-color:var(--blue); background:var(--blue-light); }
+.hw-option.selected { border-color:var(--blue); background:var(--blue-light); color:var(--blue); }
+.hw-option-radio {
+  width:20px; height:20px; border-radius:50%;
+  border:2px solid var(--gray-mid); flex-shrink:0; transition:all .2s;
+  display:flex; align-items:center; justify-content:center;
+}
+.hw-option.selected .hw-option-radio { border-color:var(--blue); background:var(--blue); }
+.hw-option.selected .hw-option-radio::after { content:''; width:8px; height:8px; border-radius:50%; background:#fff; display:block; }
+/* أدوات التنقل في الاختبار */
+.hw-quiz-nav {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+}
+.hw-quiz-dots { display:flex; gap:6px; align-items:center; }
+.hw-q-dot { width:10px; height:10px; border-radius:50%; background:var(--gray-mid); transition:all .2s; }
+.hw-q-dot.done { background:var(--blue); }
+.hw-q-dot.current { background:var(--blue); width:14px; border-radius:50px; }
+.hw-quiz-btn {
+  padding:10px 22px; border:none; border-radius:10px;
+  font-family:'Cairo',sans-serif; font-size:.9rem; font-weight:700;
+  cursor:pointer; transition:all .22s; display:flex; align-items:center; gap:7px;
+}
+.hw-btn-prev { background:var(--gray-light); color:var(--gray); border:1.5px solid var(--gray-mid); }
+.hw-btn-prev:hover { background:var(--gray-mid); }
+.hw-btn-next { background:var(--blue); color:#fff; }
+.hw-btn-next:hover { background:var(--blue-dark); }
+.hw-btn-submit { background:var(--green); color:#fff; }
+.hw-btn-submit:hover { background:#059669; }
+
+/* شاشة النتيجة */
+.hw-result-box {
+  background:#fff; border-radius:20px; padding:40px 32px; max-width:480px; width:100%;
+  box-shadow:0 24px 80px rgba(0,0,0,.25); animation:fadeIn .4s ease;
+  text-align:center; direction:rtl;
+}
+.hw-result-icon { font-size:3.5rem; margin-bottom:10px; animation:bounce 1s ease-in-out 3; }
+.hw-result-title { font-size:1.3rem; font-weight:900; color:var(--dark); margin-bottom:6px; }
+.hw-result-sub { font-size:.88rem; color:var(--gray); margin-bottom:24px; }
+.hw-result-score-wrap {
+  display:inline-flex; align-items:center; gap:10px;
+  background:var(--blue-light); border:1.5px solid #BFDBFE;
+  border-radius:14px; padding:14px 24px; margin-bottom:16px;
+}
+.hw-result-score { font-size:1.8rem; font-weight:900; color:var(--blue); }
+.hw-result-stars { display:flex; gap:4px; margin-bottom:24px; justify-content:center; }
+.hw-result-star { font-size:1.8rem; }
+.hw-result-star.lit { filter:drop-shadow(0 0 6px #FCD34D); }
+.hw-result-back {
+  width:100%; padding:13px; background:var(--blue); color:#fff;
+  border:none; border-radius:12px; font-family:'Cairo',sans-serif;
+  font-size:.95rem; font-weight:700; cursor:pointer; transition:all .25s;
+}
+.hw-result-back:hover { background:var(--blue-dark); transform:translateY(-1px); }
 </style>
 </head>
 <body>
@@ -1277,6 +1461,7 @@ function _urlBase64ToUint8Array(base64String) {
 const NAV_ITEMS = [
   { id:'home',         icon:'🏠', label:'الرئيسية'   },
   { id:'courses',      icon:'📚', label:'كورساتي'    },
+  { id:'homework',     icon:'✏️', label:'واجباتي'    },
   { id:'sessions',     icon:'🎥', label:'الحصص'      },
   { id:'exams',        icon:'📝', label:'الاختبارات'  },
   { id:'progress',     icon:'📈', label:'التقدم'     },
@@ -1357,13 +1542,15 @@ document.addEventListener('click', e => {
 // ══════════════════════════════════════════════════════════════════
 function renderPage() {
   const c = document.getElementById('pages-container');
-  const pages = { home, courses, sessions, progress, subscription, settings, support, subjectMaterials, exams, myResults };
+  const pages = { home, courses, sessions, progress, subscription, settings, support, subjectMaterials, exams, myResults, homework, homeworkSubject };
   c.innerHTML = `<div class="page active">${(pages[STATE.currentPage] || home)()}</div>`;
-  if (STATE.currentPage === 'settings')  bindSettings();
-  if (STATE.currentPage === 'support')   bindSupport();
-  if (STATE.currentPage === 'exams')     loadStudentExams();
-  if (STATE.currentPage === 'myResults') loadMyResults();
-  if (STATE.currentPage === 'progress')  loadProgressData();
+  if (STATE.currentPage === 'settings')       bindSettings();
+  if (STATE.currentPage === 'support')        bindSupport();
+  if (STATE.currentPage === 'exams')          loadStudentExams();
+  if (STATE.currentPage === 'myResults')      loadMyResults();
+  if (STATE.currentPage === 'progress')       loadProgressData();
+  if (STATE.currentPage === 'homework')       loadHomeworkPage();
+  if (STATE.currentPage === 'homeworkSubject') loadHomeworkSubjectData();
 }
 
 // ── SUBJECT MATERIALS LOGIC ───────────────────────────────────────────────
@@ -2646,6 +2833,534 @@ async function loadMyResults() {
     }).join('');
   } catch(e) { el.innerHTML = `<p style="color:var(--red)">خطأ: ${e.message}</p>`; }
 }
+
+// ══════════════════════════════════════════════════════════════════
+// HOMEWORK SYSTEM — نظام الواجبات التفاعلي
+// ══════════════════════════════════════════════════════════════════
+
+// ── STATE الواجبات ──
+STATE.hwSubject   = null; // { teacher_id, grade_id, subject_name, teacher_name }
+STATE.hwUnits     = [];   // وحدات المادة المحددة
+STATE.hwAttempts  = {};   // { lesson_id: attempt }
+STATE.quizLesson  = null; // { id, title, questions:[] }
+STATE.quizAnswers = [];   // [ selected_index | null ]
+STATE.quizCurrent = 0;    // رقم السؤال الحالي
+STATE.quizReview  = false; // وضع المراجعة
+
+// ── حساب النجوم حسب النسبة ──
+function calcStars(pct) {
+  if (pct >= 85) return 3;
+  if (pct >= 50) return 2;
+  if (pct >= 30) return 1;
+  return 0;
+}
+function starsHTML(stars, big) {
+  const sz = big ? 'hw-result-star' : 'hw-star';
+  return [1,2,3].map(i =>
+    `<span class="${sz}${stars >= i ? (big ? ' lit' : ' active') : ''}">★</span>`
+  ).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────
+// صفحة "واجباتي" الرئيسية — عرض المواد
+// ─────────────────────────────────────────────────────────────────
+function homework() {
+  const enr = STATE.enrollments || [];
+  const active = enr.filter(e => isSubscriptionActive(e._request));
+
+  const subjectIcons = {
+    'رياضيات':'🔢','math':'🔢','عربي':'📖','arabic':'📖','لغة عربية':'📖',
+    'انجليزي':'🔤','english':'🔤','لغة انجليزية':'🔤','علوم':'🔬','science':'🔬',
+    'فيزياء':'⚗️','physics':'⚗️','كيمياء':'🧪','chemistry':'🧪','أحياء':'🌱',
+    'biology':'🌱','تاريخ':'📜','history':'📜','جغرافيا':'🌍','geography':'🌍',
+    'دراسات':'📚','islamic':'🕌','إسلامية':'🕌','تربية إسلامية':'🕌',
+    'حاسب':'💻','computer':'💻','فنون':'🎨','art':'🎨',
+  };
+
+  function getSubjIcon(name) {
+    if (!name) return '📘';
+    const lower = name.toLowerCase();
+    for (const [k, v] of Object.entries(subjectIcons)) {
+      if (lower.includes(k)) return v;
+    }
+    return '📘';
+  }
+
+  return `
+    <div class="page-title">واجباتي ✏️</div>
+    <p class="page-sub">اختر مادة لعرض واجباتها وتمارينها</p>
+    ${active.length === 0 ? `
+      <div class="empty-box" style="margin-top:40px">
+        <div class="ei">✏️</div>
+        <div class="et">لا توجد مواد نشطة</div>
+        <div class="ed">اشترك في مادة أولاً لتظهر هنا واجباتها</div>
+      </div>` : `
+    <div class="hw-subjects-grid" id="hw-subjects-grid">
+      ${active.map(e => {
+        const name    = e.courses?.name || e._request?.subject || '—';
+        const teacher = e.courses?.teacher_name || '';
+        const icon    = getSubjIcon(name);
+        return `
+        <div class="hw-subject-card" onclick="openHomeworkSubject('${e.teacher_id}','${e.grade_id}','${name.replace(/'/g,"\\'")}','${teacher.replace(/'/g,"\\'")}')">
+          <div class="hw-subj-icon">${icon}</div>
+          <div class="hw-subj-name">${name}</div>
+          ${teacher ? `<div class="hw-subj-teacher">👨‍🏫 ${teacher}</div>` : ''}
+          <div><span class="hw-subj-badge">🟢 نشط</span></div>
+        </div>`;
+      }).join('')}
+    </div>`}
+  `;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// فتح مادة محددة
+// ─────────────────────────────────────────────────────────────────
+function openHomeworkSubject(teacherId, gradeId, subjectName, teacherName) {
+  STATE.hwSubject  = { teacher_id: teacherId, grade_id: gradeId, subject_name: subjectName, teacher_name: teacherName };
+  STATE.hwUnits    = [];
+  STATE.hwAttempts = {};
+  STATE.currentPage = 'homeworkSubject';
+  renderNav();
+  renderPage();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// صفحة الوحدات والدروس (skeleton أولاً ثم بيانات)
+// ─────────────────────────────────────────────────────────────────
+function homeworkSubject() {
+  const subj = STATE.hwSubject || {};
+  const units = STATE.hwUnits || [];
+  const attempts = STATE.hwAttempts || {};
+
+  const skeletonCards = Array(4).fill(0).map(() => `
+    <div class="hw-lesson-card">
+      <div class="hw-card-top" style="background:var(--gray-mid)"></div>
+      <div class="hw-card-body">
+        <div class="skel" style="height:10px;width:40%;border-radius:6px"></div>
+        <div class="skel" style="height:14px;width:80%;border-radius:6px"></div>
+        <div class="skel" style="height:36px;border-radius:9px"></div>
+      </div>
+    </div>`).join('');
+
+  const unitsHTML = units.length === 0
+    ? `<div class="hw-unit-wrap">
+        <div class="hw-unit-header">
+          <span class="hw-unit-title"><span class="skel" style="display:inline-block;width:160px;height:14px;border-radius:6px"></span></span>
+          <span class="skel" style="display:inline-block;width:60px;height:20px;border-radius:50px"></span>
+        </div>
+        <div class="hw-lessons-grid">${skeletonCards}</div>
+       </div>`
+    : units.map(unit => {
+        const lessons  = unit.lessons || [];
+        const doneLess = lessons.filter(l => attempts[l.id]?.stars > 0).length;
+        const totalLess = lessons.length;
+
+        const lessonsHTML = lessons.length === 0
+          ? `<div class="empty-box"><div class="ei">📝</div><div class="et">لا توجد دروس بعد</div></div>`
+          : lessons.map(lesson => {
+              const att   = attempts[lesson.id];
+              const pct   = att ? att.score_pct : null;
+              const stars = att ? att.stars : 0;
+              const isDone    = att && att.score_pct !== null;
+              const isStarted = att && !isDone; // لو بدأ لكن لم ينتهِ (نادر)
+
+              const topClass  = isDone ? 'done-green' : '';
+              const numLabel  = lesson.lesson_number != null ? `${lesson.lesson_number}.` : '';
+
+              const actionBtn = isDone
+                ? `<button class="hw-action-btn hw-btn-review" onclick="openLessonQuiz('${lesson.id}','${lesson.title.replace(/'/g,"\\'")}',true)">👁 مراجعة</button>`
+                : `<button class="hw-action-btn hw-btn-start" onclick="openLessonQuiz('${lesson.id}','${lesson.title.replace(/'/g,"\\'")}',false)">▶ ابدأ</button>`;
+
+              return `
+              <div class="hw-lesson-card">
+                <div class="hw-card-top ${topClass}">
+                  <div class="hw-stars">${starsHTML(stars, false)}</div>
+                  <div class="hw-score-pct">${isDone ? Math.round(pct) + '%' : '0%'}</div>
+                </div>
+                <div class="hw-card-body">
+                  <span class="hw-lesson-num">${numLabel} ${lesson.title.substring(0,25)}${lesson.title.length > 25 ? '...' : ''}</span>
+                  <div class="hw-lesson-title">${lesson.title}</div>
+                  ${actionBtn}
+                </div>
+              </div>`;
+            }).join('');
+
+        return `
+        <div class="hw-unit-wrap">
+          <div class="hw-unit-header">
+            <span class="hw-unit-title">📦 ${unit.title}</span>
+            <span class="hw-unit-progress">✅ ${doneLess}/${totalLess} انتهى</span>
+          </div>
+          <div class="hw-lessons-grid">${lessonsHTML}</div>
+        </div>`;
+      }).join('');
+
+  return `
+    <button class="hw-back-btn" onclick="goTo('homework')">← العودة لواجباتي</button>
+    <div class="hw-subject-hero">
+      <div class="hw-hero-title">✏️ ${subj.subject_name || 'الواجبات'}</div>
+      <div class="hw-hero-sub">${subj.teacher_name ? '👨‍🏫 ' + subj.teacher_name : 'واجبات المادة'}</div>
+    </div>
+    <div id="hw-units-container">${unitsHTML}</div>
+  `;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// جلب بيانات الوحدات والدروس من Supabase
+// ─────────────────────────────────────────────────────────────────
+async function loadHomeworkSubjectData() {
+  if (STATE.currentPage !== 'homeworkSubject') return;
+  const subj = STATE.hwSubject;
+  if (!subj) return;
+
+  try {
+    // 1. جلب الوحدات
+    const { data: units, error: uErr } = await sb
+      .from('homework_units')
+      .select('id, title, order_index')
+      .eq('teacher_id', subj.teacher_id)
+      .eq('grade_id', subj.grade_id)
+      .eq('subject_name', subj.subject_name)
+      .order('order_index', { ascending: true });
+    if (uErr) throw uErr;
+
+    if (!units || units.length === 0) {
+      STATE.hwUnits = [];
+      const c = document.getElementById('hw-units-container');
+      if (c) c.innerHTML = `
+        <div class="empty-box" style="margin-top:30px">
+          <div class="ei">📝</div>
+          <div class="et">لا توجد واجبات بعد</div>
+          <div class="ed">سيضيف المعلم الواجبات قريباً</div>
+        </div>`;
+      return;
+    }
+
+    // 2. جلب الدروس لكل الوحدات دفعة واحدة
+    const unitIds = units.map(u => u.id);
+    const { data: lessons, error: lErr } = await sb
+      .from('homework_lessons')
+      .select('id, unit_id, title, lesson_number, order_index')
+      .in('unit_id', unitIds)
+      .order('order_index', { ascending: true });
+    if (lErr) throw lErr;
+
+    // 3. جلب المحاولات السابقة للطالب
+    const lessonIds = (lessons || []).map(l => l.id);
+    let attemptsMap = {};
+    if (lessonIds.length > 0 && STATE.user) {
+      const { data: atts } = await sb
+        .from('homework_attempts')
+        .select('lesson_id, score, total_questions, score_pct, stars')
+        .eq('student_id', STATE.user.id)
+        .in('lesson_id', lessonIds);
+      (atts || []).forEach(a => { attemptsMap[a.lesson_id] = a; });
+    }
+
+    // 4. تجميع الوحدات مع دروسها
+    STATE.hwAttempts = attemptsMap;
+    STATE.hwUnits = units.map(u => ({
+      ...u,
+      lessons: (lessons || []).filter(l => l.unit_id === u.id),
+    }));
+
+    // 5. إعادة رسم المحتوى
+    const c = document.getElementById('hw-units-container');
+    if (c) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = homeworkSubject();
+      const newC = tmp.querySelector('#hw-units-container');
+      if (newC) c.innerHTML = newC.innerHTML;
+    }
+
+  } catch(err) {
+    const c = document.getElementById('hw-units-container');
+    if (c) c.innerHTML = `<div class="err-box">⚠️ خطأ: ${err.message}</div>`;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// loadHomeworkPage — جلب محاولات الطالب للصفحة الرئيسية (اختياري)
+// ─────────────────────────────────────────────────────────────────
+async function loadHomeworkPage() {
+  // لا توجد بيانات إضافية تحتاج جلب في الصفحة الرئيسية
+  // المواد مأخوذة من STATE.enrollments
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// نافذة الاختبار (Quiz)
+// ═══════════════════════════════════════════════════════════════════
+
+async function openLessonQuiz(lessonId, lessonTitle, reviewMode) {
+  STATE.quizLesson  = { id: lessonId, title: lessonTitle, questions: [] };
+  STATE.quizAnswers = [];
+  STATE.quizCurrent = 0;
+  STATE.quizReview  = reviewMode || false;
+
+  // فتح الـ overlay فوراً مع loading
+  ensureQuizOverlay();
+  const ov = document.getElementById('hw-quiz-overlay');
+  ov.classList.add('show');
+  document.body.style.overflow = 'hidden';
+  renderQuizLoading();
+
+  try {
+    // جلب الأسئلة
+    const { data: qs, error } = await sb
+      .from('homework_questions')
+      .select('id, question_text, image_url, options, order_index')
+      .eq('lesson_id', lessonId)
+      .order('order_index', { ascending: true });
+    if (error) throw error;
+
+    if (!qs || qs.length === 0) {
+      renderQuizEmpty();
+      return;
+    }
+
+    STATE.quizLesson.questions = qs;
+    STATE.quizAnswers = new Array(qs.length).fill(null);
+
+    // لو وضع مراجعة: نحمّل الإجابات السابقة
+    if (reviewMode && STATE.user) {
+      const { data: att } = await sb
+        .from('homework_attempts')
+        .select('answers')
+        .eq('student_id', STATE.user.id)
+        .eq('lesson_id', lessonId)
+        .single();
+      if (att && att.answers) {
+        try {
+          const saved = typeof att.answers === 'string' ? JSON.parse(att.answers) : att.answers;
+          saved.forEach((a, i) => { if (i < STATE.quizAnswers.length) STATE.quizAnswers[i] = a; });
+        } catch(e) {}
+      }
+    }
+
+    renderQuizQuestion();
+  } catch(err) {
+    const box = document.getElementById('hw-quiz-box');
+    if (box) box.innerHTML = `
+      <div style="text-align:center;padding:30px">
+        <div style="font-size:2rem;margin-bottom:12px">⚠️</div>
+        <div style="font-weight:700;color:var(--red);margin-bottom:16px">خطأ في تحميل الأسئلة</div>
+        <div style="font-size:.85rem;color:var(--gray);margin-bottom:20px">${err.message}</div>
+        <button class="hw-quiz-close" onclick="closeQuiz()">إغلاق</button>
+      </div>`;
+  }
+}
+
+function ensureQuizOverlay() {
+  if (document.getElementById('hw-quiz-overlay')) return;
+  const ov = document.createElement('div');
+  ov.id = 'hw-quiz-overlay';
+  ov.innerHTML = `<div class="hw-quiz-box" id="hw-quiz-box"></div>`;
+  ov.addEventListener('click', e => { if (e.target === ov && !STATE.quizReview) closeQuiz(); });
+  document.body.appendChild(ov);
+}
+
+function renderQuizLoading() {
+  const box = document.getElementById('hw-quiz-box');
+  if (!box) return;
+  box.innerHTML = `
+    <div style="text-align:center;padding:40px">
+      <div class="spinner" style="margin:0 auto 16px;border-color:var(--gray-mid);border-top-color:var(--blue)"></div>
+      <div style="font-family:'Cairo',sans-serif;color:var(--gray);font-size:.9rem">جاري تحميل الأسئلة...</div>
+    </div>`;
+}
+
+function renderQuizEmpty() {
+  const box = document.getElementById('hw-quiz-box');
+  if (!box) return;
+  box.innerHTML = `
+    <div style="text-align:center;padding:36px">
+      <div style="font-size:2.5rem;margin-bottom:12px">📝</div>
+      <div style="font-weight:900;font-size:1rem;color:var(--dark);margin-bottom:6px">لا توجد أسئلة بعد</div>
+      <div style="font-size:.85rem;color:var(--gray);margin-bottom:20px">سيضيف المعلم الأسئلة قريباً</div>
+      <button class="hw-quiz-btn hw-btn-prev" onclick="closeQuiz()">إغلاق</button>
+    </div>`;
+}
+
+function renderQuizQuestion() {
+  const qs      = STATE.quizLesson.questions;
+  const idx     = STATE.quizCurrent;
+  const q       = qs[idx];
+  const total   = qs.length;
+  const selAns  = STATE.quizAnswers[idx];
+  const isLast  = idx === total - 1;
+  const isReview = STATE.quizReview;
+  const box     = document.getElementById('hw-quiz-box');
+  if (!box || !q) return;
+
+  // خيارات السؤال
+  let options = [];
+  try {
+    options = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+  } catch(e) { options = []; }
+
+  const optionsHTML = options.map((opt, i) => {
+    const text = typeof opt === 'string' ? opt : (opt.text || opt);
+    const isSel = selAns === i;
+    return `
+    <div class="hw-option${isSel ? ' selected' : ''}" onclick="${isReview ? '' : `selectQuizAnswer(${i})`}">
+      <div class="hw-option-radio"></div>
+      <span>${text}</span>
+    </div>`;
+  }).join('');
+
+  // نقاط التقدم
+  const dotsHTML = Array(total).fill(0).map((_, i) =>
+    `<div class="hw-q-dot${i < idx ? ' done' : i === idx ? ' current' : ''}"></div>`
+  ).join('');
+
+  // الزر التالي / إرسال
+  const nextBtn = isReview
+    ? `<button class="hw-quiz-btn hw-btn-next" onclick="${isLast ? 'closeQuiz()' : 'nextQuizQ()'}">${isLast ? '✓ إغلاق' : 'التالي ←'}</button>`
+    : isLast
+      ? `<button class="hw-quiz-btn hw-btn-submit" id="hw-submit-btn" onclick="submitQuiz()" ${selAns === null ? 'disabled style="opacity:.6;cursor:not-allowed"' : ''}>إرسال ✓</button>`
+      : `<button class="hw-quiz-btn hw-btn-next" onclick="nextQuizQ()" ${selAns === null ? 'disabled style="opacity:.6;cursor:not-allowed"' : ''}>التالي ←</button>`;
+
+  box.innerHTML = `
+    <div class="hw-quiz-header">
+      <div class="hw-quiz-title">✏️ ${STATE.quizLesson.title}</div>
+      <button class="hw-quiz-close" onclick="closeQuiz()">✕ ${isReview ? 'إغلاق' : 'إنهاء'}</button>
+    </div>
+    ${q.image_url ? `<img src="${q.image_url}" class="hw-q-image" alt="صورة السؤال">` : ''}
+    <div class="hw-q-direction">اختر الإجابة الصحيحة.</div>
+    <div class="hw-q-text">${q.question_text}</div>
+    <div class="hw-options">${optionsHTML}</div>
+    <div class="hw-quiz-nav">
+      ${idx > 0
+        ? `<button class="hw-quiz-btn hw-btn-prev" onclick="prevQuizQ()">→ السابق</button>`
+        : `<div></div>`}
+      <div class="hw-quiz-dots">${dotsHTML}<span style="font-size:.75rem;color:var(--gray);font-family:'Cairo',sans-serif;margin-right:6px">${idx+1}/${total}</span></div>
+      ${nextBtn}
+    </div>`;
+}
+
+function selectQuizAnswer(optIndex) {
+  STATE.quizAnswers[STATE.quizCurrent] = optIndex;
+  renderQuizQuestion();
+}
+
+function nextQuizQ() {
+  if (STATE.quizCurrent < STATE.quizLesson.questions.length - 1) {
+    STATE.quizCurrent++;
+    renderQuizQuestion();
+  }
+}
+function prevQuizQ() {
+  if (STATE.quizCurrent > 0) {
+    STATE.quizCurrent--;
+    renderQuizQuestion();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// إرسال الاختبار وحساب النتيجة
+// ─────────────────────────────────────────────────────────────────
+async function submitQuiz() {
+  const qs      = STATE.quizLesson.questions;
+  const answers = STATE.quizAnswers;
+  const total   = qs.length;
+
+  // حساب الدرجة
+  let correct = 0;
+  const answersData = qs.map((q, i) => {
+    let options = [];
+    try { options = typeof q.options === 'string' ? JSON.parse(q.options) : q.options; } catch(e) {}
+    const sel = answers[i];
+    const selOpt = sel !== null && sel !== undefined ? options[sel] : null;
+    const isCorrect = selOpt && (typeof selOpt === 'object' ? selOpt.is_correct : false);
+    if (isCorrect) correct++;
+    return sel; // نحفظ index الإجابة المختارة
+  });
+
+  const pct   = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const stars = calcStars(pct);
+
+  // حفظ في Supabase
+  if (STATE.user) {
+    try {
+      await sb.from('homework_attempts').upsert({
+        student_id      : STATE.user.id,
+        lesson_id       : STATE.quizLesson.id,
+        answers         : JSON.stringify(answersData),
+        score           : correct,
+        total_questions : total,
+        score_pct       : pct,
+        stars           : stars,
+        completed_at    : new Date().toISOString(),
+      }, { onConflict: 'student_id,lesson_id' });
+    } catch(e) { console.warn('Homework save error:', e.message); }
+  }
+
+  // تحديث الـ STATE المحلي
+  STATE.hwAttempts[STATE.quizLesson.id] = { score: correct, total_questions: total, score_pct: pct, stars };
+
+  // عرض النتيجة
+  renderQuizResult(correct, total, pct, stars);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// شاشة النتيجة
+// ─────────────────────────────────────────────────────────────────
+function renderQuizResult(correct, total, pct, stars) {
+  const box = document.getElementById('hw-quiz-box');
+  if (!box) return;
+
+  const icon = stars === 3 ? '🎉' : stars === 2 ? '🌟' : stars === 1 ? '👍' : '💪';
+  const msg  = stars === 3 ? 'رائع! أداء ممتاز!' : stars === 2 ? 'جيد جداً! استمر!' : stars === 1 ? 'جيد! يمكنك التحسين' : 'حاول مرة أخرى!';
+
+  box.className = 'hw-result-box';
+  box.innerHTML = `
+    <div class="hw-result-icon">${icon}</div>
+    <div class="hw-result-title">Wohoo! أنهيت النشاط! 🎓</div>
+    <div class="hw-result-sub">${msg}</div>
+    <div class="hw-result-score-wrap">
+      <span style="font-size:1.4rem">💯</span>
+      <div class="hw-result-score">${pct}%</div>
+      <div style="color:var(--gray);font-size:.82rem;font-family:'Cairo',sans-serif">درجتك النهائية</div>
+    </div>
+    <div style="font-size:.88rem;color:var(--gray);font-family:'Cairo',sans-serif;margin-bottom:12px">
+      ${correct} من ${total} إجابة صحيحة
+    </div>
+    <div class="hw-result-stars">${starsHTML(stars, true)}</div>
+    <button class="hw-result-back" onclick="closeQuizAfterResult()">العودة للدروس</button>
+  `;
+}
+
+function closeQuizAfterResult() {
+  closeQuiz();
+  // إعادة رسم صفحة الوحدات لتحديث حالة الكروت
+  if (STATE.currentPage === 'homeworkSubject') {
+    const c = document.getElementById('hw-units-container');
+    if (c) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = homeworkSubject();
+      const newC = tmp.querySelector('#hw-units-container');
+      if (newC) c.innerHTML = newC.innerHTML;
+    }
+  }
+}
+
+function closeQuiz() {
+  const ov = document.getElementById('hw-quiz-overlay');
+  if (ov) ov.classList.remove('show');
+  document.body.style.overflow = '';
+  STATE.quizLesson  = null;
+  STATE.quizAnswers = [];
+  STATE.quizCurrent = 0;
+}
+
+// منع إغلاق الاختبار بالـ Escape لو مو وضع مراجعة
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const ov = document.getElementById('hw-quiz-overlay');
+    if (ov && ov.classList.contains('show')) { closeQuiz(); }
+  }
+});
+
 </script>
 <script>
 function openBookingModal() {
