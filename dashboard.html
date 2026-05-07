@@ -708,6 +708,74 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dar
   font-size:.95rem; font-weight:700; cursor:pointer; transition:all .25s;
 }
 .hw-result-back:hover { background:var(--blue-dark); transform:translateY(-1px); }
+
+/* ── HOME SUBJECT CARDS (بطاقات المواد في الصفحة الرئيسية) ── */
+.home-subjects-section {
+  margin-bottom:24px;
+}
+.home-subjects-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:14px;
+}
+.home-subjects-title {
+  font-size:1rem; font-weight:900; color:var(--dark);
+  display:flex; align-items:center; gap:8px;
+}
+.home-subjects-count {
+  background:var(--blue-light); color:var(--blue);
+  border-radius:50px; padding:2px 10px; font-size:.75rem; font-weight:700;
+}
+.home-subjects-viewall {
+  font-size:.78rem; font-weight:700; color:var(--blue); cursor:pointer;
+  background:none; border:none; font-family:'Cairo',sans-serif;
+  display:flex; align-items:center; gap:4px; padding:0;
+}
+.home-subjects-viewall:hover { text-decoration:underline; }
+.home-subjects-scroll {
+  display:flex; gap:14px; overflow-x:auto; padding-bottom:6px;
+  scrollbar-width:none;
+}
+.home-subjects-scroll::-webkit-scrollbar { display:none; }
+/* بطاقة المادة */
+.hs-card {
+  flex:0 0 190px; border-radius:18px; padding:18px 16px 16px;
+  cursor:pointer; transition:all .28s; position:relative; overflow:hidden;
+  min-height:110px; display:flex; flex-direction:column; justify-content:space-between;
+  box-shadow:0 4px 16px rgba(0,0,0,.1);
+}
+.hs-card:hover { transform:translateY(-5px); box-shadow:0 12px 32px rgba(0,0,0,.18); }
+.hs-card:active { transform:scale(.97); }
+/* أيقونة المادة (الرسمة) */
+.hs-illustration {
+  position:absolute; bottom:-4px; left:-4px;
+  font-size:3.8rem; opacity:.22; transform:rotate(-15deg);
+  line-height:1; pointer-events:none; user-select:none;
+}
+/* السهم */
+.hs-arrow {
+  position:absolute; left:12px; top:50%; transform:translateY(-50%);
+  width:28px; height:28px; border-radius:50%;
+  background:rgba(255,255,255,.25); display:flex; align-items:center; justify-content:center;
+  font-size:.85rem; color:#fff;
+}
+/* نص */
+.hs-name {
+  font-size:1.02rem; font-weight:900; color:#fff;
+  line-height:1.3; margin-bottom:4px; position:relative; z-index:1;
+}
+.hs-teacher {
+  font-size:.74rem; font-weight:600; color:rgba(255,255,255,.8);
+  position:relative; z-index:1;
+}
+/* ألوان المواد */
+.hs-green  { background:linear-gradient(135deg,#0B7A5A,#10B981); }
+.hs-blue   { background:linear-gradient(135deg,#1E40AF,#3B82F6); }
+.hs-pink   { background:linear-gradient(135deg,#BE185D,#EC4899); }
+.hs-gold   { background:linear-gradient(135deg,#B45309,#F59E0B); }
+.hs-purple { background:linear-gradient(135deg,#6D28D9,#A78BFA); }
+.hs-red    { background:linear-gradient(135deg,#B91C1C,#EF4444); }
+.hs-teal   { background:linear-gradient(135deg,#0E7490,#22D3EE); }
+.hs-orange { background:linear-gradient(135deg,#C2410C,#FB923C); }
 </style>
 </head>
 <body>
@@ -1581,19 +1649,80 @@ async function openSubjectMaterials(teacher_id, grade_id, subject_name) {
 }
 
 // ── HOME ─────────────────────────────────────────────────────────
+// خريطة ألوان وأيقونات المواد
+const SUBJECT_STYLES = [
+  { keys:['رياضيات','math','mathematics'],          color:'hs-blue',   icon:'🔢', art:'📐' },
+  { keys:['عربي','arabic','لغة عربية'],             color:'hs-green',  icon:'📖', art:'🖊️' },
+  { keys:['انجليزي','english','لغة انجليزية'],      color:'hs-blue',   icon:'🔤', art:'✍️' },
+  { keys:['إسلامية','islamic','تربية إسلامية','دين'],color:'hs-pink',   icon:'🕌', art:'☪️' },
+  { keys:['فيزياء','physics'],                      color:'hs-teal',   icon:'⚗️', art:'🔭' },
+  { keys:['كيمياء','chemistry'],                    color:'hs-purple', icon:'🧪', art:'⚗️' },
+  { keys:['أحياء','biology','علوم'],                color:'hs-green',  icon:'🌱', art:'🔬' },
+  { keys:['تاريخ','history'],                       color:'hs-gold',   icon:'📜', art:'🏛️' },
+  { keys:['جغرافيا','geography'],                   color:'hs-teal',   icon:'🌍', art:'🗺️' },
+  { keys:['دراسات','social'],                       color:'hs-orange', icon:'📚', art:'🌐' },
+  { keys:['حاسب','computer','technology'],          color:'hs-purple', icon:'💻', art:'🖥️' },
+  { keys:['فنون','art'],                            color:'hs-pink',   icon:'🎨', art:'🖌️' },
+];
+const SUBJECT_COLORS = ['hs-green','hs-blue','hs-pink','hs-gold','hs-purple','hs-red','hs-teal','hs-orange'];
+
+function getSubjectStyle(name, idx) {
+  if (!name) return { color: SUBJECT_COLORS[idx % SUBJECT_COLORS.length], icon:'📘', art:'📘' };
+  const lower = name.toLowerCase();
+  for (const s of SUBJECT_STYLES) {
+    if (s.keys.some(k => lower.includes(k))) return s;
+  }
+  return { color: SUBJECT_COLORS[idx % SUBJECT_COLORS.length], icon:'📘', art:'📖' };
+}
+
 function home() {
   const name   = STATE.profile?.full_name?.split(' ')[0] || 'طالب';
   const enr    = STATE.enrollments;
   const ses    = STATE.sessions;
-  // حساب الحضور من بيانات الاشتراك الحقيقية (sessions_remaining)
   const upcoming = ses.filter(s => sessionStatus(s) !== 'ended');
-  // نستخدم بيانات الحضور المحفوظة إن وجدت، وإلا نعرض 0
   const avgP   = STATE._progressPct != null ? STATE._progressPct : 0;
   const totalDone = STATE._totalPresent != null ? STATE._totalPresent : 0;
+
+  // المواد النشطة فقط
+  const activeEnr = enr.filter(e => isSubscriptionActive(e._request));
+
+  // ── قسم بطاقات الواجبات ──
+  const subjectCardsHTML = activeEnr.length === 0 ? '' : `
+  <div class="home-subjects-section">
+    <div class="home-subjects-header">
+      <div class="home-subjects-title">
+        ✏️ واجباتي
+        <span class="home-subjects-count">${activeEnr.length}</span>
+      </div>
+      <button class="home-subjects-viewall" onclick="goTo('homework')">عرض الكل ←</button>
+    </div>
+    <div class="home-subjects-scroll">
+      ${activeEnr.map((e, idx) => {
+        const subName = e.courses?.name || e._request?.subject || '—';
+        const teacher = e.courses?.teacher_name || '';
+        const tid     = e.teacher_id || '';
+        const gid     = e.grade_id   || '';
+        const style   = getSubjectStyle(subName, idx);
+        return `
+        <div class="hs-card ${style.color}"
+             onclick="openHomeworkSubject('${tid}','${gid}','${subName.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${teacher.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
+          <div>
+            <div class="hs-name">${subName}</div>
+            ${teacher ? `<div class="hs-teacher">👨‍🏫 ${teacher}</div>` : ''}
+          </div>
+          <div class="hs-illustration">${style.art}</div>
+          <div class="hs-arrow">←</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
 
   return `
     <div class="page-title">لوحة التحكم 🏠</div>
     <p class="page-sub">مرحباً ${name}، إليك ملخص نشاطك التعليمي</p>
+
+    ${subjectCardsHTML}
+
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-icon blue">📚</div><div><div class="stat-num">${enr.length}</div><div class="stat-label">كورسات مسجل بها</div><div class="stat-delta delta-up">↑ جميع الكورسات نشطة</div></div></div>
       <div class="stat-card"><div class="stat-icon green">🎥</div><div><div class="stat-num">${upcoming.length}</div><div class="stat-label">حصص قادمة</div><div class="stat-delta delta-up">↑ هذا الأسبوع</div></div></div>
@@ -2865,26 +2994,8 @@ function starsHTML(stars, big) {
 // صفحة "واجباتي" الرئيسية — عرض المواد
 // ─────────────────────────────────────────────────────────────────
 function homework() {
-  const enr = STATE.enrollments || [];
+  const enr    = STATE.enrollments || [];
   const active = enr.filter(e => isSubscriptionActive(e._request));
-
-  const subjectIcons = {
-    'رياضيات':'🔢','math':'🔢','عربي':'📖','arabic':'📖','لغة عربية':'📖',
-    'انجليزي':'🔤','english':'🔤','لغة انجليزية':'🔤','علوم':'🔬','science':'🔬',
-    'فيزياء':'⚗️','physics':'⚗️','كيمياء':'🧪','chemistry':'🧪','أحياء':'🌱',
-    'biology':'🌱','تاريخ':'📜','history':'📜','جغرافيا':'🌍','geography':'🌍',
-    'دراسات':'📚','islamic':'🕌','إسلامية':'🕌','تربية إسلامية':'🕌',
-    'حاسب':'💻','computer':'💻','فنون':'🎨','art':'🎨',
-  };
-
-  function getSubjIcon(name) {
-    if (!name) return '📘';
-    const lower = name.toLowerCase();
-    for (const [k, v] of Object.entries(subjectIcons)) {
-      if (lower.includes(k)) return v;
-    }
-    return '📘';
-  }
 
   return `
     <div class="page-title">واجباتي ✏️</div>
@@ -2895,17 +3006,23 @@ function homework() {
         <div class="et">لا توجد مواد نشطة</div>
         <div class="ed">اشترك في مادة أولاً لتظهر هنا واجباتها</div>
       </div>` : `
-    <div class="hw-subjects-grid" id="hw-subjects-grid">
-      ${active.map(e => {
-        const name    = e.courses?.name || e._request?.subject || '—';
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:16px;margin-top:4px">
+      ${active.map((e, idx) => {
+        const subName = e.courses?.name || e._request?.subject || '—';
         const teacher = e.courses?.teacher_name || '';
-        const icon    = getSubjIcon(name);
+        const tid     = e.teacher_id || '';
+        const gid     = e.grade_id   || '';
+        const style   = getSubjectStyle(subName, idx);
         return `
-        <div class="hw-subject-card" onclick="openHomeworkSubject('${e.teacher_id}','${e.grade_id}','${name.replace(/'/g,"\\'")}','${teacher.replace(/'/g,"\\'")}')">
-          <div class="hw-subj-icon">${icon}</div>
-          <div class="hw-subj-name">${name}</div>
-          ${teacher ? `<div class="hw-subj-teacher">👨‍🏫 ${teacher}</div>` : ''}
-          <div><span class="hw-subj-badge">🟢 نشط</span></div>
+        <div class="hs-card ${style.color}"
+             style="flex:unset"
+             onclick="openHomeworkSubject('${tid}','${gid}','${subName.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${teacher.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
+          <div>
+            <div class="hs-name">${subName}</div>
+            ${teacher ? `<div class="hs-teacher">👨‍🏫 ${teacher}</div>` : ''}
+          </div>
+          <div class="hs-illustration">${style.art}</div>
+          <div class="hs-arrow">←</div>
         </div>`;
       }).join('')}
     </div>`}
