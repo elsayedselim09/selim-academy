@@ -4908,19 +4908,20 @@ function addQuestionField() {
       <div class="section-body" style="padding:14px 16px">
         <!-- Question text + image -->
         <div class="fg">
-          <label>نص السؤال *</label>
+          <label>نص السؤال * <span style="font-size:.72rem;color:var(--gray);font-weight:500">(أو الصق سكرين شوت Ctrl+V)</span></label>
           <div style="display:flex;align-items:flex-start;gap:8px">
-            <textarea class="eq-text" rows="2" placeholder="اكتب السؤال هنا..." style="flex:1"></textarea>
-            <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px">
-              <button type="button" onclick="triggerQImgUpload(${n})" 
-                style="background:var(--blue-light);border:1.5px solid #BFDBFE;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:.8rem;color:var(--blue);font-family:'Cairo',sans-serif;white-space:nowrap;display:flex;align-items:center;gap:4px">
+            <textarea class="eq-text" rows="2" placeholder="اكتب السؤال هنا أو الصق صورة..." style="flex:1"></textarea>
+            <div class="paste-img-zone" style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer"
+                 onclick="triggerQImgUpload(${n})">
+              <button type="button" style="background:var(--blue-light);border:1.5px solid #BFDBFE;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:.8rem;color:var(--blue);font-family:'Cairo',sans-serif;white-space:nowrap;display:flex;align-items:center;gap:4px;pointer-events:none">
                 🖼️ صورة
               </button>
               <input type="file" id="q-img-input-${n}" accept="image/*" style="display:none" onchange="previewQImg(${n}, this)">
-              <div id="q-img-preview-${n}" style="width:60px;height:60px;border-radius:8px;border:1.5px dashed var(--gray-mid);display:none;overflow:hidden;cursor:pointer" onclick="triggerQImgUpload(${n})">
+              <div id="q-img-preview-${n}" style="width:60px;height:60px;border-radius:8px;border:1.5px dashed var(--gray-mid);display:none;overflow:hidden">
                 <img id="q-img-thumb-${n}" style="width:100%;height:100%;object-fit:cover">
               </div>
               <div id="q-img-name-${n}" style="font-size:.65rem;color:var(--blue);text-align:center;max-width:70px;word-break:break-all;display:none"></div>
+              <span class="paste-label" style="font-size:.6rem;color:var(--blue)"></span>
             </div>
           </div>
         </div>
@@ -5011,6 +5012,72 @@ function previewOptImg(n, opt, input) {
   const url = URL.createObjectURL(file);
   document.getElementById('opt-img-thumb-'+n+'-'+opt).src = url;
   document.getElementById('opt-img-preview-'+n+'-'+opt).style.display = 'block';
+}
+
+// ──────────────────────────────────────────────────────────────
+// 📸 GLOBAL CLIPBOARD PASTE (لصق السكرين شوت Ctrl+V)
+// يعمل في كل نوافذ الاختبار والواجب
+// ──────────────────────────────────────────────────────────────
+let _pasteTarget = null; // العنصر النشط الذي سيستقبل الصورة
+
+// ضبط العنصر المستهدف عند التركيز
+['q-img', 'opt-img', 'hwq-img', 'hwq2-img'].forEach(prefix => {
+  document.addEventListener('focusin', e => {
+    const closest = e.target.closest('.paste-img-zone');
+    if (closest) _pasteTarget = closest;
+  });
+});
+
+document.addEventListener('paste', function(e) {
+  // تحقق من وجود صورة في الحافظة
+  const items = Array.from(e.clipboardData?.items || []);
+  const imgItem = items.find(i => i.type.startsWith('image'));
+  if (!imgItem) return;
+
+  const file = imgItem.getAsFile();
+  if (!file) return;
+
+  // ابحث عن أقرب حاوية paste-img-zone للعنصر المركز عليه
+  const active = document.activeElement;
+  const zone = active?.closest('.paste-img-zone') || _pasteTarget;
+
+  if (!zone) {
+    // لو مافيش حاوية محددة — شوف أي نافذة مفتوحة
+    const openMdl = document.querySelector('.mdl.show');
+    if (!openMdl) return;
+    const firstZone = openMdl.querySelector('.paste-img-zone');
+    if (!firstZone) return;
+    _applyPasteToZone(firstZone, file);
+    return;
+  }
+
+  e.preventDefault();
+  _applyPasteToZone(zone, file);
+});
+
+function _applyPasteToZone(zone, file) {
+  const url = URL.createObjectURL(file);
+  // ضع الصورة في أول <img> في الحاوية
+  const thumb = zone.querySelector('img');
+  const hiddenInput = zone.querySelector('input[type="file"]');
+  if (thumb) {
+    thumb.src = url;
+    thumb.style.display = 'block';
+    if (thumb.parentElement && thumb.parentElement !== zone) {
+      thumb.parentElement.style.display = 'block';
+    }
+  }
+  // حفظ الملف في متغير مرفق بالعنصر
+  if (hiddenInput) {
+    const dt = new DataTransfer();
+    dt.items.add(new File([file], 'paste_' + Date.now() + '.png', { type: file.type }));
+    hiddenInput.files = dt.files;
+  }
+  // اعرض شارة نجاح
+  const badge = zone.querySelector('.paste-badge');
+  if (badge) { badge.style.display = 'inline-flex'; }
+  const label = zone.querySelector('.paste-label');
+  if (label) label.textContent = '📸 تم اللصق';
 }
 function handleExamPdfDrop(e) {
   e.preventDefault();
@@ -5404,6 +5471,14 @@ function openHomeworkModal() {
   document.getElementById('hw-lesson-num').value = '';
   document.getElementById('hw-questions-container').innerHTML = '';
   document.getElementById('hw-modal-msg').innerHTML = '';
+  document.getElementById('hw-pdf-zone-text').textContent = 'اضغط لاختيار ملف PDF أو اسحبه هنا';
+  document.getElementById('hw-pdf-selected-name').textContent = '';
+  document.getElementById('hw-pdf-answer-key').innerHTML = '';
+  document.getElementById('hw-pdf-qcount').value = 10;
+
+  // إعادة ضبط نوع الواجب → يدوي
+  document.querySelector('input[name="hw_mode"][value="manual"]').checked = true;
+  toggleHwMode();
 
   // ملء المادة
   const subSel = document.getElementById('hw-subj-sel');
@@ -5429,7 +5504,53 @@ function updateHwGrades() {
   });
 }
 
-// ── إضافة سؤال في مودال الواجب ──
+// ── التبديل بين نوع الواجب (يدوي / PDF) ──
+function toggleHwMode() {
+  const mode = document.querySelector('input[name="hw_mode"]:checked').value;
+  document.getElementById('hw-manual-container').style.display = mode === 'manual' ? 'block' : 'none';
+  document.getElementById('hw-pdf-container').style.display    = mode === 'pdf'    ? 'block' : 'none';
+  if (mode === 'manual') {
+    document.getElementById('hw-questions-container').innerHTML = '';
+    hwQCount = 0;
+    addHomeworkQuestion();
+  } else {
+    generateHwPdfAnswerKey();
+  }
+}
+
+// ── PDF helpers ──
+function handleHwPdfDrop(e) {
+  e.preventDefault();
+  document.getElementById('hw-pdf-drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') {
+    document.getElementById('hw-pdf-file-input').files = e.dataTransfer.files;
+    handleHwPdfSelected({ files: [file] });
+  }
+}
+function handleHwPdfSelected(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('hw-pdf-zone-text').textContent = '📎 ' + file.name + ' (' + fsize(file.size) + ')';
+  document.getElementById('hw-pdf-selected-name').textContent = '';
+}
+function generateHwPdfAnswerKey() {
+  const count = parseInt(document.getElementById('hw-pdf-qcount').value) || 10;
+  let html = '';
+  for (let i = 1; i <= count; i++) {
+    html += `
+      <div style="background:var(--gray-light);padding:8px;border-radius:8px;text-align:center;border:1px solid var(--gray-mid)">
+        <div style="font-size:.8rem;font-weight:700;margin-bottom:6px;color:var(--gray)">س ${i}</div>
+        <select id="hw-pdf-ans-${i}" style="width:100%;padding:4px;border-radius:4px;border:1px solid var(--gray-mid)">
+          <option value="0">A</option><option value="1">B</option>
+          <option value="2">C</option><option value="3">D</option>
+        </select>
+      </div>`;
+  }
+  document.getElementById('hw-pdf-answer-key').innerHTML = html;
+}
+
+
+// ── إضافة سؤال في مودال الواجب (مع صور الخيارات + لصق سكرين شوت) ──
 function addHomeworkQuestion() {
   hwQCount++;
   const n = hwQCount;
@@ -5441,26 +5562,88 @@ function addHomeworkQuestion() {
           style="background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem">✖</button>
       </div>
       <div class="section-body" style="padding:12px 16px">
+
+        <!-- نص السؤال + صورة السؤال -->
         <div class="fg">
-          <label>نص السؤال *</label>
+          <label>نص السؤال * <span style="font-size:.72rem;color:var(--gray);font-weight:500">(أو الصق سكرين شوت Ctrl+V)</span></label>
           <div style="display:flex;align-items:flex-start;gap:8px">
-            <textarea class="hwq-text" rows="2" placeholder="اكتب السؤال هنا..." style="flex:1"></textarea>
-            <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px">
-              <button type="button" onclick="document.getElementById('hwq-img-${n}').click()"
-                style="background:var(--blue-light);border:1.5px solid #BFDBFE;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:.78rem;color:var(--blue);font-family:'Cairo',sans-serif">🖼️ صورة</button>
+            <textarea class="hwq-text" rows="2" placeholder="اكتب السؤال هنا أو الصق صورة..." style="flex:1"></textarea>
+            <div class="paste-img-zone" style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer"
+                 onclick="document.getElementById('hwq-img-${n}').click()">
+              <button type="button" style="background:var(--blue-light);border:1.5px solid #BFDBFE;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:.78rem;color:var(--blue);font-family:'Cairo',sans-serif;pointer-events:none">
+                🖼️ صورة
+              </button>
               <input type="file" id="hwq-img-${n}" accept="image/*" style="display:none" onchange="previewHwqImg(${n},this)">
-              <img id="hwq-img-thumb-${n}" style="width:60px;height:60px;border-radius:8px;display:none;object-fit:cover">
+              <img id="hwq-img-thumb-${n}" style="width:60px;height:60px;border-radius:8px;display:none;object-fit:cover;border:1.5px solid var(--gray-mid)">
+              <span class="paste-label" style="font-size:.6rem;color:var(--blue);display:none"></span>
             </div>
           </div>
         </div>
-        <div class="fg-row" style="margin-top:8px">
-          <div class="fg"><label>الخيار أ *</label><input class="hwq-opt" data-idx="0" placeholder="الخيار أ"></div>
-          <div class="fg"><label>الخيار ب *</label><input class="hwq-opt" data-idx="1" placeholder="الخيار ب"></div>
+
+        <!-- الخيار أ -->
+        <div class="fg" style="margin-top:8px">
+          <label>الخيار أ *</label>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input class="hwq-opt" data-idx="0" placeholder="الخيار أ" style="flex:1">
+            <div class="paste-img-zone" style="flex-shrink:0;cursor:pointer" onclick="document.getElementById('hwq-opt-img-${n}-0').click()">
+              <button type="button" style="background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:.8rem;pointer-events:none">🖼️</button>
+              <input type="file" id="hwq-opt-img-${n}-0" accept="image/*" style="display:none" onchange="previewHwqOptImg(${n},0,this)">
+            </div>
+          </div>
+          <div id="hwq-opt-prev-${n}-0" style="margin-top:4px;display:none">
+            <img id="hwq-opt-thumb-${n}-0" style="max-height:50px;border-radius:6px;border:1px solid var(--gray-mid)">
+            <span style="font-size:.7rem;color:var(--blue)"> ✅ صورة مرفقة</span>
+          </div>
         </div>
-        <div class="fg-row">
-          <div class="fg"><label>الخيار ج *</label><input class="hwq-opt" data-idx="2" placeholder="الخيار ج"></div>
-          <div class="fg"><label>الخيار د *</label><input class="hwq-opt" data-idx="3" placeholder="الخيار د"></div>
+
+        <!-- الخيار ب -->
+        <div class="fg">
+          <label>الخيار ب *</label>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input class="hwq-opt" data-idx="1" placeholder="الخيار ب" style="flex:1">
+            <div class="paste-img-zone" style="flex-shrink:0;cursor:pointer" onclick="document.getElementById('hwq-opt-img-${n}-1').click()">
+              <button type="button" style="background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:.8rem;pointer-events:none">🖼️</button>
+              <input type="file" id="hwq-opt-img-${n}-1" accept="image/*" style="display:none" onchange="previewHwqOptImg(${n},1,this)">
+            </div>
+          </div>
+          <div id="hwq-opt-prev-${n}-1" style="margin-top:4px;display:none">
+            <img id="hwq-opt-thumb-${n}-1" style="max-height:50px;border-radius:6px;border:1px solid var(--gray-mid)">
+            <span style="font-size:.7rem;color:var(--blue)"> ✅ صورة مرفقة</span>
+          </div>
         </div>
+
+        <!-- الخيار ج -->
+        <div class="fg">
+          <label>الخيار ج *</label>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input class="hwq-opt" data-idx="2" placeholder="الخيار ج" style="flex:1">
+            <div class="paste-img-zone" style="flex-shrink:0;cursor:pointer" onclick="document.getElementById('hwq-opt-img-${n}-2').click()">
+              <button type="button" style="background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:.8rem;pointer-events:none">🖼️</button>
+              <input type="file" id="hwq-opt-img-${n}-2" accept="image/*" style="display:none" onchange="previewHwqOptImg(${n},2,this)">
+            </div>
+          </div>
+          <div id="hwq-opt-prev-${n}-2" style="margin-top:4px;display:none">
+            <img id="hwq-opt-thumb-${n}-2" style="max-height:50px;border-radius:6px;border:1px solid var(--gray-mid)">
+            <span style="font-size:.7rem;color:var(--blue)"> ✅ صورة مرفقة</span>
+          </div>
+        </div>
+
+        <!-- الخيار د -->
+        <div class="fg">
+          <label>الخيار د *</label>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input class="hwq-opt" data-idx="3" placeholder="الخيار د" style="flex:1">
+            <div class="paste-img-zone" style="flex-shrink:0;cursor:pointer" onclick="document.getElementById('hwq-opt-img-${n}-3').click()">
+              <button type="button" style="background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:.8rem;pointer-events:none">🖼️</button>
+              <input type="file" id="hwq-opt-img-${n}-3" accept="image/*" style="display:none" onchange="previewHwqOptImg(${n},3,this)">
+            </div>
+          </div>
+          <div id="hwq-opt-prev-${n}-3" style="margin-top:4px;display:none">
+            <img id="hwq-opt-thumb-${n}-3" style="max-height:50px;border-radius:6px;border:1px solid var(--gray-mid)">
+            <span style="font-size:.7rem;color:var(--blue)"> ✅ صورة مرفقة</span>
+          </div>
+        </div>
+
         <div class="fg">
           <label>الإجابة الصحيحة *</label>
           <select class="hwq-correct">
@@ -5473,13 +5656,18 @@ function addHomeworkQuestion() {
       </div>
     </div>`);
 }
+
 function previewHwqImg(n, input) {
-  const file = input.files[0];
-  if (!file) return;
+  const file = input.files[0]; if (!file) return;
   const img = document.getElementById('hwq-img-thumb-'+n);
-  img.src = URL.createObjectURL(file);
-  img.style.display = 'block';
+  img.src = URL.createObjectURL(file); img.style.display = 'block';
 }
+function previewHwqOptImg(n, idx, input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('hwq-opt-thumb-'+n+'-'+idx).src = URL.createObjectURL(file);
+  document.getElementById('hwq-opt-prev-'+n+'-'+idx).style.display = 'block';
+}
+
 
 // ── حفظ الواجب ──
 async function saveHomework() {
@@ -5488,6 +5676,7 @@ async function saveHomework() {
   const lessonNum   = document.getElementById('hw-lesson-num').value.trim();
   const rawSubj     = document.getElementById('hw-subj-sel').value;
   const rawGrade    = document.getElementById('hw-grade-sel').value;
+  const mode        = document.querySelector('input[name="hw_mode"]:checked').value;
 
   if (!unitTitle)   { setMsg('hw-modal-msg','اسم الوحدة مطلوب','err'); return; }
   if (!lessonTitle) { setMsg('hw-modal-msg','اسم الدرس مطلوب','err'); return; }
@@ -5495,67 +5684,93 @@ async function saveHomework() {
   if (!rawGrade)    { setMsg('hw-modal-msg','الرجاء اختيار الصف','err'); return; }
 
   const [subjId, subjName] = rawSubj.split('||');
-  const [gradeId, gradeName] = rawGrade.split('||');
-
-  const blocks = document.querySelectorAll('#hw-questions-container .section-card');
-  if (blocks.length === 0) { setMsg('hw-modal-msg','أضف سؤالاً واحداً على الأقل','err'); return; }
+  const [gradeId]          = rawGrade.split('||');
 
   const btn = document.getElementById('hw-save-btn');
   btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
 
   try {
-    // 1. إنشاء وحدة
+    let questions  = [];
+    let mediaUrl   = null;
+
+    // ══ وضع PDF ══
+    if (mode === 'pdf') {
+      const pdfFile = document.getElementById('hw-pdf-file-input').files[0];
+      if (!pdfFile) { setMsg('hw-modal-msg','الرجاء اختيار ملف PDF','err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
+      btn.textContent = '⏳ رفع الملف...';
+      const ext  = pdfFile.name.split('.').pop();
+      const path = `homework_pdfs/${ST.user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await sb.storage.from('teacher-content').upload(path, pdfFile, { upsert: false });
+      if (upErr) throw upErr;
+      mediaUrl = await getSupabaseSignedUrl('teacher-content', path, 604800);
+
+      const count = parseInt(document.getElementById('hw-pdf-qcount').value) || 10;
+      for (let i = 1; i <= count; i++) {
+        const ans = parseInt(document.getElementById('hw-pdf-ans-'+i).value);
+        questions.push({
+          question_text: 'سؤال ' + i,
+          options: [
+            { text:'A', is_correct: ans===0 }, { text:'B', is_correct: ans===1 },
+            { text:'C', is_correct: ans===2 }, { text:'D', is_correct: ans===3 }
+          ],
+          order_index: i-1
+        });
+      }
+
+    // ══ وضع يدوي ══
+    } else {
+      const blocks = document.querySelectorAll('#hw-questions-container .section-card');
+      if (blocks.length === 0) { setMsg('hw-modal-msg','أضف سؤالاً واحداً على الأقل','err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
+      btn.textContent = '⏳ رفع الصور...';
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        const n = b.id.replace('hwq-block-','');
+        const text = b.querySelector('.hwq-text').value.trim();
+        const opts = [...b.querySelectorAll('.hwq-opt')].map(o => o.value.trim());
+        const correctIdx = parseInt(b.querySelector('.hwq-correct').value);
+
+        if (!text) { setMsg('hw-modal-msg',`السؤال ${i+1}: نص السؤال مطلوب`,'err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
+        if (opts.some(o => !o)) { setMsg('hw-modal-msg',`السؤال ${i+1}: جميع الخيارات مطلوبة`,'err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
+
+        // رفع صورة السؤال
+        let imageUrl = null;
+        const imgFile = document.getElementById('hwq-img-'+n)?.files[0];
+        if (imgFile) imageUrl = await uploadImageToSupabase(imgFile, 'homework_images');
+
+        // رفع صور الخيارات
+        const optImages = [];
+        for (let oi = 0; oi < 4; oi++) {
+          const oFile = document.getElementById('hwq-opt-img-'+n+'-'+oi)?.files[0];
+          optImages.push(oFile ? await uploadImageToSupabase(oFile, 'homework_images') : null);
+        }
+
+        questions.push({
+          question_text: text, image_url: imageUrl,
+          options: opts.map((t, idx) => ({ text: t, is_correct: idx === correctIdx, image_url: optImages[idx] })),
+          order_index: i
+        });
+      }
+    }
+
+    // ── 1. إنشاء الوحدة ──
     const { data: unit, error: e1 } = await sb.from('homework_units').insert({
-      teacher_id:   ST.user.id,
-      grade_id:     gradeId,
-      subject_name: subjName,
-      title:        unitTitle,
-      order_index:  0
+      teacher_id: ST.user.id, grade_id: gradeId,
+      subject_name: subjName, title: unitTitle, order_index: 0,
+      mode, media_url: mediaUrl
     }).select().single();
     if (e1) throw e1;
 
-    // 2. إنشاء درس
+    // ── 2. إنشاء الدرس ──
     const { data: lesson, error: e2 } = await sb.from('homework_lessons').insert({
-      unit_id:       unit.id,
-      teacher_id:    ST.user.id,
-      grade_id:      gradeId,
-      subject_name:  subjName,
-      title:         lessonTitle,
-      lesson_number: lessonNum ? parseInt(lessonNum) : null,
-      order_index:   0
+      unit_id: unit.id, teacher_id: ST.user.id, grade_id: gradeId,
+      subject_name: subjName, title: lessonTitle,
+      lesson_number: lessonNum ? parseInt(lessonNum) : null, order_index: 0
     }).select().single();
     if (e2) throw e2;
 
-    // 3. رفع الأسئلة
-    btn.textContent = '⏳ رفع الصور...';
-    const questions = [];
-    for (let i = 0; i < blocks.length; i++) {
-      const b    = blocks[i];
-      const n    = b.id.replace('hwq-block-','');
-      const text = b.querySelector('.hwq-text').value.trim();
-      const opts = [...b.querySelectorAll('.hwq-opt')].map(o => o.value.trim());
-      const correctIdx = parseInt(b.querySelector('.hwq-correct').value);
-
-      if (!text) { setMsg('hw-modal-msg',`السؤال ${i+1}: نص السؤال مطلوب`,'err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
-      if (opts.some(o => !o)) { setMsg('hw-modal-msg',`السؤال ${i+1}: جميع الخيارات مطلوبة`,'err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
-
-      // رفع صورة السؤال إن وجدت
-      let imageUrl = null;
-      const imgFile = document.getElementById('hwq-img-'+n)?.files[0];
-      if (imgFile) {
-        imageUrl = await uploadImageToSupabase(imgFile, 'homework_images');
-      }
-
-      questions.push({
-        lesson_id:     lesson.id,
-        question_text: text,
-        image_url:     imageUrl,
-        options: opts.map((t, idx) => ({ text: t, is_correct: idx === correctIdx })),
-        order_index: i
-      });
-    }
-
-    const { error: e3 } = await sb.from('homework_questions').insert(questions);
+    // ── 3. إضافة lesson_id لكل سؤال ──
+    const qWithLesson = questions.map(q => ({ ...q, lesson_id: lesson.id }));
+    const { error: e3 } = await sb.from('homework_questions').insert(qWithLesson);
     if (e3) throw e3;
 
     toast('✅ تم إنشاء الواجب بنجاح!');
@@ -5568,6 +5783,7 @@ async function saveHomework() {
     btn.disabled = false; btn.textContent = '💾 حفظ الواجب';
   }
 }
+
 
 // ── إضافة درس لوحدة موجودة ──
 async function openAddLessonModal(unitId, subjName, gradeId) {
@@ -6215,7 +6431,7 @@ async function deleteOfflineExam(examId, title) {
     <div class="mdl-title" style="color:#7C3AED">✏️ إنشاء واجب جديد</div>
     <button onclick="closeHomeworkModal()" style="position:absolute;top:16px;left:16px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
 
-    <!-- اسم الوحدة والدرس -->
+    <!-- ── معلومات الوحدة والدرس ── -->
     <div style="background:#F5F3FF;border-radius:12px;padding:16px;margin-bottom:16px;border:1.5px solid #EDE9FE">
       <div style="font-weight:800;font-size:.88rem;color:#7C3AED;margin-bottom:12px">📦 معلومات الوحدة والدرس</div>
       <div class="fg-row">
@@ -6244,24 +6460,64 @@ async function deleteOfflineExam(examId, title) {
       </div>
     </div>
 
-    <!-- الأسئلة -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-weight:800;font-size:.88rem;color:#7C3AED">❓ أسئلة الواجب</div>
-      <button type="button" onclick="addHomeworkQuestion()"
-        style="background:linear-gradient(135deg,#7C3AED,#A78BFA);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">
-        ➕ إضافة سؤال
-      </button>
+    <!-- ── نوع الواجب ── -->
+    <div class="fg" style="margin-bottom:16px">
+      <label>نوع الواجب *</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label style="flex:1;background:var(--gray-light);padding:10px;border-radius:10px;border:1px solid var(--gray-mid);cursor:pointer;display:flex;align-items:center;gap:8px;min-width:140px">
+          <input type="radio" name="hw_mode" value="manual" checked onchange="toggleHwMode()"> 📝 أسئلة نصية + صور
+        </label>
+        <label style="flex:1;background:var(--gray-light);padding:10px;border-radius:10px;border:1px solid var(--gray-mid);cursor:pointer;display:flex;align-items:center;gap:8px;min-width:140px">
+          <input type="radio" name="hw_mode" value="pdf" onchange="toggleHwMode()"> 📄 ملف PDF كامل
+        </label>
+      </div>
     </div>
-    <div id="hw-questions-container"></div>
 
-    <div id="hw-modal-msg" style="margin-top:10px"></div>
-    <div class="mdl-btns" style="margin-top:16px">
+    <!-- ── حاوية PDF ── -->
+    <div id="hw-pdf-container" style="display:none;border-top:1px solid var(--gray-mid);margin-bottom:16px;padding-top:16px">
+      <div class="fg">
+        <label>ملف الـ PDF *</label>
+        <div class="upload-zone" id="hw-pdf-drop-zone"
+          onclick="document.getElementById('hw-pdf-file-input').click()"
+          ondragover="handleDragOver(event,'hw-pdf-drop-zone')"
+          ondragleave="handleDragLeave('hw-pdf-drop-zone')"
+          ondrop="handleHwPdfDrop(event)">
+          <div class="uz-icon">📄</div>
+          <div class="uz-text" id="hw-pdf-zone-text">اضغط لاختيار ملف PDF أو اسحبه هنا</div>
+          <div class="uz-sub">ملفات PDF فقط — حجم أقصى 50 MB</div>
+          <input type="file" id="hw-pdf-file-input" style="display:none" accept=".pdf" onchange="handleHwPdfSelected(this)">
+          <div id="hw-pdf-selected-name" style="margin-top:10px;font-size:.82rem;color:#7C3AED;font-weight:700"></div>
+        </div>
+      </div>
+      <div class="fg" style="max-width:200px">
+        <label>عدد الأسئلة *</label>
+        <input type="number" id="hw-pdf-qcount" value="10" min="1" max="100" onchange="generateHwPdfAnswerKey()">
+      </div>
+      <h3 style="font-size:1rem;font-weight:900;margin-bottom:12px">🔑 نموذج الإجابة (Answer Key)</h3>
+      <div id="hw-pdf-answer-key" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px"></div>
+    </div>
+
+    <!-- ── حاوية الأسئلة اليدوية ── -->
+    <div id="hw-manual-container" style="border-top:1px solid var(--gray-mid);margin-bottom:16px;padding-top:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-weight:800;font-size:.88rem;color:#7C3AED">❓ أسئلة الواجب</div>
+        <button type="button" onclick="addHomeworkQuestion()"
+          style="background:linear-gradient(135deg,#7C3AED,#A78BFA);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">
+          ➕ إضافة سؤال
+        </button>
+      </div>
+      <div id="hw-questions-container"></div>
+    </div>
+
+    <div id="hw-modal-msg" style="margin-top:4px"></div>
+    <div class="mdl-btns" style="margin-top:12px">
       <button class="btn-secondary" onclick="closeHomeworkModal()">إلغاء</button>
       <button class="btn-primary" id="hw-save-btn" onclick="saveHomework()"
         style="background:linear-gradient(135deg,#7C3AED,#A78BFA);border-color:#7C3AED">💾 حفظ الواجب</button>
     </div>
   </div>
 </div>
+
 
 <!-- ══ MODAL: إضافة أسئلة لدرس موجود ══ -->
 <div class="mdl" id="mdl-add-questions">
