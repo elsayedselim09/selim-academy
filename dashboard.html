@@ -738,9 +738,9 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dar
 .home-subjects-scroll::-webkit-scrollbar { display:none; }
 /* بطاقة المادة */
 .hs-card {
-  flex:0 0 190px; border-radius:18px; padding:18px 16px 16px;
+  flex:0 0 200px; border-radius:18px; padding:20px 18px 18px;
   cursor:pointer; transition:all .28s; position:relative; overflow:hidden;
-  min-height:110px; display:flex; flex-direction:column; justify-content:space-between;
+  min-height:130px; display:flex; flex-direction:column; justify-content:space-between;
   box-shadow:0 4px 16px rgba(0,0,0,.1);
 }
 .hs-card:hover { transform:translateY(-5px); box-shadow:0 12px 32px rgba(0,0,0,.18); }
@@ -760,12 +760,13 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dar
 }
 /* نص */
 .hs-name {
-  font-size:1.02rem; font-weight:900; color:#fff;
-  line-height:1.3; margin-bottom:4px; position:relative; z-index:1;
+  font-size:1.18rem; font-weight:900; color:#fff;
+  line-height:1.35; margin-bottom:6px; position:relative; z-index:1;
 }
 .hs-teacher {
-  font-size:.74rem; font-weight:600; color:rgba(255,255,255,.8);
+  font-size:.84rem; font-weight:700; color:rgba(255,255,255,.9);
   position:relative; z-index:1;
+  display:flex; align-items:center; gap:4px;
 }
 /* ألوان المواد */
 .hs-green  { background:linear-gradient(135deg,#0B7A5A,#10B981); }
@@ -1699,7 +1700,7 @@ function home() {
     <div class="home-subjects-scroll">
       ${activeEnr.map((e, idx) => {
         const subName = e.courses?.name || e._request?.subject || '—';
-        const teacher = e.courses?.teacher_name || '';
+        const teacher = e.courses?.teacher_name || e._request?.teacher_name || e.teacher_name || '';
         const tid     = e.teacher_id || '';
         const gid     = e.grade_id   || '';
         const style   = getSubjectStyle(subName, idx);
@@ -1708,7 +1709,7 @@ function home() {
              onclick="openHomeworkSubject('${tid}','${gid}','${subName.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${teacher.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
           <div>
             <div class="hs-name">${subName}</div>
-            ${teacher ? `<div class="hs-teacher">👨‍🏫 ${teacher}</div>` : ''}
+            <div class="hs-teacher">👨‍🏫 ${teacher || 'المعلم'}</div>
           </div>
           <div class="hs-illustration">${style.art}</div>
           <div class="hs-arrow">←</div>
@@ -3009,7 +3010,7 @@ function homework() {
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:16px;margin-top:4px">
       ${active.map((e, idx) => {
         const subName = e.courses?.name || e._request?.subject || '—';
-        const teacher = e.courses?.teacher_name || '';
+        const teacher = e.courses?.teacher_name || e._request?.teacher_name || e.teacher_name || '';
         const tid     = e.teacher_id || '';
         const gid     = e.grade_id   || '';
         const style   = getSubjectStyle(subName, idx);
@@ -3019,7 +3020,7 @@ function homework() {
              onclick="openHomeworkSubject('${tid}','${gid}','${subName.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${teacher.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
           <div>
             <div class="hs-name">${subName}</div>
-            ${teacher ? `<div class="hs-teacher">👨‍🏫 ${teacher}</div>` : ''}
+            <div class="hs-teacher">👨‍🏫 ${teacher || 'المعلم'}</div>
           </div>
           <div class="hs-illustration">${style.art}</div>
           <div class="hs-arrow">←</div>
