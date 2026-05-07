@@ -1456,8 +1456,9 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
   <div class="page" id="page-exams">
     <!-- التبويبات الرئيسية -->
     <div class="exam-tabs" style="margin-bottom:22px">
-      <button class="exam-tab active" id="etab-online"  onclick="switchExamTab('online')">📝 اختبارات إلكترونية</button>
-      <button class="exam-tab"        id="etab-offline" onclick="switchExamTab('offline')">📄 اختبارات ورقية</button>
+      <button class="exam-tab active" id="etab-online"   onclick="switchExamTab('online')">📝 اختبارات إلكترونية</button>
+      <button class="exam-tab"        id="etab-offline"  onclick="switchExamTab('offline')">📄 اختبارات ورقية</button>
+      <button class="exam-tab"        id="etab-homework" onclick="switchExamTab('homework')" style="background:linear-gradient(135deg,#7C3AED,#A78BFA);color:#fff;border-color:#7C3AED">✏️ الواجبات</button>
     </div>
 
     <!-- ── الاختبارات الإلكترونية ── -->
@@ -1503,8 +1504,40 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       <!-- تفاصيل اختبار ورقي (إدخال الدرجات) -->
       <div id="offline-detail-view" style="display:none"></div>
     </div>
-  </div>
 
+    <!-- ── قسم الواجبات ── -->
+    <div id="exams-homework-wrap" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="page-title">الواجبات ✏️</div>
+          <p class="page-sub" style="margin-bottom:0">إنشاء وإدارة واجبات الطلاب</p>
+        </div>
+        <button class="btn-primary" onclick="openHomeworkModal()"
+          style="background:linear-gradient(135deg,#7C3AED,#A78BFA);border-color:#7C3AED">
+          ➕ إنشاء واجب جديد
+        </button>
+      </div>
+      <!-- إحصائيات -->
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:22px">
+        <div class="stat-card"><div class="stat-icon" style="background:#F5F3FF;color:#7C3AED">📦</div><div><div class="stat-num" id="hw-stat-units">0</div><div class="stat-label">وحدات</div></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:#F5F3FF;color:#7C3AED">📝</div><div><div class="stat-num" id="hw-stat-lessons">0</div><div class="stat-label">دروس/أنشطة</div></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:#F5F3FF;color:#7C3AED">❓</div><div><div class="stat-num" id="hw-stat-questions">0</div><div class="stat-label">أسئلة</div></div></div>
+      </div>
+      <!-- فلترة بالمادة -->
+      <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <label style="font-size:.85rem;font-weight:700;color:var(--gray)">تصفية بالمادة:</label>
+        <select id="hw-filter-subject" onchange="loadHomeworkUnits()" style="border:1.5px solid var(--gray-mid);border-radius:9px;padding:8px 14px;font-family:'Cairo',sans-serif;font-size:.85rem;min-width:180px">
+          <option value="">— كل المواد —</option>
+        </select>
+      </div>
+      <!-- قائمة الوحدات -->
+      <div id="hw-units-list">
+        <div class="skel" style="height:90px;border-radius:14px;margin-bottom:10px"></div>
+        <div class="skel" style="height:90px;border-radius:14px;margin-bottom:10px"></div>
+      </div>
+    </div>
+
+  </div>
 </main>
 
 <!-- ══ MODAL: Create Exam ══ -->
@@ -5259,12 +5292,405 @@ boot();
 
 // ── Tab Switch ──
 function switchExamTab(tab) {
-  document.getElementById('etab-online').classList.toggle('active', tab === 'online');
-  document.getElementById('etab-offline').classList.toggle('active', tab === 'offline');
-  document.getElementById('exams-online-wrap').style.display  = tab === 'online'  ? 'block' : 'none';
-  document.getElementById('exams-offline-wrap').style.display = tab === 'offline' ? 'block' : 'none';
-  if (tab === 'offline') loadOfflineExams();
+  document.getElementById('etab-online').classList.toggle('active',   tab === 'online');
+  document.getElementById('etab-offline').classList.toggle('active',  tab === 'offline');
+  document.getElementById('etab-homework').classList.toggle('active', tab === 'homework');
+  document.getElementById('exams-online-wrap').style.display   = tab === 'online'   ? 'block' : 'none';
+  document.getElementById('exams-offline-wrap').style.display  = tab === 'offline'  ? 'block' : 'none';
+  document.getElementById('exams-homework-wrap').style.display = tab === 'homework' ? 'block' : 'none';
+  if (tab === 'offline')  loadOfflineExams();
+  if (tab === 'homework') loadHomeworkUnits();
 }
+
+// ══════════════════════════════════════════════
+// HOMEWORK MODULE — الواجبات
+// ══════════════════════════════════════════════
+let hwQCount = 0;
+
+// ── تحميل قائمة الوحدات ──
+async function loadHomeworkUnits() {
+  const filterSubj = document.getElementById('hw-filter-subject')?.value || '';
+
+  // بناء القائمة المنسدلة للمواد
+  const subSel = document.getElementById('hw-filter-subject');
+  if (subSel && subSel.options.length <= 1) {
+    (ST.subjects || []).forEach(s => {
+      subSel.innerHTML += `<option value="${s.name}">${s.icon||'📚'} ${s.name}</option>`;
+    });
+  }
+
+  const el = document.getElementById('hw-units-list');
+  el.innerHTML = '<div class="skel" style="height:90px;border-radius:14px;margin-bottom:10px"></div><div class="skel" style="height:90px;border-radius:14px;margin-bottom:10px"></div>';
+
+  try {
+    let q = sb.from('homework_units').select(`
+      id, title, subject_name, grade_id, order_index, created_at,
+      homework_lessons(id, title, lesson_number,
+        homework_questions(id)
+      )
+    `).eq('teacher_id', ST.user.id).order('order_index');
+
+    if (filterSubj) q = q.eq('subject_name', filterSubj);
+
+    const { data: units, error } = await q;
+    if (error) throw error;
+
+    // إحصائيات
+    const totalUnits    = (units||[]).length;
+    const totalLessons  = (units||[]).reduce((s,u) => s + (u.homework_lessons||[]).length, 0);
+    const totalQuestions= (units||[]).reduce((s,u) => s + (u.homework_lessons||[]).reduce((ss,l) => ss + (l.homework_questions||[]).length, 0), 0);
+    document.getElementById('hw-stat-units').textContent     = totalUnits;
+    document.getElementById('hw-stat-lessons').textContent   = totalLessons;
+    document.getElementById('hw-stat-questions').textContent = totalQuestions;
+
+    if (!units || units.length === 0) {
+      el.innerHTML = `<div style="text-align:center;padding:50px;color:var(--gray)">
+        <div style="font-size:3rem;margin-bottom:12px">✏️</div>
+        <p style="font-weight:700">لا توجد واجبات بعد</p>
+        <p style="font-size:.85rem">اضغط على "إنشاء واجب جديد" للبدء</p>
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = units.map(u => {
+      const lessons = u.homework_lessons || [];
+      const qCount  = lessons.reduce((s,l) => s + (l.homework_questions||[]).length, 0);
+      return `
+      <div class="section-card" style="margin-bottom:14px">
+        <div class="section-head">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:1.4rem">📦</span>
+            <div>
+              <h3 style="font-size:.95rem">${u.title}</h3>
+              <div style="font-size:.78rem;color:var(--gray)">${u.subject_name} · ${lessons.length} درس · ${qCount} سؤال</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-primary" style="font-size:.78rem;padding:5px 12px;background:linear-gradient(135deg,#7C3AED,#A78BFA);border-color:#7C3AED"
+              onclick="openAddLessonModal('${u.id}','${u.subject_name.replace(/'/g,"\\'")}','${u.grade_id||''}')">➕ درس</button>
+            <button class="btn-secondary" style="font-size:.78rem;padding:5px 12px;color:var(--red)"
+              onclick="deleteHomeworkUnit('${u.id}')">🗑</button>
+          </div>
+        </div>
+        <div class="section-body" style="padding:0">
+          ${lessons.length === 0
+            ? `<div style="padding:16px;text-align:center;color:var(--gray);font-size:.85rem">لا توجد دروس — اضغط ➕ درس لإضافة درس</div>`
+            : lessons.map(l => `
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--gray-mid)">
+                <div>
+                  <div style="font-weight:700;font-size:.88rem">${l.lesson_number ? l.lesson_number+'. ' : ''}${l.title}</div>
+                  <div style="font-size:.75rem;color:var(--gray)">${(l.homework_questions||[]).length} سؤال</div>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <button class="btn-primary" style="font-size:.75rem;padding:5px 10px;background:linear-gradient(135deg,#7C3AED,#A78BFA);border-color:#7C3AED"
+                    onclick="openAddQuestionsModal('${l.id}','${l.title.replace(/'/g,"\\'")}')">➕ أسئلة</button>
+                  <button class="btn-secondary" style="font-size:.75rem;padding:5px 10px;color:var(--red)"
+                    onclick="deleteHomeworkLesson('${l.id}')">🗑</button>
+                </div>
+              </div>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--red);padding:20px">خطأ: ${e.message}</div>`;
+  }
+}
+
+// ── فتح مودال إنشاء واجب جديد ──
+function openHomeworkModal() {
+  hwQCount = 0;
+  document.getElementById('hw-unit-title').value = '';
+  document.getElementById('hw-lesson-title').value = '';
+  document.getElementById('hw-lesson-num').value = '';
+  document.getElementById('hw-questions-container').innerHTML = '';
+  document.getElementById('hw-modal-msg').innerHTML = '';
+
+  // ملء المادة
+  const subSel = document.getElementById('hw-subj-sel');
+  subSel.innerHTML = '<option value="">— اختر المادة —</option>';
+  (ST.subjects || []).forEach(s => {
+    subSel.innerHTML += `<option value="${s.id}||${s.name}">${s.icon||'📚'} ${s.name}</option>`;
+  });
+  document.getElementById('hw-grade-sel').innerHTML = '<option value="">— اختر الصف —</option>';
+
+  addHomeworkQuestion();
+  document.getElementById('mdl-homework').classList.add('show');
+}
+function closeHomeworkModal() { document.getElementById('mdl-homework').classList.remove('show'); }
+
+function updateHwGrades() {
+  const raw  = document.getElementById('hw-subj-sel').value;
+  const id   = raw.split('||')[0];
+  const subj = (ST.subjects||[]).find(s => s.id === id);
+  const sel  = document.getElementById('hw-grade-sel');
+  sel.innerHTML = '<option value="">— اختر الصف —</option>';
+  (subj?.teacher_grades || []).forEach(g => {
+    sel.innerHTML += `<option value="${g.id}||${g.name}">${g.name}</option>`;
+  });
+}
+
+// ── إضافة سؤال في مودال الواجب ──
+function addHomeworkQuestion() {
+  hwQCount++;
+  const n = hwQCount;
+  document.getElementById('hw-questions-container').insertAdjacentHTML('beforeend', `
+    <div class="section-card" id="hwq-block-${n}" style="margin-bottom:12px">
+      <div class="section-head" style="padding:10px 16px">
+        <h3 style="font-size:.85rem">السؤال ${n}</h3>
+        <button type="button" onclick="document.getElementById('hwq-block-${n}').remove()"
+          style="background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem">✖</button>
+      </div>
+      <div class="section-body" style="padding:12px 16px">
+        <div class="fg">
+          <label>نص السؤال *</label>
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            <textarea class="hwq-text" rows="2" placeholder="اكتب السؤال هنا..." style="flex:1"></textarea>
+            <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px">
+              <button type="button" onclick="document.getElementById('hwq-img-${n}').click()"
+                style="background:var(--blue-light);border:1.5px solid #BFDBFE;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:.78rem;color:var(--blue);font-family:'Cairo',sans-serif">🖼️ صورة</button>
+              <input type="file" id="hwq-img-${n}" accept="image/*" style="display:none" onchange="previewHwqImg(${n},this)">
+              <img id="hwq-img-thumb-${n}" style="width:60px;height:60px;border-radius:8px;display:none;object-fit:cover">
+            </div>
+          </div>
+        </div>
+        <div class="fg-row" style="margin-top:8px">
+          <div class="fg"><label>الخيار أ *</label><input class="hwq-opt" data-idx="0" placeholder="الخيار أ"></div>
+          <div class="fg"><label>الخيار ب *</label><input class="hwq-opt" data-idx="1" placeholder="الخيار ب"></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>الخيار ج *</label><input class="hwq-opt" data-idx="2" placeholder="الخيار ج"></div>
+          <div class="fg"><label>الخيار د *</label><input class="hwq-opt" data-idx="3" placeholder="الخيار د"></div>
+        </div>
+        <div class="fg">
+          <label>الإجابة الصحيحة *</label>
+          <select class="hwq-correct">
+            <option value="0">الخيار أ</option>
+            <option value="1">الخيار ب</option>
+            <option value="2">الخيار ج</option>
+            <option value="3">الخيار د</option>
+          </select>
+        </div>
+      </div>
+    </div>`);
+}
+function previewHwqImg(n, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const img = document.getElementById('hwq-img-thumb-'+n);
+  img.src = URL.createObjectURL(file);
+  img.style.display = 'block';
+}
+
+// ── حفظ الواجب ──
+async function saveHomework() {
+  const unitTitle   = document.getElementById('hw-unit-title').value.trim();
+  const lessonTitle = document.getElementById('hw-lesson-title').value.trim();
+  const lessonNum   = document.getElementById('hw-lesson-num').value.trim();
+  const rawSubj     = document.getElementById('hw-subj-sel').value;
+  const rawGrade    = document.getElementById('hw-grade-sel').value;
+
+  if (!unitTitle)   { setMsg('hw-modal-msg','اسم الوحدة مطلوب','err'); return; }
+  if (!lessonTitle) { setMsg('hw-modal-msg','اسم الدرس مطلوب','err'); return; }
+  if (!rawSubj)     { setMsg('hw-modal-msg','الرجاء اختيار المادة','err'); return; }
+  if (!rawGrade)    { setMsg('hw-modal-msg','الرجاء اختيار الصف','err'); return; }
+
+  const [subjId, subjName] = rawSubj.split('||');
+  const [gradeId, gradeName] = rawGrade.split('||');
+
+  const blocks = document.querySelectorAll('#hw-questions-container .section-card');
+  if (blocks.length === 0) { setMsg('hw-modal-msg','أضف سؤالاً واحداً على الأقل','err'); return; }
+
+  const btn = document.getElementById('hw-save-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+
+  try {
+    // 1. إنشاء وحدة
+    const { data: unit, error: e1 } = await sb.from('homework_units').insert({
+      teacher_id:   ST.user.id,
+      grade_id:     gradeId,
+      subject_name: subjName,
+      title:        unitTitle,
+      order_index:  0
+    }).select().single();
+    if (e1) throw e1;
+
+    // 2. إنشاء درس
+    const { data: lesson, error: e2 } = await sb.from('homework_lessons').insert({
+      unit_id:       unit.id,
+      teacher_id:    ST.user.id,
+      grade_id:      gradeId,
+      subject_name:  subjName,
+      title:         lessonTitle,
+      lesson_number: lessonNum ? parseInt(lessonNum) : null,
+      order_index:   0
+    }).select().single();
+    if (e2) throw e2;
+
+    // 3. رفع الأسئلة
+    btn.textContent = '⏳ رفع الصور...';
+    const questions = [];
+    for (let i = 0; i < blocks.length; i++) {
+      const b    = blocks[i];
+      const n    = b.id.replace('hwq-block-','');
+      const text = b.querySelector('.hwq-text').value.trim();
+      const opts = [...b.querySelectorAll('.hwq-opt')].map(o => o.value.trim());
+      const correctIdx = parseInt(b.querySelector('.hwq-correct').value);
+
+      if (!text) { setMsg('hw-modal-msg',`السؤال ${i+1}: نص السؤال مطلوب`,'err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
+      if (opts.some(o => !o)) { setMsg('hw-modal-msg',`السؤال ${i+1}: جميع الخيارات مطلوبة`,'err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
+
+      // رفع صورة السؤال إن وجدت
+      let imageUrl = null;
+      const imgFile = document.getElementById('hwq-img-'+n)?.files[0];
+      if (imgFile) {
+        imageUrl = await uploadImageToSupabase(imgFile, 'homework_images');
+      }
+
+      questions.push({
+        lesson_id:     lesson.id,
+        question_text: text,
+        image_url:     imageUrl,
+        options: opts.map((t, idx) => ({ text: t, is_correct: idx === correctIdx })),
+        order_index: i
+      });
+    }
+
+    const { error: e3 } = await sb.from('homework_questions').insert(questions);
+    if (e3) throw e3;
+
+    toast('✅ تم إنشاء الواجب بنجاح!');
+    closeHomeworkModal();
+    loadHomeworkUnits();
+
+  } catch(e) {
+    setMsg('hw-modal-msg','خطأ: '+e.message,'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 حفظ الواجب';
+  }
+}
+
+// ── إضافة درس لوحدة موجودة ──
+async function openAddLessonModal(unitId, subjName, gradeId) {
+  const title = prompt('اسم الدرس الجديد:');
+  if (!title) return;
+  const num = prompt('رقم الدرس (اختياري):');
+  try {
+    const { error } = await sb.from('homework_lessons').insert({
+      unit_id: unitId, teacher_id: ST.user.id,
+      grade_id: gradeId, subject_name: subjName,
+      title, lesson_number: num ? parseInt(num) : null, order_index: 0
+    });
+    if (error) throw error;
+    toast('✅ تم إضافة الدرس');
+    loadHomeworkUnits();
+  } catch(e) { toast('خطأ: '+e.message,'err'); }
+}
+
+// ── إضافة أسئلة لدرس موجود ──
+function openAddQuestionsModal(lessonId, lessonTitle) {
+  hwQCount = 0;
+  document.getElementById('hwq-lesson-id').value = lessonId;
+  document.getElementById('hwq-lesson-label').textContent = lessonTitle;
+  document.getElementById('hwq-questions-container').innerHTML = '';
+  document.getElementById('hwq-modal-msg').innerHTML = '';
+  addHwqQuestion();
+  document.getElementById('mdl-add-questions').classList.add('show');
+}
+function closeAddQuestionsModal() { document.getElementById('mdl-add-questions').classList.remove('show'); }
+
+function addHwqQuestion() {
+  hwQCount++;
+  const n = hwQCount;
+  document.getElementById('hwq-questions-container').insertAdjacentHTML('beforeend', `
+    <div class="section-card" id="hwq2-block-${n}" style="margin-bottom:12px">
+      <div class="section-head" style="padding:10px 16px">
+        <h3 style="font-size:.85rem">السؤال ${n}</h3>
+        <button type="button" onclick="document.getElementById('hwq2-block-${n}').remove()"
+          style="background:none;border:none;color:var(--red);cursor:pointer">✖</button>
+      </div>
+      <div class="section-body" style="padding:12px 16px">
+        <div class="fg">
+          <label>نص السؤال *</label>
+          <div style="display:flex;gap:8px">
+            <textarea class="hwq2-text" rows="2" placeholder="السؤال..." style="flex:1"></textarea>
+            <div style="flex-shrink:0">
+              <button type="button" onclick="document.getElementById('hwq2-img-${n}').click()"
+                style="background:var(--blue-light);border:1.5px solid #BFDBFE;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:.78rem;color:var(--blue);font-family:'Cairo',sans-serif">🖼️</button>
+              <input type="file" id="hwq2-img-${n}" accept="image/*" style="display:none" onchange="previewHwq2Img(${n},this)">
+              <img id="hwq2-img-thumb-${n}" style="width:50px;height:50px;border-radius:6px;display:none;object-fit:cover;margin-top:4px">
+            </div>
+          </div>
+        </div>
+        <div class="fg-row" style="margin-top:8px">
+          <div class="fg"><label>أ</label><input class="hwq2-opt" data-idx="0" placeholder="الخيار أ"></div>
+          <div class="fg"><label>ب</label><input class="hwq2-opt" data-idx="1" placeholder="الخيار ب"></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>ج</label><input class="hwq2-opt" data-idx="2" placeholder="الخيار ج"></div>
+          <div class="fg"><label>د</label><input class="hwq2-opt" data-idx="3" placeholder="الخيار د"></div>
+        </div>
+        <div class="fg">
+          <label>الإجابة الصحيحة</label>
+          <select class="hwq2-correct">
+            <option value="0">أ</option><option value="1">ب</option>
+            <option value="2">ج</option><option value="3">د</option>
+          </select>
+        </div>
+      </div>
+    </div>`);
+}
+function previewHwq2Img(n, input) {
+  const file = input.files[0]; if (!file) return;
+  const img = document.getElementById('hwq2-img-thumb-'+n);
+  img.src = URL.createObjectURL(file); img.style.display = 'block';
+}
+async function saveAddedQuestions() {
+  const lessonId = document.getElementById('hwq-lesson-id').value;
+  const blocks   = document.querySelectorAll('#hwq-questions-container .section-card');
+  if (!blocks.length) { setMsg('hwq-modal-msg','أضف سؤالاً واحداً على الأقل','err'); return; }
+  const btn = document.getElementById('hwq-save-btn');
+  btn.disabled = true; btn.textContent = '⏳...';
+  try {
+    const questions = [];
+    for (let i = 0; i < blocks.length; i++) {
+      const b    = blocks[i];
+      const n    = b.id.replace('hwq2-block-','');
+      const text = b.querySelector('.hwq2-text').value.trim();
+      const opts = [...b.querySelectorAll('.hwq2-opt')].map(o => o.value.trim());
+      const correctIdx = parseInt(b.querySelector('.hwq2-correct').value);
+      if (!text) { setMsg('hwq-modal-msg',`السؤال ${i+1}: النص مطلوب`,'err'); btn.disabled=false; btn.textContent='💾 حفظ'; return; }
+      let imageUrl = null;
+      const imgFile = document.getElementById('hwq2-img-'+n)?.files[0];
+      if (imgFile) imageUrl = await uploadImageToSupabase(imgFile, 'homework_images');
+      questions.push({ lesson_id: lessonId, question_text: text, image_url: imageUrl,
+        options: opts.map((t, idx) => ({ text: t, is_correct: idx === correctIdx })), order_index: i });
+    }
+    const { error } = await sb.from('homework_questions').insert(questions);
+    if (error) throw error;
+    toast('✅ تم إضافة الأسئلة');
+    closeAddQuestionsModal();
+    loadHomeworkUnits();
+  } catch(e) { setMsg('hwq-modal-msg','خطأ: '+e.message,'err'); }
+  finally { btn.disabled = false; btn.textContent = '💾 حفظ'; }
+}
+
+// ── حذف وحدة ──
+async function deleteHomeworkUnit(id) {
+  if (!confirm('هل تريد حذف هذه الوحدة وجميع دروسها وأسئلتها؟')) return;
+  const { error } = await sb.from('homework_units').delete().eq('id',id);
+  if (error) { toast('خطأ: '+error.message,'err'); return; }
+  toast('✅ تم حذف الوحدة');
+  loadHomeworkUnits();
+}
+// ── حذف درس ──
+async function deleteHomeworkLesson(id) {
+  if (!confirm('هل تريد حذف هذا الدرس وأسئلته؟')) return;
+  const { error } = await sb.from('homework_lessons').delete().eq('id',id);
+  if (error) { toast('خطأ: '+error.message,'err'); return; }
+  toast('✅ تم حذف الدرس');
+  loadHomeworkUnits();
+}
+
 
 // ── Modal: Create Offline Exam ──
 function openOfflineExamModal() {
@@ -5783,6 +6209,86 @@ async function deleteOfflineExam(examId, title) {
   </div>
 </div>
 
+<!-- ══ MODAL: إنشاء واجب جديد ══ -->
+<div class="mdl" id="mdl-homework">
+  <div class="mdl-box wide" style="position:relative;max-height:92vh;overflow-y:auto">
+    <div class="mdl-title" style="color:#7C3AED">✏️ إنشاء واجب جديد</div>
+    <button onclick="closeHomeworkModal()" style="position:absolute;top:16px;left:16px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
+
+    <!-- اسم الوحدة والدرس -->
+    <div style="background:#F5F3FF;border-radius:12px;padding:16px;margin-bottom:16px;border:1.5px solid #EDE9FE">
+      <div style="font-weight:800;font-size:.88rem;color:#7C3AED;margin-bottom:12px">📦 معلومات الوحدة والدرس</div>
+      <div class="fg-row">
+        <div class="fg" style="flex:2">
+          <label>اسم الوحدة *</label>
+          <input type="text" id="hw-unit-title" placeholder="مثال: الوحدة 8: المثلثات">
+        </div>
+        <div class="fg" style="flex:1">
+          <label>المادة *</label>
+          <select id="hw-subj-sel" onchange="updateHwGrades()"><option value="">— اختر —</option></select>
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg" style="flex:2">
+          <label>اسم الدرس *</label>
+          <input type="text" id="hw-lesson-title" placeholder="مثال: Perpendicular Bisectors">
+        </div>
+        <div class="fg">
+          <label>رقم الدرس</label>
+          <input type="number" id="hw-lesson-num" placeholder="131">
+        </div>
+        <div class="fg">
+          <label>الصف *</label>
+          <select id="hw-grade-sel"><option value="">— اختر —</option></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- الأسئلة -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-weight:800;font-size:.88rem;color:#7C3AED">❓ أسئلة الواجب</div>
+      <button type="button" onclick="addHomeworkQuestion()"
+        style="background:linear-gradient(135deg,#7C3AED,#A78BFA);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">
+        ➕ إضافة سؤال
+      </button>
+    </div>
+    <div id="hw-questions-container"></div>
+
+    <div id="hw-modal-msg" style="margin-top:10px"></div>
+    <div class="mdl-btns" style="margin-top:16px">
+      <button class="btn-secondary" onclick="closeHomeworkModal()">إلغاء</button>
+      <button class="btn-primary" id="hw-save-btn" onclick="saveHomework()"
+        style="background:linear-gradient(135deg,#7C3AED,#A78BFA);border-color:#7C3AED">💾 حفظ الواجب</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: إضافة أسئلة لدرس موجود ══ -->
+<div class="mdl" id="mdl-add-questions">
+  <div class="mdl-box wide" style="position:relative;max-height:92vh;overflow-y:auto">
+    <div class="mdl-title" style="color:#7C3AED">❓ إضافة أسئلة — <span id="hwq-lesson-label" style="font-size:.85rem;font-weight:600;color:var(--gray)"></span></div>
+    <input type="hidden" id="hwq-lesson-id">
+    <button onclick="closeAddQuestionsModal()" style="position:absolute;top:16px;left:16px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:8px">
+      <div style="font-size:.85rem;color:var(--gray)">أضف أسئلة اختيار من متعدد للدرس</div>
+      <button type="button" onclick="addHwqQuestion()"
+        style="background:linear-gradient(135deg,#7C3AED,#A78BFA);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">
+        ➕ سؤال جديد
+      </button>
+    </div>
+
+    <div id="hwq-questions-container"></div>
+    <div id="hwq-modal-msg" style="margin-top:10px"></div>
+    <div class="mdl-btns" style="margin-top:16px">
+      <button class="btn-secondary" onclick="closeAddQuestionsModal()">إلغاء</button>
+      <button class="btn-primary" id="hwq-save-btn" onclick="saveAddedQuestions()"
+        style="background:linear-gradient(135deg,#7C3AED,#A78BFA);border-color:#7C3AED">💾 حفظ الأسئلة</button>
+    </div>
+  </div>
+</div>
+
 <script src="pwa-register.js" defer></script>
 </body>
+
 </html>
