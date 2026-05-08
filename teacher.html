@@ -2171,13 +2171,45 @@ async function boot() {
   if(!session) { window.location.href = 'login.html'; return; }
   ST.user = session.user;
 
-  const { data: profile } = await sb.from('profiles').select('*').eq('id', ST.user.id).single();
+  // ── جلب الـ profile مع إعادة المحاولة 3 مرات ──
+  let profile = null;
+  let profileError = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const { data, error } = await sb.from('profiles').select('*').eq('id', ST.user.id).single();
+    if (data) { profile = data; profileError = null; break; }
+    profileError = error;
+    if (attempt < 3) await new Promise(r => setTimeout(r, 800 * attempt));
+  }
   ST.profile = profile;
 
-  // Check role
-  if(profile?.role !== 'teacher') {
-    // Not a teacher → redirect
-    window.location.href = 'dashboard.html';
+  // ── إذا فشل جلب الـ profile كلياً ──
+  if (!profile) {
+    document.getElementById('loader').style.display = 'none';
+    document.body.insertAdjacentHTML('beforeend', `
+      <div style="position:fixed;inset:0;background:#0F172A;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:20px;padding:20px;text-align:center">
+        <div style="font-size:3rem">⚠️</div>
+        <div style="color:#fff;font-size:1.2rem;font-weight:700">تعذّر تحميل بيانات حسابك</div>
+        <div style="color:rgba(255,255,255,.6);font-size:.88rem;max-width:380px;line-height:1.8">
+          ${profileError ? profileError.message : 'لم يتم العثور على ملفك الشخصي.'}<br>
+          تأكد من اتصالك بالإنترنت ثم حاول مرة أخرى.
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+          <button onclick="window.location.reload()" style="padding:12px 28px;background:#1A56DB;color:#fff;border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">🔄 إعادة المحاولة</button>
+          <button onclick="sb.auth.signOut().then(()=>window.location.href='login.html')" style="padding:12px 28px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">🚪 تسجيل الخروج</button>
+        </div>
+      </div>
+    `);
+    return;
+  }
+
+  // ── التحقق من الـ role ──
+  if (profile.role !== 'teacher') {
+    // ليس معلماً — تحقق من الـ role الفعلي قبل التحويل
+    if (profile.role === 'admin') {
+      window.location.href = 'admin.html';
+    } else {
+      window.location.href = 'dashboard.html';
+    }
     return;
   }
 
