@@ -1219,14 +1219,21 @@ async function fetchAllData(userId) {
         .in('grade_id', gradeIds)
         .order('scheduled_at', { ascending: true })
         .limit(50);
-      teacherSessions = (tsess || []).map(s => {
-        const enr = teEnr.find(e => e.grade_id === s.grade_id);
-        return {
-          ...s,
-          subject     : s.subject_name || enr?.subject_name || '—',
-          teacher_name: teacherProfiles[s.teacher_id || enr?.teacher_id]?.full_name || '—',
-        };
-      });
+      teacherSessions = (tsess || [])
+        .filter(s => {
+          if (s.student_ids && s.student_ids.length > 0) {
+            return s.student_ids.includes(userId);
+          }
+          return true;
+        })
+        .map(s => {
+          const enr = teEnr.find(e => e.grade_id === s.grade_id);
+          return {
+            ...s,
+            subject     : s.subject_name || enr?.subject_name || '—',
+            teacher_name: teacherProfiles[s.teacher_id || enr?.teacher_id]?.full_name || '—',
+          };
+        });
     }
   }
 

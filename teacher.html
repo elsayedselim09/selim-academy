@@ -532,6 +532,12 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 .btn-del  { background:var(--red-light);  color:var(--red); border:1px solid #FECACA }
 .btn-del:hover  { background:var(--red);  color:#fff }
 
+.btn-join{padding:7px 14px;border-radius:8px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;border:none;transition:all .2s;flex-shrink:0}
+.btn-live{background:var(--green);color:#fff}.btn-live:hover{background:#0B8A5F}
+.btn-soon{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
+.btn-dis{background:var(--gray-light);color:var(--gray);cursor:not-allowed;border:1px solid var(--gray-mid)}
+.btn-end{background:var(--red-light);color:var(--red);border:1px solid #FECACA;cursor:not-allowed}
+
 /* ══════════════════════════════════════════
    BADGES
 ══════════════════════════════════════════ */
@@ -1649,6 +1655,13 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
         <select id="sess-grade-sel">
           <option value="">— اختر الصف —</option>
         </select>
+      </div>
+
+      <!-- الطلاب المشمولين في الحصة -->
+      <div class="fg" id="sess-students-wrap" style="display:none;margin-top:10px;">
+        <label>الطلاب المشمولين (اختياري - افتراضياً كل طلاب الصف)</label>
+        <div id="sess-students-list" style="background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:10px;max-height:150px;overflow-y:auto;font-size:.85rem;display:flex;flex-direction:column;gap:6px;">
+        </div>
       </div>
       <!-- الصف المجاني (ابتدائي→ثانوي) — يظهر عند تفعيل المجاني -->
       <div class="fg" id="sess-free-grade-wrap" style="display:none">
@@ -3412,6 +3425,17 @@ function renderSessionsData(data) {
     };
     const mins = s.duration_min || 60;
 
+    let joinBtn = '';
+    if (s.zoom_link) {
+      if (st === 'live') {
+        joinBtn = `<button class="btn-join btn-live" onclick="openZoomLink('${s.zoom_link}')">🎥 ادخل الآن</button>`;
+      } else if (st === 'upcoming') {
+        joinBtn = `<button class="btn-join btn-soon" onclick="openZoomLink('${s.zoom_link}')">🎥 دخول مبكر</button>`;
+      } else {
+        joinBtn = `<button class="btn-join btn-end" disabled>انتهت</button>`;
+      }
+    }
+
     return `
       <div class="session-card s-${st}" id="sc-${s.id}">
         <div class="sc-date">
@@ -3426,11 +3450,11 @@ function renderSessionsData(data) {
             <span>⏱️ ${mins} دقيقة</span>
             ${s.subject_name ? `<span>📚 ${s.subject_name}</span>` : ''}
             ${s.grade_name   ? `<span>🏫 ${s.grade_name}</span>` : ''}
-            ${s.zoom_link    ? `<span><button onclick="openZoomLink('${s.zoom_link}')" style="background:none;border:none;cursor:pointer;color:var(--blue)">🔗 انضم</button></span>` : ''}
           </div>
         </div>
         <div class="sc-status">${stateMap[st]||''}${s.is_free ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7;border-radius:50px;padding:3px 10px;font-size:.7rem;font-weight:900;margin-top:4px">🟢 مجاني</span>` : ''}</div>
         <div class="sc-acts">
+          ${joinBtn}
           <button class="btn-sm btn-edit" onclick="editSession('${s.id}')">✏️</button>
           <button class="btn-sm btn-del"  onclick="confirmDelete('session','${s.id}','${s.title.replace(/'/g,'')}')">🗑️</button>
         </div>
@@ -3602,7 +3626,44 @@ function updateSessionGradeDropdown(subjId, selectedGradeId) {
   const sel = document.getElementById('sess-grade-sel');
   sel.innerHTML = '<option value="">— اختر الصف —</option>' +
     grades.map(g => `<option value="${g.id}" ${g.id===selectedGradeId?'selected':''}>${g.name}</option>`).join('');
+  
+  sel.onchange = (e) => loadStudentsForSessionGrade(e.target.value);
+  if (selectedGradeId) loadStudentsForSessionGrade(selectedGradeId);
+  else document.getElementById('sess-students-wrap').style.display = 'none';
 }
+
+async function loadStudentsForSessionGrade(gradeId) {
+  const wrap = document.getElementById('sess-students-wrap');
+  const list = document.getElementById('sess-students-list');
+  if (!gradeId) { wrap.style.display = 'none'; return; }
+  
+  wrap.style.display = 'block';
+  list.innerHTML = '⏳ جاري جلب الطلاب...';
+  
+  const { data: enData } = await sb.from('teacher_enrollments').select('student_id').eq('teacher_id', ST.user.id).eq('grade_id', gradeId);
+  if (!enData || enData.length === 0) {
+    list.innerHTML = 'لا يوجد طلاب في هذا الصف.';
+    return;
+  }
+  const studentIds = enData.map(e => e.student_id);
+  const { data: profs } = await sb.from('profiles').select('id,full_name').in('id', studentIds);
+  
+  let html = `<label style="display:flex;align-items:center;gap:6px;font-weight:700;border-bottom:1px solid var(--gray-mid);padding-bottom:5px;margin-bottom:5px"><input type="checkbox" id="sess-all-students" checked onchange="toggleAllSessionStudents(this.checked)" style="accent-color:var(--blue)"> جميع طلاب الصف</label>`;
+  (profs||[]).forEach(p => {
+    html += `<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="sess-student-cb" value="${p.id}" checked onchange="checkAllStudentsState()" style="accent-color:var(--blue)"> ${p.full_name}</label>`;
+  });
+  list.innerHTML = html;
+}
+
+window.toggleAllSessionStudents = function(checked) {
+  document.querySelectorAll('.sess-student-cb').forEach(cb => cb.checked = checked);
+};
+
+window.checkAllStudentsState = function() {
+  const allCb = document.querySelectorAll('.sess-student-cb');
+  const checked = document.querySelectorAll('.sess-student-cb:checked');
+  document.getElementById('sess-all-students').checked = (allCb.length === checked.length);
+};
 
 function closeSessionModal() { document.getElementById('mdl-session').classList.remove('show'); }
 
@@ -3681,8 +3742,21 @@ async function saveSession() {
     gradeName = subj?.teacher_grades?.find(g => g.id === gradeId)?.name || null;
   }
 
-  // الصفوف الإضافية
   const extraGrades = isFree ? [] : getExtraGrades(subj);
+
+  let selectedStudentIds = null;
+  const wrap = document.getElementById('sess-students-wrap');
+  if (wrap && wrap.style.display !== 'none' && !isFree) {
+    const allChecked = document.getElementById('sess-all-students')?.checked;
+    if (!allChecked) {
+      selectedStudentIds = [];
+      document.querySelectorAll('.sess-student-cb:checked').forEach(cb => selectedStudentIds.push(cb.value));
+      if (selectedStudentIds.length === 0) {
+        setMsg('sess-mdl-msg','يجب اختيار طالب واحد على الأقل أو جميع الطلاب','err');
+        return;
+      }
+    }
+  }
 
   const basePayload = {
     teacher_id:   ST.user.id,
@@ -3693,6 +3767,7 @@ async function saveSession() {
     grade_id:     gradeId,
     grade_name:   gradeName,
     is_free:      isFree,
+    student_ids:  selectedStudentIds,
   };
 
   const btn = document.getElementById('save-sess-btn');
@@ -4151,13 +4226,20 @@ async function loadAttendanceForDate() {
 }
 
 function markAtt(studentId, status) {
-  attRecords[studentId] = status;
-  // Update button states
-  const pBtn = document.getElementById('btn-pres-'+studentId);
-  const aBtn = document.getElementById('btn-abs-'+studentId);
-  if(pBtn) { pBtn.className = 'att-btn' + (status==='present'?' present':''); }
-  if(aBtn) { aBtn.className = 'att-btn' + (status==='absent'?' absent':''); }
-  // Count all students
+  if (attRecords[studentId] === status) {
+    // إلغاء التحديد إذا تم النقر على نفس الحالة
+    delete attRecords[studentId];
+    const pBtn = document.getElementById('btn-pres-'+studentId);
+    const aBtn = document.getElementById('btn-abs-'+studentId);
+    if(pBtn) pBtn.className = 'att-btn';
+    if(aBtn) aBtn.className = 'att-btn';
+  } else {
+    attRecords[studentId] = status;
+    const pBtn = document.getElementById('btn-pres-'+studentId);
+    const aBtn = document.getElementById('btn-abs-'+studentId);
+    if(pBtn) { pBtn.className = 'att-btn' + (status==='present'?' present':''); }
+    if(aBtn) { aBtn.className = 'att-btn' + (status==='absent'?' absent':''); }
+  }
   const rows = document.querySelectorAll('[id^="att-row-"]').length;
   updateAttSummary(rows);
 }
