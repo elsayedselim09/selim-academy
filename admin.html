@@ -1922,14 +1922,19 @@ async function openStudentDetail(studentId) {
   modal.classList.add('show');
   body.innerHTML = '<div class="skel" style="height:200px;border-radius:12px"></div>';
 
-  // جلب طلبات الاشتراك
-  const reqRes = await sb.from('subscription_requests')
-    .select('id,status,subject,grade,session_type,days_info,created_at,assigned_teacher_id')
-    .eq('user_id', studentId)
-    .order('created_at', {ascending: false});
+  // جلب طلبات الاشتراك والالتحاق
+  const [reqRes, enrRes] = await Promise.all([
+    sb.from('subscription_requests')
+      .select('id,status,subject,grade,session_type,days_info,created_at,assigned_teacher_id,end_date,sessions_remaining')
+      .eq('user_id', studentId)
+      .order('created_at', {ascending: false}),
+    sb.from('teacher_enrollments')
+      .select('teacher_id, subject_name')
+      .eq('student_id', studentId)
+  ]);
 
   const reqs = reqRes.data || [];
-  const enrs = [];
+  const enrs = enrRes.data || [];
 
   const statusBadge = st => ({
     approved: '<span class="badge b-approved">✅ مقبول</span>',
@@ -2019,7 +2024,10 @@ async function openStudentDetail(studentId) {
       let stuSessions = [];
       if(activeReqs.length > 0) {
          // Get teacher IDs and subjects from active reqs
-         const activeDetails = activeReqs.map(r => ({ teacher_id: r.assigned_teacher_id, subject: r.subject }));
+         const activeDetails = activeReqs.map(r => {
+           const teacherIdForReq = enrs.find(e => (e.subject_name||'').includes(r.subject||'') || (r.subject||'').includes(e.subject_name||''))?.teacher_id || '';
+           return { teacher_id: r.assigned_teacher_id || teacherIdForReq, subject: r.subject };
+         });
          // Since we don't have direct student_ids matching in this simple query, we'll fetch sessions from assigned teachers
          const tIds = [...new Set(activeDetails.map(d=>d.teacher_id).filter(Boolean))];
          if(tIds.length) {
