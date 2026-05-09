@@ -246,6 +246,22 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   .stats-grid{grid-template-columns:1fr}.fg-row{grid-template-columns:1fr}
   .courses-grid{grid-template-columns:1fr}
 }
+/* WEEKLY SCHEDULE TABLE */
+.admin-page-tabs { display:flex; gap:0; border:1.5px solid var(--gray-mid); border-radius:11px; overflow:hidden; margin-bottom:16px }
+.admin-ptab { flex:1; padding:9px 12px; background:var(--gray-light); border:none; font-family:'Cairo',sans-serif; font-size:.87rem; font-weight:700; cursor:pointer; color:var(--gray); transition:all .2s; text-align:center }
+.admin-ptab.active { background:var(--blue); color:#fff }
+.admin-schedule-wrap { overflow-x:auto; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,.08); border:1px solid var(--gray-mid); background:#fff; direction:rtl }
+.admin-schedule-table { border-collapse:collapse; width:100%; min-width:800px; font-family:'Cairo',sans-serif; font-size:.75rem }
+.admin-schedule-table thead th { background:var(--dark); color:#fff; padding:8px 4px; text-align:center; font-weight:700; border:1px solid rgba(255,255,255,.1); white-space:nowrap }
+.admin-schedule-table thead th.sth-day { background:#0F172A; min-width:70px; position:sticky; right:0; z-index:3 }
+.admin-schedule-table tbody td { border:1px solid var(--gray-mid); padding:2px; height:60px; vertical-align:top; background:#FAFBFF; min-width:75px }
+.admin-schedule-table tbody tr:nth-child(even) td { background:#F1F5FB }
+.admin-schedule-table tbody td.std-day { background:linear-gradient(135deg,#1E3A5F,#1A56DB); color:#fff; font-weight:700; font-size:.8rem; padding:6px 4px; text-align:center; white-space:nowrap; vertical-align:middle; border-color:rgba(255,255,255,.12); position:sticky; right:0; z-index:2; box-shadow:-2px 0 6px rgba(0,0,0,.15) }
+.admin-schedule-table tbody tr:nth-child(even) td.std-day { background:linear-gradient(135deg,#162B47,#1342B0) }
+.admin-sched-cell { padding:4px; border-radius:6px; font-weight:700; line-height:1.3; display:block; border-width:1.5px; border-style:solid; text-align:center; position:relative; overflow:hidden }
+.admin-sched-cell-subj { font-size:.7rem; font-weight:800; margin-bottom:1px }
+.admin-sched-cell-sub { font-size:.6rem; opacity:.85; margin-bottom:1px }
+.admin-sched-cell-time { font-size:.6rem; opacity:.7 }
 </style>
 </head>
 <body>
@@ -1930,6 +1946,13 @@ async function openStudentDetail(studentId) {
       <div class="t-mdl-spec">🎓 طالب</div>
     </div>
 
+    <div class="admin-page-tabs">
+      <button class="admin-ptab sd-ptab active" id="sd-tabbtn-info" onclick="adminSwitchStudentTab('info')">ℹ️ المعلومات</button>
+      <button class="admin-ptab sd-ptab" id="sd-tabbtn-sch" onclick="adminSwitchStudentTab('schedule')">📅 الجدول الأسبوعي</button>
+    </div>
+
+    <!-- Tab 1: Info -->
+    <div id="sd-tab-info">
     <div class="t-info-grid">
       <div class="t-info-item">
         <div class="t-info-lbl">📱 رقم الهاتف</div>
@@ -1983,8 +2006,57 @@ async function openStudentDetail(studentId) {
         : '<div style="color:var(--gray);font-size:.83rem">لم يقدم أي طلب بعد</div>'
       }
     </div>
-
+    </div>
+    <!-- Tab 2: Schedule -->
+    <div id="sd-tab-schedule" style="display:none">
+      <div id="sd-schedule-content"><div class="skel" style="height:200px;border-radius:12px"></div></div>
+    </div>
     `;
+
+    // Fetch full sessions for schedule
+    try {
+      const activeReqs = reqs.filter(r => r.status === 'approved' && (!r.end_date || new Date(r.end_date).setHours(23,59,59,999) >= Date.now()) && (r.sessions_remaining == null || r.sessions_remaining > 0));
+      let stuSessions = [];
+      if(activeReqs.length > 0) {
+         // Get teacher IDs and subjects from active reqs
+         const activeDetails = activeReqs.map(r => ({ teacher_id: r.assigned_teacher_id, subject: r.subject }));
+         // Since we don't have direct student_ids matching in this simple query, we'll fetch sessions from assigned teachers
+         const tIds = [...new Set(activeDetails.map(d=>d.teacher_id).filter(Boolean))];
+         if(tIds.length) {
+           const {data: tSess} = await sb.from('teacher_sessions')
+             .select('*')
+             .in('teacher_id', tIds)
+             .gte('scheduled_at', new Date(Date.now() - 24*60*60*1000).toISOString());
+           
+           // Filter by those containing student in student_ids array OR just show all for the teacher/grade combo for now if student_ids missing
+           if(tSess) {
+             stuSessions = tSess.filter(s => {
+               if(s.student_ids && s.student_ids.includes(studentId)) return true;
+               // Fallback: match subject and teacher if student_ids not populated correctly yet
+               return activeDetails.some(ad => ad.teacher_id === s.teacher_id && (s.subject_name === ad.subject || !ad.subject));
+             });
+           }
+         }
+      }
+      
+      const teacherIds = [...new Set(stuSessions.map(s=>s.teacher_id).filter(Boolean))];
+      let pm = {};
+      if(teacherIds.length) {
+         const {data: pr} = await sb.from('profiles').select('id,full_name').in('id', teacherIds);
+         (pr||[]).forEach(p=>pm[p.id]=p);
+      }
+      stuSessions = stuSessions.map(s => ({...s, teacher_name: pm[s.teacher_id]?.full_name || '—'}));
+      document.getElementById('sd-schedule-content').innerHTML = adminRenderScheduleGrid(stuSessions, true);
+    } catch(e) {
+      document.getElementById('sd-schedule-content').innerHTML = `<div class="msg-err">❌ فشل تحميل الجدول: ${e.message}</div>`;
+    }
+}
+
+function adminSwitchStudentTab(tab) {
+  document.querySelectorAll('.sd-ptab').forEach(b => b.classList.remove('active'));
+  document.getElementById(tab === 'info' ? 'sd-tabbtn-info' : 'sd-tabbtn-sch').classList.add('active');
+  document.getElementById('sd-tab-info').style.display = tab === 'info' ? 'block' : 'none';
+  document.getElementById('sd-tab-schedule').style.display = tab === 'schedule' ? 'block' : 'none';
 }
 
 // ══════════════════════════════════
@@ -2799,6 +2871,13 @@ async function openTeacherDetail(teacherId) {
       </div>
     </div>
 
+    <div class="admin-page-tabs">
+      <button class="admin-ptab td-ptab active" id="td-tabbtn-info" onclick="adminSwitchTeacherTab('info')">ℹ️ المعلومات</button>
+      <button class="admin-ptab td-ptab" id="td-tabbtn-sch" onclick="adminSwitchTeacherTab('schedule')">📅 الجدول الأسبوعي</button>
+    </div>
+
+    <!-- Tab 1: Info -->
+    <div id="td-tab-info">
     <div class="t-info-grid">
       <div class="t-info-item">
         <div class="t-info-lbl">📱 رقم الهاتف</div>
@@ -2864,7 +2943,25 @@ async function openTeacherDetail(teacherId) {
         }).join('')}
       </div>
       <div style="font-size:.72rem;color:#9CA3AF">يمكنك تجاوز إعداد المعلم وتغيير مستوى ظهوره في الموقع مباشرة</div>
-    </div>`;
+    </div>
+    </div>
+    <!-- Tab 2: Schedule -->
+    <div id="td-tab-schedule" style="display:none">
+      <div id="td-schedule-content"><div class="skel" style="height:200px;border-radius:12px"></div></div>
+    </div>
+    `;
+
+  // Fetch full sessions for teacher schedule tab
+  try {
+    const {data: allTchSess} = await sb.from('teacher_sessions')
+      .select('*')
+      .eq('teacher_id', teacherId)
+      .gte('scheduled_at', new Date(Date.now() - 24*60*60*1000).toISOString()); // from past 24h onwards to handle deduplication
+    
+    document.getElementById('td-schedule-content').innerHTML = adminRenderScheduleGrid(allTchSess || [], false);
+  } catch(e) {
+    document.getElementById('td-schedule-content').innerHTML = `<div class="msg-err">❌ فشل تحميل الجدول: ${e.message}</div>`;
+  }
 
   // Action buttons
   acts.innerHTML = `
@@ -2873,6 +2970,125 @@ async function openTeacherDetail(teacherId) {
     ${st === 'approved' ? `<button class="mdl-confirm" style="background:var(--gold);color:#fff" onclick="revokeTeacher('${t.id}');document.getElementById('mdl-teacher-detail').classList.remove('show')">🔄 سحب الاعتماد</button>` : ''}
     ${st === 'rejected' ? `<button class="mdl-confirm mc-approve" onclick="approveTeacher('${t.id}');document.getElementById('mdl-teacher-detail').classList.remove('show')">✅ إعادة قبول</button>` : ''}
     <button class="mdl-cancel" onclick="document.getElementById('mdl-teacher-detail').classList.remove('show')">إغلاق</button>`;
+}
+
+function adminSwitchTeacherTab(tab) {
+  document.querySelectorAll('.td-ptab').forEach(b => b.classList.remove('active'));
+  document.getElementById(tab === 'info' ? 'td-tabbtn-info' : 'td-tabbtn-sch').classList.add('active');
+  document.getElementById('td-tab-info').style.display = tab === 'info' ? 'block' : 'none';
+  document.getElementById('td-tab-schedule').style.display = tab === 'schedule' ? 'block' : 'none';
+}
+
+// ── Admin Universal Schedule Renderer ──
+const ADMIN_PAL = [
+  { bg:'#FEF08A', text:'#713F12', border:'#CA8A04' },
+  { bg:'#C4B5FD', text:'#3B0764', border:'#7C3AED' },
+  { bg:'#93C5FD', text:'#1E3A5F', border:'#2563EB' },
+  { bg:'#86EFAC', text:'#14532D', border:'#16A34A' },
+  { bg:'#FED7AA', text:'#7C2D12', border:'#EA580C' },
+  { bg:'#FCA5A5', text:'#7F1D1D', border:'#DC2626' },
+  { bg:'#A5F3FC', text:'#164E63', border:'#0891B2' },
+];
+
+function adminRenderScheduleGrid(data, isStudent) {
+  const now = Date.now();
+  if (!data || !data.length) {
+    return `<div class="empty-box"><div class="ei">📅</div><div class="et">لا توجد حصص مجدولة</div></div>`;
+  }
+
+  // Deduplication logic (same as teacher/dashboard)
+  const slotMap = {};
+  data.forEach(s => {
+    const dt = new Date(s.scheduled_at);
+    const di = dt.getDay(), hr = dt.getHours();
+    const gr = s.grade_name || s.grade_id || '_';
+    const subj = s.subject_name || s.subject || '_';
+    const slot = isStudent ? `${di}_${hr}_${subj}` : `${di}_${hr}_${gr}`;
+    const sEnd = dt.getTime() + (s.duration_min || 60) * 60000;
+    const done = sEnd < now;
+    
+    if(!slotMap[slot]) { slotMap[slot] = s; return; }
+    
+    const ex = slotMap[slot];
+    const exEnd = new Date(ex.scheduled_at).getTime() + (ex.duration_min || 60) * 60000;
+    const exDone = exEnd < now;
+    
+    if(!done && exDone) { slotMap[slot] = s; return; }
+    if(!done && !exDone) { if(dt.getTime() < new Date(ex.scheduled_at).getTime()) slotMap[slot] = s; }
+    else if(done && exDone) { if(dt.getTime() > new Date(ex.scheduled_at).getTime()) slotMap[slot] = s; }
+  });
+
+  const activeSlots = {};
+  Object.entries(slotMap).forEach(([slot, s]) => {
+    const [di, hr, grOrSubj] = slot.split('_');
+    const hasFuture = data.some(x => {
+      const xDt = new Date(x.scheduled_at);
+      const xKey = isStudent ? (x.subject_name || x.subject || '_') : (x.grade_name || x.grade_id || '_');
+      const xEnd = xDt.getTime() + (x.duration_min || 60) * 60000;
+      return String(xDt.getDay()) === di && String(xDt.getHours()) === hr && xKey === grOrSubj && xEnd >= now;
+    });
+    if(hasFuture) activeSlots[slot] = s;
+  });
+
+  const actSess = Object.values(activeSlots);
+  if(!actSess.length) {
+    return `<div class="empty-box"><div class="ei">✅</div><div class="et">انتهت جميع الحصص</div></div>`;
+  }
+
+  // Colors
+  const colorMap = {};
+  let ci = 0;
+  actSess.forEach(s => {
+    const key = isStudent ? (s.subject_name || s.subject || '_') : (s.grade_name || s.grade_id || '_');
+    if(!colorMap[key]) colorMap[key] = ADMIN_PAL[ci++ % ADMIN_PAL.length];
+  });
+
+  const hourRange = [];
+  for(let h=6; h<=23; h++) hourRange.push(h);
+
+  const DAYS = [
+    { idx:6, name:'السبت' }, { idx:0, name:'الأحد' }, { idx:1, name:'الاثنين' },
+    { idx:2, name:'الثلاثاء' }, { idx:3, name:'الأربعاء' }, { idx:4, name:'الخميس' }, { idx:5, name:'الجمعة' }
+  ];
+
+  const lookup = {};
+  DAYS.forEach(d => { lookup[d.idx]={}; hourRange.forEach(h => lookup[d.idx][h]=null); });
+  actSess.forEach(s => {
+    const dt = new Date(s.scheduled_at);
+    const di = dt.getDay(), hr = dt.getHours();
+    if(lookup[di] !== undefined && hr >= 6 && hr <= 23) lookup[di][hr] = s;
+  });
+
+  const hLabel = h => h<12 ? `${h} ص` : h===12 ? '12 ظ' : `${h-12} م`;
+
+  let html = `<div class="admin-schedule-wrap"><table class="admin-schedule-table"><thead><tr><th class="sth-day">اليوم/الوقت</th>`;
+  hourRange.forEach(h => html += `<th>${h}<br><span style="font-size:.55rem;opacity:.7">${hLabel(h)}</span></th>`);
+  html += `</tr></thead><tbody>`;
+
+  DAYS.forEach(d => {
+    html += `<tr><td class="std-day">${d.name}</td>`;
+    hourRange.forEach(h => {
+      const s = lookup[d.idx][h];
+      if(!s) {
+        html += `<td></td>`;
+      } else {
+        const titleKey = isStudent ? (s.subject_name || s.subject || '—') : (s.grade_name || '—');
+        const subKey   = isStudent ? (s.teacher_name || '—') : (s.subject_name || '—');
+        const c        = colorMap[titleKey] || ADMIN_PAL[0];
+        const dur      = s.duration_min || 60;
+        html += `<td style="padding:2px">
+          <div class="admin-sched-cell" style="background:${c.bg};color:${c.text};border-color:${c.border}" title="${titleKey} · ${subKey}">
+            <div class="admin-sched-cell-subj">${titleKey}</div>
+            <div class="admin-sched-cell-sub">${subKey}</div>
+            <div class="admin-sched-cell-time">${new Date(s.scheduled_at).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</div>
+          </div>
+        </td>`;
+      }
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody></table></div>`;
+  return html;
 }
 
 async function adminSetVisibility(teacherId, value, btn) {
