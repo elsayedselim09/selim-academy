@@ -934,6 +934,29 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 .exam-tab  { padding:9px 22px; background:none; border:none; font-family:'Cairo',sans-serif; font-size:.85rem; font-weight:700; cursor:pointer; color:var(--gray); transition:all .2s }
 .exam-tab.active { background:var(--blue); color:#fff }
 
+/* ══════════════════════════════════════════
+   SESSIONS PAGE TABS
+══════════════════════════════════════════ */
+.sess-page-tabs { display:inline-flex; gap:0; border:1.5px solid var(--gray-mid); border-radius:11px; overflow:hidden; margin-bottom:22px }
+.sess-ptab { padding:9px 26px; background:none; border:none; font-family:'Cairo',sans-serif; font-size:.87rem; font-weight:700; cursor:pointer; color:var(--gray); transition:all .2s }
+.sess-ptab.active { background:var(--blue); color:#fff }
+
+/* ══════════════════════════════════════════
+   WEEKLY SCHEDULE TABLE
+══════════════════════════════════════════ */
+.schedule-wrap { overflow-x:auto; border-radius:16px; box-shadow:var(--shadow-md); margin-bottom:20px }
+.schedule-table { border-collapse:collapse; width:100%; min-width:860px; font-family:'Cairo',sans-serif }
+.schedule-table thead th { background:#1A56DB; color:#fff; padding:10px 7px; text-align:center; font-size:.74rem; font-weight:700; border:1px solid rgba(255,255,255,.18); white-space:nowrap }
+.schedule-table thead th.th-day { background:#0F172A; min-width:74px }
+.schedule-table tbody td { border:1px solid #E5E7EB; padding:3px; height:72px; vertical-align:top; background:#FAFBFF; min-width:80px; transition:background .15s }
+.schedule-table tbody tr:nth-child(even) td { background:#F1F5FB }
+.schedule-table tbody td.td-day { background:linear-gradient(135deg,#1E3A5F,#1A56DB); color:#fff; font-weight:700; font-size:.82rem; padding:8px 10px; text-align:center; white-space:nowrap; vertical-align:middle; border-color:rgba(255,255,255,.12) }
+.schedule-table tbody tr:nth-child(even) td.td-day { background:linear-gradient(135deg,#162B47,#1342B0) }
+.sched-cell { padding:5px 6px; border-radius:8px; font-size:.72rem; font-weight:700; line-height:1.4; cursor:pointer; transition:all .22s; display:block; border-width:1.5px; border-style:solid; text-align:center; margin-bottom:2px }
+.sched-cell:hover { transform:scale(1.07); box-shadow:0 4px 14px rgba(0,0,0,.2); position:relative; z-index:5 }
+.schedule-legend { display:flex; flex-wrap:wrap; gap:8px; padding:14px 18px; background:#fff; border-radius:14px; border:1px solid var(--gray-mid); margin-top:4px; align-items:center }
+.sched-legend-item { display:inline-flex; align-items:center; gap:5px; padding:5px 14px; border-radius:50px; font-size:.76rem; font-weight:700; border-width:1.5px; border-style:solid }
+
 .oex-card {
   background:#fff; border:1px solid var(--gray-mid); border-radius:var(--radius);
   padding:18px 20px; margin-bottom:12px; display:flex; align-items:center; gap:16px;
@@ -1132,46 +1155,69 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 
   <!-- ════ SESSIONS ════ -->
   <div class="page" id="page-sessions">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px">
       <div>
         <div class="page-title">الحصص 🗓️</div>
         <p class="page-sub" style="margin-bottom:0">جميع حصصك القادمة والسابقة</p>
       </div>
       <button class="btn-primary" onclick="openSessionModal()">➕ إضافة حصة</button>
     </div>
-    <!-- Calendar Strip -->
-    <div class="cal-strip" id="cal-strip"></div>
-    <!-- Grade Filter Bar -->
-    <div style="margin-bottom:14px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <span style="font-size:.82rem;font-weight:700;color:var(--gray)">🏫 الصف:</span>
-        <div id="sess-grade-bar" style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="sg-btn active" data-gid="all" onclick="setSessGrade('all')">📋 الكل</button>
-          <!-- يُبنى ديناميكياً -->
+
+    <!-- ── تبويبات: الحصص | الجدول ── -->
+    <div class="sess-page-tabs">
+      <button class="sess-ptab active" id="stab-sessions" onclick="switchSessTabView('sessions')">🗓️ الحصص</button>
+      <button class="sess-ptab"        id="stab-schedule" onclick="switchSessTabView('schedule')">📅 الجدول</button>
+    </div>
+
+    <!-- ── LIST VIEW ── -->
+    <div id="sess-list-view">
+      <!-- Calendar Strip -->
+      <div class="cal-strip" id="cal-strip"></div>
+      <!-- Grade Filter Bar -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <span style="font-size:.82rem;font-weight:700;color:var(--gray)">🏫 الصف:</span>
+          <div id="sess-grade-bar" style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="sg-btn active" data-gid="all" onclick="setSessGrade('all')">📋 الكل</button>
+            <!-- يُبنى ديناميكياً -->
+          </div>
+        </div>
+        <!-- زرار حذف حصص الصف المختار -->
+        <div id="sess-delete-bar" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:10px 14px;display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <span id="sess-delete-label" style="font-size:.82rem;color:var(--red);font-weight:700">🗑️ حذف حصص هذا الصف</span>
+          <div style="display:flex;gap:8px">
+            <button onclick="deleteSessionsByGrade()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🗑️ حذف حصص الصف</button>
+            <button onclick="deleteAllSessions()" style="background:#7F1D1D;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🗑️ حذف كل الحصص</button>
+          </div>
         </div>
       </div>
-      <!-- زرار حذف حصص الصف المختار -->
-      <div id="sess-delete-bar" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:10px 14px;display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-        <span id="sess-delete-label" style="font-size:.82rem;color:var(--red);font-weight:700">🗑️ حذف حصص هذا الصف</span>
-        <div style="display:flex;gap:8px">
-          <button onclick="deleteSessionsByGrade()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🗑️ حذف حصص الصف</button>
-          <button onclick="deleteAllSessions()" style="background:#7F1D1D;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🗑️ حذف كل الحصص</button>
-        </div>
+      <!-- Status Filter -->
+      <div class="sessions-filter">
+        <button class="sf-btn active" id="sf-all"      onclick="setSessFilter('all')">📋 الكل</button>
+        <button class="sf-btn"        id="sf-upcoming" onclick="setSessFilter('upcoming')">🔵 القادمة</button>
+        <button class="sf-btn"        id="sf-live"     onclick="setSessFilter('live')">🟢 مباشرة</button>
+        <button class="sf-btn"        id="sf-ended"    onclick="setSessFilter('ended')">✅ المنتهية</button>
+      </div>
+      <!-- List -->
+      <div id="sessions-list">
+        <div class="skel" style="height:90px;border-radius:14px;margin-bottom:12px"></div>
+        <div class="skel" style="height:90px;border-radius:14px;margin-bottom:12px"></div>
+        <div class="skel" style="height:90px;border-radius:14px"></div>
       </div>
     </div>
 
-    <!-- Status Filter -->
-    <div class="sessions-filter">
-      <button class="sf-btn active" id="sf-all"      onclick="setSessFilter('all')">📋 الكل</button>
-      <button class="sf-btn"        id="sf-upcoming" onclick="setSessFilter('upcoming')">🔵 القادمة</button>
-      <button class="sf-btn"        id="sf-live"     onclick="setSessFilter('live')">🟢 مباشرة</button>
-      <button class="sf-btn"        id="sf-ended"    onclick="setSessFilter('ended')">✅ المنتهية</button>
-    </div>
-    <!-- List -->
-    <div id="sessions-list">
-      <div class="skel" style="height:90px;border-radius:14px;margin-bottom:12px"></div>
-      <div class="skel" style="height:90px;border-radius:14px;margin-bottom:12px"></div>
-      <div class="skel" style="height:90px;border-radius:14px"></div>
+    <!-- ── SCHEDULE VIEW (الجدول الأسبوعي) ── -->
+    <div id="sess-schedule-view" style="display:none">
+      <!-- Grade filter for schedule -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+        <span style="font-size:.82rem;font-weight:700;color:var(--gray)">🏫 الصف:</span>
+        <div id="sched-grade-bar" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="sg-btn active" data-gid="all" onclick="setSchedGrade('all')">📋 الكل</button>
+        </div>
+      </div>
+      <div id="schedule-view-inner">
+        <div class="skel" style="height:340px;border-radius:14px"></div>
+      </div>
     </div>
   </div>
 
@@ -3496,6 +3542,166 @@ async function deleteAllSessions() {
     sessGradeFilter = 'all';
     await loadSessions();
   } catch(e) { alert('خطأ أثناء الحذف: ' + e.message); }
+}
+
+// ══════════════════════════════════════════════
+// SESSIONS PAGE — TAB SWITCHER  (الحصص | الجدول)
+// ══════════════════════════════════════════════
+let sessCurrentTab  = 'sessions';
+let schedGradeFilter = 'all';
+
+function switchSessTabView(tab) {
+  sessCurrentTab = tab;
+  document.querySelectorAll('.sess-ptab').forEach(t => t.classList.remove('active'));
+  document.getElementById('stab-' + tab).classList.add('active');
+  document.getElementById('sess-list-view').style.display     = tab === 'sessions' ? 'block' : 'none';
+  document.getElementById('sess-schedule-view').style.display = tab === 'schedule'  ? 'block' : 'none';
+  if (tab === 'schedule') {
+    buildSchedGradeBar();
+    renderSchedule();
+  }
+}
+
+function buildSchedGradeBar() {
+  const bar = document.getElementById('sched-grade-bar');
+  if (!bar) return;
+  const seen = {}, grades = [];
+  sessAllData.forEach(s => {
+    if (s.grade_id && !seen[s.grade_id]) {
+      seen[s.grade_id] = true;
+      grades.push({ id: s.grade_id, name: s.grade_name || s.grade_id });
+    }
+  });
+  bar.innerHTML = `<button class="sg-btn ${schedGradeFilter==='all'?'active':''}" data-gid="all" onclick="setSchedGrade('all')">📋 الكل</button>` +
+    grades.map(g => `<button class="sg-btn ${schedGradeFilter===g.id?'active':''}" data-gid="${g.id}" onclick="setSchedGrade('${g.id}')">${g.name}</button>`).join('');
+}
+
+function setSchedGrade(gid) {
+  schedGradeFilter = gid;
+  document.querySelectorAll('#sched-grade-bar .sg-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll(`#sched-grade-bar .sg-btn[data-gid="${gid}"]`).forEach(b => b.classList.add('active'));
+  renderSchedule();
+}
+
+// ── Palette matching the Excel colours ──
+const SCHED_PAL = [
+  { bg:'#FEF08A', text:'#713F12', border:'#CA8A04' }, // yellow
+  { bg:'#C4B5FD', text:'#3B0764', border:'#7C3AED' }, // purple
+  { bg:'#93C5FD', text:'#1E3A5F', border:'#2563EB' }, // blue
+  { bg:'#86EFAC', text:'#14532D', border:'#16A34A' }, // green
+  { bg:'#FED7AA', text:'#7C2D12', border:'#EA580C' }, // orange
+  { bg:'#FCA5A5', text:'#7F1D1D', border:'#DC2626' }, // red
+  { bg:'#A5F3FC', text:'#164E63', border:'#0891B2' }, // teal
+  { bg:'#D9F99D', text:'#365314', border:'#65A30D' }, // lime
+  { bg:'#E9D5FF', text:'#581C87', border:'#9333EA' }, // violet
+  { bg:'#FDE68A', text:'#78350F', border:'#D97706' }, // amber
+];
+
+function renderSchedule() {
+  const el = document.getElementById('schedule-view-inner');
+  if (!el) return;
+
+  // Filter by grade if needed
+  const data = schedGradeFilter === 'all'
+    ? sessAllData
+    : sessAllData.filter(s => s.grade_id === schedGradeFilter);
+
+  if (!data.length) {
+    el.innerHTML = `<div class="empty-box"><div class="ei">📅</div><div class="et">لا توجد حصص لعرضها في الجدول</div><div class="ed">أضف حصصك من زر "إضافة حصة"</div></div>`;
+    return;
+  }
+
+  // Build grade → color map
+  const colorMap = {};
+  let ci = 0;
+  data.forEach(s => {
+    const key = s.grade_id || s.grade_name || '_';
+    if (!colorMap[key]) colorMap[key] = SCHED_PAL[ci++ % SCHED_PAL.length];
+  });
+
+  // Determine hour range from data (minimum 8am–9pm)
+  const allHours = data.map(s => new Date(s.scheduled_at).getHours());
+  const minH = Math.min(8, ...allHours);
+  const maxH = Math.max(21, ...allHours);
+  const hourRange = [];
+  for (let h = minH; h <= maxH; h++) hourRange.push(h);
+
+  // Day rows (Saturday first like the Excel)
+  const DAYS = [
+    { idx:6, name:'السبت' },
+    { idx:0, name:'الأحد' },
+    { idx:1, name:'الاثنين' },
+    { idx:2, name:'الثلاثاء' },
+    { idx:3, name:'الأربعاء' },
+    { idx:4, name:'الخميس' },
+    { idx:5, name:'الجمعة' },
+  ];
+
+  // Build lookup: dayIdx → hour → sessions[]
+  const lookup = {};
+  DAYS.forEach(d => {
+    lookup[d.idx] = {};
+    hourRange.forEach(h => { lookup[d.idx][h] = []; });
+  });
+  data.forEach(s => {
+    const dt = new Date(s.scheduled_at);
+    const di = dt.getDay(), hr = dt.getHours();
+    if (lookup[di] && lookup[di][hr] !== undefined) lookup[di][hr].push(s);
+  });
+
+  // Helper: hour label
+  const hLabel = h => h < 12 ? `${h} ص` : h === 12 ? '12 ظ' : `${h-12} م`;
+
+  // Build table
+  let html = `<div class="schedule-wrap"><table class="schedule-table"><thead><tr>`;
+  html += `<th class="th-day">اليوم / الوقت</th>`;
+  hourRange.forEach(h => {
+    html += `<th>ساعة ${h}<br><span style="font-size:.62rem;opacity:.75">${hLabel(h)}</span></th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  DAYS.forEach(d => {
+    const hasSess = hourRange.some(h => lookup[d.idx][h].length > 0);
+    if (!hasSess) return; // skip empty days
+    html += `<tr><td class="td-day">${d.name}</td>`;
+    hourRange.forEach(h => {
+      const cells = lookup[d.idx][h];
+      if (!cells.length) {
+        html += `<td></td>`;
+      } else {
+        html += `<td style="padding:3px">`;
+        cells.forEach(s => {
+          const key = s.grade_id || s.grade_name || '_';
+          const c   = colorMap[key];
+          const lbl = s.grade_name || s.title || '—';
+          const dur = s.duration_min || 60;
+          html += `<div class="sched-cell"
+            style="background:${c.bg};color:${c.text};border-color:${c.border}"
+            title="${s.title} · ${s.grade_name||''} · ${fhr(s.scheduled_at)} (${dur} دقيقة)"
+            onclick="editSession('${s.id}')">
+            ${lbl}
+            <div style="font-size:.62rem;opacity:.75;margin-top:1px">${fhr(s.scheduled_at)}</div>
+          </div>`;
+        });
+        html += `</td>`;
+      }
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  // Legend
+  html += `<div class="schedule-legend">
+    <span style="font-size:.78rem;font-weight:700;color:var(--gray);margin-left:4px">🎨 الألوان:</span>`;
+  Object.entries(colorMap).forEach(([key, c]) => {
+    const s   = data.find(x => (x.grade_id || x.grade_name || '_') === key);
+    const lbl = s?.grade_name || key;
+    html += `<span class="sched-legend-item" style="background:${c.bg};color:${c.text};border-color:${c.border}">${lbl}</span>`;
+  });
+  html += `</div>`;
+
+  el.innerHTML = html;
 }
 
 // Session Modal
