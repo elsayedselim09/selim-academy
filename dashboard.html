@@ -777,6 +777,26 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dar
 .hs-red    { background:linear-gradient(135deg,#B91C1C,#EF4444); }
 .hs-teal   { background:linear-gradient(135deg,#0E7490,#22D3EE); }
 .hs-orange { background:linear-gradient(135deg,#C2410C,#FB923C); }
+/* ══════════════════════════════════════════
+   STUDENT WEEKLY SCHEDULE TABLE
+══════════════════════════════════════════ */
+.stu-page-tabs { display:inline-flex; gap:0; border:1.5px solid var(--gray-mid); border-radius:11px; overflow:hidden; margin-bottom:20px }
+.stu-ptab { padding:9px 26px; background:none; border:none; font-family:'Cairo',sans-serif; font-size:.87rem; font-weight:700; cursor:pointer; color:var(--gray); transition:all .2s }
+.stu-ptab.active { background:var(--blue); color:#fff }
+.stu-schedule-wrap { overflow-x:auto; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,.1); margin-bottom:20px }
+.stu-schedule-table { border-collapse:collapse; width:100%; min-width:900px; font-family:'Cairo',sans-serif }
+.stu-schedule-table thead th { background:#1A56DB; color:#fff; padding:10px 7px; text-align:center; font-size:.74rem; font-weight:700; border:1px solid rgba(255,255,255,.18); white-space:nowrap }
+.stu-schedule-table thead th.sth-day { background:#0F172A; min-width:82px; position:sticky; right:0; z-index:3 }
+.stu-schedule-table tbody td { border:1px solid #E5E7EB; padding:3px; height:72px; vertical-align:top; background:#FAFBFF; min-width:82px }
+.stu-schedule-table tbody tr:nth-child(even) td { background:#F1F5FB }
+.stu-schedule-table tbody td.std-day { background:linear-gradient(135deg,#1E3A5F,#1A56DB); color:#fff; font-weight:700; font-size:.82rem; padding:8px 10px; text-align:center; white-space:nowrap; vertical-align:middle; border-color:rgba(255,255,255,.12); position:sticky; right:0; z-index:2; box-shadow:-3px 0 8px rgba(0,0,0,.18) }
+.stu-schedule-table tbody tr:nth-child(even) td.std-day { background:linear-gradient(135deg,#162B47,#1342B0) }
+.stu-sched-cell { padding:5px 7px; border-radius:8px; font-size:.72rem; font-weight:700; line-height:1.4; display:block; border-width:1.5px; border-style:solid; text-align:center; position:relative; overflow:hidden }
+.stu-sched-cell-subj { font-size:.73rem; font-weight:800; margin-bottom:2px }
+.stu-sched-cell-teacher { font-size:.63rem; opacity:.8 }
+.stu-sched-cell-time { font-size:.6rem; opacity:.7; margin-top:1px }
+.stu-sched-legend { display:flex; flex-wrap:wrap; gap:8px; padding:14px 18px; background:#fff; border-radius:14px; border:1px solid var(--gray-mid); margin-top:4px; align-items:center }
+.stu-legend-item { display:inline-flex; align-items:center; gap:5px; padding:5px 14px; border-radius:50px; font-size:.76rem; font-weight:700; border-width:1.5px; border-style:solid }
 </style>
 </head>
 <body>
@@ -1784,6 +1804,8 @@ function courses() {
 }
 
 // ── SESSIONS ─────────────────────────────────────────────────────
+let stuSessCurrentTab = 'list'; // 'list' | 'schedule'
+
 function sessions() {
   const upcoming = STATE.sessions.filter(s => sessionStatus(s) !== 'ended');
   const ended    = STATE.sessions.filter(s => sessionStatus(s) === 'ended');
@@ -1793,20 +1815,190 @@ function sessions() {
       <button onclick="requestScheduleChange()" style="padding:9px 18px;background:var(--blue-light);color:var(--blue);border:1.5px solid #BFDBFE;border-radius:9px;font-family:'Cairo',sans-serif;font-size:.83rem;font-weight:700;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:7px" onmouseover="this.style.background='var(--blue)';this.style.color='#fff'" onmouseout="this.style.background='var(--blue-light)';this.style.color='var(--blue)'">📅 طلب تعديل موعد</button>
     </div>
     <p class="page-sub">جميع حصصك القادمة والسابقة</p>
-    <div class="section-card" style="margin-bottom:20px">
-      <div class="section-head"><h3>🟢 الحصص القادمة</h3></div>
-      <div class="section-body">
-        ${upcoming.length === 0
-          ? `<div class="empty-box"><div class="ei">🎥</div><div class="et">لا توجد حصص قادمة</div><div class="ed">ستظهر هنا حصصك بعد تأكيد المعلم للمواعيد</div></div>`
-          : upcoming.map(renderSessionItem).join('')}
-      </div>
+
+    <!-- تبويبات: الحصص | الجدول -->
+    <div class="stu-page-tabs">
+      <button class="stu-ptab ${stuSessCurrentTab==='list'?'active':''}" id="stab-list" onclick="switchStuSessTab('list')">🎥 الحصص</button>
+      <button class="stu-ptab ${stuSessCurrentTab==='schedule'?'active':''}" id="stab-sch" onclick="switchStuSessTab('schedule')">📅 الجدول</button>
     </div>
-    ${ended.length > 0 ? `
-    <div class="section-card">
-      <div class="section-head"><h3>✅ الحصص المنتهية</h3></div>
-      <div class="section-body">${ended.map(renderSessionItem).join('')}</div>
-    </div>` : ''}`;
+
+    <!-- LIST VIEW -->
+    <div id="stu-list-view" style="display:${stuSessCurrentTab==='list'?'block':'none'}">
+      <div class="section-card" style="margin-bottom:20px">
+        <div class="section-head"><h3>🟢 الحصص القادمة</h3></div>
+        <div class="section-body">
+          ${upcoming.length === 0
+            ? `<div class="empty-box"><div class="ei">🎥</div><div class="et">لا توجد حصص قادمة</div><div class="ed">ستظهر هنا حصصك بعد تأكيد المعلم للمواعيد</div></div>`
+            : upcoming.map(renderSessionItem).join('')}
+        </div>
+      </div>
+      ${ended.length > 0 ? `
+      <div class="section-card">
+        <div class="section-head"><h3>✅ الحصص المنتهية</h3></div>
+        <div class="section-body">${ended.map(renderSessionItem).join('')}</div>
+      </div>` : ''}
+    </div>
+
+    <!-- SCHEDULE VIEW -->
+    <div id="stu-schedule-view" style="display:${stuSessCurrentTab==='schedule'?'block':'none'}">
+      <div id="stu-schedule-inner">
+        ${renderStudentSchedule()}
+      </div>
+    </div>`;
 }
+
+function switchStuSessTab(tab) {
+  stuSessCurrentTab = tab;
+  const lv = document.getElementById('stu-list-view');
+  const sv = document.getElementById('stu-schedule-view');
+  if (lv) lv.style.display = tab === 'list' ? 'block' : 'none';
+  if (sv) sv.style.display = tab === 'schedule' ? 'block' : 'none';
+  document.querySelectorAll('.stu-ptab').forEach(b => b.classList.remove('active'));
+  const active = document.getElementById(tab === 'list' ? 'stab-list' : 'stab-sch');
+  if (active) active.classList.add('active');
+  if (tab === 'schedule') {
+    const inner = document.getElementById('stu-schedule-inner');
+    if (inner) inner.innerHTML = renderStudentSchedule();
+  }
+}
+
+// ── Palette for subjects ──
+const STU_PAL = [
+  { bg:'#FEF08A', text:'#713F12', border:'#CA8A04' },
+  { bg:'#C4B5FD', text:'#3B0764', border:'#7C3AED' },
+  { bg:'#93C5FD', text:'#1E3A5F', border:'#2563EB' },
+  { bg:'#86EFAC', text:'#14532D', border:'#16A34A' },
+  { bg:'#FED7AA', text:'#7C2D12', border:'#EA580C' },
+  { bg:'#FCA5A5', text:'#7F1D1D', border:'#DC2626' },
+  { bg:'#A5F3FC', text:'#164E63', border:'#0891B2' },
+  { bg:'#D9F99D', text:'#365314', border:'#65A30D' },
+  { bg:'#E9D5FF', text:'#581C87', border:'#9333EA' },
+  { bg:'#FDE68A', text:'#78350F', border:'#D97706' },
+];
+
+function renderStudentSchedule() {
+  const data = STATE.sessions || [];
+  const now  = Date.now();
+
+  if (!data.length) {
+    return `<div class="empty-box"><div class="ei">📅</div><div class="et">لا توجد حصص مجدولة</div><div class="ed">ستظهر هنا حصصك بعد تأكيد المعلم</div></div>`;
+  }
+
+  // Color map by subject
+  const colorMap = {};
+  let ci = 0;
+  data.forEach(s => {
+    const key = s.subject || s.subject_name || '_';
+    if (!colorMap[key]) colorMap[key] = STU_PAL[ci++ % STU_PAL.length];
+  });
+
+  // Fixed hour range 6 → 23
+  const hourRange = [];
+  for (let h = 6; h <= 23; h++) hourRange.push(h);
+
+  const DAYS = [
+    { idx:6, name:'السبت' },
+    { idx:0, name:'الأحد' },
+    { idx:1, name:'الاثنين' },
+    { idx:2, name:'الثلاثاء' },
+    { idx:3, name:'الأربعاء' },
+    { idx:4, name:'الخميس' },
+    { idx:5, name:'الجمعة' },
+  ];
+
+  // Deduplication: per (dayIdx, hour, subject) keep ONE card (next upcoming)
+  const slotMap = {};
+  data.forEach(s => {
+    const dt   = new Date(s.scheduled_at);
+    const di   = dt.getDay();
+    const hr   = dt.getHours();
+    const subj = s.subject || s.subject_name || '_';
+    const slot = `${di}_${hr}_${subj}`;
+    const sEnd = dt.getTime() + (s.duration_min || 60) * 60000;
+    const done = sEnd < now;
+    const ex   = slotMap[slot];
+    if (!ex) { slotMap[slot] = s; return; }
+    const exEnd  = new Date(ex.scheduled_at).getTime() + (ex.duration_min || 60) * 60000;
+    const exDone = exEnd < now;
+    if (!done && exDone)  { slotMap[slot] = s; return; }
+    if (!done && !exDone) { if (dt.getTime() < new Date(ex.scheduled_at).getTime()) slotMap[slot] = s; }
+    else if (done && exDone) { if (dt.getTime() > new Date(ex.scheduled_at).getTime()) slotMap[slot] = s; }
+  });
+
+  // Filter: keep only slots with a future occurrence
+  const activeSlots = {};
+  Object.entries(slotMap).forEach(([slot, s]) => {
+    const [di, hr, subj] = slot.split('_');
+    const hasFuture = data.some(x => {
+      const xDt   = new Date(x.scheduled_at);
+      const xSubj = x.subject || x.subject_name || '_';
+      const xEnd  = xDt.getTime() + (x.duration_min || 60) * 60000;
+      return String(xDt.getDay()) === di && String(xDt.getHours()) === hr && xSubj === subj && xEnd >= now;
+    });
+    if (hasFuture) activeSlots[slot] = s;
+  });
+
+  const actSess = Object.values(activeSlots);
+  if (!actSess.length) {
+    return `<div class="empty-box"><div class="ei">✅</div><div class="et">انتهت جميع الحصص المجدولة</div><div class="ed">تواصل مع معلمك لإضافة مواعيد جديدة</div></div>`;
+  }
+
+  // Build lookup
+  const lookup = {};
+  DAYS.forEach(d => { lookup[d.idx] = {}; hourRange.forEach(h => { lookup[d.idx][h] = null; }); });
+  actSess.forEach(s => {
+    const dt = new Date(s.scheduled_at);
+    const di = dt.getDay(), hr = dt.getHours();
+    if (lookup[di] !== undefined && hr >= 6 && hr <= 23) lookup[di][hr] = s;
+  });
+
+  const hLabel = h => h < 12 ? `${h} ص` : h === 12 ? '12 ظ' : `${h-12} م`;
+
+  let html = `<div class="stu-schedule-wrap"><table class="stu-schedule-table"><thead><tr>`;
+  html += `<th class="sth-day">اليوم / الوقت</th>`;
+  hourRange.forEach(h => {
+    html += `<th>ساعة ${h}<br><span style="font-size:.6rem;opacity:.72">${hLabel(h)}</span></th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  DAYS.forEach(d => {
+    html += `<tr><td class="std-day">${d.name}</td>`;
+    hourRange.forEach(h => {
+      const s = lookup[d.idx][h];
+      if (!s) {
+        html += `<td></td>`;
+      } else {
+        const subj    = s.subject || s.subject_name || '—';
+        const teacher = s.teacher_name || '—';
+        const c       = colorMap[subj];
+        const dur     = s.duration_min || 60;
+        html += `<td style="padding:4px">
+          <div class="stu-sched-cell" style="background:${c.bg};color:${c.text};border-color:${c.border}" title="${subj} · ${teacher} · ${formatTime(s.scheduled_at)} (${dur} دقيقة)">
+            <div class="stu-sched-cell-subj">📚 ${subj}</div>
+            <div class="stu-sched-cell-teacher">👨‍🏫 ${teacher}</div>
+            <div class="stu-sched-cell-time">${formatTime(s.scheduled_at)} · ${dur}د</div>
+          </div>
+        </td>`;
+      }
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  // Legend
+  const usedKeys = [...new Set(actSess.map(s => s.subject || s.subject_name || '_'))];
+  html += `<div class="stu-sched-legend"><span style="font-size:.78rem;font-weight:700;color:var(--gray)">🎨 المواد:</span>`;
+  usedKeys.forEach(key => {
+    const c   = colorMap[key];
+    const rep = actSess.find(x => (x.subject || x.subject_name || '_') === key);
+    html += `<span class="stu-legend-item" style="background:${c.bg};color:${c.text};border-color:${c.border}">📚 ${key}<span style="opacity:.7;font-size:.65rem"> · 👨‍🏫 ${rep?.teacher_name||'—'}</span></span>`;
+  });
+  html += `</div>`;
+
+  return html;
+}
+
 function requestScheduleChange() {
   const name = STATE.profile?.full_name || 'الطالب';
   const msg  = encodeURIComponent(`طلب تعديل موعد من الطالب: ${name}\n\nأود تعديل موعد حصصي. يرجى التواصل معي.`);

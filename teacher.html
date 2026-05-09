@@ -947,10 +947,10 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 .schedule-wrap { overflow-x:auto; border-radius:16px; box-shadow:var(--shadow-md); margin-bottom:20px }
 .schedule-table { border-collapse:collapse; width:100%; min-width:860px; font-family:'Cairo',sans-serif }
 .schedule-table thead th { background:#1A56DB; color:#fff; padding:10px 7px; text-align:center; font-size:.74rem; font-weight:700; border:1px solid rgba(255,255,255,.18); white-space:nowrap }
-.schedule-table thead th.th-day { background:#0F172A; min-width:74px }
+.schedule-table thead th.th-day { background:#0F172A; min-width:80px; position:sticky; right:0; z-index:3 }
 .schedule-table tbody td { border:1px solid #E5E7EB; padding:3px; height:72px; vertical-align:top; background:#FAFBFF; min-width:80px; transition:background .15s }
 .schedule-table tbody tr:nth-child(even) td { background:#F1F5FB }
-.schedule-table tbody td.td-day { background:linear-gradient(135deg,#1E3A5F,#1A56DB); color:#fff; font-weight:700; font-size:.82rem; padding:8px 10px; text-align:center; white-space:nowrap; vertical-align:middle; border-color:rgba(255,255,255,.12) }
+.schedule-table tbody td.td-day { background:linear-gradient(135deg,#1E3A5F,#1A56DB); color:#fff; font-weight:700; font-size:.82rem; padding:8px 10px; text-align:center; white-space:nowrap; vertical-align:middle; border-color:rgba(255,255,255,.12); position:sticky; right:0; z-index:2; box-shadow:-3px 0 8px rgba(0,0,0,.18) }
 .schedule-table tbody tr:nth-child(even) td.td-day { background:linear-gradient(135deg,#162B47,#1342B0) }
 .sched-cell { padding:5px 6px; border-radius:8px; font-size:.72rem; font-weight:700; line-height:1.4; transition:all .22s; display:block; border-width:1.5px; border-style:solid; text-align:center; margin-bottom:2px; position:relative; overflow:hidden }
 .sched-cell:hover { transform:scale(1.05); box-shadow:0 4px 14px rgba(0,0,0,.22); z-index:5 }
@@ -3720,8 +3720,6 @@ function renderSchedule() {
   html += `</tr></thead><tbody>`;
 
   DAYS.forEach(d => {
-    const hasSess = hourRange.some(h => lookup[d.idx][h] !== null);
-    if (!hasSess) return;
     html += `<tr><td class="td-day">${d.name}</td>`;
     hourRange.forEach(h => {
       const s = lookup[d.idx][h];
