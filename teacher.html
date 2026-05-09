@@ -952,8 +952,10 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 .schedule-table tbody tr:nth-child(even) td { background:#F1F5FB }
 .schedule-table tbody td.td-day { background:linear-gradient(135deg,#1E3A5F,#1A56DB); color:#fff; font-weight:700; font-size:.82rem; padding:8px 10px; text-align:center; white-space:nowrap; vertical-align:middle; border-color:rgba(255,255,255,.12) }
 .schedule-table tbody tr:nth-child(even) td.td-day { background:linear-gradient(135deg,#162B47,#1342B0) }
-.sched-cell { padding:5px 6px; border-radius:8px; font-size:.72rem; font-weight:700; line-height:1.4; cursor:pointer; transition:all .22s; display:block; border-width:1.5px; border-style:solid; text-align:center; margin-bottom:2px }
-.sched-cell:hover { transform:scale(1.07); box-shadow:0 4px 14px rgba(0,0,0,.2); position:relative; z-index:5 }
+.sched-cell { padding:5px 6px; border-radius:8px; font-size:.72rem; font-weight:700; line-height:1.4; transition:all .22s; display:block; border-width:1.5px; border-style:solid; text-align:center; margin-bottom:2px; position:relative; overflow:hidden }
+.sched-cell:hover { transform:scale(1.05); box-shadow:0 4px 14px rgba(0,0,0,.22); z-index:5 }
+.sched-edit-btn { position:absolute; bottom:3px; left:3px; background:rgba(0,0,0,.18); border:none; border-radius:4px; font-size:.6rem; padding:2px 5px; cursor:pointer; opacity:0; transition:opacity .18s; line-height:1 }
+.sched-cell:hover .sched-edit-btn { opacity:1 }
 .schedule-legend { display:flex; flex-wrap:wrap; gap:8px; padding:14px 18px; background:#fff; border-radius:14px; border:1px solid var(--gray-mid); margin-top:4px; align-items:center }
 .sched-legend-item { display:inline-flex; align-items:center; gap:5px; padding:5px 14px; border-radius:50px; font-size:.76rem; font-weight:700; border-width:1.5px; border-style:solid }
 
@@ -3601,32 +3603,90 @@ function renderSchedule() {
   const el = document.getElementById('schedule-view-inner');
   if (!el) return;
 
+  const now = Date.now();
+
   // Filter by grade if needed
-  const data = schedGradeFilter === 'all'
+  const allData = schedGradeFilter === 'all'
     ? sessAllData
     : sessAllData.filter(s => s.grade_id === schedGradeFilter);
 
-  if (!data.length) {
+  if (!allData.length) {
     el.innerHTML = `<div class="empty-box"><div class="ei">📅</div><div class="et">لا توجد حصص لعرضها في الجدول</div><div class="ed">أضف حصصك من زر "إضافة حصة"</div></div>`;
     return;
   }
 
-  // Build grade → color map
+  // Build grade → color map (from all data, not just active)
   const colorMap = {};
   let ci = 0;
-  data.forEach(s => {
+  allData.forEach(s => {
     const key = s.grade_id || s.grade_name || '_';
     if (!colorMap[key]) colorMap[key] = SCHED_PAL[ci++ % SCHED_PAL.length];
   });
 
-  // Determine hour range from data (minimum 8am–9pm)
-  const allHours = data.map(s => new Date(s.scheduled_at).getHours());
-  const minH = Math.min(8, ...allHours);
-  const maxH = Math.max(21, ...allHours);
-  const hourRange = [];
-  for (let h = minH; h <= maxH; h++) hourRange.push(h);
+  // ── DEDUPLICATION ──
+  // Per (dayOfWeek, hour, gradeKey): keep only ONE card
+  // Priority: 1) next upcoming session, 2) most-recent past (fallback for recurring)
+  const slotMap = {}; // key: `${dayIdx}_${hr}_${gradeKey}` → best session
 
-  // Day rows (Saturday first like the Excel)
+  allData.forEach(s => {
+    const dt    = new Date(s.scheduled_at);
+    const di    = dt.getDay();
+    const hr    = dt.getHours();
+    const gKey  = s.grade_id || s.grade_name || '_';
+    const slot  = `${di}_${hr}_${gKey}`;
+    const sEnd  = dt.getTime() + (s.duration_min || 60) * 60000;
+    const sIsDone = sEnd < now;
+
+    const existing = slotMap[slot];
+    if (!existing) {
+      slotMap[slot] = s;
+      return;
+    }
+    const exEnd   = new Date(existing.scheduled_at).getTime() + (existing.duration_min || 60) * 60000;
+    const exIsDone = exEnd < now;
+
+    // Prefer future over done; among futures pick closest; among done pick most recent
+    if (!sIsDone && exIsDone) { slotMap[slot] = s; return; }
+    if (!sIsDone && !exIsDone) {
+      if (dt.getTime() < new Date(existing.scheduled_at).getTime()) slotMap[slot] = s;
+    } else if (sIsDone && exIsDone) {
+      if (dt.getTime() > new Date(existing.scheduled_at).getTime()) slotMap[slot] = s;
+    }
+  });
+
+  // ── FILTER: remove sessions whose time has fully passed (one-time ended) ──
+  // Keep a slot if: the best session is NOT done yet, OR there exist FUTURE sessions in that slot
+  // (recurring sessions will always have a future occurrence stored in sessAllData)
+  const activeSlots = {};
+  Object.entries(slotMap).forEach(([slot, s]) => {
+    const sEnd = new Date(s.scheduled_at).getTime() + (s.duration_min || 60) * 60000;
+    // Check if there is ANY future session in allData with same day+hour+grade
+    const [di, hr, gKey] = slot.split('_');
+    const hasFuture = allData.some(x => {
+      const xDt  = new Date(x.scheduled_at);
+      const xGKey = x.grade_id || x.grade_name || '_';
+      const xEnd  = xDt.getTime() + (x.duration_min || 60) * 60000;
+      return String(xDt.getDay()) === di &&
+             String(xDt.getHours()) === hr &&
+             xGKey === gKey &&
+             xEnd >= now;
+    });
+    if (hasFuture) activeSlots[slot] = s;
+  });
+
+  // Active sessions to show
+  const activeSessions = Object.values(activeSlots);
+
+  if (!activeSessions.length) {
+    el.innerHTML = `<div class="empty-box"><div class="ei">✅</div><div class="et">انتهت جميع الحصص المجدولة</div><div class="ed">يمكنك إضافة حصص جديدة بالضغط على "إضافة حصة"</div></div>`;
+    return;
+  }
+
+  // ── Fixed hour range: 6 AM → 11 PM (23) ──
+  const hourRange = [];
+  for (let h = 6; h <= 23; h++) hourRange.push(h);
+
+  // Day rows (Saturday first)
   const DAYS = [
     { idx:6, name:'السبت' },
     { idx:0, name:'الأحد' },
@@ -3637,53 +3697,53 @@ function renderSchedule() {
     { idx:5, name:'الجمعة' },
   ];
 
-  // Build lookup: dayIdx → hour → sessions[]
+  // Build lookup from deduped active sessions
   const lookup = {};
   DAYS.forEach(d => {
     lookup[d.idx] = {};
-    hourRange.forEach(h => { lookup[d.idx][h] = []; });
+    hourRange.forEach(h => { lookup[d.idx][h] = null; });
   });
-  data.forEach(s => {
+  activeSessions.forEach(s => {
     const dt = new Date(s.scheduled_at);
     const di = dt.getDay(), hr = dt.getHours();
-    if (lookup[di] && lookup[di][hr] !== undefined) lookup[di][hr].push(s);
+    if (lookup[di] !== undefined && hr >= 6 && hr <= 23) lookup[di][hr] = s;
   });
 
-  // Helper: hour label
-  const hLabel = h => h < 12 ? `${h} ص` : h === 12 ? '12 ظ' : `${h-12} م`;
+  const hLabel = h => h === 0 ? '12 ص' : h < 12 ? `${h} ص` : h === 12 ? '12 ظ' : `${h-12} م`;
 
-  // Build table
+  // ── Build table ──
   let html = `<div class="schedule-wrap"><table class="schedule-table"><thead><tr>`;
   html += `<th class="th-day">اليوم / الوقت</th>`;
   hourRange.forEach(h => {
-    html += `<th>ساعة ${h}<br><span style="font-size:.62rem;opacity:.75">${hLabel(h)}</span></th>`;
+    html += `<th>ساعة ${h}<br><span style="font-size:.6rem;opacity:.72">${hLabel(h)}</span></th>`;
   });
   html += `</tr></thead><tbody>`;
 
   DAYS.forEach(d => {
-    const hasSess = hourRange.some(h => lookup[d.idx][h].length > 0);
-    if (!hasSess) return; // skip empty days
+    const hasSess = hourRange.some(h => lookup[d.idx][h] !== null);
+    if (!hasSess) return;
     html += `<tr><td class="td-day">${d.name}</td>`;
     hourRange.forEach(h => {
-      const cells = lookup[d.idx][h];
-      if (!cells.length) {
+      const s = lookup[d.idx][h];
+      if (!s) {
         html += `<td></td>`;
       } else {
-        html += `<td style="padding:3px">`;
-        cells.forEach(s => {
-          const key = s.grade_id || s.grade_name || '_';
-          const c   = colorMap[key];
-          const lbl = s.grade_name || s.title || '—';
-          const dur = s.duration_min || 60;
-          html += `<div class="sched-cell"
-            style="background:${c.bg};color:${c.text};border-color:${c.border}"
-            title="${s.title} · ${s.grade_name||''} · ${fhr(s.scheduled_at)} (${dur} دقيقة)"
-            onclick="editSession('${s.id}')">
-            ${lbl}
-            <div style="font-size:.62rem;opacity:.75;margin-top:1px">${fhr(s.scheduled_at)}</div>
-          </div>`;
-        });
-        html += `</td>`;
+        const key = s.grade_id || s.grade_name || '_';
+        const c   = colorMap[key];
+        const lbl = s.grade_name || s.title || '—';
+        const dur = s.duration_min || 60;
+        const safeTitle = (s.title || '').replace(/"/g, '&quot;');
+        html += `<td style="padding:4px">
+          <div class="sched-cell"
+            style="background:${c.bg};color:${c.text};border-color:${c.border};position:relative"
+            title="${safeTitle} · ${s.grade_name||''} · ${fhr(s.scheduled_at)} (${dur} دقيقة)">
+            <div onclick="editSession('${s.id}')" style="cursor:pointer">
+              <div style="font-weight:800;font-size:.73rem;margin-bottom:1px">${lbl}</div>
+              <div style="font-size:.63rem;opacity:.75">${fhr(s.scheduled_at)} · ${dur}د</div>
+            </div>
+            <button onclick="event.stopPropagation();editSession('${s.id}')" class="sched-edit-btn" title="تعديل">✏️</button>
+          </div>
+        </td>`;
       }
     });
     html += `</tr>`;
@@ -3691,12 +3751,13 @@ function renderSchedule() {
 
   html += `</tbody></table></div>`;
 
-  // Legend
-  html += `<div class="schedule-legend">
-    <span style="font-size:.78rem;font-weight:700;color:var(--gray);margin-left:4px">🎨 الألوان:</span>`;
-  Object.entries(colorMap).forEach(([key, c]) => {
-    const s   = data.find(x => (x.grade_id || x.grade_name || '_') === key);
-    const lbl = s?.grade_name || key;
+  // ── Legend ──
+  const usedKeys = [...new Set(activeSessions.map(s => s.grade_id || s.grade_name || '_'))];
+  html += `<div class="schedule-legend"><span style="font-size:.78rem;font-weight:700;color:var(--gray)">🎨 الألوان:</span>`;
+  usedKeys.forEach(key => {
+    const c   = colorMap[key];
+    const rep = activeSessions.find(x => (x.grade_id || x.grade_name || '_') === key);
+    const lbl = rep?.grade_name || key;
     html += `<span class="sched-legend-item" style="background:${c.bg};color:${c.text};border-color:${c.border}">${lbl}</span>`;
   });
   html += `</div>`;
