@@ -3151,7 +3151,20 @@ function renderCourses() {
 }
 
 window.addEventListener('DOMContentLoaded', function() {
-  renderTeachers();  // async — جلب من Supabase
+  // تشغيل renderTeachers بعد التأكد إن Supabase جاهز
+  function tryRenderTeachers(attempts) {
+    attempts = attempts || 0;
+    if (window._sb) {
+      renderTeachers();
+    } else if (attempts < 20) {
+      setTimeout(function() { tryRenderTeachers(attempts + 1); }, 300);
+    } else {
+      console.warn('Supabase not ready — skipping teacher load');
+      renderTeachers(); // سيستخدم البيانات الثابتة كـ fallback
+    }
+  }
+  tryRenderTeachers();
+
   var gradeSelect = document.getElementById('sel-grade');
   if (gradeSelect) {
     gradeSelect.innerHTML = '<option value="">اختار الصف</option>';
@@ -3162,32 +3175,6 @@ window.addEventListener('DOMContentLoaded', function() {
 
 
 <!-- ══ TEACHER DETAIL MODAL ══ -->
-<div id="teacher-modal">
-  <div class="tmdl-box">
-    <div class="tmdl-cover">
-      <button class="tmdl-close" onclick="closeTeacherModal()">✕</button>
-      <div class="tmdl-av" id="tmdl-av">م</div>
-      <div class="tmdl-name" id="tmdl-name">...</div>
-      <div class="tmdl-spec" id="tmdl-spec">...</div>
-      <div class="tmdl-chips" id="tmdl-chips"></div>
-    </div>
-    <div class="tmdl-body">
-      <div class="tmdl-section" id="tmdl-bio-sec" style="display:none">
-        <div class="tmdl-section-title">👤 نبذة عن المعلم</div>
-        <div class="tmdl-bio" id="tmdl-bio"></div>
-      </div>
-      <div class="tmdl-section">
-        <div class="tmdl-section-title">📚 الصفوف والمجموعات</div>
-        <div id="tmdl-grades-body">
-          <div style="text-align:center;padding:24px;color:#9CA3AF;">⏳ جاري التحميل...</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- TEACHER DETAIL MODAL -->
 <div id="teacher-modal">
   <div class="tmdl-box">
     <div class="tmdl-cover">
