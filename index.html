@@ -698,7 +698,9 @@ section { padding:80px 5%; }
 .add-day-btn:hover { background:var(--blue); color:#fff; border-style:solid; }
 .plus { font-size:1.2rem; font-weight:900; }
 .booking-form-wrap { display:none; margin-top:24px; border-top:1px solid var(--gray-mid); padding-top:24px; }
-.booking-summary { background:#fff; border:1px solid var(--gray-mid); border-radius:12px; padding:16px 20px; margin-bottom:20px; }
+.booking-form-wrap.show { display:block; }
+.booking-summary { background:#fff; border:1px solid var(--gray-mid); border-radius:12px; padding:16px 20px; margin-bottom:20px; display:none; }
+.booking-summary.show { display:block; }
 .booking-summary h5 { font-size:.9rem; font-weight:900; color:var(--blue); margin-bottom:10px; }
 .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
 .form-group { display:flex; flex-direction:column; gap:6px; }
@@ -1034,8 +1036,8 @@ footer { background:var(--dark); padding:60px 5% 30px; }
   .sb-panel-img { height:55vw; }
   .sb-panel:nth-child(odd) .sb-panel-img-overlay { background:linear-gradient(to top, var(--sb-bg) 0%, transparent 60%); }
   .sb-panel:nth-child(even) .sb-panel-img-overlay { background:linear-gradient(to top, var(--sb-bg) 0%, transparent 60%); }
-  .sb-panel:nth-child(even) .sb-panel-img { order:0; }
-  .sb-panel:nth-child(even) .sb-panel-content { order:1; }
+  .sb-panel .sb-panel-img { order:0; }
+  .sb-panel .sb-panel-content { order:1; }
   .sb-panel-content { padding:32px 24px; }
   .sb-panel-num { display:none; }
   .tests-grid { grid-template-columns:1fr; }
@@ -1142,8 +1144,8 @@ footer { background:var(--dark); padding:60px 5% 30px; }
   .stages-hero,.tests-hero{grid-template-columns:1fr;}
   .stages-hero-img,.tests-hero-img{min-height:260px;}
   .stages-hero-img img,.tests-hero-img img{height:260px;}
-  .stages-hero-fade{background:linear-gradient(to top,var(--gray-light) 0%,transparent 100%);}
-  .tests-hero-fade{background:linear-gradient(to top,var(--white) 0%,transparent 100%);}
+  .stages-hero-fade{background:linear-gradient(to top,#050810 0%,transparent 100%);}
+  .tests-hero-fade{background:linear-gradient(to top,#050810 0%,transparent 100%);}
   .stages-hero-content,.tests-hero-content{padding:36px 24px;}
   .tests-hero-img{order:-1;}
 }
@@ -1505,7 +1507,7 @@ footer { background:var(--dark); padding:60px 5% 30px; }
         <a href="#booking" class="btn-primary">✨ اكتشف عالمنا التعليمي</a>
       </div>
       <div class="sb-panel-img">
-        <img src="images/hero-visual-main.webp" alt="بوابة العلم">
+        <img src="images/hero-bg-overlay.webp" alt="بوابة العلم">
         <div class="sb-panel-img-overlay"></div>
         <div class="sb-panel-num">02</div>
       </div>
