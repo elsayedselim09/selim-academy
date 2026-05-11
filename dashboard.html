@@ -1248,10 +1248,14 @@ async function fetchAllData(userId) {
         })
         .map(s => {
           const enr = teEnr.find(e => e.grade_id === s.grade_id);
+          const tid = s.teacher_id || enr?.teacher_id;
+          const tName = teacherProfiles[tid]?.full_name
+                     || assignedTeachers[tid]?.full_name
+                     || '';
           return {
             ...s,
             subject     : s.subject_name || enr?.subject_name || '—',
-            teacher_name: teacherProfiles[s.teacher_id || enr?.teacher_id]?.full_name || '—',
+            teacher_name: tName || '—',
           };
         });
     }
@@ -1969,7 +1973,14 @@ function renderStudentSchedule() {
         html += `<td></td>`;
       } else {
         const subj    = s.subject || s.subject_name || '—';
-        const teacher = s.teacher_name || '—';
+        let teacher   = s.teacher_name && s.teacher_name !== '—' ? s.teacher_name : '';
+        if (!teacher) {
+          const matchEnr = STATE.enrollments.find(e =>
+            (e.grade_id && e.grade_id === s.grade_id) ||
+            (e.courses?.name && e.courses.name === subj)
+          );
+          teacher = matchEnr?.courses?.teacher_name || '—';
+        }
         const c       = colorMap[subj];
         const dur     = s.duration_min || 60;
         html += `<td style="padding:4px">
@@ -1992,7 +2003,15 @@ function renderStudentSchedule() {
   usedKeys.forEach(key => {
     const c   = colorMap[key];
     const rep = actSess.find(x => (x.subject || x.subject_name || '_') === key);
-    html += `<span class="stu-legend-item" style="background:${c.bg};color:${c.text};border-color:${c.border}">📚 ${key}<span style="opacity:.7;font-size:.65rem"> · 👨‍🏫 ${rep?.teacher_name||'—'}</span></span>`;
+    let repTeacher = rep?.teacher_name && rep.teacher_name !== '—' ? rep.teacher_name : '';
+    if (!repTeacher) {
+      const matchEnr = STATE.enrollments.find(e =>
+        (e.grade_id && rep?.grade_id && e.grade_id === rep.grade_id) ||
+        (e.courses?.name && e.courses.name === key)
+      );
+      repTeacher = matchEnr?.courses?.teacher_name || '—';
+    }
+    html += `<span class="stu-legend-item" style="background:${c.bg};color:${c.text};border-color:${c.border}">📚 ${key}<span style="opacity:.7;font-size:.65rem"> · 👨‍🏫 ${repTeacher}</span></span>`;
   });
   html += `</div>`;
 
@@ -2809,6 +2828,16 @@ function renderSessionItem(s) {
   const ended = st === 'ended';
   const tbStyle = ended ? 'background:var(--gray-light);border-color:var(--gray-mid)' : '';
   const txStyle = ended ? 'color:var(--gray)' : '';
+  // محاولة جلب اسم المعلم من الـ enrollments إذا لم يكن موجوداً في الـ session
+  let teacherDisplay = s.teacher_name && s.teacher_name !== '—' ? s.teacher_name : '';
+  if (!teacherDisplay) {
+    const enr = STATE.enrollments.find(e =>
+      (e.grade_id && e.grade_id === s.grade_id) ||
+      (e.courses?.name && e.courses.name === s.subject)
+    );
+    teacherDisplay = enr?.courses?.teacher_name || '';
+  }
+  if (!teacherDisplay) teacherDisplay = '—';
   let btn = '';
   if ((st === 'live' || st === 'soon') && s.zoom_link)
     // ← يُتاح الدخول قبل الموعد بـ 10 دقائق
@@ -2826,7 +2855,7 @@ function renderSessionItem(s) {
       </div>
       <div class="session-info">
         <div class="session-subj">${s.subject}</div>
-        <div class="session-teacher">${s.teacher_name}</div>
+        <div class="session-teacher">👨‍🏫 ${teacherDisplay}</div>
         ${cd}
       </div>
       ${btn}
@@ -2837,8 +2866,9 @@ function renderCourseItem(e) {
   const c = e.courses || {};
   const r = e._request;
   const p = e.progress_pct || 0;
-  const metaLine = c.teacher_name
-    ? `👨‍🏫 ${c.teacher_name}`
+  const teacherName = c.teacher_name || e.teacher_name || r?.teacher_name || '';
+  const metaLine = teacherName
+    ? `👨‍🏫 ${teacherName}`
     : (r?.grade ? `🏫 ${r.grade}` : '');
 
   // حصص متبقية
