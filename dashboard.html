@@ -1113,7 +1113,7 @@ async function refreshSubscription() {
   try {
     // جلب أحدث بيانات الاشتراكات من Supabase مباشرة
     const { data: freshReqs, error } = await sb.from('subscription_requests')
-      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,admin_notes,teacher:profiles!assigned_teacher_id(full_name)')
+      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,admin_notes')
       .eq('user_id', STATE.user.id)
       .eq('status', 'approved')
       .order('created_at', { ascending: false });
@@ -1126,16 +1126,8 @@ async function refreshSubscription() {
     const assignedTIds = [...new Set((freshReqs||[]).map(r => r.assigned_teacher_id).filter(Boolean))];
     const assignedTeachers = {};
     if (assignedTIds.length) {
-      const { data: enrProfs2 } = await sb.from('teacher_enrollments')
-        .select('teacher_id,teacher_name').in('teacher_id', assignedTIds).limit(100);
-      (enrProfs2 || []).forEach(ep => {
-        if (ep.teacher_name) assignedTeachers[ep.teacher_id] = { id: ep.teacher_id, full_name: ep.teacher_name };
-      });
-      const stillMissing2 = assignedTIds.filter(id => !assignedTeachers[id]);
-      if (stillMissing2.length) {
-        const { data: tProfs } = await sb.from('profiles').select('id,full_name').in('id', stillMissing2);
-        (tProfs || []).forEach(p => { if (p.full_name) assignedTeachers[p.id] = p; });
-      }
+      const { data: tProfs } = await sb.from('profiles').select('id,full_name').in('id', assignedTIds);
+      (tProfs || []).forEach(p => { assignedTeachers[p.id] = p; });
     }
     const { data: teEnr } = await sb.from('teacher_enrollments')
       .select('teacher_id,grade_id,subject_name,grade_name').eq('student_id', STATE.user.id);
@@ -1149,7 +1141,7 @@ async function refreshSubscription() {
         enrolled_at: r.created_at, progress_pct: 0, completed_lessons: 0,
         courses: {
           name: r.subject || 'اشتراك مقبول', icon: '📘', icon_bg: '#EBF5FF',
-          total_lessons: 0, teacher_name: r.teacher?.full_name || assignedTeachers[r.assigned_teacher_id]?.full_name || '',
+          total_lessons: 0, teacher_name: assignedTeachers[r.assigned_teacher_id]?.full_name || '',
         },
         _request: r,
       };
@@ -1183,7 +1175,7 @@ async function fetchAllData(userId) {
   const [p, approvedReqs, act, notif, teEnrRes] = await Promise.all([
     sb.from('profiles').select('*').eq('id', userId).single(),
     sb.from('subscription_requests')
-      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,admin_notes,teacher:profiles!assigned_teacher_id(full_name)')
+      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,admin_notes')
       .eq('user_id', userId).eq('status','approved')
       .order('created_at', { ascending: false }),
     sb.from('activity_log').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(8),
@@ -1199,18 +1191,8 @@ async function fetchAllData(userId) {
   const assignedTIds = [...new Set(approved.map(r => r.assigned_teacher_id).filter(Boolean))];
   const assignedTeachers = {};
   if (assignedTIds.length) {
-    // محاولة 1: من teacher_enrollments مباشرة (لا يتأثر بـ RLS على profiles)
-    const { data: enrProfs } = await sb.from('teacher_enrollments')
-      .select('teacher_id,teacher_name').in('teacher_id', assignedTIds).limit(100);
-    (enrProfs || []).forEach(ep => {
-      if (ep.teacher_name) assignedTeachers[ep.teacher_id] = { id: ep.teacher_id, full_name: ep.teacher_name };
-    });
-    // محاولة 2: من profiles مباشرة (تعمل إذا كان RLS يسمح)
-    const stillMissing = assignedTIds.filter(id => !assignedTeachers[id]);
-    if (stillMissing.length) {
-      const { data: tProfs } = await sb.from('profiles').select('id,full_name').in('id', stillMissing);
-      (tProfs || []).forEach(p => { if (p.full_name) assignedTeachers[p.id] = p; });
-    }
+    const { data: tProfs } = await sb.from('profiles').select('id,full_name').in('id', assignedTIds);
+    (tProfs || []).forEach(p => { assignedTeachers[p.id] = p; });
   }
 
   // ── بناء قائمة الكورسات من الطلبات المقبولة (بدون تكرار) ──
@@ -1231,7 +1213,7 @@ async function fetchAllData(userId) {
         icon        : '📘',
         icon_bg     : '#EBF5FF',
         total_lessons: 0,
-        teacher_name: r.teacher?.full_name || assignedTeachers[r.assigned_teacher_id]?.full_name || '',
+        teacher_name: assignedTeachers[r.assigned_teacher_id]?.full_name || '',
       },
       _request: r,
     };
@@ -1243,19 +1225,11 @@ async function fetchAllData(userId) {
     const teacherIds = [...new Set(teEnr.map(e => e.teacher_id).filter(Boolean))];
     const gradeIds   = [...new Set(teEnr.map(e => e.grade_id).filter(Boolean))];
 
-    // أسماء المعلمين (من teacher_enrollments أولاً لتفادي مشاكل RLS)
+    // أسماء المعلمين
     const teacherProfiles = {};
     if (teacherIds.length) {
-      const { data: enrNames } = await sb.from('teacher_enrollments')
-        .select('teacher_id,teacher_name').in('teacher_id', teacherIds).limit(100);
-      (enrNames || []).forEach(en => {
-        if (en.teacher_name) teacherProfiles[en.teacher_id] = { id: en.teacher_id, full_name: en.teacher_name };
-      });
-      const missingIds = teacherIds.filter(id => !teacherProfiles[id]);
-      if (missingIds.length) {
-        const { data: profs } = await sb.from('profiles').select('id,full_name').in('id', missingIds);
-        (profs || []).forEach(tp => { if (tp.full_name) teacherProfiles[tp.id] = tp; });
-      }
+      const { data: profs } = await sb.from('profiles').select('id,full_name').in('id', teacherIds);
+      (profs || []).forEach(tp => { teacherProfiles[tp.id] = tp; });
     }
 
     // جلب الحصص المرتبطة بصفوف الطالب
@@ -1275,13 +1249,10 @@ async function fetchAllData(userId) {
         .map(s => {
           const enr = teEnr.find(e => e.grade_id === s.grade_id);
           const tid = s.teacher_id || enr?.teacher_id;
-          const tName = teacherProfiles[tid]?.full_name
-                     || assignedTeachers[tid]?.full_name
-                     || '';
           return {
             ...s,
             subject     : s.subject_name || enr?.subject_name || '—',
-            teacher_name: tName || '—',
+            teacher_name: teacherProfiles[tid]?.full_name || '—',
           };
         });
     }
@@ -1757,7 +1728,7 @@ function home() {
     <div class="home-subjects-scroll">
       ${activeEnr.map((e, idx) => {
         const subName = e.courses?.name || e._request?.subject || '—';
-        const teacher = e.courses?.teacher_name || e._request?.teacher?.full_name || e._request?.teacher_name || e.teacher_name || '';
+        const teacher = e.courses?.teacher_name || e.teacher_name || '';
         const tid     = e.teacher_id || '';
         const gid     = e.grade_id   || '';
         const style   = getSubjectStyle(subName, idx);
@@ -1999,14 +1970,7 @@ function renderStudentSchedule() {
         html += `<td></td>`;
       } else {
         const subj    = s.subject || s.subject_name || '—';
-        let teacher   = s.teacher_name && s.teacher_name !== '—' ? s.teacher_name : '';
-        if (!teacher) {
-          const matchEnr = STATE.enrollments.find(e =>
-            (e.grade_id && e.grade_id === s.grade_id) ||
-            (e.courses?.name && e.courses.name === subj)
-          );
-          teacher = matchEnr?.courses?.teacher_name || '—';
-        }
+        const teacher = s.teacher_name || '—';
         const c       = colorMap[subj];
         const dur     = s.duration_min || 60;
         html += `<td style="padding:4px">
@@ -2029,15 +1993,7 @@ function renderStudentSchedule() {
   usedKeys.forEach(key => {
     const c   = colorMap[key];
     const rep = actSess.find(x => (x.subject || x.subject_name || '_') === key);
-    let repTeacher = rep?.teacher_name && rep.teacher_name !== '—' ? rep.teacher_name : '';
-    if (!repTeacher) {
-      const matchEnr = STATE.enrollments.find(e =>
-        (e.grade_id && rep?.grade_id && e.grade_id === rep.grade_id) ||
-        (e.courses?.name && e.courses.name === key)
-      );
-      repTeacher = matchEnr?.courses?.teacher_name || '—';
-    }
-    html += `<span class="stu-legend-item" style="background:${c.bg};color:${c.text};border-color:${c.border}">📚 ${key}<span style="opacity:.7;font-size:.65rem"> · 👨‍🏫 ${repTeacher}</span></span>`;
+    html += `<span class="stu-legend-item" style="background:${c.bg};color:${c.text};border-color:${c.border}">📚 ${key}<span style="opacity:.7;font-size:.65rem"> · 👨‍🏫 ${rep?.teacher_name||'—'}</span></span>`;
   });
   html += `</div>`;
 
@@ -2854,16 +2810,7 @@ function renderSessionItem(s) {
   const ended = st === 'ended';
   const tbStyle = ended ? 'background:var(--gray-light);border-color:var(--gray-mid)' : '';
   const txStyle = ended ? 'color:var(--gray)' : '';
-  // محاولة جلب اسم المعلم من الـ enrollments إذا لم يكن موجوداً في الـ session
-  let teacherDisplay = s.teacher_name && s.teacher_name !== '—' ? s.teacher_name : '';
-  if (!teacherDisplay) {
-    const enr = STATE.enrollments.find(e =>
-      (e.grade_id && e.grade_id === s.grade_id) ||
-      (e.courses?.name && e.courses.name === s.subject)
-    );
-    teacherDisplay = enr?.courses?.teacher_name || '';
-  }
-  if (!teacherDisplay) teacherDisplay = '—';
+  const teacherDisplay = s.teacher_name && s.teacher_name !== '—' ? s.teacher_name : '—';
   let btn = '';
   if ((st === 'live' || st === 'soon') && s.zoom_link)
     // ← يُتاح الدخول قبل الموعد بـ 10 دقائق
@@ -2892,7 +2839,7 @@ function renderCourseItem(e) {
   const c = e.courses || {};
   const r = e._request;
   const p = e.progress_pct || 0;
-  const teacherName = c.teacher_name || e.teacher_name || r?.teacher?.full_name || r?.teacher_name || '';
+  const teacherName = c.teacher_name || e.teacher_name || '';
   const metaLine = teacherName
     ? `👨‍🏫 ${teacherName}`
     : (r?.grade ? `🏫 ${r.grade}` : '');
@@ -3265,7 +3212,7 @@ function homework() {
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:16px;margin-top:4px">
       ${active.map((e, idx) => {
         const subName = e.courses?.name || e._request?.subject || '—';
-        const teacher = e.courses?.teacher_name || e._request?.teacher?.full_name || e._request?.teacher_name || e.teacher_name || '';
+        const teacher = e.courses?.teacher_name || e.teacher_name || '';
         const tid     = e.teacher_id || '';
         const gid     = e.grade_id   || '';
         const style   = getSubjectStyle(subName, idx);
