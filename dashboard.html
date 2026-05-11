@@ -1113,7 +1113,7 @@ async function refreshSubscription() {
   try {
     // جلب أحدث بيانات الاشتراكات من Supabase مباشرة
     const { data: freshReqs, error } = await sb.from('subscription_requests')
-      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,admin_notes')
+      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,admin_notes,teacher:profiles!assigned_teacher_id(full_name)')
       .eq('user_id', STATE.user.id)
       .eq('status', 'approved')
       .order('created_at', { ascending: false });
@@ -1126,8 +1126,16 @@ async function refreshSubscription() {
     const assignedTIds = [...new Set((freshReqs||[]).map(r => r.assigned_teacher_id).filter(Boolean))];
     const assignedTeachers = {};
     if (assignedTIds.length) {
-      const { data: tProfs } = await sb.from('profiles').select('id,full_name').in('id', assignedTIds);
-      (tProfs || []).forEach(p => { assignedTeachers[p.id] = p; });
+      const { data: enrProfs2 } = await sb.from('teacher_enrollments')
+        .select('teacher_id,teacher_name').in('teacher_id', assignedTIds).limit(100);
+      (enrProfs2 || []).forEach(ep => {
+        if (ep.teacher_name) assignedTeachers[ep.teacher_id] = { id: ep.teacher_id, full_name: ep.teacher_name };
+      });
+      const stillMissing2 = assignedTIds.filter(id => !assignedTeachers[id]);
+      if (stillMissing2.length) {
+        const { data: tProfs } = await sb.from('profiles').select('id,full_name').in('id', stillMissing2);
+        (tProfs || []).forEach(p => { if (p.full_name) assignedTeachers[p.id] = p; });
+      }
     }
     const { data: teEnr } = await sb.from('teacher_enrollments')
       .select('teacher_id,grade_id,subject_name,grade_name').eq('student_id', STATE.user.id);
@@ -1141,7 +1149,7 @@ async function refreshSubscription() {
         enrolled_at: r.created_at, progress_pct: 0, completed_lessons: 0,
         courses: {
           name: r.subject || 'اشتراك مقبول', icon: '📘', icon_bg: '#EBF5FF',
-          total_lessons: 0, teacher_name: assignedTeachers[r.assigned_teacher_id]?.full_name || '',
+          total_lessons: 0, teacher_name: r.teacher?.full_name || assignedTeachers[r.assigned_teacher_id]?.full_name || '',
         },
         _request: r,
       };
@@ -1175,7 +1183,7 @@ async function fetchAllData(userId) {
   const [p, approvedReqs, act, notif, teEnrRes] = await Promise.all([
     sb.from('profiles').select('*').eq('id', userId).single(),
     sb.from('subscription_requests')
-      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,admin_notes')
+      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,admin_notes,teacher:profiles!assigned_teacher_id(full_name)')
       .eq('user_id', userId).eq('status','approved')
       .order('created_at', { ascending: false }),
     sb.from('activity_log').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(8),
@@ -1191,8 +1199,18 @@ async function fetchAllData(userId) {
   const assignedTIds = [...new Set(approved.map(r => r.assigned_teacher_id).filter(Boolean))];
   const assignedTeachers = {};
   if (assignedTIds.length) {
-    const { data: tProfs } = await sb.from('profiles').select('id,full_name').in('id', assignedTIds);
-    (tProfs || []).forEach(p => { assignedTeachers[p.id] = p; });
+    // محاولة 1: من teacher_enrollments مباشرة (لا يتأثر بـ RLS على profiles)
+    const { data: enrProfs } = await sb.from('teacher_enrollments')
+      .select('teacher_id,teacher_name').in('teacher_id', assignedTIds).limit(100);
+    (enrProfs || []).forEach(ep => {
+      if (ep.teacher_name) assignedTeachers[ep.teacher_id] = { id: ep.teacher_id, full_name: ep.teacher_name };
+    });
+    // محاولة 2: من profiles مباشرة (تعمل إذا كان RLS يسمح)
+    const stillMissing = assignedTIds.filter(id => !assignedTeachers[id]);
+    if (stillMissing.length) {
+      const { data: tProfs } = await sb.from('profiles').select('id,full_name').in('id', stillMissing);
+      (tProfs || []).forEach(p => { if (p.full_name) assignedTeachers[p.id] = p; });
+    }
   }
 
   // ── بناء قائمة الكورسات من الطلبات المقبولة (بدون تكرار) ──
@@ -1213,7 +1231,7 @@ async function fetchAllData(userId) {
         icon        : '📘',
         icon_bg     : '#EBF5FF',
         total_lessons: 0,
-        teacher_name: assignedTeachers[r.assigned_teacher_id]?.full_name || '',
+        teacher_name: r.teacher?.full_name || assignedTeachers[r.assigned_teacher_id]?.full_name || '',
       },
       _request: r,
     };
@@ -1225,11 +1243,19 @@ async function fetchAllData(userId) {
     const teacherIds = [...new Set(teEnr.map(e => e.teacher_id).filter(Boolean))];
     const gradeIds   = [...new Set(teEnr.map(e => e.grade_id).filter(Boolean))];
 
-    // أسماء المعلمين
+    // أسماء المعلمين (من teacher_enrollments أولاً لتفادي مشاكل RLS)
     const teacherProfiles = {};
     if (teacherIds.length) {
-      const { data: profs } = await sb.from('profiles').select('id,full_name').in('id', teacherIds);
-      (profs || []).forEach(tp => { teacherProfiles[tp.id] = tp; });
+      const { data: enrNames } = await sb.from('teacher_enrollments')
+        .select('teacher_id,teacher_name').in('teacher_id', teacherIds).limit(100);
+      (enrNames || []).forEach(en => {
+        if (en.teacher_name) teacherProfiles[en.teacher_id] = { id: en.teacher_id, full_name: en.teacher_name };
+      });
+      const missingIds = teacherIds.filter(id => !teacherProfiles[id]);
+      if (missingIds.length) {
+        const { data: profs } = await sb.from('profiles').select('id,full_name').in('id', missingIds);
+        (profs || []).forEach(tp => { if (tp.full_name) teacherProfiles[tp.id] = tp; });
+      }
     }
 
     // جلب الحصص المرتبطة بصفوف الطالب
@@ -1731,7 +1757,7 @@ function home() {
     <div class="home-subjects-scroll">
       ${activeEnr.map((e, idx) => {
         const subName = e.courses?.name || e._request?.subject || '—';
-        const teacher = e.courses?.teacher_name || e._request?.teacher_name || e.teacher_name || '';
+        const teacher = e.courses?.teacher_name || e._request?.teacher?.full_name || e._request?.teacher_name || e.teacher_name || '';
         const tid     = e.teacher_id || '';
         const gid     = e.grade_id   || '';
         const style   = getSubjectStyle(subName, idx);
@@ -2866,7 +2892,7 @@ function renderCourseItem(e) {
   const c = e.courses || {};
   const r = e._request;
   const p = e.progress_pct || 0;
-  const teacherName = c.teacher_name || e.teacher_name || r?.teacher_name || '';
+  const teacherName = c.teacher_name || e.teacher_name || r?.teacher?.full_name || r?.teacher_name || '';
   const metaLine = teacherName
     ? `👨‍🏫 ${teacherName}`
     : (r?.grade ? `🏫 ${r.grade}` : '');
@@ -3239,7 +3265,7 @@ function homework() {
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:16px;margin-top:4px">
       ${active.map((e, idx) => {
         const subName = e.courses?.name || e._request?.subject || '—';
-        const teacher = e.courses?.teacher_name || e._request?.teacher_name || e.teacher_name || '';
+        const teacher = e.courses?.teacher_name || e._request?.teacher?.full_name || e._request?.teacher_name || e.teacher_name || '';
         const tid     = e.teacher_id || '';
         const gid     = e.grade_id   || '';
         const style   = getSubjectStyle(subName, idx);
