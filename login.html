@@ -805,6 +805,63 @@ body {
       </div>
     </div>
 
+    <!-- ═══ RESET PASSWORD PANEL ═══ -->
+    <div class="auth-panel" id="panel-reset">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:2.2rem">🔐</div>
+      </div>
+      <div class="panel-title">تعيين كلمة مرور جديدة</div>
+      <p class="panel-sub">أدخل كلمة المرور الجديدة التي تريد استخدامها</p>
+
+      <!-- Alert error -->
+      <div class="alert error" id="reset-alert">
+        <span>⚠️</span>
+        <span id="reset-alert-msg">حدث خطأ، من فضلك حاول مرة أخرى</span>
+      </div>
+      <!-- Alert success -->
+      <div class="alert success" id="reset-success">
+        <span>✅</span>
+        <span>تم تغيير كلمة المرور بنجاح! جاري تحويلك...</span>
+      </div>
+
+      <!-- New Password -->
+      <div class="form-group">
+        <label>كلمة المرور الجديدة <span class="req">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="reset-password" placeholder="8 أحرف على الأقل" oninput="checkStrengthReset(this.value)" autocomplete="new-password">
+          <button type="button" class="pass-toggle" onclick="togglePass('reset-password', this)" title="إظهار/إخفاء">👁</button>
+        </div>
+        <div class="field-error" id="err-reset-password">كلمة المرور يجب أن تكون 8 أحرف على الأقل</div>
+        <div class="pass-strength" id="pass-strength-reset">
+          <div class="strength-bars">
+            <div class="strength-bar" id="rbar1"></div>
+            <div class="strength-bar" id="rbar2"></div>
+            <div class="strength-bar" id="rbar3"></div>
+            <div class="strength-bar" id="rbar4"></div>
+          </div>
+          <span class="strength-label" id="strength-label-reset">ضعيفة</span>
+        </div>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="form-group">
+        <label>تأكيد كلمة المرور <span class="req">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="reset-confirm" placeholder="أعد كتابة كلمة المرور" autocomplete="new-password">
+          <button type="button" class="pass-toggle" onclick="togglePass('reset-confirm', this)" title="إظهار/إخفاء">👁</button>
+        </div>
+        <div class="field-error" id="err-reset-confirm">كلمتا المرور غير متطابقتين</div>
+      </div>
+
+      <!-- Submit -->
+      <button class="btn-submit" id="btn-reset" onclick="handleResetPassword()">
+        <span class="btn-text">💾 حفظ كلمة المرور الجديدة</span>
+        <div class="spinner"></div>
+      </button>
+    </div>
+
     <!-- FOOTER -->
     <div class="auth-footer">
       © 2025 أكاديمية سليم · جميع الحقوق محفوظة
@@ -941,8 +998,9 @@ async function handleForgotPassword() {
   btn.classList.add('loading');
   btn.disabled = true;
 
+  // ✅ رابط إعادة التوجيه — يجب أن يكون URL موقعك الفعلي المنشور
   var redirectUrl = window.location.origin +
-    window.location.pathname.replace(/login\.html$/, '') + 'login.html';
+    window.location.pathname.replace(/\/[^\/]*$/, '/') + 'login.html';
 
   var { error } = await _sb.auth.resetPasswordForEmail(email, {
     redirectTo: redirectUrl
@@ -1350,14 +1408,109 @@ async function goToDashboard() {
   }
 }
 
-// ── CHECK IF ALREADY LOGGED IN ──
+// ── RESET PASSWORD STRENGTH ──
+function checkStrengthReset(val) {
+  var strength = document.getElementById('pass-strength-reset');
+  var label    = document.getElementById('strength-label-reset');
+  var bars     = ['rbar1','rbar2','rbar3','rbar4'].map(function(id){ return document.getElementById(id); });
+  if (!val) { strength.classList.remove('show'); return; }
+  strength.classList.add('show');
+  var score = 0;
+  if (val.length >= 8)           score++;
+  if (/[A-Z]/.test(val))         score++;
+  if (/[0-9]/.test(val))         score++;
+  if (/[^A-Za-z0-9]/.test(val))  score++;
+  bars.forEach(function(b){ b.className = 'strength-bar'; });
+  var txt;
+  if (score <= 1)       { txt='ضعيفة';    bars[0].classList.add('weak'); }
+  else if (score === 2) { txt='متوسطة';   bars[0].classList.add('medium'); bars[1].classList.add('medium'); }
+  else if (score === 3) { txt='جيدة';     [0,1,2].forEach(function(i){ bars[i].classList.add('medium'); }); }
+  else                  { txt='قوية جداً'; bars.forEach(function(b){ b.classList.add('strong'); }); }
+  label.textContent = txt;
+}
+
+// ── SHOW RESET PANEL ──
+function showResetPanel() {
+  document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.auth-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById('panel-reset').classList.add('active');
+}
+
+// ── HANDLE RESET PASSWORD ──
+async function handleResetPassword() {
+  var pwd  = document.getElementById('reset-password').value;
+  var conf = document.getElementById('reset-confirm').value;
+  document.getElementById('reset-alert').classList.remove('show');
+
+  var ok = true;
+  if (!pwd || pwd.length < 8) {
+    markError('reset-password', 'err-reset-password', 'كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+    ok = false;
+  }
+  if (pwd !== conf) {
+    markError('reset-confirm', 'err-reset-confirm', 'كلمتا المرور غير متطابقتين');
+    ok = false;
+  }
+  if (!ok) return;
+
+  var btn = document.getElementById('btn-reset');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  var { error } = await _sb.auth.updateUser({ password: pwd });
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+
+  if (error) {
+    var msg = 'حدث خطأ، من فضلك حاول مرة أخرى';
+    if (error.message.includes('same password')) msg = 'كلمة المرور الجديدة يجب أن تكون مختلفة عن القديمة';
+    document.getElementById('reset-alert-msg').textContent = msg;
+    document.getElementById('reset-alert').classList.add('show');
+  } else {
+    document.getElementById('reset-success').classList.add('show');
+    btn.style.display = 'none';
+    // بعد ثانيتين حوّله لصفحة تسجيل الدخول
+    setTimeout(function() {
+      // تسجيل الخروج وتحويله لتسجيل الدخول من جديد
+      _sb.auth.signOut().then(function() {
+        switchTab('login');
+      });
+    }, 2500);
+  }
+}
+
+// ── AUTO-DETECT RECOVERY TOKEN ON PAGE LOAD ──
 window.addEventListener('load', async function() {
+  // ✅ تحقق أولاً إذا كان في recovery token في الـ URL hash
+  var hash = window.location.hash;
+  if (hash && hash.includes('type=recovery')) {
+    // Supabase بيبعت التوكن في الـ hash — نخلي Supabase يتعامل معاه
+    var { data, error } = await _sb.auth.getSession();
+    if (data && data.session) {
+      // تم التحقق من التوكن — أظهر صفحة إعادة التعيين
+      showResetPanel();
+      // نظّف الـ URL
+      history.replaceState(null, '', window.location.pathname);
+      return;
+    }
+  }
+
+  // ✅ تحقق كمان من onAuthStateChange لاستقبال recovery event
+  _sb.auth.onAuthStateChange(function(event, session) {
+    if (event === 'PASSWORD_RECOVERY') {
+      showResetPanel();
+      history.replaceState(null, '', window.location.pathname);
+    }
+  });
+
+  // ✅ لو مفيش recovery — تحقق من session عادية
   var { data } = await _sb.auth.getSession();
-  if (data.session) {
-    // ✅ حوّله للصفحة الصح حسب الـ role
+  if (data.session && !hash.includes('type=recovery')) {
     await redirectByRole(data.session.user.id);
   }
 });
+
 </script>
 <script src="pwa-register.js" defer></script>
 </body>
