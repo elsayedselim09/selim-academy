@@ -4370,7 +4370,7 @@ async function scLoadTeachers() {
   cont.innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
   try {
     const { data, error } = await sb.from('profiles')
-      .select('id, full_name, specialization, photo_url, teacher_sort_order, teacher_is_pinned')
+      .select('id, full_name, specialization, avatar_url, teacher_sort_order, teacher_is_pinned')
       .eq('role', 'teacher')
       .order('teacher_sort_order', { ascending: true });
     if (error) throw error;
@@ -4390,7 +4390,7 @@ function scRenderTeachers() {
          ondragstart="scDragStart(event,${i})" ondragover="scDragOver(event)" ondrop="scDrop(event,${i})" ondragend="scDragEnd()">
       <span class="sc-drag-handle">⠿</span>
       <div class="t-av" style="flex-shrink:0;">
-        ${t.photo_url ? `<img src="${t.photo_url}" alt="">` : (t.full_name||'م').charAt(0)}
+        ${t.avatar_url ? `<img src="${t.avatar_url}" alt="">` : (t.full_name||'م').charAt(0)}
       </div>
       <div style="flex:1;">
         <div class="t-name">${t.full_name || '—'}</div>
@@ -4733,8 +4733,8 @@ function scRenderReviews() {
   const cont = document.getElementById('sc-reviews-list');
   if (!_scReviews.length) { cont.innerHTML = '<div class="empty-box"><div class="ei">⭐</div><div class="et">لا توجد آراء</div></div>'; return; }
   cont.innerHTML = _scReviews.map(r => {
-    const stars = '★'.repeat(r.stars || 5) + '☆'.repeat(5 - (r.stars || 5));
-    const initials = r.initials || r.student_name?.substring(0,2) || '؟';
+    const stars = '★'.repeat(r.rating || r.stars || 5) + '☆'.repeat(5 - (r.rating || r.stars || 5));
+    const initials = r.student_name?.substring(0,2) || '؟';
     return `
     <div class="sc-review-item ${r.is_visible === false ? 'opacity-50' : ''}">
       <div class="sc-review-av">${initials}</div>
@@ -4747,7 +4747,7 @@ function scRenderReviews() {
       <div class="sc-review-acts">
         <button class="btn-ed" onclick="scOpenEditReview('${r.id}')">✏️ تعديل</button>
         <label class="sc-toggle-label" title="${r.is_visible !== false ? 'ظاهر' : 'مخفي'}">
-          <input type="checkbox" class="sc-toggle-input" ${r.is_visible !== false ? 'checked' : ''} onchange="scToggleReview('${r.id}',this)">
+          <input type="checkbox" class="sc-toggle-input" ${r.is_active !== false ? 'checked' : ''} onchange="scToggleReview('${r.id}',this)">
           <span class="sc-toggle-track"><span class="sc-toggle-thumb"></span></span>
         </label>
         <button class="btn-rm" onclick="scDeleteReview('${r.id}')">🗑️</button>
@@ -4758,7 +4758,7 @@ function scRenderReviews() {
 
 async function scToggleReview(id, chk) {
   try {
-    await sb.from('student_testimonials').update({ is_visible: chk.checked }).eq('id', id);
+    await sb.from('student_testimonials').update({ is_active: chk.checked }).eq('id', id);
     toast(chk.checked ? '✅ تم إظهار الرأي' : '🚫 تم إخفاء الرأي');
     scLoadReviews();
   } catch(e) { toast('❌ ' + e.message, 'err'); chk.checked = !chk.checked; }
@@ -4768,7 +4768,7 @@ function scOpenAddReview() {
   document.getElementById('mdl-review-title').textContent = 'إضافة رأي جديد';
   document.getElementById('sc-review-id').value = '';
   document.getElementById('sc-review-name').value = '';
-  document.getElementById('sc-review-initials').value = '';
+  // initials field removed — computed from name
   document.getElementById('sc-review-stars').value = 5;
   document.getElementById('sc-review-meta').value = '';
   document.getElementById('sc-review-text').value = '';
@@ -4782,10 +4782,10 @@ function scOpenEditReview(id) {
   document.getElementById('mdl-review-title').textContent = `تعديل — ${r.student_name || ''}`;
   document.getElementById('sc-review-id').value = r.id;
   document.getElementById('sc-review-name').value = r.student_name || '';
-  document.getElementById('sc-review-initials').value = r.initials || '';
-  document.getElementById('sc-review-stars').value = r.stars || 5;
-  document.getElementById('sc-review-meta').value = r.student_info || r.meta || '';
-  document.getElementById('sc-review-text').value = r.review_text || r.content || '';
+  // initials field removed
+  document.getElementById('sc-review-stars').value = r.rating || r.stars || 5;
+  document.getElementById('sc-review-meta').value = r.student_title || '';
+  document.getElementById('sc-review-text').value = r.review_text || '';
   document.getElementById('sc-review-msg').innerHTML = '';
   openMdl('mdl-sc-review');
 }
@@ -4794,11 +4794,10 @@ async function scSaveReview() {
   const id = document.getElementById('sc-review-id').value;
   const msg = document.getElementById('sc-review-msg');
   const payload = {
-    student_name: document.getElementById('sc-review-name').value.trim(),
-    initials:     document.getElementById('sc-review-initials').value.trim(),
-    stars:        parseInt(document.getElementById('sc-review-stars').value) || 5,
-    student_info: document.getElementById('sc-review-meta').value.trim(),
-    review_text:  document.getElementById('sc-review-text').value.trim(),
+    student_name:  document.getElementById('sc-review-name').value.trim(),
+    rating:        parseInt(document.getElementById('sc-review-stars').value) || 5,
+    student_title: document.getElementById('sc-review-meta').value.trim(),
+    review_text:   document.getElementById('sc-review-text').value.trim(),
     updated_at:   new Date().toISOString(),
   };
   if (!payload.student_name || !payload.review_text) { msg.innerHTML = '<div class="msg-err">❌ أدخل الاسم والنص</div>'; return; }
@@ -4807,8 +4806,8 @@ async function scSaveReview() {
     if (id) {
       ({ error } = await sb.from('student_testimonials').update(payload).eq('id', id));
     } else {
-      payload.sort_order = _scReviews.length + 1;
-      payload.is_visible = true;
+      payload.display_order = _scReviews.length + 1;
+      payload.is_active = true;
       payload.created_at = new Date().toISOString();
       ({ error } = await sb.from('student_testimonials').insert(payload));
     }
@@ -5014,7 +5013,7 @@ async function scSaveFaq() {
       ({ error } = await sb.from('site_faq').update(payload).eq('id', id));
     } else {
       payload.sort_order = _scFaqs.length + 1;
-      payload.is_visible = true;
+      payload.is_active = true;
       ({ error } = await sb.from('site_faq').insert(payload));
     }
     if (error) throw error;

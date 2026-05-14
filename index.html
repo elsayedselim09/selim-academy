@@ -3394,16 +3394,16 @@ function switchSession(s) {
     try {
       var { data } = await _sb.from('student_testimonials')
         .select('*')
-        .eq('is_visible', true)
-        .order('sort_order', { ascending: true })
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
         .limit(6);
       if (!data || !data.length) return; // keep existing static cards
       var colors = ['#1A56DB','#0E9F6E','#F59E0B','#8B5CF6','#EF4444','#0EA5E9'];
       grid.innerHTML = data.map(function(r, i) {
-        var stars = '★'.repeat(r.stars || 5) + '☆'.repeat(5-(r.stars||5));
-        var initials = r.initials || (r.student_name ? r.student_name.substring(0,2) : '؟');
+        var stars = '★'.repeat(r.rating || r.stars || 5) + '☆'.repeat(5-(r.rating||r.stars||5));
+        var initials = r.student_name ? r.student_name.substring(0,2) : '؟';
         var text = r.review_text || r.content || '';
-        var meta = r.student_info || r.meta || '';
+        var meta = r.student_title || '';
         return '<div class="test-card">' +
           '<div class="test-header">' +
           '<div class="test-av" style="background:' + colors[i % colors.length] + ';">' + initials + '</div>' +
