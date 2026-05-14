@@ -1,0 +1,681 @@
+<!--
+════════════════════════════════════════════════════════════
+  PATCH — admin.html
+  نظام آراء الطلاب — كود جاهز للإضافة مباشرةً لملف admin.html
+  
+  طريقة الإضافة:
+  1. CSS  → أضفه داخل <style> الموجود قبل </style>
+  2. HTML → أضفه داخل <main id="app"> بعد آخر <div class="page">
+  3. NAV  → أضف زر الـ sidebar داخل <nav class="sidebar-nav">
+  4. JS   → أضفه قبل </script> الأخير
+════════════════════════════════════════════════════════════
+-->
+
+<!-- ══════════════════════════════════
+  [1] CSS — أضفه داخل كتلة <style>
+══════════════════════════════════ -->
+<style id="TESTIMONIALS_CSS">
+/* ─── Testimonials Admin Styles ─── */
+.tm-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:900px){.tm-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.tm-stats{grid-template-columns:1fr 1fr}}
+
+/* drag row highlight */
+.tm-drag-over td{background:var(--blue-light)!important}
+.tm-dragging{opacity:.4}
+
+/* image upload zone */
+.tm-img-zone{
+  width:90px;height:90px;border-radius:50%;
+  border:2px dashed var(--gray-mid);background:var(--gray-light);
+  cursor:pointer;margin:0 auto 8px;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;transition:border-color .2s;text-align:center;
+}
+.tm-img-zone:hover{border-color:var(--blue)}
+.tm-img-zone img{width:100%;height:100%;object-fit:cover}
+
+/* star picker */
+.star-pick{display:inline-flex;gap:4px;cursor:pointer}
+.star-pick svg{transition:transform .1s}
+.star-pick svg:hover,.star-pick svg.active{transform:scale(1.2)}
+
+/* review card in table */
+.tm-review-clip{
+  display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden;
+  font-size:.82rem;color:var(--dark);line-height:1.5;max-width:220px
+}
+
+/* toggle switch */
+.tm-switch{position:relative;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.tm-switch input{opacity:0;width:0;height:0;position:absolute}
+.tm-slider{
+  width:38px;height:20px;border-radius:10px;background:var(--gray-mid);
+  position:relative;transition:background .2s;flex-shrink:0
+}
+.tm-slider::after{
+  content:'';position:absolute;top:3px;right:3px;
+  width:14px;height:14px;border-radius:50%;background:#fff;
+  transition:transform .2s
+}
+.tm-switch input:checked + .tm-slider{background:var(--green)}
+.tm-switch input:checked + .tm-slider::after{transform:translateX(-18px)}
+</style>
+
+
+<!-- ══════════════════════════════════
+  [2] SIDEBAR NAV — أضفه داخل sidebar-nav
+  بعد سطر: <button class="nav-item" id="nav-students"...>
+══════════════════════════════════ -->
+<!--
+  <div class="nav-label">التسويق</div>
+  <button class="nav-item" id="nav-testimonials" onclick="goTo('testimonials')">
+    <span class="nav-icon">💬</span> آراء الطلاب
+  </button>
+-->
+
+
+<!-- ══════════════════════════════════
+  [3] HTML PAGE — أضفه داخل <main id="app">
+      بعد آخر <div class="page">
+══════════════════════════════════ -->
+<div class="page" id="page-testimonials">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+    <div>
+      <div class="page-title">💬 آراء الطلاب</div>
+      <p class="page-sub">إدارة شهادات وآراء الطلاب الظاهرة في الموقع الرئيسي</p>
+    </div>
+    <button class="btn-primary" onclick="openTestimonialModal()">
+      ➕ إضافة رأي جديد
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="tm-stats" id="tm-stats-grid">
+    <div class="stat-card"><div class="stat-icon si-blue">💬</div><div><div class="stat-num" id="tm-s-total">—</div><div class="stat-label">إجمالي الآراء</div></div></div>
+    <div class="stat-card"><div class="stat-icon si-green">👁️</div><div><div class="stat-num" id="tm-s-active">—</div><div class="stat-label">آراء نشطة</div></div></div>
+    <div class="stat-card"><div class="stat-icon si-gold">⭐</div><div><div class="stat-num" id="tm-s-featured">—</div><div class="stat-label">آراء مميّزة</div></div></div>
+    <div class="stat-card"><div class="stat-icon si-purple">⭐</div><div><div class="stat-num" id="tm-s-avg">—</div><div class="stat-label">متوسط التقييم</div></div></div>
+  </div>
+
+  <!-- Main card -->
+  <div class="section-card">
+    <div class="section-head">
+      <h3>قائمة الآراء</h3>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:.74rem;color:var(--gray)">✋ اسحب لإعادة الترتيب</span>
+        <button class="btn-refresh" onclick="loadTestimonials()">🔄 تحديث</button>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <button class="filter-btn active" id="tmf-all"      onclick="setTmFilter('all')">📋 الكل</button>
+      <button class="filter-btn"        id="tmf-active"   onclick="setTmFilter('active')">👁️ نشطة</button>
+      <button class="filter-btn"        id="tmf-inactive" onclick="setTmFilter('inactive')">🙈 مخفية</button>
+      <button class="filter-btn"        id="tmf-featured" onclick="setTmFilter('featured')">⭐ مميّزة</button>
+      <input class="search-input" id="tm-search" type="text" placeholder="🔍 بحث بالاسم أو الكورس..." oninput="renderTestimonialsTable()">
+    </div>
+
+    <!-- Table body -->
+    <div id="tm-body"></div>
+
+    <!-- Footer count -->
+    <div id="tm-footer" style="display:none;padding:12px 20px;border-top:1px solid var(--gray-mid);font-size:.8rem;color:var(--gray)"></div>
+  </div>
+
+  <div style="margin-top:10px;font-size:.78rem;color:var(--gray);text-align:center">
+    💡 اسحب أي صف لأعلى أو لأسفل لتغيير ترتيب ظهور الآراء في الموقع
+  </div>
+</div><!-- /page-testimonials -->
+
+
+<!-- ══════════════════════════════════
+  MODAL: إضافة / تعديل رأي
+  أضفه قبل </body>
+══════════════════════════════════ -->
+<div class="mdl" id="mdl-testimonial">
+  <div class="mdl-box wide" style="max-width:580px;max-height:90vh;overflow-y:auto;padding:28px">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div id="tm-mdl-title" style="font-size:1.05rem;font-weight:900;color:var(--dark)">➕ إضافة رأي جديد</div>
+        <div style="font-size:.78rem;color:var(--gray);margin-top:2px">أدخل بيانات رأي الطالب</div>
+      </div>
+      <button onclick="closeTestimonialModal()"
+        style="width:32px;height:32px;border:none;border-radius:50%;background:var(--gray-light);color:var(--gray);cursor:pointer;font-size:1rem">✕</button>
+    </div>
+
+    <!-- Image upload -->
+    <div style="text-align:center;margin-bottom:20px">
+      <div class="tm-img-zone" id="tm-img-zone"
+        onclick="document.getElementById('tm-file-input').click()"
+        ondragover="event.preventDefault()"
+        ondrop="handleTmFileDrop(event)">
+        <div id="tm-img-placeholder">
+          <div style="font-size:1.8rem">📷</div>
+          <div style="font-size:.72rem;color:var(--gray);margin-top:4px">صورة الطالب</div>
+        </div>
+      </div>
+      <input type="file" id="tm-file-input" accept="image/*" style="display:none"
+        onchange="handleTmFileSelect(this)">
+      <div id="tm-img-err" style="font-size:.73rem;color:var(--red);margin-top:4px"></div>
+      <button id="tm-remove-img-btn" onclick="removeTmImage()"
+        style="display:none;background:none;border:none;color:var(--red);font-size:.78rem;cursor:pointer;font-family:'Cairo',sans-serif;margin-top:4px">
+        🗑️ إزالة الصورة
+      </button>
+    </div>
+
+    <!-- Row: Name + Title -->
+    <div class="fg-row">
+      <div class="fg">
+        <label>اسم الطالب *</label>
+        <input type="text" id="tm-name" placeholder="مثال: أحمد محمد">
+        <div id="tm-name-err" style="font-size:.73rem;color:var(--red);margin-top:3px"></div>
+      </div>
+      <div class="fg">
+        <label>المسمى / الصف</label>
+        <input type="text" id="tm-title" placeholder="مثال: طالب الصف الثاني">
+      </div>
+    </div>
+
+    <!-- Review text -->
+    <div class="fg">
+      <label>نص الرأي *</label>
+      <textarea id="tm-review" rows="4" placeholder="اكتب رأي الطالب... (20-500 حرف)"
+        oninput="updateTmCounter()"></textarea>
+      <div style="display:flex;justify-content:space-between;margin-top:3px">
+        <div id="tm-review-err" style="font-size:.73rem;color:var(--red)"></div>
+        <span id="tm-counter" style="font-size:.72rem;color:var(--gray)">0/500</span>
+      </div>
+    </div>
+
+    <!-- Row: Rating + Course -->
+    <div class="fg-row">
+      <div class="fg">
+        <label>التقييم</label>
+        <div style="padding:10px 13px;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:9px">
+          <div id="tm-stars" class="star-pick"></div>
+          <div id="tm-rating-label" style="font-size:.73rem;color:var(--gray);margin-top:4px">ممتاز</div>
+        </div>
+      </div>
+      <div class="fg">
+        <label>اسم الكورس</label>
+        <input type="text" id="tm-course" placeholder="مثال: رياضيات ثانوي">
+      </div>
+    </div>
+
+    <!-- URL fallback -->
+    <div class="fg">
+      <label>رابط صورة (بديل)</label>
+      <input type="url" id="tm-img-url" placeholder="https://..." style="direction:ltr"
+        oninput="previewTmUrl()">
+    </div>
+
+    <!-- Checkboxes -->
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin:8px 0 20px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:700">
+        <input type="checkbox" id="tm-active" checked style="width:17px;height:17px;accent-color:var(--blue)">
+        👁️ نشط (مرئي)
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:700">
+        <input type="checkbox" id="tm-featured" style="width:17px;height:17px;accent-color:var(--blue)">
+        ⭐ مميّز (يظهر أولاً)
+      </label>
+    </div>
+
+    <div id="tm-mdl-msg"></div>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:12px;justify-content:flex-end">
+      <button class="mdl-cancel" onclick="closeTestimonialModal()">إلغاء</button>
+      <button class="btn-primary" id="tm-save-btn" onclick="saveTestimonial()" style="min-width:140px">
+        ➕ إضافة الرأي
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: تأكيد الحذف -->
+<div class="mdl" id="mdl-tm-delete">
+  <div class="mdl-box">
+    <div class="mdl-icon">🗑️</div>
+    <div class="mdl-title">تأكيد الحذف</div>
+    <div class="mdl-sub">هل تريد حذف رأي الطالب "<strong id="tm-del-name"></strong>" نهائياً؟<br>لا يمكن التراجع عن هذا الإجراء.</div>
+    <div id="tm-del-msg"></div>
+    <div class="mdl-btns">
+      <button class="mdl-cancel" onclick="document.getElementById('mdl-tm-delete').classList.remove('show')">إلغاء</button>
+      <button class="mdl-confirm mc-danger" id="tm-del-btn" onclick="confirmDeleteTestimonial()" style="min-width:120px">🗑️ نعم، احذف</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════
+  [4] JAVASCRIPT — أضفه قبل </script> الأخير
+══════════════════════════════════ -->
+<script id="TESTIMONIALS_JS">
+// ══════════════════════════════════════════════════════════
+// TESTIMONIALS MANAGEMENT — أكاديمية سليم
+// ══════════════════════════════════════════════════════════
+
+// ─── State ──────────────────────────────────────────────────
+var TM = {
+  items       : [],
+  filter      : 'all',
+  editId      : null,
+  deleteId    : null,
+  rating      : 5,
+  imgUrl      : '',
+  imgUploading: false,
+  dragId      : null,
+  dragOverId  : null,
+};
+
+// ─── goTo patch — أضف 'testimonials' ────────────────────────
+// عدّل السطر في دالة goTo الموجودة:
+// const loaders = { ..., testimonials: loadTestimonials };
+
+// ─── Load ────────────────────────────────────────────────────
+async function loadTestimonials() {
+  var body = document.getElementById('tm-body');
+  body.innerHTML = [1,2,3,4].map(function(){
+    return '<div class="skel" style="height:68px;border-radius:10px;margin:10px 20px"></div>';
+  }).join('');
+
+  try {
+    var res = await sb.from('student_testimonials')
+      .select('*')
+      .order('display_order', { ascending: true })
+      .order('created_at',    { ascending: false });
+
+    if (res.error) throw res.error;
+    TM.items = res.data || [];
+    updateTmStats();
+    renderTestimonialsTable();
+  } catch(e) {
+    body.innerHTML = '<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ' + e.message + '</div></div>';
+  }
+}
+
+// ─── Stats ────────────────────────────────────────────────────
+function updateTmStats() {
+  var items = TM.items;
+  var total    = items.length;
+  var active   = items.filter(function(t){ return t.is_active; }).length;
+  var featured = items.filter(function(t){ return t.featured; }).length;
+  var avg = total ? Math.round(items.reduce(function(s,t){ return s+t.rating; },0)/total*10)/10 : 0;
+
+  document.getElementById('tm-s-total').textContent   = total;
+  document.getElementById('tm-s-active').textContent  = active;
+  document.getElementById('tm-s-featured').textContent= featured;
+  document.getElementById('tm-s-avg').textContent     = avg + ' ★';
+}
+
+// ─── Filter ──────────────────────────────────────────────────
+function setTmFilter(f) {
+  TM.filter = f;
+  document.querySelectorAll('[id^="tmf-"]').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('tmf-' + f).classList.add('active');
+  renderTestimonialsTable();
+}
+
+// ─── Render table ────────────────────────────────────────────
+function renderTestimonialsTable() {
+  var q     = (document.getElementById('tm-search').value || '').toLowerCase();
+  var items = TM.items;
+
+  if (TM.filter === 'active')   items = items.filter(function(t){ return t.is_active; });
+  if (TM.filter === 'inactive') items = items.filter(function(t){ return !t.is_active; });
+  if (TM.filter === 'featured') items = items.filter(function(t){ return t.featured; });
+  if (q) items = items.filter(function(t){
+    return (t.student_name||'').toLowerCase().includes(q)
+        || (t.course_name||'').toLowerCase().includes(q)
+        || (t.student_title||'').toLowerCase().includes(q);
+  });
+
+  var body   = document.getElementById('tm-body');
+  var footer = document.getElementById('tm-footer');
+
+  if (!items.length) {
+    body.innerHTML = '<div class="empty-box"><div class="ei">💬</div><div class="et">لا توجد آراء</div>'
+      + '<div class="ed">' + (q ? 'لا نتائج لهذا البحث' : 'اضغط "+ إضافة رأي جديد" للبدء') + '</div></div>';
+    footer.style.display = 'none';
+    return;
+  }
+
+  var ratingLabels = ['','ضعيف','مقبول','جيد','جيد جداً','ممتاز'];
+
+  body.innerHTML = '<div class="tbl-wrap"><table class="data-table">'
+    + '<thead><tr><th style="width:36px">⠿</th><th>#</th><th>الطالب</th><th>التقييم</th><th>الكورس</th><th>الرأي</th><th>الحالة</th><th>التاريخ</th><th>الإجراءات</th></tr></thead>'
+    + '<tbody id="tm-tbody">'
+    + items.map(function(t, i) {
+        var initials = t.student_name.trim().split(' ').slice(0,2).map(function(w){ return w[0]; }).join('');
+        var stars    = [1,2,3,4,5].map(function(s){
+          return '<svg width="13" height="13" viewBox="0 0 24 24" fill="' + (s<=t.rating?'#F59E0B':'none') + '" stroke="' + (s<=t.rating?'#F59E0B':'#D1D5DB') + '" stroke-width="1.8"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>';
+        }).join('');
+        var avatar   = t.student_image
+          ? '<div style="width:33px;height:33px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid var(--gray-mid)">'
+              + '<img src="' + t.student_image + '" alt="" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentNode.innerHTML=\'' + initials + '\';this.parentNode.style.background=\'linear-gradient(135deg,var(--blue),var(--blue-mid))\';this.parentNode.style.color=\'#fff\';this.parentNode.style.display=\'flex\';this.parentNode.style.alignItems=\'center\';this.parentNode.style.justifyContent=\'center\';this.parentNode.style.fontWeight=\'900\';this.parentNode.style.fontSize=\'.78rem\'"></div>'
+          : '<div class="u-av">' + initials + '</div>';
+
+        return '<tr id="tm-row-' + t.id + '" draggable="true"'
+          + ' ondragstart="tmDragStart(\'' + t.id + '\')"'
+          + ' ondragenter="tmDragEnter(\'' + t.id + '\')"'
+          + ' ondragend="tmDragEnd()"'
+          + ' ondragover="event.preventDefault()"'
+          + ' style="cursor:grab">'
+          + '<td style="text-align:center;font-size:1.1rem;color:var(--gray)">⠿</td>'
+          + '<td style="color:var(--gray);font-size:.78rem">' + (i+1) + '</td>'
+          + '<td><div class="u-info">' + avatar + '<div><div class="u-name">' + t.student_name + '</div>'
+          + (t.student_title ? '<div class="u-sub">' + t.student_title + '</div>' : '') + '</div></div></td>'
+          + '<td><div style="display:flex;gap:2px;align-items:center">' + stars + '</div>'
+          + '<div style="font-size:.68rem;color:var(--gray);margin-top:2px">' + ratingLabels[t.rating] + '</div></td>'
+          + '<td>' + (t.course_name ? '<span class="badge b-blue">' + t.course_name + '</span>' : '<span style="color:var(--gray);font-size:.75rem">—</span>') + '</td>'
+          + '<td><div class="tm-review-clip">' + t.review_text + '</div></td>'
+          + '<td><div style="display:flex;flex-direction:column;gap:4px">'
+          + '<span class="badge ' + (t.is_active ? 'b-approved' : 'b-gray') + '" style="cursor:pointer" onclick="tmToggleActive(\'' + t.id + '\',' + t.is_active + ')" title="اضغط للتبديل">' + (t.is_active ? '👁️ نشط' : '🙈 مخفي') + '</span>'
+          + (t.featured ? '<span class="badge" style="background:#FFFBEB;color:#92400E;border:1px solid #FCD34D">⭐ مميّز</span>' : '')
+          + '</div></td>'
+          + '<td style="font-size:.76rem;color:var(--gray);white-space:nowrap">' + fds(t.created_at) + '</td>'
+          + '<td><div class="acts" style="flex-wrap:nowrap">'
+          + '<button class="btn-ed" onclick="openEditTestimonial(\'' + t.id + '\')" title="تعديل">✏️</button>'
+          + '<button class="' + (t.is_active ? 'btn-no' : 'btn-ok') + '" style="font-size:.72rem;padding:5px 10px" onclick="tmToggleActive(\'' + t.id + '\',' + t.is_active + ')" title="' + (t.is_active ? 'إخفاء' : 'إظهار') + '">' + (t.is_active ? '🙈' : '👁️') + '</button>'
+          + '<button style="padding:5px 10px;border:1px solid ' + (t.featured ? '#FCD34D' : 'var(--gray-mid)') + ';border-radius:7px;font-family:inherit;font-size:.72rem;cursor:pointer;background:' + (t.featured ? '#FFFBEB' : 'var(--gray-light)') + ';color:' + (t.featured ? '#92400E' : 'var(--gray)') + ';transition:all .2s" onclick="tmToggleFeatured(\'' + t.id + '\',' + t.featured + ')" title="' + (t.featured ? 'إلغاء التمييز' : 'تمييز') + '">⭐</button>'
+          + '<button class="btn-rm" onclick="openDeleteTestimonial(\'' + t.id + '\',\'' + t.student_name.replace(/'/g,"\\'") + '\')" title="حذف">🗑️</button>'
+          + '</div></td>'
+          + '</tr>';
+      }).join('')
+    + '</tbody></table></div>';
+
+  footer.style.display = 'block';
+  footer.textContent   = 'عرض ' + items.length + ' من ' + TM.items.length + ' رأي';
+}
+
+// ─── Drag & Drop ──────────────────────────────────────────────
+function tmDragStart(id) { TM.dragId = id; document.getElementById('tm-row-'+id).classList.add('tm-dragging'); }
+function tmDragEnter(id) {
+  if (TM.dragOverId) document.getElementById('tm-row-'+TM.dragOverId)?.classList.remove('tm-drag-over');
+  TM.dragOverId = id;
+  document.getElementById('tm-row-'+id)?.classList.add('tm-drag-over');
+}
+async function tmDragEnd() {
+  if (!TM.dragId || !TM.dragOverId || TM.dragId === TM.dragOverId) {
+    document.getElementById('tm-row-'+TM.dragId)?.classList.remove('tm-dragging');
+    document.getElementById('tm-row-'+TM.dragOverId)?.classList.remove('tm-drag-over');
+    TM.dragId = null; TM.dragOverId = null; return;
+  }
+  var list    = [...TM.items];
+  var fromIdx = list.findIndex(function(t){ return t.id === TM.dragId; });
+  var toIdx   = list.findIndex(function(t){ return t.id === TM.dragOverId; });
+  var moved   = list.splice(fromIdx, 1)[0];
+  list.splice(toIdx, 0, moved);
+  TM.items    = list;
+  TM.dragId   = null; TM.dragOverId = null;
+
+  renderTestimonialsTable();
+  try {
+    await Promise.all(list.map(function(t, idx){
+      return sb.from('student_testimonials').update({ display_order: idx }).eq('id', t.id);
+    }));
+    toast('✅ تم حفظ الترتيب الجديد');
+  } catch(e) { toast('❌ فشل حفظ الترتيب: ' + e.message, 'err'); loadTestimonials(); }
+}
+
+// ─── Toggle helpers ───────────────────────────────────────────
+async function tmToggleActive(id, current) {
+  var newVal = !current;
+  TM.items = TM.items.map(function(t){ return t.id === id ? Object.assign({},t,{is_active:newVal}) : t; });
+  renderTestimonialsTable();
+  try {
+    var res = await sb.from('student_testimonials').update({ is_active: newVal }).eq('id', id);
+    if (res.error) throw res.error;
+    toast(newVal ? '👁️ تم إظهار الرأي' : '🙈 تم إخفاء الرأي');
+    updateTmStats();
+  } catch(e) { toast('❌ ' + e.message, 'err'); loadTestimonials(); }
+}
+
+async function tmToggleFeatured(id, current) {
+  var newVal = !current;
+  TM.items = TM.items.map(function(t){ return t.id === id ? Object.assign({},t,{featured:newVal}) : t; });
+  renderTestimonialsTable();
+  try {
+    var res = await sb.from('student_testimonials').update({ featured: newVal }).eq('id', id);
+    if (res.error) throw res.error;
+    toast(newVal ? '⭐ تم تمييز الرأي' : '⭐ تم إلغاء التمييز');
+    updateTmStats();
+  } catch(e) { toast('❌ ' + e.message, 'err'); loadTestimonials(); }
+}
+
+// ─── Star picker ──────────────────────────────────────────────
+var RATING_LABELS = ['','ضعيف','مقبول','جيد','جيد جداً','ممتاز'];
+
+function renderStarPicker(val) {
+  TM.rating = val;
+  var el = document.getElementById('tm-stars');
+  if (!el) return;
+  el.innerHTML = [1,2,3,4,5].map(function(s) {
+    return '<svg width="24" height="24" viewBox="0 0 24 24" fill="' + (s<=val?'#F59E0B':'none') + '" stroke="' + (s<=val?'#F59E0B':'#D1D5DB') + '" stroke-width="1.8" style="cursor:pointer;transition:transform .1s" class="' + (s<=val?'active':'') + '" onclick="renderStarPicker(' + s + ')" onmouseover="this.style.transform=\'scale(1.25)\'" onmouseout="this.style.transform=\'scale(1)\'"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>';
+  }).join('');
+  var lbl = document.getElementById('tm-rating-label');
+  if (lbl) lbl.textContent = RATING_LABELS[val];
+}
+
+// ─── Image handling ───────────────────────────────────────────
+function handleTmFileSelect(input) {
+  if (!input.files || !input.files[0]) return;
+  uploadTmImage(input.files[0]);
+}
+function handleTmFileDrop(e) {
+  e.preventDefault();
+  var f = e.dataTransfer.files[0];
+  if (f) uploadTmImage(f);
+}
+function previewTmUrl() {
+  var url = document.getElementById('tm-img-url').value.trim();
+  TM.imgUrl = url;
+  setTmImgPreview(url);
+}
+function setTmImgPreview(url) {
+  var zone = document.getElementById('tm-img-zone');
+  if (url) {
+    zone.innerHTML = '<img src="' + url + '" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.innerHTML=\'<div style=\\\"font-size:.72rem;color:var(--red)\\\">رابط غير صالح</div>\'">';
+    document.getElementById('tm-remove-img-btn').style.display = 'block';
+  } else {
+    zone.innerHTML = '<div id="tm-img-placeholder"><div style="font-size:1.8rem">📷</div><div style="font-size:.72rem;color:var(--gray);margin-top:4px">صورة الطالب</div></div>';
+    document.getElementById('tm-remove-img-btn').style.display = 'none';
+  }
+}
+function removeTmImage() {
+  TM.imgUrl = '';
+  document.getElementById('tm-img-url').value = '';
+  document.getElementById('tm-file-input').value = '';
+  setTmImgPreview('');
+}
+async function uploadTmImage(file) {
+  var errEl = document.getElementById('tm-img-err');
+  errEl.textContent = '';
+  if (!file.type.startsWith('image/')) { errEl.textContent = 'الملف يجب أن يكون صورة'; return; }
+  if (file.size > 2000000) { errEl.textContent = 'حجم الصورة يتجاوز 2MB'; return; }
+
+  // Local preview
+  var reader = new FileReader();
+  reader.onload = function(ev) { setTmImgPreview(ev.target.result); };
+  reader.readAsDataURL(file);
+
+  TM.imgUploading = true;
+  try {
+    var ext  = file.name.split('.').pop();
+    var path = 'testimonials/' + Date.now() + '.' + ext;
+    var up   = await sb.storage.from('testimonials').upload(path, file, { upsert: true });
+    if (up.error) throw up.error;
+    var pub = sb.storage.from('testimonials').getPublicUrl(path);
+    TM.imgUrl = pub.data.publicUrl;
+    document.getElementById('tm-img-url').value = TM.imgUrl;
+    setTmImgPreview(TM.imgUrl);
+    toast('✅ تم رفع الصورة');
+  } catch(e) {
+    errEl.textContent = 'فشل الرفع: ' + e.message;
+    // إذا لم يكن bucket موجوداً، استخدم الرابط المباشر
+    toast('⚠️ تحقق من إعداد Storage bucket "testimonials"', 'err');
+  } finally {
+    TM.imgUploading = false;
+  }
+}
+
+// ─── Counter ──────────────────────────────────────────────────
+function updateTmCounter() {
+  var val = (document.getElementById('tm-review').value || '').length;
+  var el  = document.getElementById('tm-counter');
+  if (el) { el.textContent = val + '/500'; el.style.color = val > 450 ? 'var(--red)' : 'var(--gray)'; }
+}
+
+// ─── Validate ────────────────────────────────────────────────
+function validateTmForm() {
+  var ok   = true;
+  var name = (document.getElementById('tm-name').value || '').trim();
+  var rev  = (document.getElementById('tm-review').value || '').trim();
+  document.getElementById('tm-name-err').textContent   = '';
+  document.getElementById('tm-review-err').textContent = '';
+  if (!name) { document.getElementById('tm-name-err').textContent = 'الاسم مطلوب'; ok = false; }
+  else if (name.length > 80) { document.getElementById('tm-name-err').textContent = 'الاسم طويل جداً'; ok = false; }
+  if (!rev) { document.getElementById('tm-review-err').textContent = 'نص الرأي مطلوب'; ok = false; }
+  else if (rev.length < 20) { document.getElementById('tm-review-err').textContent = 'الرأي قصير (20 حرف على الأقل)'; ok = false; }
+  else if (rev.length > 500) { document.getElementById('tm-review-err').textContent = 'الرأي طويل جداً (500 حرف)'; ok = false; }
+  return ok;
+}
+
+// ─── Open Modal ───────────────────────────────────────────────
+function openTestimonialModal(id) {
+  TM.editId = id || null;
+  var isEdit = !!id;
+  document.getElementById('tm-mdl-title').textContent = isEdit ? '✏️ تعديل الرأي' : '➕ إضافة رأي جديد';
+  document.getElementById('tm-save-btn').textContent  = isEdit ? '💾 حفظ التعديلات' : '➕ إضافة الرأي';
+  document.getElementById('tm-mdl-msg').innerHTML     = '';
+  document.getElementById('tm-name-err').textContent  = '';
+  document.getElementById('tm-review-err').textContent= '';
+  document.getElementById('tm-img-err').textContent   = '';
+
+  if (isEdit) {
+    var t = TM.items.find(function(x){ return x.id === id; });
+    if (!t) return;
+    document.getElementById('tm-name').value    = t.student_name;
+    document.getElementById('tm-title').value   = t.student_title  || '';
+    document.getElementById('tm-review').value  = t.review_text;
+    document.getElementById('tm-course').value  = t.course_name    || '';
+    document.getElementById('tm-img-url').value = t.student_image  || '';
+    document.getElementById('tm-active').checked   = t.is_active;
+    document.getElementById('tm-featured').checked = t.featured;
+    TM.imgUrl = t.student_image || '';
+    setTmImgPreview(TM.imgUrl);
+    renderStarPicker(t.rating);
+    updateTmCounter();
+  } else {
+    document.getElementById('tm-name').value    = '';
+    document.getElementById('tm-title').value   = '';
+    document.getElementById('tm-review').value  = '';
+    document.getElementById('tm-course').value  = '';
+    document.getElementById('tm-img-url').value = '';
+    document.getElementById('tm-active').checked   = true;
+    document.getElementById('tm-featured').checked = false;
+    TM.imgUrl = '';
+    setTmImgPreview('');
+    renderStarPicker(5);
+    updateTmCounter();
+  }
+  document.getElementById('mdl-testimonial').classList.add('show');
+}
+
+function openEditTestimonial(id) { openTestimonialModal(id); }
+function closeTestimonialModal() {
+  document.getElementById('mdl-testimonial').classList.remove('show');
+  TM.editId = null;
+}
+
+// ─── Save ────────────────────────────────────────────────────
+async function saveTestimonial() {
+  if (!validateTmForm()) return;
+  var btn = document.getElementById('tm-save-btn');
+  var msg = document.getElementById('tm-mdl-msg');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;margin-left:6px"></div> جاري الحفظ...';
+  msg.innerHTML = '';
+
+  var payload = {
+    student_name : document.getElementById('tm-name').value.trim(),
+    student_title: document.getElementById('tm-title').value.trim() || null,
+    review_text  : document.getElementById('tm-review').value.trim(),
+    rating       : TM.rating,
+    student_image: TM.imgUrl || null,
+    course_name  : document.getElementById('tm-course').value.trim() || null,
+    is_active    : document.getElementById('tm-active').checked,
+    featured     : document.getElementById('tm-featured').checked,
+  };
+
+  try {
+    var res;
+    if (TM.editId) {
+      res = await sb.from('student_testimonials').update(payload).eq('id', TM.editId).select().single();
+    } else {
+      payload.display_order = TM.items.length;
+      res = await sb.from('student_testimonials').insert(payload).select().single();
+    }
+    if (res.error) throw res.error;
+
+    // Optimistic update
+    if (TM.editId) {
+      TM.items = TM.items.map(function(t){ return t.id === TM.editId ? res.data : t; });
+      toast('✅ تم تعديل الرأي بنجاح');
+    } else {
+      TM.items.unshift(res.data);
+      toast('✅ تم إضافة الرأي بنجاح');
+    }
+    updateTmStats();
+    renderTestimonialsTable();
+    closeTestimonialModal();
+  } catch(e) {
+    msg.innerHTML = '<div class="msg-err">❌ ' + e.message + '</div>';
+    btn.disabled  = false;
+    btn.textContent = TM.editId ? '💾 حفظ التعديلات' : '➕ إضافة الرأي';
+  }
+}
+
+// ─── Delete ───────────────────────────────────────────────────
+function openDeleteTestimonial(id, name) {
+  TM.deleteId = id;
+  document.getElementById('tm-del-name').textContent = name;
+  document.getElementById('tm-del-msg').innerHTML    = '';
+  var btn = document.getElementById('tm-del-btn');
+  btn.disabled = false;
+  btn.textContent = '🗑️ نعم، احذف';
+  document.getElementById('mdl-tm-delete').classList.add('show');
+}
+
+async function confirmDeleteTestimonial() {
+  if (!TM.deleteId) return;
+  var btn = document.getElementById('tm-del-btn');
+  var msg = document.getElementById('tm-del-msg');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle"></div> جاري الحذف...';
+  msg.innerHTML = '';
+
+  try {
+    var res = await sb.from('student_testimonials').delete().eq('id', TM.deleteId);
+    if (res.error) throw res.error;
+    TM.items = TM.items.filter(function(t){ return t.id !== TM.deleteId; });
+    TM.deleteId = null;
+    updateTmStats();
+    renderTestimonialsTable();
+    document.getElementById('mdl-tm-delete').classList.remove('show');
+    toast('✅ تم حذف الرأي بنجاح');
+  } catch(e) {
+    msg.innerHTML = '<div class="msg-err">❌ ' + e.message + '</div>';
+    btn.disabled  = false;
+    btn.textContent = '🗑️ نعم، احذف';
+  }
+}
+</script>
