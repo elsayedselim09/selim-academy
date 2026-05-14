@@ -291,6 +291,8 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <button class="nav-item"        id="nav-students"  onclick="goTo('students')"><span class="nav-icon">👥</span> الطلاب</button>
     <div class="nav-label">الاختبارات</div>
     <button class="nav-item"        id="nav-admin-exams" onclick="goTo('admin-exams')"><span class="nav-icon">📝</span> إحصائيات الاختبارات</button>
+    <div class="nav-label">إدارة الموقع</div>
+    <button class="nav-item"        id="nav-site-content" onclick="goTo('site-content')"><span class="nav-icon">🌐</span> إدارة المحتوى</button>
     <div class="nav-label">الحساب</div>
     <button class="nav-item"        id="nav-profile"   onclick="goTo('profile')"><span class="nav-icon">👤</span> حسابي</button>
   </nav>
@@ -529,6 +531,327 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   </div>
 
   <!-- PROFILE -->
+  <!-- ═══════════════════════════════════════════════════════
+       صفحة إدارة المحتوى — SITE CONTENT MANAGEMENT
+  ═══════════════════════════════════════════════════════ -->
+  <div class="page" id="page-site-content">
+    <div class="page-title">🌐 إدارة المحتوى</div>
+    <p class="page-sub">تحكم في كل أقسام الموقع الرئيسي بدون الرجوع للكود</p>
+
+    <!-- TABS -->
+    <div class="sc-tabs-bar">
+      <button class="sc-tab active" data-tab="sc-teachers" onclick="scSwitchTab(this,'sc-teachers')">👨‍🏫 المدرسين</button>
+      <button class="sc-tab" data-tab="sc-pricing"  onclick="scSwitchTab(this,'sc-pricing')">💰 الأسعار</button>
+      <button class="sc-tab" data-tab="sc-booking"  onclick="scSwitchTab(this,'sc-booking')">📅 الحجز</button>
+      <button class="sc-tab" data-tab="sc-reviews"  onclick="scSwitchTab(this,'sc-reviews')">⭐ آراء الطلاب</button>
+      <button class="sc-tab" data-tab="sc-contact"  onclick="scSwitchTab(this,'sc-contact')">📞 التواصل</button>
+      <button class="sc-tab" data-tab="sc-faq"      onclick="scSwitchTab(this,'sc-faq')">❓ الأسئلة الشائعة</button>
+    </div>
+
+    <!-- ────────── TAB: المدرسين ────────── -->
+    <div class="sc-pane active" id="sc-teachers">
+      <div class="section-card">
+        <div class="section-head">
+          <h3>👨‍🏫 ترتيب المدرسين وتثبيتهم</h3>
+          <span style="font-size:.82rem;color:var(--gray);">اسحب لإعادة الترتيب · الثابتون يظهرون أولاً في الموقع</span>
+        </div>
+        <div class="section-body">
+          <div id="sc-teachers-list" style="display:flex;flex-direction:column;gap:10px;">
+            <div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>
+          </div>
+          <button class="btn-primary" style="margin-top:16px;" onclick="scSaveTeachersOrder()">💾 حفظ الترتيب</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── TAB: الأسعار ────────── -->
+    <div class="sc-pane" id="sc-pricing">
+      <!-- Visibility toggle -->
+      <div class="section-card" style="margin-bottom:16px;">
+        <div class="section-head"><h3>👁️ ظهور قسم الأسعار في الموقع</h3></div>
+        <div class="section-body" style="display:flex;align-items:center;gap:16px;">
+          <label class="sc-toggle-label">
+            <input type="checkbox" id="pricing-visible-chk" onchange="scTogglePricingVisible(this)" class="sc-toggle-input">
+            <span class="sc-toggle-track"><span class="sc-toggle-thumb"></span></span>
+          </label>
+          <span id="pricing-visible-txt" style="font-weight:700;color:var(--gray);">جاري التحميل...</span>
+        </div>
+      </div>
+
+      <!-- Countries pricing table -->
+      <div class="section-card">
+        <div class="section-head">
+          <h3>💰 الأسعار حسب الدولة</h3>
+          <button class="btn-primary" onclick="scOpenAddCountry()">+ إضافة دولة</button>
+        </div>
+        <div class="section-body">
+          <div class="tbl-wrap">
+            <table class="data-table" id="pricing-table">
+              <thead><tr>
+                <th>الترتيب</th><th>الدولة</th><th>العملة</th><th>سعر الفردي</th><th>سعر الجماعي</th><th>الحالة</th><th>إجراءات</th>
+              </tr></thead>
+              <tbody id="pricing-tbody">
+                <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray);">⏳ جاري التحميل...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── TAB: الحجز ────────── -->
+    <div class="sc-pane" id="sc-booking">
+      <!-- Visibility toggle -->
+      <div class="section-card" style="margin-bottom:16px;">
+        <div class="section-head"><h3>👁️ ظهور قسم الحجز في الموقع</h3></div>
+        <div class="section-body" style="display:flex;align-items:center;gap:16px;">
+          <label class="sc-toggle-label">
+            <input type="checkbox" id="booking-visible-chk" onchange="scToggleBookingVisible(this)" class="sc-toggle-input">
+            <span class="sc-toggle-track"><span class="sc-toggle-thumb"></span></span>
+          </label>
+          <span id="booking-visible-txt" style="font-weight:700;color:var(--gray);">جاري التحميل...</span>
+        </div>
+      </div>
+
+      <!-- Booking fields -->
+      <div class="section-card">
+        <div class="section-head">
+          <h3>📝 حقول فورم الحجز</h3>
+          <button class="btn-primary" onclick="scOpenAddBookingField()">+ إضافة حقل</button>
+        </div>
+        <div class="section-body">
+          <div class="tbl-wrap">
+            <table class="data-table" id="booking-fields-table">
+              <thead><tr><th>الحقل</th><th>النوع</th><th>مطلوب</th><th>ظاهر</th><th>إجراءات</th></tr></thead>
+              <tbody id="booking-fields-tbody">
+                <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray);">⏳ جاري التحميل...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── TAB: آراء الطلاب ────────── -->
+    <div class="sc-pane" id="sc-reviews">
+      <div class="section-card">
+        <div class="section-head">
+          <h3>⭐ آراء الطلاب</h3>
+          <button class="btn-primary" onclick="scOpenAddReview()">+ إضافة رأي</button>
+        </div>
+        <div class="section-body">
+          <div id="sc-reviews-list" style="display:flex;flex-direction:column;gap:12px;">
+            <div class="sc-skeleton"></div><div class="sc-skeleton"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── TAB: التواصل ────────── -->
+    <div class="sc-pane" id="sc-contact">
+      <div class="section-card">
+        <div class="section-head">
+          <h3>📞 معلومات التواصل</h3>
+          <button class="btn-primary" onclick="scOpenAddContact()">+ إضافة</button>
+        </div>
+        <div class="section-body">
+          <div id="sc-contact-list" style="display:flex;flex-direction:column;gap:10px;">
+            <div class="sc-skeleton"></div><div class="sc-skeleton"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── TAB: الأسئلة الشائعة ────────── -->
+    <div class="sc-pane" id="sc-faq">
+      <div class="section-card">
+        <div class="section-head">
+          <h3>❓ الأسئلة الشائعة</h3>
+          <button class="btn-primary" onclick="scOpenAddFaq()">+ إضافة سؤال</button>
+        </div>
+        <div class="section-body">
+          <div id="sc-faq-list" style="display:flex;flex-direction:column;gap:10px;">
+            <div class="sc-skeleton"></div><div class="sc-skeleton"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end page-site-content -->
+
+  <!-- ════════════ MODALS for site content ════════════ -->
+
+  <!-- Modal: Edit/Add Country Pricing -->
+  <div class="mdl" id="mdl-sc-country">
+    <div class="mdl-box wide" style="max-width:480px;">
+      <div class="mdl-icon">💰</div>
+      <div class="mdl-title" id="mdl-country-title">إضافة دولة</div>
+      <input type="hidden" id="sc-country-id">
+      <div class="fg"><label>الكود (مثال: sa)</label><input type="text" id="sc-country-code" placeholder="sa"></div>
+      <div class="fg"><label>اسم الدولة</label><input type="text" id="sc-country-name" placeholder="السعودي"></div>
+      <div class="fg"><label>الرمز (Emoji)</label><input type="text" id="sc-country-flag" placeholder="🇸🇦"></div>
+      <div class="fg"><label>العملة</label><input type="text" id="sc-country-currency" placeholder="ريال سعودي"></div>
+      <div class="fg-row">
+        <div class="fg"><label>سعر الفردي</label><input type="number" id="sc-country-solo" placeholder="20"></div>
+        <div class="fg"><label>سعر الجماعي</label><input type="number" id="sc-country-group" placeholder="100"></div>
+      </div>
+      <div id="sc-country-msg"></div>
+      <div class="mdl-btns">
+        <button class="mdl-cancel" onclick="closeMdl('mdl-sc-country')">إلغاء</button>
+        <button class="mdl-confirm mc-save" onclick="scSaveCountry()">💾 حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edit/Add Booking Field -->
+  <div class="mdl" id="mdl-sc-booking-field">
+    <div class="mdl-box wide">
+      <div class="mdl-icon">📝</div>
+      <div class="mdl-title" id="mdl-bf-title">إضافة حقل</div>
+      <input type="hidden" id="sc-bf-id">
+      <div class="fg"><label>مفتاح الحقل</label><input type="text" id="sc-bf-key" placeholder="field_name"></div>
+      <div class="fg"><label>اسم الحقل (عربي)</label><input type="text" id="sc-bf-label" placeholder="اسم الطالب"></div>
+      <div class="fg"><label>نوع الحقل</label>
+        <select id="sc-bf-type">
+          <option value="text">نص</option>
+          <option value="tel">رقم هاتف</option>
+          <option value="select">قائمة اختيار</option>
+          <option value="day_time">يوم ووقت</option>
+        </select>
+      </div>
+      <div id="sc-bf-msg"></div>
+      <div class="mdl-btns">
+        <button class="mdl-cancel" onclick="closeMdl('mdl-sc-booking-field')">إلغاء</button>
+        <button class="mdl-confirm mc-save" onclick="scSaveBookingField()">💾 حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edit/Add Review -->
+  <div class="mdl" id="mdl-sc-review">
+    <div class="mdl-box wide" style="max-width:520px;">
+      <div class="mdl-icon">⭐</div>
+      <div class="mdl-title" id="mdl-review-title">إضافة رأي</div>
+      <input type="hidden" id="sc-review-id">
+      <div class="fg-row">
+        <div class="fg"><label>الاسم</label><input type="text" id="sc-review-name" placeholder="محمد خالد"></div>
+        <div class="fg"><label>الأحرف الأولى (Avatar)</label><input type="text" id="sc-review-initials" placeholder="م.خ" maxlength="4"></div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>التقييم (1-5)</label><input type="number" id="sc-review-stars" min="1" max="5" value="5"></div>
+        <div class="fg"><label>البيانات (مثال: طالب ثانوي)</label><input type="text" id="sc-review-meta" placeholder="طالب ثانوي — أنهى 3 كورسات"></div>
+      </div>
+      <div class="fg"><label>نص الرأي</label><textarea id="sc-review-text" rows="3" placeholder="اكتب رأي الطالب هنا..."></textarea></div>
+      <div id="sc-review-msg"></div>
+      <div class="mdl-btns">
+        <button class="mdl-cancel" onclick="closeMdl('mdl-sc-review')">إلغاء</button>
+        <button class="mdl-confirm mc-save" onclick="scSaveReview()">💾 حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edit/Add Contact -->
+  <div class="mdl" id="mdl-sc-contact">
+    <div class="mdl-box wide">
+      <div class="mdl-icon">📞</div>
+      <div class="mdl-title" id="mdl-contact-title">إضافة معلومة تواصل</div>
+      <input type="hidden" id="sc-contact-id">
+      <div class="fg-row">
+        <div class="fg"><label>الأيقونة (Emoji)</label><input type="text" id="sc-contact-icon" placeholder="📱" maxlength="4"></div>
+        <div class="fg"><label>العنوان</label><input type="text" id="sc-contact-label" placeholder="واتساب"></div>
+      </div>
+      <div class="fg"><label>القيمة</label><input type="text" id="sc-contact-value" placeholder="+201012142749"></div>
+      <div class="fg"><label>الرابط (اختياري)</label><input type="text" id="sc-contact-link" placeholder="https://wa.me/..."></div>
+      <div id="sc-contact-msg"></div>
+      <div class="mdl-btns">
+        <button class="mdl-cancel" onclick="closeMdl('mdl-sc-contact')">إلغاء</button>
+        <button class="mdl-confirm mc-save" onclick="scSaveContact()">💾 حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edit/Add FAQ -->
+  <div class="mdl" id="mdl-sc-faq">
+    <div class="mdl-box wide" style="max-width:520px;">
+      <div class="mdl-icon">❓</div>
+      <div class="mdl-title" id="mdl-faq-title">إضافة سؤال</div>
+      <input type="hidden" id="sc-faq-id">
+      <div class="fg"><label>السؤال</label><input type="text" id="sc-faq-q" placeholder="اكتب السؤال هنا..."></div>
+      <div class="fg"><label>الإجابة</label><textarea id="sc-faq-a" rows="3" placeholder="اكتب الإجابة هنا..."></textarea></div>
+      <div id="sc-faq-msg"></div>
+      <div class="mdl-btns">
+        <button class="mdl-cancel" onclick="closeMdl('mdl-sc-faq')">إلغاء</button>
+        <button class="mdl-confirm mc-save" onclick="scSaveFaq()">💾 حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Teacher pinning/order -->
+  <div class="mdl" id="mdl-sc-teacher-pin">
+    <div class="mdl-box">
+      <div class="mdl-icon">📌</div>
+      <div class="mdl-title" id="mdl-tp-name">تثبيت المدرس</div>
+      <input type="hidden" id="sc-tp-id">
+      <div class="fg"><label>ترتيب الظهور (رقم أقل = يظهر أولاً)</label><input type="number" id="sc-tp-order" min="0" value="0"></div>
+      <div class="fg" style="flex-direction:row;align-items:center;gap:10px;">
+        <input type="checkbox" id="sc-tp-pinned" style="width:18px;height:18px;accent-color:var(--blue);">
+        <label style="font-size:.9rem;font-weight:700;cursor:pointer;" for="sc-tp-pinned">ثابت في الصف الأول (يظهر دائماً)</label>
+      </div>
+      <div id="sc-tp-msg"></div>
+      <div class="mdl-btns">
+        <button class="mdl-cancel" onclick="closeMdl('mdl-sc-teacher-pin')">إلغاء</button>
+        <button class="mdl-confirm mc-save" onclick="scSaveTeacherPin()">💾 حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ CSS for site content page ════════════ -->
+  <style>
+  /* TABS BAR */
+  .sc-tabs-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;background:var(--white);border:1px solid var(--gray-mid);border-radius:14px;padding:8px;box-shadow:var(--shadow)}
+  .sc-tab{padding:9px 18px;border-radius:10px;border:none;background:transparent;font-family:'Cairo',sans-serif;font-size:.88rem;font-weight:700;color:var(--gray);cursor:pointer;transition:all .2s;white-space:nowrap}
+  .sc-tab:hover{background:var(--blue-light);color:var(--blue)}
+  .sc-tab.active{background:var(--blue);color:#fff;box-shadow:0 4px 14px rgba(26,86,219,.3)}
+  .sc-pane{display:none;animation:fadeIn .3s ease}
+  .sc-pane.active{display:block}
+  /* TOGGLE SWITCH */
+  .sc-toggle-label{display:inline-flex;align-items:center;cursor:pointer}
+  .sc-toggle-input{display:none}
+  .sc-toggle-track{width:52px;height:28px;background:var(--gray-mid);border-radius:14px;position:relative;transition:background .25s;flex-shrink:0}
+  .sc-toggle-input:checked+.sc-toggle-track{background:var(--green)}
+  .sc-toggle-thumb{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:right .25s;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+  .sc-toggle-input:checked+.sc-toggle-track .sc-toggle-thumb{right:calc(100% - 25px)}
+  /* TEACHER DRAG ITEM */
+  .sc-teacher-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--white);border:1px solid var(--gray-mid);border-radius:12px;cursor:grab;transition:all .2s;user-select:none}
+  .sc-teacher-item:hover{box-shadow:var(--shadow);border-color:var(--blue-mid)}
+  .sc-teacher-item.dragging{opacity:.5;border-color:var(--blue);box-shadow:0 8px 24px rgba(26,86,219,.2)}
+  .sc-teacher-item.pinned-item{border-color:var(--gold);background:var(--gold-light)}
+  .sc-drag-handle{font-size:1.2rem;color:var(--gray);cursor:grab;flex-shrink:0}
+  .sc-pin-badge{background:var(--gold);color:#fff;font-size:.68rem;font-weight:900;padding:2px 8px;border-radius:50px}
+  /* SKELETON */
+  .sc-skeleton{height:50px;border-radius:10px;background:linear-gradient(90deg,var(--gray-mid) 25%,#f0f0f0 50%,var(--gray-mid) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  /* REVIEW CARD ADMIN */
+  .sc-review-item{background:var(--white);border:1px solid var(--gray-mid);border-radius:12px;padding:16px;display:flex;align-items:flex-start;gap:14px}
+  .sc-review-av{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-mid));display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem;font-weight:900;flex-shrink:0}
+  .sc-review-body{flex:1}
+  .sc-review-name{font-weight:900;color:var(--dark);font-size:.9rem}
+  .sc-review-stars{color:var(--gold);font-size:.82rem}
+  .sc-review-text{font-size:.84rem;color:var(--gray);margin:4px 0;line-height:1.6}
+  .sc-review-meta{font-size:.75rem;color:var(--gray)}
+  .sc-review-acts{display:flex;gap:7px;flex-shrink:0;flex-direction:column;align-items:flex-end}
+  /* CONTACT ITEM */
+  .sc-contact-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--white);border:1px solid var(--gray-mid);border-radius:12px}
+  .sc-contact-icon{font-size:1.5rem;width:44px;height:44px;background:var(--blue-light);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .sc-contact-body{flex:1}
+  .sc-contact-label{font-size:.75rem;color:var(--blue);font-weight:700}
+  .sc-contact-val{font-size:.9rem;font-weight:700;color:var(--dark)}
+  /* FAQ ITEM ADMIN */
+  .sc-faq-item{background:var(--white);border:1px solid var(--gray-mid);border-radius:12px;padding:16px}
+  .sc-faq-q{font-weight:900;color:var(--dark);margin-bottom:6px;font-size:.9rem}
+  .sc-faq-a{font-size:.84rem;color:var(--gray);line-height:1.6}
+  </style>
+
   <div class="page" id="page-profile">
     <div class="page-title">👤 حسابي</div>
     <p class="page-sub">تعديل بياناتك الشخصية وصورة الملف الشخصي</p>
@@ -936,7 +1259,7 @@ function goTo(name) {
   document.getElementById('nav-'+name).classList.add('active');
   closeSidebar();
   if (name !== 'sessions' && _sessInterval) { clearInterval(_sessInterval); _sessInterval = null; }
-  const loaders = {courses:loadCourses, sessions:initSessions, students:loadStudents, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams};
+  const loaders = {courses:loadCourses, sessions:initSessions, students:loadStudents, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit};
   if(loaders[name]) loaders[name]();
   if(name==='requests') renderReqTable();
 }
@@ -4005,6 +4328,710 @@ async function confirmDeleteStudent() {
     btn.disabled = false;
     btn.textContent = '🗑️ حذف نهائياً';
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  🌐  SITE CONTENT MANAGEMENT — إدارة محتوى الموقع الرئيسي
+// ══════════════════════════════════════════════════════════════════
+
+// ── Helpers ──
+function closeMdl(id){ document.getElementById(id).classList.remove('show'); }
+function openMdl(id){ document.getElementById(id).classList.add('show'); }
+
+function scSwitchTab(btn, paneId) {
+  document.querySelectorAll('.sc-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.sc-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(paneId).classList.add('active');
+  // lazy load data for each tab
+  if (paneId === 'sc-teachers') scLoadTeachers();
+  if (paneId === 'sc-pricing')  scLoadPricing();
+  if (paneId === 'sc-booking')  scLoadBookingFields();
+  if (paneId === 'sc-reviews')  scLoadReviews();
+  if (paneId === 'sc-contact')  scLoadContact();
+  if (paneId === 'sc-faq')      scLoadFaq();
+}
+
+// ── Init ──
+let _scInited = false;
+async function scInit() {
+  if (_scInited) return;
+  _scInited = true;
+  await Promise.all([scLoadTeachers(), scLoadPricing(), scLoadBookingFields(), scLoadReviews(), scLoadContact(), scLoadFaq()]);
+}
+
+// ════════════════════════════
+//  TAB 1 — المدرسين
+// ════════════════════════════
+let _scTeachers = [];
+
+async function scLoadTeachers() {
+  const cont = document.getElementById('sc-teachers-list');
+  cont.innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
+  try {
+    const { data, error } = await sb.from('profiles')
+      .select('id, full_name, specialization, photo_url, teacher_sort_order, teacher_is_pinned')
+      .eq('role', 'teacher')
+      .order('teacher_sort_order', { ascending: true });
+    if (error) throw error;
+    _scTeachers = data || [];
+    scRenderTeachers();
+  } catch(e) {
+    cont.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+  }
+}
+
+function scRenderTeachers() {
+  const cont = document.getElementById('sc-teachers-list');
+  if (!_scTeachers.length) { cont.innerHTML = '<div class="empty-box"><div class="ei">👨‍🏫</div><div class="et">لا يوجد مدرسون</div></div>'; return; }
+  cont.innerHTML = _scTeachers.map((t, i) => `
+    <div class="sc-teacher-item ${t.teacher_is_pinned ? 'pinned-item' : ''}" draggable="true"
+         data-id="${t.id}" data-idx="${i}"
+         ondragstart="scDragStart(event,${i})" ondragover="scDragOver(event)" ondrop="scDrop(event,${i})" ondragend="scDragEnd()">
+      <span class="sc-drag-handle">⠿</span>
+      <div class="t-av" style="flex-shrink:0;">
+        ${t.photo_url ? `<img src="${t.photo_url}" alt="">` : (t.full_name||'م').charAt(0)}
+      </div>
+      <div style="flex:1;">
+        <div class="t-name">${t.full_name || '—'}</div>
+        <div class="t-sub">${t.specialization || ''}</div>
+      </div>
+      ${t.teacher_is_pinned ? '<span class="sc-pin-badge">📌 ثابت</span>' : ''}
+      <div class="acts">
+        <button class="btn-ed" onclick="scOpenTeacherPin('${t.id}','${(t.full_name||'').replace(/'/g,"\\'")}',${t.teacher_sort_order||0},${t.teacher_is_pinned?'true':'false'})">📌 ترتيب</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+let _scDragFrom = null;
+function scDragStart(e, idx) { _scDragFrom = idx; e.currentTarget.classList.add('dragging'); }
+function scDragOver(e) { e.preventDefault(); }
+function scDragEnd() { document.querySelectorAll('.sc-teacher-item').forEach(el => el.classList.remove('dragging')); }
+function scDrop(e, toIdx) {
+  e.preventDefault();
+  if (_scDragFrom === null || _scDragFrom === toIdx) return;
+  const moved = _scTeachers.splice(_scDragFrom, 1)[0];
+  _scTeachers.splice(toIdx, 0, moved);
+  _scDragFrom = null;
+  scRenderTeachers();
+}
+
+async function scSaveTeachersOrder() {
+  try {
+    const updates = _scTeachers.map((t, i) =>
+      sb.from('profiles').update({ teacher_sort_order: i }).eq('id', t.id)
+    );
+    await Promise.all(updates);
+    toast('✅ تم حفظ ترتيب المدرسين بنجاح');
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+function scOpenTeacherPin(id, name, order, pinned) {
+  document.getElementById('sc-tp-id').value = id;
+  document.getElementById('mdl-tp-name').textContent = name;
+  document.getElementById('sc-tp-order').value = order;
+  document.getElementById('sc-tp-pinned').checked = pinned;
+  document.getElementById('sc-tp-msg').innerHTML = '';
+  openMdl('mdl-sc-teacher-pin');
+}
+
+async function scSaveTeacherPin() {
+  const id = document.getElementById('sc-tp-id').value;
+  const order = parseInt(document.getElementById('sc-tp-order').value) || 0;
+  const pinned = document.getElementById('sc-tp-pinned').checked;
+  const msg = document.getElementById('sc-tp-msg');
+  try {
+    const { error } = await sb.from('profiles').update({ teacher_sort_order: order, teacher_is_pinned: pinned }).eq('id', id);
+    if (error) throw error;
+    closeMdl('mdl-sc-teacher-pin');
+    toast('✅ تم تحديث إعدادات المدرس');
+    scLoadTeachers();
+  } catch(e) { msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`; }
+}
+
+// ════════════════════════════
+//  TAB 2 — الأسعار
+// ════════════════════════════
+let _scPrices = [];
+
+async function scLoadPricing() {
+  // Load visibility setting
+  try {
+    const { data } = await sb.from('site_settings').select('value').eq('id', 'pricing_visible').single();
+    const chk = document.getElementById('pricing-visible-chk');
+    const txt = document.getElementById('pricing-visible-txt');
+    if (data) {
+      chk.checked = data.value.visible !== false;
+      txt.textContent = chk.checked ? '✅ قسم الأسعار ظاهر في الموقع' : '🚫 قسم الأسعار مخفي من الموقع';
+    }
+  } catch(e) {}
+
+  // Load countries
+  const tbody = document.getElementById('pricing-tbody');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--gray);">⏳ جاري التحميل...</td></tr>';
+  try {
+    const { data, error } = await sb.from('site_pricing').select('*').order('sort_order', { ascending: true });
+    if (error) throw error;
+    _scPrices = data || [];
+    scRenderPricing();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="7" class="msg-err">❌ ${e.message}</td></tr>`;
+  }
+}
+
+function scRenderPricing() {
+  const tbody = document.getElementById('pricing-tbody');
+  if (!_scPrices.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;">لا توجد دول</td></tr>'; return; }
+  tbody.innerHTML = _scPrices.map(p => `
+    <tr>
+      <td style="text-align:center;font-weight:900;color:var(--blue);">${p.sort_order}</td>
+      <td><span style="font-size:1.3rem;">${p.flag}</span> ${p.country_name}</td>
+      <td>${p.currency}</td>
+      <td style="font-weight:900;color:var(--blue);">${p.solo_price}</td>
+      <td style="font-weight:900;color:#E65100;">${p.group_price}</td>
+      <td>
+        <label class="sc-toggle-label" title="${p.is_active ? 'ظاهر' : 'مخفي'}">
+          <input type="checkbox" class="sc-toggle-input" ${p.is_active ? 'checked' : ''} onchange="scToggleCountry('${p.id}',this)">
+          <span class="sc-toggle-track"><span class="sc-toggle-thumb"></span></span>
+        </label>
+      </td>
+      <td>
+        <div class="acts">
+          <button class="btn-ed" onclick="scOpenEditCountry('${p.id}')">✏️ تعديل</button>
+          <button class="btn-rm" onclick="scDeleteCountry('${p.id}','${p.country_name}')">🗑️</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function scTogglePricingVisible(chk) {
+  const txt = document.getElementById('pricing-visible-txt');
+  try {
+    await sb.from('site_settings').upsert({ id: 'pricing_visible', value: { visible: chk.checked }, updated_at: new Date().toISOString() });
+    txt.textContent = chk.checked ? '✅ قسم الأسعار ظاهر في الموقع' : '🚫 قسم الأسعار مخفي من الموقع';
+    toast(chk.checked ? '✅ تم إظهار قسم الأسعار' : '🚫 تم إخفاء قسم الأسعار');
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+async function scToggleCountry(id, chk) {
+  try {
+    await sb.from('site_pricing').update({ is_active: chk.checked }).eq('id', id);
+    toast(chk.checked ? '✅ تم إظهار الدولة' : '🚫 تم إخفاء الدولة');
+  } catch(e) { toast('❌ ' + e.message, 'err'); chk.checked = !chk.checked; }
+}
+
+function scOpenAddCountry() {
+  document.getElementById('mdl-country-title').textContent = 'إضافة دولة جديدة';
+  document.getElementById('sc-country-id').value = '';
+  ['sc-country-code','sc-country-name','sc-country-flag','sc-country-currency','sc-country-solo','sc-country-group'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('sc-country-msg').innerHTML = '';
+  openMdl('mdl-sc-country');
+}
+
+function scOpenEditCountry(id) {
+  const p = _scPrices.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('mdl-country-title').textContent = `تعديل — ${p.country_name}`;
+  document.getElementById('sc-country-id').value = p.id;
+  document.getElementById('sc-country-code').value = p.country_code;
+  document.getElementById('sc-country-name').value = p.country_name;
+  document.getElementById('sc-country-flag').value = p.flag;
+  document.getElementById('sc-country-currency').value = p.currency;
+  document.getElementById('sc-country-solo').value = p.solo_price;
+  document.getElementById('sc-country-group').value = p.group_price;
+  document.getElementById('sc-country-msg').innerHTML = '';
+  openMdl('mdl-sc-country');
+}
+
+async function scSaveCountry() {
+  const id = document.getElementById('sc-country-id').value;
+  const msg = document.getElementById('sc-country-msg');
+  const payload = {
+    country_code: document.getElementById('sc-country-code').value.trim().toLowerCase(),
+    country_name: document.getElementById('sc-country-name').value.trim(),
+    flag:         document.getElementById('sc-country-flag').value.trim(),
+    currency:     document.getElementById('sc-country-currency').value.trim(),
+    solo_price:   parseFloat(document.getElementById('sc-country-solo').value) || 0,
+    group_price:  parseFloat(document.getElementById('sc-country-group').value) || 0,
+    updated_at:   new Date().toISOString(),
+    sort_order:   _scPrices.length + 1,
+  };
+  if (!payload.country_code || !payload.country_name) { msg.innerHTML = '<div class="msg-err">❌ أدخل الكود والاسم</div>'; return; }
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('site_pricing').update(payload).eq('id', id));
+    } else {
+      ({ error } = await sb.from('site_pricing').insert(payload));
+    }
+    if (error) throw error;
+    closeMdl('mdl-sc-country');
+    toast('✅ تم حفظ بيانات الدولة');
+    scLoadPricing();
+  } catch(e) { msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`; }
+}
+
+async function scDeleteCountry(id, name) {
+  if (!confirm(`هل تريد حذف "${name}" من قائمة الأسعار؟`)) return;
+  try {
+    const { error } = await sb.from('site_pricing').delete().eq('id', id);
+    if (error) throw error;
+    toast('🗑️ تم الحذف');
+    scLoadPricing();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+// ════════════════════════════
+//  TAB 3 — الحجز
+// ════════════════════════════
+let _scBookingFields = [];
+
+async function scLoadBookingFields() {
+  // Booking visibility
+  try {
+    const { data } = await sb.from('site_settings').select('value').eq('id', 'booking_visible').single();
+    const chk = document.getElementById('booking-visible-chk');
+    const txt = document.getElementById('booking-visible-txt');
+    if (data) {
+      chk.checked = data.value.visible !== false;
+      txt.textContent = chk.checked ? '✅ قسم الحجز ظاهر في الموقع' : '🚫 قسم الحجز مخفي من الموقع';
+    }
+  } catch(e) {}
+
+  const tbody = document.getElementById('booking-fields-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray);">⏳ جاري التحميل...</td></tr>';
+  try {
+    const { data, error } = await sb.from('site_booking_fields').select('*').order('sort_order', { ascending: true });
+    if (error) throw error;
+    _scBookingFields = data || [];
+    scRenderBookingFields();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="5" class="msg-err">❌ ${e.message}</td></tr>`;
+  }
+}
+
+function scRenderBookingFields() {
+  const tbody = document.getElementById('booking-fields-tbody');
+  const typeNames = { text:'نص', tel:'هاتف', select:'قائمة', day_time:'يوم/وقت' };
+  tbody.innerHTML = _scBookingFields.map(f => `
+    <tr>
+      <td><strong>${f.field_label}</strong><br><span style="font-size:.72rem;color:var(--gray);">${f.field_key}</span></td>
+      <td><span class="badge b-blue">${typeNames[f.field_type] || f.field_type}</span></td>
+      <td>${f.is_required ? '<span class="badge b-approved">مطلوب</span>' : '<span class="badge b-gray">اختياري</span>'}</td>
+      <td>
+        <label class="sc-toggle-label">
+          <input type="checkbox" class="sc-toggle-input" ${f.is_visible ? 'checked' : ''} onchange="scToggleBookingField('${f.id}',this)">
+          <span class="sc-toggle-track"><span class="sc-toggle-thumb"></span></span>
+        </label>
+      </td>
+      <td>
+        <div class="acts">
+          <button class="btn-ed" onclick="scOpenEditBookingField('${f.id}')">✏️</button>
+          <button class="btn-rm" onclick="scDeleteBookingField('${f.id}','${f.field_label}')">🗑️</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function scToggleBookingVisible(chk) {
+  const txt = document.getElementById('booking-visible-txt');
+  try {
+    await sb.from('site_settings').upsert({ id: 'booking_visible', value: { visible: chk.checked }, updated_at: new Date().toISOString() });
+    txt.textContent = chk.checked ? '✅ قسم الحجز ظاهر في الموقع' : '🚫 قسم الحجز مخفي من الموقع';
+    toast(chk.checked ? '✅ تم إظهار قسم الحجز' : '🚫 تم إخفاء قسم الحجز');
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+async function scToggleBookingField(id, chk) {
+  try {
+    await sb.from('site_booking_fields').update({ is_visible: chk.checked }).eq('id', id);
+    toast(chk.checked ? '✅ تم إظهار الحقل' : '🚫 تم إخفاء الحقل');
+  } catch(e) { toast('❌ ' + e.message, 'err'); chk.checked = !chk.checked; }
+}
+
+function scOpenAddBookingField() {
+  document.getElementById('mdl-bf-title').textContent = 'إضافة حقل جديد';
+  document.getElementById('sc-bf-id').value = '';
+  document.getElementById('sc-bf-key').value = '';
+  document.getElementById('sc-bf-label').value = '';
+  document.getElementById('sc-bf-type').value = 'text';
+  document.getElementById('sc-bf-msg').innerHTML = '';
+  openMdl('mdl-sc-booking-field');
+}
+
+function scOpenEditBookingField(id) {
+  const f = _scBookingFields.find(x => x.id === id);
+  if (!f) return;
+  document.getElementById('mdl-bf-title').textContent = `تعديل — ${f.field_label}`;
+  document.getElementById('sc-bf-id').value = f.id;
+  document.getElementById('sc-bf-key').value = f.field_key;
+  document.getElementById('sc-bf-label').value = f.field_label;
+  document.getElementById('sc-bf-type').value = f.field_type;
+  document.getElementById('sc-bf-msg').innerHTML = '';
+  openMdl('mdl-sc-booking-field');
+}
+
+async function scSaveBookingField() {
+  const id = document.getElementById('sc-bf-id').value;
+  const msg = document.getElementById('sc-bf-msg');
+  const payload = {
+    field_key:   document.getElementById('sc-bf-key').value.trim(),
+    field_label: document.getElementById('sc-bf-label').value.trim(),
+    field_type:  document.getElementById('sc-bf-type').value,
+  };
+  if (!payload.field_key || !payload.field_label) { msg.innerHTML = '<div class="msg-err">❌ أدخل المفتاح والاسم</div>'; return; }
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('site_booking_fields').update(payload).eq('id', id));
+    } else {
+      payload.sort_order = _scBookingFields.length + 1;
+      ({ error } = await sb.from('site_booking_fields').insert(payload));
+    }
+    if (error) throw error;
+    closeMdl('mdl-sc-booking-field');
+    toast('✅ تم حفظ الحقل');
+    scLoadBookingFields();
+  } catch(e) { msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`; }
+}
+
+async function scDeleteBookingField(id, label) {
+  if (!confirm(`حذف حقل "${label}"؟`)) return;
+  try {
+    const { error } = await sb.from('site_booking_fields').delete().eq('id', id);
+    if (error) throw error;
+    toast('🗑️ تم الحذف');
+    scLoadBookingFields();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+// ════════════════════════════
+//  TAB 4 — آراء الطلاب
+// ════════════════════════════
+let _scReviews = [];
+
+async function scLoadReviews() {
+  const cont = document.getElementById('sc-reviews-list');
+  cont.innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
+  try {
+    const { data, error } = await sb.from('student_testimonials')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    _scReviews = data || [];
+    scRenderReviews();
+  } catch(e) {
+    cont.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+  }
+}
+
+function scRenderReviews() {
+  const cont = document.getElementById('sc-reviews-list');
+  if (!_scReviews.length) { cont.innerHTML = '<div class="empty-box"><div class="ei">⭐</div><div class="et">لا توجد آراء</div></div>'; return; }
+  cont.innerHTML = _scReviews.map(r => {
+    const stars = '★'.repeat(r.stars || 5) + '☆'.repeat(5 - (r.stars || 5));
+    const initials = r.initials || r.student_name?.substring(0,2) || '؟';
+    return `
+    <div class="sc-review-item ${r.is_visible === false ? 'opacity-50' : ''}">
+      <div class="sc-review-av">${initials}</div>
+      <div class="sc-review-body">
+        <div class="sc-review-name">${r.student_name || '—'}</div>
+        <div class="sc-review-stars" style="color:var(--gold);">${stars}</div>
+        <div class="sc-review-text">"${r.review_text || r.content || ''}"</div>
+        <div class="sc-review-meta">${r.student_info || r.meta || ''}</div>
+      </div>
+      <div class="sc-review-acts">
+        <button class="btn-ed" onclick="scOpenEditReview('${r.id}')">✏️ تعديل</button>
+        <label class="sc-toggle-label" title="${r.is_visible !== false ? 'ظاهر' : 'مخفي'}">
+          <input type="checkbox" class="sc-toggle-input" ${r.is_visible !== false ? 'checked' : ''} onchange="scToggleReview('${r.id}',this)">
+          <span class="sc-toggle-track"><span class="sc-toggle-thumb"></span></span>
+        </label>
+        <button class="btn-rm" onclick="scDeleteReview('${r.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function scToggleReview(id, chk) {
+  try {
+    await sb.from('student_testimonials').update({ is_visible: chk.checked }).eq('id', id);
+    toast(chk.checked ? '✅ تم إظهار الرأي' : '🚫 تم إخفاء الرأي');
+    scLoadReviews();
+  } catch(e) { toast('❌ ' + e.message, 'err'); chk.checked = !chk.checked; }
+}
+
+function scOpenAddReview() {
+  document.getElementById('mdl-review-title').textContent = 'إضافة رأي جديد';
+  document.getElementById('sc-review-id').value = '';
+  document.getElementById('sc-review-name').value = '';
+  document.getElementById('sc-review-initials').value = '';
+  document.getElementById('sc-review-stars').value = 5;
+  document.getElementById('sc-review-meta').value = '';
+  document.getElementById('sc-review-text').value = '';
+  document.getElementById('sc-review-msg').innerHTML = '';
+  openMdl('mdl-sc-review');
+}
+
+function scOpenEditReview(id) {
+  const r = _scReviews.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('mdl-review-title').textContent = `تعديل — ${r.student_name || ''}`;
+  document.getElementById('sc-review-id').value = r.id;
+  document.getElementById('sc-review-name').value = r.student_name || '';
+  document.getElementById('sc-review-initials').value = r.initials || '';
+  document.getElementById('sc-review-stars').value = r.stars || 5;
+  document.getElementById('sc-review-meta').value = r.student_info || r.meta || '';
+  document.getElementById('sc-review-text').value = r.review_text || r.content || '';
+  document.getElementById('sc-review-msg').innerHTML = '';
+  openMdl('mdl-sc-review');
+}
+
+async function scSaveReview() {
+  const id = document.getElementById('sc-review-id').value;
+  const msg = document.getElementById('sc-review-msg');
+  const payload = {
+    student_name: document.getElementById('sc-review-name').value.trim(),
+    initials:     document.getElementById('sc-review-initials').value.trim(),
+    stars:        parseInt(document.getElementById('sc-review-stars').value) || 5,
+    student_info: document.getElementById('sc-review-meta').value.trim(),
+    review_text:  document.getElementById('sc-review-text').value.trim(),
+    updated_at:   new Date().toISOString(),
+  };
+  if (!payload.student_name || !payload.review_text) { msg.innerHTML = '<div class="msg-err">❌ أدخل الاسم والنص</div>'; return; }
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('student_testimonials').update(payload).eq('id', id));
+    } else {
+      payload.sort_order = _scReviews.length + 1;
+      payload.is_visible = true;
+      payload.created_at = new Date().toISOString();
+      ({ error } = await sb.from('student_testimonials').insert(payload));
+    }
+    if (error) throw error;
+    closeMdl('mdl-sc-review');
+    toast('✅ تم حفظ الرأي');
+    scLoadReviews();
+  } catch(e) { msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`; }
+}
+
+async function scDeleteReview(id) {
+  if (!confirm('هل تريد حذف هذا الرأي نهائياً؟')) return;
+  try {
+    const { error } = await sb.from('student_testimonials').delete().eq('id', id);
+    if (error) throw error;
+    toast('🗑️ تم حذف الرأي');
+    scLoadReviews();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+// ════════════════════════════
+//  TAB 5 — معلومات التواصل
+// ════════════════════════════
+let _scContacts = [];
+
+async function scLoadContact() {
+  const cont = document.getElementById('sc-contact-list');
+  cont.innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
+  try {
+    const { data, error } = await sb.from('site_contact_info').select('*').order('sort_order', { ascending: true });
+    if (error) throw error;
+    _scContacts = data || [];
+    scRenderContacts();
+  } catch(e) { cont.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`; }
+}
+
+function scRenderContacts() {
+  const cont = document.getElementById('sc-contact-list');
+  if (!_scContacts.length) { cont.innerHTML = '<div class="empty-box"><div class="ei">📞</div><div class="et">لا توجد بيانات تواصل</div></div>'; return; }
+  cont.innerHTML = _scContacts.map(c => `
+    <div class="sc-contact-item">
+      <div class="sc-contact-icon">${c.icon}</div>
+      <div class="sc-contact-body">
+        <div class="sc-contact-label">${c.label}</div>
+        <div class="sc-contact-val">${c.value}</div>
+        ${c.link ? `<a href="${c.link}" target="_blank" style="font-size:.75rem;color:var(--blue);">${c.link}</a>` : ''}
+      </div>
+      <div class="acts">
+        <button class="btn-ed" onclick="scOpenEditContact('${c.id}')">✏️ تعديل</button>
+        <label class="sc-toggle-label">
+          <input type="checkbox" class="sc-toggle-input" ${c.is_visible !== false ? 'checked' : ''} onchange="scToggleContact('${c.id}',this)">
+          <span class="sc-toggle-track"><span class="sc-toggle-thumb"></span></span>
+        </label>
+        <button class="btn-rm" onclick="scDeleteContact('${c.id}')">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function scToggleContact(id, chk) {
+  try {
+    await sb.from('site_contact_info').update({ is_visible: chk.checked }).eq('id', id);
+    toast(chk.checked ? '✅ ظاهر' : '🚫 مخفي');
+  } catch(e) { toast('❌ ' + e.message, 'err'); chk.checked = !chk.checked; }
+}
+
+function scOpenAddContact() {
+  document.getElementById('mdl-contact-title').textContent = 'إضافة معلومة تواصل';
+  document.getElementById('sc-contact-id').value = '';
+  ['sc-contact-icon','sc-contact-label','sc-contact-value','sc-contact-link'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('sc-contact-msg').innerHTML = '';
+  openMdl('mdl-sc-contact');
+}
+
+function scOpenEditContact(id) {
+  const c = _scContacts.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('mdl-contact-title').textContent = `تعديل — ${c.label}`;
+  document.getElementById('sc-contact-id').value = c.id;
+  document.getElementById('sc-contact-icon').value = c.icon;
+  document.getElementById('sc-contact-label').value = c.label;
+  document.getElementById('sc-contact-value').value = c.value;
+  document.getElementById('sc-contact-link').value = c.link || '';
+  document.getElementById('sc-contact-msg').innerHTML = '';
+  openMdl('mdl-sc-contact');
+}
+
+async function scSaveContact() {
+  const id = document.getElementById('sc-contact-id').value;
+  const msg = document.getElementById('sc-contact-msg');
+  const payload = {
+    icon:       document.getElementById('sc-contact-icon').value.trim(),
+    label:      document.getElementById('sc-contact-label').value.trim(),
+    value:      document.getElementById('sc-contact-value').value.trim(),
+    link:       document.getElementById('sc-contact-link').value.trim() || null,
+    updated_at: new Date().toISOString(),
+  };
+  if (!payload.label || !payload.value) { msg.innerHTML = '<div class="msg-err">❌ أدخل العنوان والقيمة</div>'; return; }
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('site_contact_info').update(payload).eq('id', id));
+    } else {
+      payload.sort_order = _scContacts.length + 1;
+      ({ error } = await sb.from('site_contact_info').insert(payload));
+    }
+    if (error) throw error;
+    closeMdl('mdl-sc-contact');
+    toast('✅ تم حفظ معلومة التواصل');
+    scLoadContact();
+  } catch(e) { msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`; }
+}
+
+async function scDeleteContact(id) {
+  if (!confirm('حذف هذه المعلومة؟')) return;
+  try {
+    const { error } = await sb.from('site_contact_info').delete().eq('id', id);
+    if (error) throw error;
+    toast('🗑️ تم الحذف');
+    scLoadContact();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+// ════════════════════════════
+//  TAB 6 — الأسئلة الشائعة
+// ════════════════════════════
+let _scFaqs = [];
+
+async function scLoadFaq() {
+  const cont = document.getElementById('sc-faq-list');
+  cont.innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
+  try {
+    const { data, error } = await sb.from('site_faq').select('*').order('sort_order', { ascending: true });
+    if (error) throw error;
+    _scFaqs = data || [];
+    scRenderFaqs();
+  } catch(e) { cont.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`; }
+}
+
+function scRenderFaqs() {
+  const cont = document.getElementById('sc-faq-list');
+  if (!_scFaqs.length) { cont.innerHTML = '<div class="empty-box"><div class="ei">❓</div><div class="et">لا توجد أسئلة</div></div>'; return; }
+  cont.innerHTML = _scFaqs.map(f => `
+    <div class="sc-faq-item ${f.is_visible === false ? 'opacity-50' : ''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div style="flex:1;">
+          <div class="sc-faq-q">❓ ${f.question}</div>
+          <div class="sc-faq-a">${f.answer}</div>
+        </div>
+        <div class="acts" style="flex-shrink:0;flex-direction:column;align-items:flex-end;">
+          <button class="btn-ed" onclick="scOpenEditFaq('${f.id}')">✏️ تعديل</button>
+          <label class="sc-toggle-label" style="margin-top:6px;">
+            <input type="checkbox" class="sc-toggle-input" ${f.is_visible !== false ? 'checked' : ''} onchange="scToggleFaq('${f.id}',this)">
+            <span class="sc-toggle-track"><span class="sc-toggle-thumb"></span></span>
+          </label>
+          <button class="btn-rm" style="margin-top:6px;" onclick="scDeleteFaq('${f.id}')">🗑️</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function scToggleFaq(id, chk) {
+  try {
+    await sb.from('site_faq').update({ is_visible: chk.checked }).eq('id', id);
+    toast(chk.checked ? '✅ السؤال ظاهر' : '🚫 السؤال مخفي');
+    scLoadFaq();
+  } catch(e) { toast('❌ ' + e.message, 'err'); chk.checked = !chk.checked; }
+}
+
+function scOpenAddFaq() {
+  document.getElementById('mdl-faq-title').textContent = 'إضافة سؤال جديد';
+  document.getElementById('sc-faq-id').value = '';
+  document.getElementById('sc-faq-q').value = '';
+  document.getElementById('sc-faq-a').value = '';
+  document.getElementById('sc-faq-msg').innerHTML = '';
+  openMdl('mdl-sc-faq');
+}
+
+function scOpenEditFaq(id) {
+  const f = _scFaqs.find(x => x.id === id);
+  if (!f) return;
+  document.getElementById('mdl-faq-title').textContent = 'تعديل السؤال';
+  document.getElementById('sc-faq-id').value = f.id;
+  document.getElementById('sc-faq-q').value = f.question;
+  document.getElementById('sc-faq-a').value = f.answer;
+  document.getElementById('sc-faq-msg').innerHTML = '';
+  openMdl('mdl-sc-faq');
+}
+
+async function scSaveFaq() {
+  const id = document.getElementById('sc-faq-id').value;
+  const msg = document.getElementById('sc-faq-msg');
+  const payload = {
+    question:   document.getElementById('sc-faq-q').value.trim(),
+    answer:     document.getElementById('sc-faq-a').value.trim(),
+    updated_at: new Date().toISOString(),
+  };
+  if (!payload.question || !payload.answer) { msg.innerHTML = '<div class="msg-err">❌ أدخل السؤال والإجابة</div>'; return; }
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('site_faq').update(payload).eq('id', id));
+    } else {
+      payload.sort_order = _scFaqs.length + 1;
+      payload.is_visible = true;
+      ({ error } = await sb.from('site_faq').insert(payload));
+    }
+    if (error) throw error;
+    closeMdl('mdl-sc-faq');
+    toast('✅ تم حفظ السؤال');
+    scLoadFaq();
+  } catch(e) { msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`; }
+}
+
+async function scDeleteFaq(id) {
+  if (!confirm('حذف هذا السؤال؟')) return;
+  try {
+    const { error } = await sb.from('site_faq').delete().eq('id', id);
+    if (error) throw error;
+    toast('🗑️ تم الحذف');
+    scLoadFaq();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
 }
 </script>
 </body>

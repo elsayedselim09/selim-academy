@@ -2071,7 +2071,7 @@ footer { background:var(--dark); padding:60px 5% 30px; }
   </div>
   <div class="tests-hero-divider"></div>
   <div class="tests-cards-wrap reveal">
-    <div class="tests-grid">
+    <div class="tests-grid" id="site-reviews-grid">
       <div class="test-card">
         <div class="test-header">
           <div class="test-av">م.خ</div>
@@ -2133,34 +2133,7 @@ footer { background:var(--dark); padding:60px 5% 30px; }
         <h3 class="sb-panel-title">مستعد تبدأ؟<br><span>تواصل معنا</span> دلوقتي</h3>
         <p class="sb-panel-desc">فريقنا جاهز لمساعدتك في اختيار الباقة المناسبة، الحجز، أو الإجابة على أي استفسار — بلا انتظار.</p>
 
-        <div class="cp-info-card">
-          <div class="cp-info-icon">📱</div>
-          <div>
-            <div class="cp-info-label">واتساب</div>
-            <div class="cp-info-val"><a href="https://wa.me/qr/2XDTSZMSXAV7D1" target="_blank">+201012142749</a></div>
-          </div>
-        </div>
-        <div class="cp-info-card">
-          <div class="cp-info-icon">🕐</div>
-          <div>
-            <div class="cp-info-label">مواعيد العمل</div>
-            <div class="cp-info-val">طوال أيام الأسبوع · 3:00 م – 10:00 م</div>
-          </div>
-        </div>
-        <div class="cp-info-card">
-          <div class="cp-info-icon">📍</div>
-          <div>
-            <div class="cp-info-label">العنوان</div>
-            <div class="cp-info-val">المملكة العربية السعودية</div>
-          </div>
-        </div>
-        <div class="cp-info-card">
-          <div class="cp-info-icon">⚡</div>
-          <div>
-            <div class="cp-info-label">وقت الرد</div>
-            <div class="cp-info-val">أقل من 24 ساعة</div>
-          </div>
-        </div>
+        <div id="site-contact-info-list"><!-- dynamic contact info loaded from Supabase --></div>
 
         <div style="margin-top:8px;">
           <a href="https://wa.me/qr/2XDTSZMSXAV7D1" target="_blank" class="btn-gold" style="display:inline-flex;align-items:center;gap:10px;">
@@ -2228,28 +2201,7 @@ footer { background:var(--dark); padding:60px 5% 30px; }
     <h2 class="section-title">الأسئلة <span>الشائعة</span></h2>
     <p class="section-sub">إجابات على أكثر الأسئلة شيوعاً حول الحجز والكورسات</p>
   </div>
-  <div class="faq-list">
-    <div class="faq-item">
-      <div class="faq-q" onclick="toggleFaq(this)">كيف يمكنني حجز حصة في أكاديمية سليم؟ <span class="faq-arrow">▼</span></div>
-      <div class="faq-a">اختار الصف والمادة والوقت المناسب من صفحة الحجز، ثم أدخل بياناتك وسيتواصل معك م. السيد سليم خلال 24 ساعة لتأكيد الحجز.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q" onclick="toggleFaq(this)">ما هي المناهج المتاحة في الأكاديمية؟ <span class="faq-arrow">▼</span></div>
-      <div class="faq-a">نغطي المنهج السعودي، الإماراتي، القطري، العماني، الكويتي، والمصري لجميع المراحل الدراسية.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q" onclick="toggleFaq(this)">ما هي طرق الدفع المتاحة؟ <span class="faq-arrow">▼</span></div>
-      <div class="faq-a">يمكن الدفع عبر التحويل البنكي أو خدمات الدفع الإلكتروني. تواصل معنا على واتساب لمعرفة التفاصيل.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q" onclick="toggleFaq(this)">هل يمكنني حجز أكثر من يوم في الأسبوع؟ <span class="faq-arrow">▼</span></div>
-      <div class="faq-a">نعم! يمكنك إضافة أكثر من يوم في نموذج الحجز باستخدام زر "إضافة يوم آخر"، ولكل يوم وقت مستقل.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q" onclick="toggleFaq(this)">كيف يمكنني التواصل مع المدرس خارج أوقات الحصص؟ <span class="faq-arrow">▼</span></div>
-      <div class="faq-a">يمكن التواصل مباشرة عبر واتساب على الرقم +201012142749 في أي وقت خلال ساعات العمل.</div>
-    </div>
-  </div>
+  <div class="faq-list" id="site-faq-list"><!-- dynamic FAQ loaded from Supabase --></div>
   <div class="faq-more"><p>لديك سؤال آخر؟ <a href="https://wa.me/qr/2XDTSZMSXAV7D1" target="_blank">تواصل مع خدمة العملاء 💬</a></p></div>
 </section>
 
@@ -3347,6 +3299,180 @@ function switchSession(s) {
     document.querySelectorAll('.prices-8').forEach(function(el){ el.style.display='block'; });
   }
 }
+
+// ════════════════════════════════════════════════════
+//  🌐  SITE CONTENT DYNAMIC LOADER — يقرأ من Supabase
+// ════════════════════════════════════════════════════
+(function() {
+  var _sb = window._sb || window.supabase;
+  if (!_sb) return;
+
+  // ── 1. إخفاء/إظهار قسم الأسعار والحجز ──
+  async function loadVisibility() {
+    try {
+      var { data } = await _sb.from('site_settings').select('id,value');
+      if (!data) return;
+      data.forEach(function(s) {
+        if (s.id === 'pricing_visible' && s.value.visible === false) {
+          var sec = document.getElementById('pricing');
+          if (sec) sec.style.display = 'none';
+          // إخفاء رابط الأسعار من القائمة
+          document.querySelectorAll('a[href="#pricing"]').forEach(function(a){ a.style.display='none'; });
+        }
+        if (s.id === 'booking_visible' && s.value.visible === false) {
+          var sec = document.getElementById('booking');
+          if (sec) sec.style.display = 'none';
+          document.querySelectorAll('a[href="#booking"]').forEach(function(a){ a.style.display='none'; });
+        }
+      });
+    } catch(e) {}
+  }
+
+  // ── 2. تحميل الأسعار من Supabase ──
+  async function loadPricing() {
+    try {
+      var { data } = await _sb.from('site_pricing').select('*').eq('is_active', true).order('sort_order', { ascending: true });
+      if (!data || !data.length) return;
+
+      // إعادة بناء تبويبات المنهج
+      var tabsEl = document.querySelector('.curriculum-tabs');
+      if (tabsEl) {
+        tabsEl.innerHTML = data.map(function(p, i) {
+          return '<button class="curr-tab' + (i===0?' active':'') + '" onclick="showCurriculum(\'' + p.country_code + '\')">' + p.flag + ' ' + p.country_name + '</button>';
+        }).join('');
+      }
+
+      // إعادة بناء محتوى الأسعار
+      var pricingSection = document.getElementById('pricing');
+      if (!pricingSection) return;
+      // احذف القديم
+      document.querySelectorAll('.curr-content').forEach(function(el){ el.remove(); });
+
+      var parent = document.querySelector('.curriculum-tabs')?.parentElement || pricingSection;
+      data.forEach(function(p, i) {
+        var div = document.createElement('div');
+        div.className = 'curr-content' + (i===0?' active':'');
+        div.id = 'curr-' + p.country_code;
+        if (p.solo_price === 0 && p.group_price === 0) {
+          div.innerHTML = '<div style="text-align:center;padding:60px 20px;">' +
+            '<div style="font-size:3rem;margin-bottom:20px;">' + p.flag + '</div>' +
+            '<h3 style="font-family:\'Cairo\',sans-serif;font-size:1.6rem;font-weight:900;color:var(--dark);margin-bottom:12px;">المنهج ' + p.country_name + '</h3>' +
+            '<p style="color:var(--gray);font-size:1rem;margin-bottom:28px;line-height:1.8;">الأسعار قيد الإعداد.<br>تواصل معنا الآن للاستفسار.</p>' +
+            '<a href="https://wa.me/qr/2XDTSZMSXAV7D1" target="_blank" class="btn-accent" style="font-size:1rem;padding:14px 36px;border-radius:50px;border:none;cursor:pointer;font-family:\'Cairo\',sans-serif;display:inline-flex;align-items:center;gap:10px;">💬 تواصل للاستفسار</a>' +
+            '</div>';
+        } else {
+          div.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:720px;margin:0 auto 40px;">' +
+            '<div class="pricing-solo" style="max-width:100%;margin:0;">' +
+            '<div class="solo-label">🎯 اشتراك فردي</div>' +
+            '<div class="solo-price">' + p.solo_price + ' <span>' + p.currency + '</span></div>' +
+            '<div class="solo-desc">للحصة الواحدة — اهتمام كامل وشرح مخصص لطالب واحد</div>' +
+            '<a href="#booking" class="btn-primary" style="margin-top:20px;display:inline-block;border-radius:50px;">📅 احجز الآن</a>' +
+            '</div>' +
+            '<div class="pricing-solo" style="max-width:100%;margin:0;border-color:var(--gold);box-shadow:0 8px 40px rgba(245,158,11,.2);">' +
+            '<div class="solo-label" style="color:#E65100;">👥 اشتراك جماعي</div>' +
+            '<div class="solo-price" style="color:#E65100;">' + p.group_price + ' <span>' + p.currency + '</span></div>' +
+            '<div class="solo-desc">في الشهر — اشترك مع مجموعة وتعلّم بسعر أقل</div>' +
+            '<a href="#booking" class="btn-accent" style="margin-top:20px;display:inline-block;border-radius:50px;border:none;cursor:pointer;font-family:\'Cairo\',sans-serif;padding:13px 28px;font-weight:700;font-size:.95rem;text-decoration:none;">📅 احجز الآن</a>' +
+            '</div>' +
+            '</div>' +
+            '<div class="pricing-savings"><div class="savings-icon">🔥</div><div class="savings-text">احجز قبل اكتمال المجموعات!</div><div class="savings-icon">🔥</div></div>' +
+            '<div class="pricing-cta">' +
+            '<a href="https://wa.me/qr/2XDTSZMSXAV7D1" target="_blank" class="btn-accent" style="font-size:1.05rem;padding:15px 40px;border-radius:50px;border:none;cursor:pointer;font-family:\'Cairo\',sans-serif;display:inline-flex;align-items:center;gap:10px;">💬 تواصل للاشتراك الآن</a>' +
+            '<p class="pricing-note">📞 +201012142749 · واتساب متاح طوال اليوم</p>' +
+            '</div>';
+        }
+        if (tabsEl) tabsEl.insertAdjacentElement('afterend', div);
+        else pricingSection.appendChild(div);
+      });
+    } catch(e) { console.warn('site pricing load error:', e); }
+  }
+
+  // ── 3. تحميل آراء الطلاب ──
+  async function loadTestimonials() {
+    var grid = document.getElementById('site-reviews-grid');
+    if (!grid) return;
+    try {
+      var { data } = await _sb.from('student_testimonials')
+        .select('*')
+        .eq('is_visible', true)
+        .order('sort_order', { ascending: true })
+        .limit(6);
+      if (!data || !data.length) return; // keep existing static cards
+      var colors = ['#1A56DB','#0E9F6E','#F59E0B','#8B5CF6','#EF4444','#0EA5E9'];
+      grid.innerHTML = data.map(function(r, i) {
+        var stars = '★'.repeat(r.stars || 5) + '☆'.repeat(5-(r.stars||5));
+        var initials = r.initials || (r.student_name ? r.student_name.substring(0,2) : '؟');
+        var text = r.review_text || r.content || '';
+        var meta = r.student_info || r.meta || '';
+        return '<div class="test-card">' +
+          '<div class="test-header">' +
+          '<div class="test-av" style="background:' + colors[i % colors.length] + ';">' + initials + '</div>' +
+          '<div><div class="test-name">' + (r.student_name||'') + '</div>' +
+          '<div class="test-stars" style="color:var(--gold);">' + stars + '</div></div>' +
+          '</div>' +
+          '<p class="test-text">"' + text + '"</p>' +
+          '<div class="test-meta">' + meta + '</div>' +
+          '</div>';
+      }).join('');
+    } catch(e) { console.warn('site testimonials load error:', e); }
+  }
+
+  // ── 4. تحميل معلومات التواصل ──
+  async function loadContactInfo() {
+    var cont = document.getElementById('site-contact-info-list');
+    if (!cont) return;
+    try {
+      var { data } = await _sb.from('site_contact_info')
+        .select('*')
+        .eq('is_visible', true)
+        .order('sort_order', { ascending: true });
+      if (!data || !data.length) return;
+      cont.innerHTML = data.map(function(c) {
+        var val = c.link
+          ? '<a href="' + c.link + '" target="_blank">' + c.value + '</a>'
+          : c.value;
+        return '<div class="cp-info-card">' +
+          '<div class="cp-info-icon">' + c.icon + '</div>' +
+          '<div><div class="cp-info-label">' + c.label + '</div>' +
+          '<div class="cp-info-val">' + val + '</div></div>' +
+          '</div>';
+      }).join('');
+    } catch(e) { console.warn('site contact load error:', e); }
+  }
+
+  // ── 5. تحميل الأسئلة الشائعة ──
+  async function loadFaqs() {
+    var list = document.getElementById('site-faq-list');
+    if (!list) return;
+    try {
+      var { data } = await _sb.from('site_faq')
+        .select('*')
+        .eq('is_visible', true)
+        .order('sort_order', { ascending: true });
+      if (!data || !data.length) return;
+      list.innerHTML = data.map(function(f) {
+        return '<div class="faq-item">' +
+          '<div class="faq-q" onclick="toggleFaq(this)">' + f.question + ' <span class="faq-arrow">▼</span></div>' +
+          '<div class="faq-a">' + f.answer + '</div>' +
+          '</div>';
+      }).join('');
+    } catch(e) { console.warn('site faq load error:', e); }
+  }
+
+  // ── 6. ترتيب المدرسين (الثابتون أولاً) ──
+  // هذا يتم عبر teachersGrid الموجود بالفعل في الكود — نضيف فقط sort
+  // الكود الأصلي في index.html يعالج teachersGrid بالفعل من profiles
+  // سنتدخل بعد تحميل المدرسين لإعادة ترتيبهم
+
+  // ── تشغيل كل الوظائف ──
+  document.addEventListener('DOMContentLoaded', function() {
+    loadVisibility();
+    loadPricing();
+    loadTestimonials();
+    loadContactInfo();
+    loadFaqs();
+  });
+})();
 </script>
 <script src="pwa-register.js" defer></script>
 </body>
