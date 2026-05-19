@@ -1134,15 +1134,16 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
 
 <!-- EDIT SUBSCRIPTION MODAL -->
 <div class="mdl" id="mdl-edit-subscription">
-  <div class="mdl-box wide" style="max-width:520px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+  <div class="mdl-box wide" style="max-width:520px;max-height:90vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-shrink:0">
       <div class="mdl-title" style="margin-bottom:0">✏️ تعديل اشتراك الطالب</div>
       <button onclick="document.getElementById('mdl-edit-subscription').classList.remove('show')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
     </div>
-    <div style="text-align:center;margin-bottom:18px">
+    <div style="text-align:center;margin-bottom:12px;flex-shrink:0">
       <span style="background:var(--blue-light);color:var(--blue);padding:5px 16px;border-radius:50px;font-size:.85rem;font-weight:700" id="esub-student-name">—</span>
     </div>
     <input type="hidden" id="esub-id">
+    <div style="overflow-y:auto;flex:1;padding-left:4px;padding-right:2px">
 
     <!-- معلومات الاشتراك الحالية (للعرض فقط) -->
     <div class="fg-row" style="margin-bottom:14px">
@@ -1176,10 +1177,23 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       <input type="number" id="esub-sessions-rem" placeholder="مثال: 8" min="0" oninput="calcEditTotal()" style="direction:ltr">
     </div>
 
+    <!-- 🌍 العملة -->
+    <div class="fg" style="margin-bottom:14px">
+      <label>🌍 العملة</label>
+      <select id="esub-currency" onchange="calcEditTotal()" style="border-color:#FCD34D;background:#FFFBEB">
+        <option value="جنيه مصري">🇪🇬 جنيه مصري (EGP)</option>
+        <option value="ريال سعودي">🇸🇦 ريال سعودي (SAR)</option>
+        <option value="درهم إماراتي">🇦🇪 درهم إماراتي (AED)</option>
+        <option value="دينار كويتي">🇰🇼 دينار كويتي (KWD)</option>
+        <option value="ريال قطري">🇶🇦 ريال قطري (QAR)</option>
+        <option value="ريال عماني">🇴🇲 ريال عماني (OMR)</option>
+      </select>
+    </div>
+
     <!-- 💰 سعر الحصة والإجمالي -->
     <div class="fg-row" style="margin-bottom:14px">
       <div class="fg">
-        <label>💰 سعر الحصة (جنيه)</label>
+        <label>💰 سعر الحصة</label>
         <input type="number" id="esub-session-price" min="0" step="0.01" placeholder="مثال: 150" oninput="calcEditTotal()" style="border-color:#FCD34D;background:#FFFBEB">
       </div>
       <div class="fg">
@@ -1195,9 +1209,10 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     </div>
 
     <div id="esub-msg"></div>
+    </div><!-- نهاية القسم القابل للتمرير -->
 
     <!-- الأزرار -->
-    <div style="display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:6px">
+    <div style="display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:6px;padding-top:12px;border-top:1px solid var(--gray-mid);flex-shrink:0">
       <button onclick="deleteSubscription()"
         style="padding:10px 18px;background:var(--red-light);color:var(--red);border:1.5px solid #FECACA;border-radius:9px;font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s"
         onmouseover="this.style.background='var(--red)';this.style.color='#fff'"
@@ -3710,7 +3725,7 @@ async function openEditSubscription(reqId) {
 
   // جلب أحدث بيانات الطلب من Supabase
   const { data, error } = await sb.from('subscription_requests')
-    .select('id,status,subject,grade,session_type,days_info,created_at,user_id,student_name,student_phone,assigned_teacher_id,end_date,sessions_remaining,sessions_total,session_price,total_price,admin_notes')
+    .select('id,status,subject,grade,session_type,days_info,created_at,user_id,student_name,student_phone,assigned_teacher_id,end_date,sessions_remaining,sessions_total,session_price,total_price,admin_notes,currency')
     .eq('id', reqId).single();
   if (error) { toast('خطأ في جلب بيانات الاشتراك: '+error.message,'err'); return; }
 
@@ -3727,6 +3742,9 @@ async function openEditSubscription(reqId) {
   document.getElementById('esub-session-price').value= data.session_price ?? '';
   document.getElementById('esub-total-price').value  = data.total_price ?? '';
   document.getElementById('esub-notes').value        = data.admin_notes || '';
+  // تعيين العملة المحفوظة (أو الافتراضية جنيه مصري)
+  const currSel = document.getElementById('esub-currency');
+  if (currSel) currSel.value = data.currency || 'جنيه مصري';
   calcEditTotal();
 
   const nameEl = document.getElementById('esub-student-name');
@@ -3747,6 +3765,7 @@ async function saveEditSubscription() {
   const daysInfo   = document.getElementById('esub-days').value.trim();
   const sessPrice  = document.getElementById('esub-session-price').value;
   const totPrice   = document.getElementById('esub-total-price').value;
+  const currency   = document.getElementById('esub-currency')?.value || 'جنيه مصري';
 
   const payload = {
     days_info          : daysInfo || null,
@@ -3755,6 +3774,7 @@ async function saveEditSubscription() {
     sessions_remaining : sessRem !== '' ? parseInt(sessRem) : null,
     session_price      : sessPrice !== '' ? parseFloat(sessPrice) : null,
     total_price        : totPrice !== '' ? parseFloat(totPrice) : null,
+    currency           : currency,
   };
 
   try {
@@ -3959,10 +3979,21 @@ async function deleteSubscription() {
           </div>
           <div class="fg" style="margin-bottom:0"><!-- spacer --></div>
         </div>
-        <!-- 💰 سعر الحصة والإجمالي -->
+        <!-- 💰 العملة + سعر الحصة والإجمالي -->
+        <div class="fg" style="margin-top:10px;margin-bottom:0">
+          <label style="font-size:.78rem">🌍 العملة</label>
+          <select id="me-currency" onchange="calcManualTotal()" style="width:100%;padding:9px 13px;border:1.5px solid #FCD34D;border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:#FFFBEB">
+            <option value="جنيه مصري">🇪🇬 جنيه مصري (EGP)</option>
+            <option value="ريال سعودي">🇸🇦 ريال سعودي (SAR)</option>
+            <option value="درهم إماراتي">🇦🇪 درهم إماراتي (AED)</option>
+            <option value="دينار كويتي">🇰🇼 دينار كويتي (KWD)</option>
+            <option value="ريال قطري">🇶🇦 ريال قطري (QAR)</option>
+            <option value="ريال عماني">🇴🇲 ريال عماني (OMR)</option>
+          </select>
+        </div>
         <div class="fg-row" style="margin-top:10px">
           <div class="fg" style="margin-bottom:0">
-            <label style="font-size:.78rem">💰 سعر الحصة (جنيه)</label>
+            <label style="font-size:.78rem">💰 سعر الحصة</label>
             <input type="number" id="me-session-price" min="0" step="0.01" placeholder="مثال: 150" oninput="calcManualTotal()" style="width:100%;padding:9px 13px;border:1.5px solid #FCD34D;border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:#FFFBEB">
           </div>
           <div class="fg" style="margin-bottom:0">
@@ -4020,6 +4051,8 @@ function openManualEnroll() {
   document.getElementById('me-curriculum').value = '';
   document.getElementById('me-curriculum-custom').value = '';
   document.getElementById('me-curriculum-custom').style.display = 'none';
+  const currEl = document.getElementById('me-currency');
+  if (currEl) currEl.value = 'جنيه مصري';
 
   // إعادة قفل المادة والمعلم
   const subjectSel = document.getElementById('me-subject');
@@ -4049,13 +4082,16 @@ function calcManualTotal() {
   const totalEl   = document.getElementById('me-total-price');
   const totalSess = document.getElementById('me-sessions-total');
   const infoEl    = document.getElementById('me-price-info');
+  const currEl    = document.getElementById('me-currency');
   const price  = parseFloat(priceEl?.value) || 0;
   const total  = parseInt(totalSess?.value) || 0;
+  const currency = currEl?.options[currEl.selectedIndex]?.text || 'جنيه مصري';
+  const currShort = currEl?.value || 'جنيه مصري';
   if (price > 0 && total > 0) {
     const grand = price * total;
     totalEl.value = grand.toFixed(2);
     infoEl.style.display = 'block';
-    infoEl.innerHTML = `💰 ${total} حصة × ${price} جنيه = <span style="font-size:.95rem">${grand.toLocaleString('ar-EG')} جنيه</span>`;
+    infoEl.innerHTML = `💰 ${total} حصة × ${price} ${currShort} = <span style="font-size:.95rem">${grand.toLocaleString('ar-EG')} ${currShort}</span>`;
   } else {
     totalEl.value = '';
     infoEl.style.display = 'none';
@@ -4067,16 +4103,18 @@ function calcEditTotal() {
   const totalEl  = document.getElementById('esub-total-price');
   const infoEl   = document.getElementById('esub-price-info');
   const sessRem  = document.getElementById('esub-sessions-rem');
+  const currEl   = document.getElementById('esub-currency');
   const price = parseFloat(priceEl?.value) || 0;
   const sess  = parseInt(sessRem?.value) || 0;
+  const currShort = currEl?.value || 'جنيه مصري';
   if (price > 0 && sess > 0) {
     const grand = price * sess;
     totalEl.value = grand.toFixed(2);
     infoEl.style.display = 'block';
-    infoEl.innerHTML = `💰 ${sess} حصة × ${price} جنيه = <span style="font-size:.95rem">${grand.toLocaleString('ar-EG')} جنيه</span>`;
+    infoEl.innerHTML = `💰 ${sess} حصة × ${price} ${currShort} = <span style="font-size:.95rem">${grand.toLocaleString('ar-EG')} ${currShort}</span>`;
   } else if (price > 0 && totalEl.value) {
     infoEl.style.display = 'block';
-    infoEl.innerHTML = `💰 سعر الحصة: ${price} جنيه — الإجمالي: ${parseFloat(totalEl.value).toLocaleString('ar-EG')} جنيه`;
+    infoEl.innerHTML = `💰 سعر الحصة: ${price} ${currShort} — الإجمالي: ${parseFloat(totalEl.value).toLocaleString('ar-EG')} ${currShort}`;
   } else {
     infoEl.style.display = 'none';
   }
@@ -4282,6 +4320,7 @@ async function saveManualEnroll() {
     const sessTotal    = document.getElementById('me-sessions-total').value;
     const sessPrice    = document.getElementById('me-session-price').value;
     const totalPrice   = document.getElementById('me-total-price').value;
+    const currency     = document.getElementById('me-currency')?.value || 'جنيه مصري';
     const teacher      = S.teachers.find(t => t.id === teacherId);
 
     // 1. إنشاء subscription_request بحالة approved مباشرة
@@ -4301,6 +4340,7 @@ async function saveManualEnroll() {
       sessions_total     : sessTotal !== '' ? parseInt(sessTotal) : null,
       session_price      : sessPrice !== '' ? parseFloat(sessPrice) : null,
       total_price        : totalPrice !== '' ? parseFloat(totalPrice) : null,
+      currency           : currency,
       admin_notes        : notes || 'تم إضافته يدوياً من الإدارة',
       created_at         : new Date().toISOString(),
       updated_at         : new Date().toISOString(),
