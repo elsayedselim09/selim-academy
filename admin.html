@@ -1173,8 +1173,21 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
 
     <div class="fg" style="margin-bottom:14px">
       <label>🔢 الحصص المتبقية</label>
-      <input type="number" id="esub-sessions-rem" placeholder="مثال: 8" min="0" style="direction:ltr">
+      <input type="number" id="esub-sessions-rem" placeholder="مثال: 8" min="0" oninput="calcEditTotal()" style="direction:ltr">
     </div>
+
+    <!-- 💰 سعر الحصة والإجمالي -->
+    <div class="fg-row" style="margin-bottom:14px">
+      <div class="fg">
+        <label>💰 سعر الحصة (جنيه)</label>
+        <input type="number" id="esub-session-price" min="0" step="0.01" placeholder="مثال: 150" oninput="calcEditTotal()" style="border-color:#FCD34D;background:#FFFBEB">
+      </div>
+      <div class="fg">
+        <label>🧾 إجمالي السعر</label>
+        <input type="number" id="esub-total-price" min="0" step="0.01" placeholder="يُحسب تلقائياً" readonly style="border-color:#86EFAC;background:#F0FDF4;color:var(--green);font-weight:700;cursor:not-allowed">
+      </div>
+    </div>
+    <div id="esub-price-info" style="display:none;margin-bottom:10px;background:var(--gold-light);border:1px solid #FCD34D;border-radius:8px;padding:8px 12px;font-size:.8rem;color:#92400E;font-weight:700;text-align:center"></div>
 
     <div class="fg" style="margin-bottom:16px">
       <label>📝 ملاحظات</label>
@@ -1275,7 +1288,7 @@ async function doLogout() {
 async function loadRequests() {
   try {
     const {data:reqs, error} = await sb.from('subscription_requests')
-      .select('id,status,created_at,note,user_id,course_id,student_name,student_phone,grade,subject,session_type,days_info,curriculum,assigned_teacher_id,end_date,sessions_remaining,admin_notes')
+      .select('id,status,created_at,note,user_id,course_id,student_name,student_phone,grade,subject,session_type,days_info,curriculum,assigned_teacher_id,end_date,sessions_remaining,sessions_total,session_price,total_price,admin_notes')
       .order('created_at',{ascending:false});
 
     // إذا فشل الجلب بسبب أعمدة مفقودة، أعد المحاولة بدونها وأظهر تنبيهاً
@@ -3697,7 +3710,7 @@ async function openEditSubscription(reqId) {
 
   // جلب أحدث بيانات الطلب من Supabase
   const { data, error } = await sb.from('subscription_requests')
-    .select('id,status,subject,grade,session_type,days_info,created_at,user_id,student_name,student_phone,assigned_teacher_id,end_date,sessions_remaining,admin_notes')
+    .select('id,status,subject,grade,session_type,days_info,created_at,user_id,student_name,student_phone,assigned_teacher_id,end_date,sessions_remaining,sessions_total,session_price,total_price,admin_notes')
     .eq('id', reqId).single();
   if (error) { toast('خطأ في جلب بيانات الاشتراك: '+error.message,'err'); return; }
 
@@ -3711,7 +3724,10 @@ async function openEditSubscription(reqId) {
   document.getElementById('esub-days').value         = data.days_info || '';
   document.getElementById('esub-end-date').value     = data.end_date ? data.end_date.slice(0,10) : '';
   document.getElementById('esub-sessions-rem').value = data.sessions_remaining ?? '';
+  document.getElementById('esub-session-price').value= data.session_price ?? '';
+  document.getElementById('esub-total-price').value  = data.total_price ?? '';
   document.getElementById('esub-notes').value        = data.admin_notes || '';
+  calcEditTotal();
 
   const nameEl = document.getElementById('esub-student-name');
   nameEl.textContent = data.student_name || req.profiles?.full_name || 'الطالب';
@@ -3729,12 +3745,16 @@ async function saveEditSubscription() {
   const sessRem    = document.getElementById('esub-sessions-rem').value;
   const notes      = document.getElementById('esub-notes').value.trim();
   const daysInfo   = document.getElementById('esub-days').value.trim();
+  const sessPrice  = document.getElementById('esub-session-price').value;
+  const totPrice   = document.getElementById('esub-total-price').value;
 
   const payload = {
-    days_info: daysInfo || null,
-    admin_notes: notes || null,
-    end_date: endDate || null,
-    sessions_remaining: sessRem !== '' ? parseInt(sessRem) : null,
+    days_info          : daysInfo || null,
+    admin_notes        : notes || null,
+    end_date           : endDate || null,
+    sessions_remaining : sessRem !== '' ? parseInt(sessRem) : null,
+    session_price      : sessPrice !== '' ? parseFloat(sessPrice) : null,
+    total_price        : totPrice !== '' ? parseFloat(totPrice) : null,
   };
 
   try {
@@ -3929,7 +3949,7 @@ async function deleteSubscription() {
           </div>
           <div class="fg" style="margin-bottom:0">
             <label style="font-size:.78rem">عدد حصص الاشتراك</label>
-            <input type="number" id="me-sessions-total" min="0" placeholder="مثال: 12" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none">
+            <input type="number" id="me-sessions-total" min="0" placeholder="مثال: 12" oninput="calcManualTotal()" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none">
           </div>
         </div>
         <div class="fg-row" style="margin-top:10px">
@@ -3939,6 +3959,18 @@ async function deleteSubscription() {
           </div>
           <div class="fg" style="margin-bottom:0"><!-- spacer --></div>
         </div>
+        <!-- 💰 سعر الحصة والإجمالي -->
+        <div class="fg-row" style="margin-top:10px">
+          <div class="fg" style="margin-bottom:0">
+            <label style="font-size:.78rem">💰 سعر الحصة (جنيه)</label>
+            <input type="number" id="me-session-price" min="0" step="0.01" placeholder="مثال: 150" oninput="calcManualTotal()" style="width:100%;padding:9px 13px;border:1.5px solid #FCD34D;border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:#FFFBEB">
+          </div>
+          <div class="fg" style="margin-bottom:0">
+            <label style="font-size:.78rem">🧾 إجمالي السعر (محسوب تلقائياً)</label>
+            <input type="number" id="me-total-price" min="0" step="0.01" placeholder="يُحسب تلقائياً" readonly style="width:100%;padding:9px 13px;border:1.5px solid #86EFAC;border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:#F0FDF4;color:var(--green);font-weight:700;cursor:not-allowed">
+          </div>
+        </div>
+        <div id="me-price-info" style="display:none;margin-top:6px;background:var(--gold-light);border:1px solid #FCD34D;border-radius:8px;padding:8px 12px;font-size:.8rem;color:#92400E;font-weight:700;text-align:center"></div>
         <div class="fg" style="margin-bottom:6px;margin-top:10px">
           <label style="font-size:.78rem">المواعيد والأيام</label>
           <input type="text" id="me-days-info" placeholder="مثال: السبت والثلاثاء 5-6م" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none">
@@ -3976,7 +4008,7 @@ function openManualEnroll() {
   _meSelectedStudent = null;
 
   // تنظيف الحقول
-  ['me-student-search','me-days-info','me-curriculum','me-notes','me-sessions-rem','me-sessions-total'].forEach(id => {
+  ['me-student-search','me-days-info','me-curriculum','me-notes','me-sessions-rem','me-sessions-total','me-session-price','me-total-price'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -4010,6 +4042,44 @@ function openManualEnroll() {
   document.getElementById('me-msg').innerHTML = '';
 
   document.getElementById('mdl-manual-enroll').classList.add('show');
+}
+
+function calcManualTotal() {
+  const priceEl   = document.getElementById('me-session-price');
+  const totalEl   = document.getElementById('me-total-price');
+  const totalSess = document.getElementById('me-sessions-total');
+  const infoEl    = document.getElementById('me-price-info');
+  const price  = parseFloat(priceEl?.value) || 0;
+  const total  = parseInt(totalSess?.value) || 0;
+  if (price > 0 && total > 0) {
+    const grand = price * total;
+    totalEl.value = grand.toFixed(2);
+    infoEl.style.display = 'block';
+    infoEl.innerHTML = `💰 ${total} حصة × ${price} جنيه = <span style="font-size:.95rem">${grand.toLocaleString('ar-EG')} جنيه</span>`;
+  } else {
+    totalEl.value = '';
+    infoEl.style.display = 'none';
+  }
+}
+
+function calcEditTotal() {
+  const priceEl  = document.getElementById('esub-session-price');
+  const totalEl  = document.getElementById('esub-total-price');
+  const infoEl   = document.getElementById('esub-price-info');
+  const sessRem  = document.getElementById('esub-sessions-rem');
+  const price = parseFloat(priceEl?.value) || 0;
+  const sess  = parseInt(sessRem?.value) || 0;
+  if (price > 0 && sess > 0) {
+    const grand = price * sess;
+    totalEl.value = grand.toFixed(2);
+    infoEl.style.display = 'block';
+    infoEl.innerHTML = `💰 ${sess} حصة × ${price} جنيه = <span style="font-size:.95rem">${grand.toLocaleString('ar-EG')} جنيه</span>`;
+  } else if (price > 0 && totalEl.value) {
+    infoEl.style.display = 'block';
+    infoEl.innerHTML = `💰 سعر الحصة: ${price} جنيه — الإجمالي: ${parseFloat(totalEl.value).toLocaleString('ar-EG')} جنيه`;
+  } else {
+    infoEl.style.display = 'none';
+  }
 }
 
 function filterManualStudents() {
@@ -4210,6 +4280,8 @@ async function saveManualEnroll() {
     const notes        = document.getElementById('me-notes').value.trim() || null;
     const sessRem      = document.getElementById('me-sessions-rem').value;
     const sessTotal    = document.getElementById('me-sessions-total').value;
+    const sessPrice    = document.getElementById('me-session-price').value;
+    const totalPrice   = document.getElementById('me-total-price').value;
     const teacher      = S.teachers.find(t => t.id === teacherId);
 
     // 1. إنشاء subscription_request بحالة approved مباشرة
@@ -4227,6 +4299,8 @@ async function saveManualEnroll() {
       end_date           : endDate || null,
       sessions_remaining : sessRem !== '' ? parseInt(sessRem) : null,
       sessions_total     : sessTotal !== '' ? parseInt(sessTotal) : null,
+      session_price      : sessPrice !== '' ? parseFloat(sessPrice) : null,
+      total_price        : totalPrice !== '' ? parseFloat(totalPrice) : null,
       admin_notes        : notes || 'تم إضافته يدوياً من الإدارة',
       created_at         : new Date().toISOString(),
       updated_at         : new Date().toISOString(),

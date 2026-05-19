@@ -1113,7 +1113,7 @@ async function refreshSubscription() {
   try {
     // جلب أحدث بيانات الاشتراكات من Supabase مباشرة
     const { data: freshReqs, error } = await sb.from('subscription_requests')
-      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,admin_notes')
+      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,sessions_total,session_price,total_price,admin_notes')
       .eq('user_id', STATE.user.id)
       .eq('status', 'approved')
       .order('created_at', { ascending: false });
@@ -1175,7 +1175,7 @@ async function fetchAllData(userId) {
   const [p, approvedReqs, act, notif, teEnrRes] = await Promise.all([
     sb.from('profiles').select('*').eq('id', userId).single(),
     sb.from('subscription_requests')
-      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,admin_notes')
+      .select('id,student_name,subject,grade,curriculum,session_type,days_info,created_at,course_id,assigned_teacher_id,end_date,sessions_remaining,sessions_total,session_price,total_price,admin_notes')
       .eq('user_id', userId).eq('status','approved')
       .order('created_at', { ascending: false }),
     sb.from('activity_log').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(8),
@@ -2400,6 +2400,21 @@ function subscription() {
         </div>
       </div>
 
+      <!-- 💰 سعر الحصة والإجمالي -->
+      ${(req.session_price || req.total_price) ? `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:1px solid #FCD34D;padding:14px;border-radius:10px">
+        ${req.session_price ? `
+        <div style="text-align:center">
+          <div style="font-size:.72rem;color:#92400E;margin-bottom:4px;font-weight:700">💰 سعر الحصة</div>
+          <div style="font-size:1rem;font-weight:900;color:#78350F">${Number(req.session_price).toLocaleString('ar-EG')} جنيه</div>
+        </div>` : ''}
+        ${req.total_price ? `
+        <div style="text-align:center;${req.session_price ? 'border-right:1px solid #FCD34D;' : ''}">
+          <div style="font-size:.72rem;color:#92400E;margin-bottom:4px;font-weight:700">🧾 إجمالي الاشتراك</div>
+          <div style="font-size:1.1rem;font-weight:900;color:#78350F">${Number(req.total_price).toLocaleString('ar-EG')} جنيه</div>
+        </div>` : ''}
+      </div>` : ''}
+
       <!-- الأيام والمواعيد -->
       ${req.days_info ? `
       <div style="background:var(--blue-light);border-radius:9px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:flex-start;gap:8px">
@@ -2420,13 +2435,19 @@ function subscription() {
         </div>
       </div>` : ''}
 
-      <!-- زر التجديد -->
-      <div style="margin-top:14px">
-        <button style="width:100%;padding:12px;border:none;border-radius:10px;background:var(--dark);color:#fff;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s"
+      <!-- أزرار: تفاصيل + تجديد -->
+      <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button style="padding:12px;border:1.5px solid var(--blue);border-radius:10px;background:var(--blue-light);color:var(--blue);font-family:'Cairo',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s"
+          onmouseover="this.style.background='var(--blue)';this.style.color='#fff'"
+          onmouseout="this.style.background='var(--blue-light)';this.style.color='var(--blue)'"
+          onclick="openSubDetailModal('${req.id}')">
+          📋 تفاصيل الاشتراك
+        </button>
+        <button style="padding:12px;border:none;border-radius:10px;background:var(--dark);color:#fff;font-family:'Cairo',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s"
           onmouseover="this.style.opacity='.85'"
           onmouseout="this.style.opacity='1'"
           onclick="window.open('https://wa.me/201012142749?text=${encodeURIComponent('أريد تجديد اشتراكي في مادة ' + req.subject + (hasSessRem ? ' — تبقّى لي ' + sessRem + ' حصة' : ''))}','_blank')">
-          🔄 طلب تجديد الاشتراك
+          🔄 طلب تجديد
         </button>
       </div>
     </div>`;
@@ -4148,6 +4169,172 @@ async function playVideoById(videoId, title) {
     await playVideo(data.url, data.title || title);
   } catch(e) { alert('تعذّر تحميل الفيديو'); }
 }
+
+// ══════════════════════════════════════════════════
+// SUBSCRIPTION DETAIL MODAL
+// ══════════════════════════════════════════════════
+async function openSubDetailModal(reqId) {
+  const modal = document.getElementById('mdl-sub-detail');
+  const body  = document.getElementById('mdl-sub-detail-body');
+  modal.classList.add('show');
+  body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--gray)"><div class="spinner" style="margin:0 auto 12px;width:30px;height:30px;border-width:2px"></div>جاري تحميل التفاصيل...</div>`;
+
+  try {
+    // جلب بيانات الاشتراك
+    const { data: req, error: e1 } = await sb.from('subscription_requests')
+      .select('id,subject,grade,session_type,days_info,created_at,end_date,sessions_remaining,sessions_total,session_price,total_price,assigned_teacher_id,admin_notes')
+      .eq('id', reqId).single();
+    if (e1) throw e1;
+
+    // جلب سجل الحضور
+    let attendanceHtml = '';
+    if (req.assigned_teacher_id) {
+      const { data: attRows } = await sb.from('teacher_attendance')
+        .select('status,session_date,notes')
+        .eq('student_id', STATE.user.id)
+        .eq('teacher_id', req.assigned_teacher_id)
+        .order('session_date', { ascending: false })
+        .limit(50);
+
+      const rows = attRows || [];
+      const present = rows.filter(r => r.status === 'present').length;
+      const absent  = rows.filter(r => r.status === 'absent').length;
+
+      const attRows_html = rows.map(r => {
+        const isPresent = r.status === 'present';
+        const d = new Date(r.session_date);
+        const dayName = d.toLocaleDateString('ar-EG', { weekday: 'long' });
+        const dateStr = d.toLocaleDateString('ar-EG', { day:'2-digit', month:'short', year:'numeric' });
+        return `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;margin-bottom:5px;background:${isPresent ? '#F0FDF4' : '#FEF2F2'};border:1px solid ${isPresent ? '#86EFAC' : '#FECACA'}">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:1rem">${isPresent ? '✅' : '❌'}</span>
+              <div>
+                <div style="font-size:.82rem;font-weight:700;color:var(--dark)">${dateStr}</div>
+                <div style="font-size:.72rem;color:var(--gray)">${dayName}${r.notes ? ' · ' + r.notes : ''}</div>
+              </div>
+            </div>
+            <span style="font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:50px;background:${isPresent ? 'var(--green)' : 'var(--red)'};color:#fff">${isPresent ? 'حضور' : 'غياب'}</span>
+          </div>`;
+      }).join('') || `<div style="text-align:center;padding:16px;color:var(--gray);font-size:.85rem">لم يُسجَّل أي حضور بعد</div>`;
+
+      const attPct = rows.length > 0 ? Math.round((present / rows.length) * 100) : 0;
+      attendanceHtml = `
+        <div style="margin-bottom:16px">
+          <div style="font-size:.82rem;font-weight:700;color:var(--dark);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+            📊 إحصائيات الحضور
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
+            <div style="text-align:center;background:var(--blue-light);border-radius:9px;padding:10px">
+              <div style="font-size:1.4rem;font-weight:900;color:var(--blue)">${rows.length}</div>
+              <div style="font-size:.7rem;color:var(--blue)">إجمالي الحصص</div>
+            </div>
+            <div style="text-align:center;background:var(--green-light);border-radius:9px;padding:10px">
+              <div style="font-size:1.4rem;font-weight:900;color:var(--green)">${present}</div>
+              <div style="font-size:.7rem;color:var(--green)">✅ حضور</div>
+            </div>
+            <div style="text-align:center;background:var(--red-light);border-radius:9px;padding:10px">
+              <div style="font-size:1.4rem;font-weight:900;color:var(--red)">${absent}</div>
+              <div style="font-size:.7rem;color:var(--red)">❌ غياب</div>
+            </div>
+          </div>
+          <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:.75rem;font-weight:700;color:var(--gray)">
+            <span>نسبة الحضور</span><span style="color:${attPct >= 80 ? 'var(--green)' : attPct >= 60 ? 'var(--gold)' : 'var(--red)'}">${attPct}%</span>
+          </div>
+          <div style="background:var(--gray-mid);border-radius:50px;height:7px;overflow:hidden;margin-bottom:14px">
+            <div style="height:100%;width:${attPct}%;background:${attPct >= 80 ? 'var(--green)' : attPct >= 60 ? 'var(--gold)' : 'var(--red)'};border-radius:50px;transition:width .5s"></div>
+          </div>
+          <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">📋 سجل الحضور والغياب</div>
+          <div style="max-height:220px;overflow-y:auto;padding-left:2px">${attRows_html}</div>
+        </div>`;
+    }
+
+    // بناء محتوى الـ modal
+    const sessTotal = req.sessions_total;
+    const sessRem   = req.sessions_remaining;
+    const sessPrice = req.session_price;
+    const totPrice  = req.total_price;
+
+    let endDate = req.end_date ? new Date(req.end_date) : new Date(req.created_at);
+    if (!req.end_date) endDate.setDate(endDate.getDate() + 30);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+
+    body.innerHTML = `
+      <!-- معلومات أساسية -->
+      <div style="background:var(--blue-light);border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:.72rem;font-weight:700;color:var(--blue);margin-bottom:8px">📚 معلومات المادة</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><div style="font-size:.68rem;color:var(--gray)">المادة</div><div style="font-size:.88rem;font-weight:700;color:var(--dark)">${req.subject || '—'}</div></div>
+          <div><div style="font-size:.68rem;color:var(--gray)">الصف</div><div style="font-size:.88rem;font-weight:700;color:var(--dark)">${req.grade || '—'}</div></div>
+          <div><div style="font-size:.68rem;color:var(--gray)">نوع الحصة</div><div style="font-size:.88rem;font-weight:700;color:var(--dark)">${req.session_type || '—'}</div></div>
+          <div><div style="font-size:.68rem;color:var(--gray)">الأيام</div><div style="font-size:.84rem;font-weight:600;color:var(--dark)">${req.days_info || '—'}</div></div>
+        </div>
+      </div>
+
+      <!-- الحصص -->
+      <div style="background:var(--gray-light);border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:.72rem;font-weight:700;color:var(--dark);margin-bottom:8px">🔢 تفاصيل الحصص</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
+          <div style="background:var(--white);border-radius:8px;padding:10px">
+            <div style="font-size:1.3rem;font-weight:900;color:var(--blue)">${sessTotal ?? '—'}</div>
+            <div style="font-size:.68rem;color:var(--gray);margin-top:2px">إجمالي الحصص</div>
+          </div>
+          <div style="background:var(--white);border-radius:8px;padding:10px">
+            <div style="font-size:1.3rem;font-weight:900;color:${sessRem != null && sessRem <= 3 ? 'var(--red)' : 'var(--green)'}">${sessRem ?? '—'}</div>
+            <div style="font-size:.68rem;color:var(--gray);margin-top:2px">الحصص المتبقية</div>
+          </div>
+          <div style="background:var(--white);border-radius:8px;padding:10px">
+            <div style="font-size:1rem;font-weight:900;color:${daysLeft <= 7 ? 'var(--red)' : 'var(--dark)'}">${daysLeft > 0 ? daysLeft + ' يوم' : 'منتهي'}</div>
+            <div style="font-size:.68rem;color:var(--gray);margin-top:2px">الأيام المتبقية</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- السعر -->
+      ${(sessPrice || totPrice) ? `
+      <div style="background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:1px solid #FCD34D;border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:.72rem;font-weight:700;color:#92400E;margin-bottom:8px">💰 التفاصيل المالية</div>
+        <div style="display:grid;grid-template-columns:${sessPrice && totPrice ? '1fr 1fr' : '1fr'};gap:10px;text-align:center">
+          ${sessPrice ? `<div style="background:#fff;border-radius:8px;padding:10px">
+            <div style="font-size:1.1rem;font-weight:900;color:#78350F">${Number(sessPrice).toLocaleString('ar-EG')} جنيه</div>
+            <div style="font-size:.7rem;color:#92400E;margin-top:2px">سعر الحصة الواحدة</div>
+          </div>` : ''}
+          ${totPrice ? `<div style="background:#fff;border-radius:8px;padding:10px">
+            <div style="font-size:1.2rem;font-weight:900;color:#78350F">${Number(totPrice).toLocaleString('ar-EG')} جنيه</div>
+            <div style="font-size:.7rem;color:#92400E;margin-top:2px">إجمالي الاشتراك</div>
+          </div>` : ''}
+        </div>
+      </div>` : ''}
+
+      <!-- الحضور والغياب -->
+      ${attendanceHtml}
+
+      <!-- التواريخ -->
+      <div style="background:var(--gray-light);border-radius:10px;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center">
+        <div><div style="font-size:.68rem;color:var(--gray);margin-bottom:3px">📅 تاريخ البدء</div><div style="font-size:.82rem;font-weight:700;color:var(--dark)">${formatDate(req.created_at)}</div></div>
+        <div><div style="font-size:.68rem;color:var(--gray);margin-bottom:3px">🗓️ تاريخ الانتهاء</div><div style="font-size:.82rem;font-weight:700;color:${daysLeft <= 7 ? 'var(--red)' : 'var(--dark)'}">${formatDate(endDate.toISOString())}</div></div>
+      </div>`;
+
+  } catch(e) {
+    body.innerHTML = `<div style="text-align:center;padding:24px;color:var(--red);font-size:.85rem">❌ خطأ في تحميل التفاصيل: ${e.message}</div>`;
+  }
+}
 </script>
+
+<!-- MODAL: تفاصيل الاشتراك (للطالب) -->
+<div class="mdl" id="mdl-sub-detail" style="z-index:1200">
+  <div class="mdl-box wide" style="max-width:520px;max-height:90vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-shrink:0">
+      <div class="mdl-title" style="margin-bottom:0">📋 تفاصيل الاشتراك</div>
+      <button onclick="document.getElementById('mdl-sub-detail').classList.remove('show')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
+    </div>
+    <div id="mdl-sub-detail-body" style="overflow-y:auto;flex:1"></div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-mid);flex-shrink:0">
+      <button onclick="document.getElementById('mdl-sub-detail').classList.remove('show')" style="width:100%;padding:12px;background:var(--dark);color:#fff;border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
