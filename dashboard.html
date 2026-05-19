@@ -4209,7 +4209,7 @@ async function openSubDetailModal(reqId) {
   try {
     // جلب بيانات الاشتراك
     const { data: req, error: e1 } = await sb.from('subscription_requests')
-      .select('id,subject,grade,session_type,days_info,created_at,end_date,sessions_remaining,sessions_total,session_price,total_price,assigned_teacher_id,admin_notes')
+      .select('id,subject,grade,session_type,days_info,created_at,end_date,sessions_remaining,sessions_total,session_price,total_price,currency,assigned_teacher_id,admin_notes')
       .eq('id', reqId).single();
     if (e1) throw e1;
 
@@ -4299,6 +4299,29 @@ async function openSubDetailModal(reqId) {
         </div>
       </div>
 
+      <!-- 💰 السعر — بعد معلومات المادة مباشرة -->
+      <div style="background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:1px solid #FCD34D;border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:.72rem;font-weight:700;color:#92400E;margin-bottom:10px;display:flex;align-items:center;gap:5px">💰 التفاصيل المالية</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center">
+          <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #FDE68A">
+            <div style="font-size:.65rem;color:#92400E;margin-bottom:4px;font-weight:700">سعر الحصة الواحدة</div>
+            <div style="font-size:1.15rem;font-weight:900;color:#78350F">
+              ${sessPrice != null ? Number(sessPrice).toLocaleString('ar-EG') + ' ' + (req.currency || 'جنيه') : '—'}
+            </div>
+          </div>
+          <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #FDE68A">
+            <div style="font-size:.65rem;color:#92400E;margin-bottom:4px;font-weight:700">إجمالي الاشتراك</div>
+            <div style="font-size:1.15rem;font-weight:900;color:#78350F">
+              ${totPrice != null ? Number(totPrice).toLocaleString('ar-EG') + ' ' + (req.currency || 'جنيه') : '—'}
+            </div>
+          </div>
+        </div>
+        ${(sessPrice != null && totPrice != null && sessTotal != null && sessTotal > 0) ? `
+        <div style="margin-top:10px;background:rgba(245,158,11,.12);border-radius:8px;padding:8px 12px;font-size:.78rem;color:#92400E;font-weight:700;text-align:center">
+          📌 ${sessTotal} حصة × ${Number(sessPrice).toLocaleString('ar-EG')} ${req.currency || 'جنيه'} = ${Number(totPrice).toLocaleString('ar-EG')} ${req.currency || 'جنيه'}
+        </div>` : ''}
+      </div>
+
       <!-- الحصص -->
       <div style="background:var(--gray-light);border-radius:10px;padding:14px;margin-bottom:14px">
         <div style="font-size:.72rem;font-weight:700;color:var(--dark);margin-bottom:8px">🔢 تفاصيل الحصص</div>
@@ -4317,22 +4340,6 @@ async function openSubDetailModal(reqId) {
           </div>
         </div>
       </div>
-
-      <!-- السعر -->
-      ${(sessPrice || totPrice) ? `
-      <div style="background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:1px solid #FCD34D;border-radius:10px;padding:14px;margin-bottom:14px">
-        <div style="font-size:.72rem;font-weight:700;color:#92400E;margin-bottom:8px">💰 التفاصيل المالية</div>
-        <div style="display:grid;grid-template-columns:${sessPrice && totPrice ? '1fr 1fr' : '1fr'};gap:10px;text-align:center">
-          ${sessPrice ? `<div style="background:#fff;border-radius:8px;padding:10px">
-            <div style="font-size:1.1rem;font-weight:900;color:#78350F">${Number(sessPrice).toLocaleString('ar-EG')} جنيه</div>
-            <div style="font-size:.7rem;color:#92400E;margin-top:2px">سعر الحصة الواحدة</div>
-          </div>` : ''}
-          ${totPrice ? `<div style="background:#fff;border-radius:8px;padding:10px">
-            <div style="font-size:1.2rem;font-weight:900;color:#78350F">${Number(totPrice).toLocaleString('ar-EG')} جنيه</div>
-            <div style="font-size:.7rem;color:#92400E;margin-top:2px">إجمالي الاشتراك</div>
-          </div>` : ''}
-        </div>
-      </div>` : ''}
 
       <!-- الحضور والغياب -->
       ${attendanceHtml}
