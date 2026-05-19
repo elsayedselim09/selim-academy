@@ -797,6 +797,33 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dar
 .stu-sched-cell-time { font-size:.6rem; opacity:.7; margin-top:1px }
 .stu-sched-legend { display:flex; flex-wrap:wrap; gap:8px; padding:14px 18px; background:#fff; border-radius:14px; border:1px solid var(--gray-mid); margin-top:4px; align-items:center }
 .stu-legend-item { display:inline-flex; align-items:center; gap:5px; padding:5px 14px; border-radius:50px; font-size:.76rem; font-weight:700; border-width:1.5px; border-style:solid }
+
+/* ── MODAL (نوافذ الحوار) ── */
+.mdl{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.50);
+  z-index:1000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.mdl.show{display:flex}
+.mdl-box{
+  background:#fff;
+  border-radius:18px;
+  padding:28px 26px;
+  max-width:460px;
+  width:100%;
+  box-shadow:0 8px 40px rgba(0,0,0,.18);
+  animation:fadeIn .25s ease;
+  position:relative;
+}
+.mdl-box.wide{max-width:540px}
+.mdl-title{
+  font-size:1.05rem;font-weight:900;
+  color:var(--dark);margin-bottom:8px;
+}
 </style>
 </head>
 <body>
