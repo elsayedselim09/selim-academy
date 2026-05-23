@@ -77,7 +77,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 
 <style>
-/* ══════════ DESIGN TOKENS ══════════ */
 :root {
   --blue:       #1A56DB;
   --blue-dark:  #1342B0;
@@ -1131,7 +1130,98 @@ footer { background:var(--dark); padding:60px 5% 30px; }
 .tests-hero-badges { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:28px; }
 .tests-hero-badge { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 16px; font-size:.85rem; font-weight:700; color:#fff; }
 .tests-hero-divider { height:2px; background:linear-gradient(90deg,transparent,rgba(201,168,76,0.4),transparent); margin:0 5%; }
-.tests-cards-wrap { padding:52px 5%; background:#0a0f1e; }
+/* ══════════ TESTIMONIALS SLIDER ══════════ */
+.tests-cards-wrap { padding:52px 0 60px; background:#0a0f1e; overflow:hidden; }
+
+.tests-slider-viewport {
+  position: relative;
+  overflow: hidden;
+  padding: 12px 0 20px;
+  /* Fade edges */
+  -webkit-mask-image: linear-gradient(to left, transparent 0%, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to left, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+.tests-grid {
+  display: flex;
+  gap: 24px;
+  padding: 0 5%;
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.test-card {
+  background: rgba(255,255,255,0.05);
+  border-radius: 20px;
+  padding: 28px;
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: all .4s cubic-bezier(0.4,0,0.2,1);
+  flex: 0 0 calc(33.333% - 16px);
+  min-width: 280px;
+  cursor: grab;
+  user-select: none;
+}
+.test-card:active { cursor: grabbing; }
+.test-card.active-card {
+  transform: translateY(-8px) scale(1.02);
+  background: rgba(26,86,219,0.15);
+  border-color: rgba(26,86,219,0.4);
+  box-shadow: 0 20px 50px rgba(26,86,219,0.25);
+}
+
+/* Dots pagination */
+.tests-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 36px;
+  padding: 0 5%;
+}
+.tests-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+  border: none; outline: none;
+}
+.tests-dot.active {
+  background: #1A56DB;
+  width: 28px;
+  border-radius: 4px;
+  box-shadow: 0 0 14px rgba(26,86,219,0.7);
+}
+
+/* Slider nav arrows */
+.tests-slider-nav {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+.tests-nav-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex; align-items: center; justify-content: center;
+}
+.tests-nav-btn:hover {
+  background: rgba(26,86,219,0.4);
+  border-color: rgba(26,86,219,0.6);
+  box-shadow: 0 0 18px rgba(26,86,219,0.4);
+  transform: scale(1.1);
+}
+.tests-nav-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  transform: none;
+}
 
 /* ════ SECTION WAVE CONNECTOR ════ */
 .wave-connector {
@@ -2071,33 +2161,43 @@ footer { background:var(--dark); padding:60px 5% 30px; }
   </div>
   <div class="tests-hero-divider"></div>
   <div class="tests-cards-wrap reveal">
-    <div class="tests-grid" id="site-reviews-grid">
-      <div class="test-card">
-        <div class="test-header">
-          <div class="test-av">م.خ</div>
-          <div><div class="test-name">محمد خالد</div><div class="test-stars">★★★★★</div></div>
+    <div class="tests-slider-viewport" id="tests-slider-viewport">
+      <div class="tests-grid" id="site-reviews-grid">
+        <div class="test-card">
+          <div class="test-header">
+            <div class="test-av">م.خ</div>
+            <div><div class="test-name">محمد خالد</div><div class="test-stars">★★★★★</div></div>
+          </div>
+          <p class="test-text">"كنت بياخد 54% في الرياضيات. بعد فصل واحد مع م. سليم، درجتي بقت 91%. أخيراً فهمت ليه القوانين بتشتغل!"</p>
+          <div class="test-meta">طالب ثانوي — أنهى 3 كورسات</div>
         </div>
-        <p class="test-text">"كنت بياخد 54% في الرياضيات. بعد فصل واحد مع م. سليم، درجتي بقت 91%. أخيراً فهمت ليه القوانين بتشتغل!"</p>
-        <div class="test-meta">طالب ثانوي — أنهى 3 كورسات</div>
-      </div>
-      <div class="test-card">
-        <div class="test-header">
-          <div class="test-av" style="background:#0E9F6E;">أ.ف</div>
-          <div><div class="test-name">أم فريدة</div><div class="test-stars">★★★★★</div></div>
+        <div class="test-card">
+          <div class="test-header">
+            <div class="test-av" style="background:#0E9F6E;">أ.ف</div>
+            <div><div class="test-name">أم فريدة</div><div class="test-stars">★★★★★</div></div>
+          </div>
+          <p class="test-text">"ابني كان بيكره الرياضيات. بعد 3 شهور مع م. سليم بقى بياخد 88% وبيذاكر من غير ما أقوله. أسلوب الشرح مختلف خالص!"</p>
+          <div class="test-meta">ولية أمر — صف تاسع</div>
         </div>
-        <p class="test-text">"ابني كان بيكره الرياضيات. بعد 3 شهور مع م. سليم بقى بياخد 88% وبيذاكر من غير ما أقوله. أسلوب الشرح مختلف خالص!"</p>
-        <div class="test-meta">ولية أمر — صف تاسع</div>
-      </div>
-      <div class="test-card">
-        <div class="test-header">
-          <div class="test-av" style="background:#F59E0B;">س.أ</div>
-          <div><div class="test-name">سارة أحمد</div><div class="test-stars">★★★★★</div></div>
+        <div class="test-card">
+          <div class="test-header">
+            <div class="test-av" style="background:#F59E0B;">س.أ</div>
+            <div><div class="test-name">سارة أحمد</div><div class="test-stars">★★★★★</div></div>
+          </div>
+          <p class="test-text">"مراجعة الامتحانات كانت بالظبط اللي محتاجاه. حللنا ورق سنوات وحددنا نقاط ضعفي. دخلت الامتحان مطمنة وعملت نتيجة ممتازة!"</p>
+          <div class="test-meta">خريجة ثانوية — مراجعة امتحانات</div>
         </div>
-        <p class="test-text">"مراجعة الامتحانات كانت بالظبط اللي محتاجاه. حللنا ورق سنوات وحددنا نقاط ضعفي. دخلت الامتحان مطمنة وعملت نتيجة ممتازة!"</p>
-        <div class="test-meta">خريجة ثانوية — مراجعة امتحانات</div>
       </div>
     </div>
-    <div class="tests-rating" style="margin-top:32px;">
+
+    <!-- Dots + Nav -->
+    <div class="tests-dots" id="tests-dots"></div>
+    <div class="tests-slider-nav">
+      <button class="tests-nav-btn" id="tests-prev" aria-label="السابق">&#8594;</button>
+      <button class="tests-nav-btn" id="tests-next" aria-label="التالي">&#8592;</button>
+    </div>
+
+    <div class="tests-rating" style="margin-top:28px;">
       <div class="rating-badge">⭐ تقييم 4.9/5 من أكثر من <span style="color:var(--blue);margin-right:4px;">1000</span> طالب</div>
     </div>
   </div>
@@ -3473,6 +3573,109 @@ function switchSession(s) {
     loadFaqs();
   });
 })();
+</script>
+<script>
+/* ══ TESTIMONIALS SLIDER — init after DOM & after Supabase might inject cards ══ */
+function initTestimonialsSlider() {
+  var grid = document.getElementById('site-reviews-grid');
+  var dotsEl = document.getElementById('tests-dots');
+  var prevBtn = document.getElementById('tests-prev');
+  var nextBtn = document.getElementById('tests-next');
+  if (!grid || !dotsEl || !prevBtn || !nextBtn) return;
+
+  var current = 0;
+  var startX = 0, isDragging = false, dragStarted = false;
+  var CARDS_PER_PAGE = window.innerWidth < 640 ? 1 : window.innerWidth < 1024 ? 2 : 3;
+
+  function getCards() { return grid.querySelectorAll('.test-card'); }
+
+  function getPageCount() {
+    var cards = getCards();
+    return Math.max(1, Math.ceil(cards.length / CARDS_PER_PAGE));
+  }
+
+  function getCardWidth() {
+    var cards = getCards();
+    if (!cards.length) return 0;
+    return cards[0].offsetWidth + 24; /* gap */
+  }
+
+  function goTo(page) {
+    var pages = getPageCount();
+    current = Math.max(0, Math.min(page, pages - 1));
+
+    /* Slide */
+    var offset = current * CARDS_PER_PAGE * getCardWidth();
+    /* RTL: positive offset moves left-to-right visually; we reverse */
+    grid.style.transform = 'translateX(' + offset + 'px)';
+
+    /* Highlight active cards */
+    getCards().forEach(function(c, i) {
+      var inPage = i >= current * CARDS_PER_PAGE && i < (current + 1) * CARDS_PER_PAGE;
+      c.classList.toggle('active-card', inPage);
+    });
+
+    /* Dots */
+    dotsEl.querySelectorAll('.tests-dot').forEach(function(d, i) {
+      d.classList.toggle('active', i === current);
+    });
+
+    /* Buttons */
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current >= pages - 1;
+  }
+
+  function buildDots() {
+    dotsEl.innerHTML = '';
+    var pages = getPageCount();
+    for (var i = 0; i < pages; i++) {
+      (function(idx) {
+        var btn = document.createElement('button');
+        btn.className = 'tests-dot' + (idx === 0 ? ' active' : '');
+        btn.setAttribute('aria-label', '\u0635\u0641\u062d\u0629 ' + (idx + 1));
+        btn.addEventListener('click', function() { goTo(idx); });
+        dotsEl.appendChild(btn);
+      })(i);
+    }
+  }
+
+  function init() {
+    CARDS_PER_PAGE = window.innerWidth < 640 ? 1 : window.innerWidth < 1024 ? 2 : 3;
+    buildDots();
+    goTo(0);
+  }
+
+  prevBtn.addEventListener('click', function() { goTo(current - 1); });
+  nextBtn.addEventListener('click', function() { goTo(current + 1); });
+
+  /* Touch / drag */
+  grid.addEventListener('mousedown', function(e) { startX = e.clientX; isDragging = true; dragStarted = false; });
+  window.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    if (Math.abs(e.clientX - startX) > 8) dragStarted = true;
+  });
+  window.addEventListener('mouseup', function(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    if (!dragStarted) return;
+    var diff = startX - e.clientX;
+    if (Math.abs(diff) > 50) goTo(diff > 0 ? current + 1 : current - 1);
+  });
+
+  grid.addEventListener('touchstart', function(e) { startX = e.touches[0].clientX; }, {passive:true});
+  grid.addEventListener('touchend', function(e) {
+    var diff = startX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) goTo(diff > 0 ? current + 1 : current - 1);
+  });
+
+  /* Re-init on resize */
+  window.addEventListener('resize', function() { init(); });
+
+  /* Wait a tick so Supabase cards might have loaded */
+  setTimeout(init, 800);
+}
+
+document.addEventListener('DOMContentLoaded', initTestimonialsSlider);
 </script>
 <script src="pwa-register.js" defer></script>
 </body>
