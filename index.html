@@ -3495,8 +3495,7 @@ function switchSession(s) {
       var { data } = await _sb.from('student_testimonials')
         .select('*')
         .eq('is_active', true)
-        .order('display_order', { ascending: true })
-        .limit(6);
+        .order('display_order', { ascending: true });
       if (!data || !data.length) return; // keep existing static cards
       var colors = ['#1A56DB','#0E9F6E','#F59E0B','#8B5CF6','#EF4444','#0EA5E9'];
       grid.innerHTML = data.map(function(r, i) {
