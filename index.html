@@ -1222,6 +1222,45 @@ footer { background:var(--dark); padding:60px 5% 30px; }
   cursor: not-allowed;
   transform: none;
 }
+/* ── Counter ── */
+.tests-counter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 50px;
+  padding: 6px 18px;
+  font-family: 'Cairo', sans-serif;
+  font-size: .95rem;
+  color: rgba(255,255,255,0.75);
+  min-width: 110px;
+  justify-content: center;
+  transition: all 0.3s;
+}
+.tests-counter-current {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--blue-mid);
+  transition: transform 0.25s, opacity 0.25s;
+}
+.tests-counter-current.bump {
+  transform: scale(1.35);
+  opacity: 0.6;
+}
+.tests-counter-sep {
+  color: rgba(255,255,255,0.35);
+  font-weight: 300;
+}
+.tests-counter-total {
+  font-weight: 700;
+  color: rgba(255,255,255,0.85);
+}
+.tests-counter-label {
+  font-size: .78rem;
+  color: rgba(255,255,255,0.45);
+  margin-right: 2px;
+}
 
 /* ════ SECTION WAVE CONNECTOR ════ */
 .wave-connector {
@@ -2194,6 +2233,12 @@ footer { background:var(--dark); padding:60px 5% 30px; }
     <div class="tests-dots" id="tests-dots"></div>
     <div class="tests-slider-nav">
       <button class="tests-nav-btn" id="tests-prev" aria-label="السابق">&#8594;</button>
+      <div class="tests-counter" id="tests-counter">
+        <span class="tests-counter-current" id="tests-counter-current">1</span>
+        <span class="tests-counter-sep">/</span>
+        <span class="tests-counter-total" id="tests-counter-total">1</span>
+        <span class="tests-counter-label">صفحة</span>
+      </div>
       <button class="tests-nav-btn" id="tests-next" aria-label="التالي">&#8592;</button>
     </div>
 
@@ -3622,6 +3667,18 @@ function initTestimonialsSlider() {
     /* Buttons */
     prevBtn.disabled = current === 0;
     nextBtn.disabled = current >= pages - 1;
+
+    /* Counter */
+    var curEl = document.getElementById('tests-counter-current');
+    var totEl = document.getElementById('tests-counter-total');
+    if (curEl && totEl) {
+      curEl.classList.remove('bump');
+      void curEl.offsetWidth; /* reflow to restart animation */
+      curEl.classList.add('bump');
+      curEl.textContent = current + 1;
+      totEl.textContent = pages;
+      setTimeout(function() { curEl.classList.remove('bump'); }, 280);
+    }
   }
 
   function buildDots() {
