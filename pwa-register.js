@@ -1,7 +1,7 @@
 /*
  * ═══════════════════════════════════════════════════════
  *  Selim Academy — pwa-register.js  (نسخة محدّثة ✅)
- *  ضع هذا الملف في: /selim-academy/pwa-register.js
+ *  ضع هذا الملف في: /pwa-register.js
  *  واستدعه من آخر <body> في كل صفحة HTML
  * ═══════════════════════════════════════════════════════
  */
@@ -13,8 +13,8 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
       navigator.serviceWorker
-        .register('/selim-academy/sw.js', {
-          scope: '/selim-academy/'
+        .register('/sw.js', {
+          scope: '/'
         })
         .then(function (registration) {
           console.log('[PWA] Service Worker registered. Scope:', registration.scope);

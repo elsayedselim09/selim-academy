@@ -2,24 +2,24 @@
  * ═══════════════════════════════════════════════════════
  *  Selim Academy — Service Worker  (sw.js)
  *  الإصدار: 2.0
- *  المسار الصحيح: /selim-academy/sw.js
+ *  المسار الصحيح: /sw.js
  * ═══════════════════════════════════════════════════════
  */
 
 // ── اسم الـ Cache — غيّر الرقم عند أي تحديث للموقع ──
-const CACHE_NAME    = 'selim-academy-v5';
-const OFFLINE_PAGE  = '/selim-academy/offline.html';
+const CACHE_NAME    = 'selimacademy-v5';
+const OFFLINE_PAGE  = '/offline.html';
 
 // ── الملفات التي تُحفظ فوراً عند تثبيت الـ SW ──
 const PRECACHE_URLS = [
-  '/selim-academy/',
-  '/selim-academy/index.html',
-  '/selim-academy/dashboard.html',
-  '/selim-academy/login.html',
-  '/selim-academy/manifest.json',
-  '/selim-academy/offline.html',
-  '/selim-academy/icon-192x192.png',
-  '/selim-academy/icon-512x512.png',
+  '/',
+  '/index.html',
+  '/dashboard.html',
+  '/login.html',
+  '/manifest.json',
+  '/offline.html',
+  '/icon-192x192.png',
+  '/icon-512x512.png',
   // أضف أي ملفات CSS أو JS خارجية محلية هنا
 ];
 
@@ -207,8 +207,8 @@ self.addEventListener('push', event => {
     self.registration.showNotification(title || '🔔 أكاديمية سليم', {
       body,
       tag               : tag || `session-${Date.now()}`,
-      icon              : '/selim-academy/icon-192x192.png',
-      badge             : '/selim-academy/icon-192x192.png',
+      icon              : '/icon-192x192.png',
+      badge             : '/icon-192x192.png',
       dir               : 'rtl',
       lang              : 'ar',
       requireInteraction: true,
@@ -231,11 +231,11 @@ self.addEventListener('notificationclick', event => {
 
   const target = (action === 'join' && zoom)
     ? zoom
-    : `${self.location.origin}/selim-academy/dashboard.html#sessions`;
+    : `${self.location.origin}/dashboard.html#sessions`;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-      const existing = clients.find(c => c.url.includes('selim-academy'));
+      const existing = clients.find(c => c.url.includes('selimacademy'));
       if (existing) {
         existing.focus();
         existing.postMessage({ type: 'NOTIFICATION_CLICKED', sessionId, action, zoom });

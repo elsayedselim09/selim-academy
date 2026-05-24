@@ -100,8 +100,8 @@ function showSessionNotification({ title, body, tag, data }) {
   const options = {
     body,
     tag,                         // يمنع تكرار نفس الإشعار
-    icon: '/selim-academy/icon-192x192.png',
-    badge: '/selim-academy/icon-192x192.png',
+    icon: '/icon-192x192.png',
+    badge: '/icon-192x192.png',
     dir: 'rtl',
     lang: 'ar',
     requireInteraction: true,    // لا يختفي تلقائياً حتى يضغط عليه
@@ -130,12 +130,12 @@ self.addEventListener('notificationclick', event => {
   // فتح رابط الزووم مباشرة عند بدء الحصة
   const urlToOpen = (action === 'join' && zoomUrl)
     ? zoomUrl
-    : self.location.origin + '/selim-academy/dashboard.html#sessions';
+    : self.location.origin + '/dashboard.html#sessions';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
       // إذا الصفحة مفتوحة، ننقل التركيز إليها
-      const existing = clients.find(c => c.url.includes('selim-academy'));
+      const existing = clients.find(c => c.url.includes('selimacademy'));
       if (existing) {
         existing.focus();
         existing.postMessage({ type: 'NOTIFICATION_CLICKED', sessionId, action, zoomUrl });
