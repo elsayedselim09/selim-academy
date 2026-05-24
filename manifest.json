@@ -2,8 +2,8 @@
   "name": "أكاديمية سليم",
   "short_name": "سليم",
   "description": "منصة تعليمية متخصصة في الرياضيات والفيزياء والكيمياء للثانوية العامة",
-  "start_url": "/selim-academy/",
-  "scope": "/selim-academy/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#ffffff",
@@ -15,25 +15,25 @@
 
   "icons": [
     {
-      "src": "/selim-academy/icon-192x192.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/selim-academy/icon-192x192.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/selim-academy/icon-512x512.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/selim-academy/icon-512x512.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -42,14 +42,14 @@
 
   "screenshots": [
     {
-      "src": "/selim-academy/screenshot-mobile.png",
+      "src": "/screenshot-mobile.png",
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "أكاديمية سليم على الموبايل"
     },
     {
-      "src": "/selim-academy/screenshot-desktop.png",
+      "src": "/screenshot-desktop.png",
       "sizes": "1280x800",
       "type": "image/png",
       "form_factor": "wide",
@@ -61,17 +61,17 @@
     {
       "name": "الدروس",
       "short_name": "دروس",
-      "url": "/selim-academy/#courses",
+      "url": "/#courses",
       "icons": [
-        { "src": "/selim-academy/icon-192x192.png", "sizes": "192x192", "type": "image/png" }
+        { "src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png" }
       ]
     },
     {
       "name": "تواصل معنا",
       "short_name": "تواصل",
-      "url": "/selim-academy/#contact",
+      "url": "/#contact",
       "icons": [
-        { "src": "/selim-academy/icon-192x192.png", "sizes": "192x192", "type": "image/png" }
+        { "src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png" }
       ]
     }
   ]
