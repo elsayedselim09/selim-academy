@@ -3553,6 +3553,10 @@ function switchSession(s) {
           '<div class="test-meta">' + meta + '</div>' +
           '</div>';
       }).join('');
+      /* ✅ إعادة تهيئة الـ slider بعد ما الكارت تتحمل من Supabase */
+      setTimeout(function() {
+        if (typeof initTestimonialsSlider === 'function') initTestimonialsSlider();
+      }, 100);
     } catch(e) { console.warn('site testimonials load error:', e); }
   }
 
