@@ -293,6 +293,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <button class="nav-item"        id="nav-admin-exams" onclick="goTo('admin-exams')"><span class="nav-icon">📝</span> إحصائيات الاختبارات</button>
     <div class="nav-label">إدارة الموقع</div>
     <button class="nav-item"        id="nav-site-content" onclick="goTo('site-content')"><span class="nav-icon">🌐</span> إدارة المحتوى</button>
+    <button class="nav-item"        id="nav-announcements" onclick="goTo('announcements')"><span class="nav-icon">📢</span> الإعلانات</button>
     <div class="nav-label">الحساب</div>
     <button class="nav-item"        id="nav-profile"   onclick="goTo('profile')"><span class="nav-icon">👤</span> حسابي</button>
   </nav>
@@ -880,6 +881,29 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     </div>
   </div>
 
+
+  <!-- ANNOUNCEMENTS PAGE -->
+  <div class="page" id="page-announcements">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:8px;">
+      <div>
+        <div class="page-title">📢 إدارة الإعلانات</div>
+        <p class="page-sub" style="margin-bottom:0;">أضف وعدّل وتحكم في كل إعلانات الأكاديمية</p>
+      </div>
+      <button class="btn-primary" onclick="annOpenAdd()" style="border:none;cursor:pointer;font-family:Cairo,sans-serif;padding:10px 22px;border-radius:10px;display:flex;align-items:center;gap:8px;">➕ إضافة إعلان</button>
+    </div>
+    <div class="stats-grid" id="ann-stats" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:24px;"></div>
+    <div class="section-card">
+      <div class="section-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <h3>📋 قائمة الإعلانات</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <select id="ann-filter-type" onchange="annRender()" style="padding:8px 12px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:Cairo,sans-serif;font-size:.83rem;"><option value="">كل الأنواع</option><option value="job">💼 وظيفة</option><option value="course">📚 كورس</option><option value="discount">🏷️ خصم</option><option value="grant">🎓 منحة</option><option value="intern">🧑‍💼 تدريب</option><option value="news">📣 خبر</option></select>
+          <select id="ann-filter-status" onchange="annRender()" style="padding:8px 12px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:Cairo,sans-serif;font-size:.83rem;"><option value="">كل الحالات</option><option value="open">🟢 متاح</option><option value="closed">🔴 مغلق</option><option value="soon">🟡 قريباً</option></select>
+        </div>
+      </div>
+      <div class="section-body" id="ann-list"><div class="skel" style="height:80px;margin-bottom:10px;border-radius:10px;"></div></div>
+    </div>
+  </div>
+
   <!-- ADMIN EXAMS -->
   <div class="page" id="page-admin-exams">
     <div class="page-title">إحصائيات الاختبارات 📝</div>
@@ -898,6 +922,43 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
 </main>
 
 <!-- CONFIRM MODAL -->
+<!-- ANN MODAL -->
+<div class="mdl" id="mdl-ann">
+  <div class="mdl-box" style="max-width:560px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div class="mdl-title" style="margin-bottom:0;" id="mdl-ann-title">إضافة إعلان</div>
+      <button onclick="closeMdl('mdl-ann')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
+    </div>
+    <input type="hidden" id="ann-id">
+    <div class="fg-row">
+      <div class="fg"><label>نوع الإعلان *</label><select id="ann-type" style="width:100%;padding:10px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:Cairo,sans-serif;"><option value="job">💼 وظيفة شاغرة</option><option value="course">📚 كورس جديد</option><option value="discount">🏷️ عرض وخصم</option><option value="grant">🎓 منحة دراسية</option><option value="intern">🧑‍💼 تدريب</option><option value="news">📣 خبر عام</option></select></div>
+      <div class="fg"><label>الحالة *</label><select id="ann-status" style="width:100%;padding:10px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:Cairo,sans-serif;"><option value="open">🟢 متاح</option><option value="closed">🔴 مغلق</option><option value="soon">🟡 قريباً</option></select></div>
+    </div>
+    <div class="fg"><label>العنوان *</label><input type="text" id="ann-title-inp" placeholder="عنوان الإعلان"></div>
+    <div class="fg"><label>الوصف *</label><textarea id="ann-desc" rows="5" style="width:100%;padding:10px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:Cairo,sans-serif;font-size:.88rem;resize:vertical;" placeholder="اكتب تفاصيل الإعلان هنا..."></textarea></div>
+    <div class="fg-row">
+      <div class="fg"><label>الراتب / المكافأة</label><input type="text" id="ann-salary" placeholder="مثال: 3000–5000 ج.م"></div>
+      <div class="fg"><label>الموقع</label><input type="text" id="ann-location" placeholder="مثال: عن بُعد"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>آخر موعد للتقديم</label><input type="date" id="ann-deadline" style="direction:ltr;"></div>
+      <div class="fg"><label>ترتيب العرض</label><input type="number" id="ann-sort" placeholder="1" min="1"></div>
+    </div>
+    <div class="fg"><label>رابط الصورة (اختياري)</label><input type="url" id="ann-img" placeholder="https://..." style="direction:ltr;"></div>
+    <div class="fg" style="display:flex;align-items:center;gap:12px;background:var(--gray-light);padding:12px 14px;border-radius:10px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:700;">
+        <input type="checkbox" id="ann-visible" checked style="width:16px;height:16px;accent-color:var(--green);cursor:pointer;">
+        ظاهر على الموقع
+      </label>
+    </div>
+    <div id="ann-mdl-msg" style="margin-top:10px;"></div>
+    <div class="mdl-btns" style="margin-top:16px;">
+      <button class="mdl-cancel" onclick="closeMdl('mdl-ann')">إلغاء</button>
+      <button class="mdl-confirm mc-save" onclick="annSave()">💾 حفظ الإعلان</button>
+    </div>
+  </div>
+</div>
+
 <div class="mdl" id="mdl-confirm">
   <div class="mdl-box">
     <div class="mdl-icon" id="mdl-icon">❓</div>
@@ -1287,7 +1348,7 @@ function goTo(name) {
   document.getElementById('nav-'+name).classList.add('active');
   closeSidebar();
   if (name !== 'sessions' && _sessInterval) { clearInterval(_sessInterval); _sessInterval = null; }
-  const loaders = {courses:loadCourses, sessions:initSessions, students:loadStudents, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit};
+  const loaders = {courses:loadCourses, sessions:initSessions, students:loadStudents, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit, announcements:annLoad};
   if(loaders[name]) loaders[name]();
   if(name==='requests') renderReqTable();
 }
@@ -5144,6 +5205,191 @@ async function scDeleteFaq(id) {
     if (error) throw error;
     toast('🗑️ تم الحذف');
     scLoadFaq();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+// ════════════════════════════════════════
+//  ANNOUNCEMENTS MODULE
+// ════════════════════════════════════════
+let _annList = [];
+
+const ANN_TYPE = {
+  job:      { label:'وظيفة شاغرة', icon:'💼', cls:'si-blue' },
+  course:   { label:'كورس جديد',   icon:'📚', cls:'si-green' },
+  discount: { label:'عرض وخصم',    icon:'🏷️', cls:'si-gold' },
+  grant:    { label:'منحة دراسية', icon:'🎓', cls:'si-green' },
+  intern:   { label:'تدريب',       icon:'🧑‍💼', cls:'si-purple' },
+  news:     { label:'خبر عام',     icon:'📣', cls:'si-blue' },
+};
+const ANN_STATUS = {
+  open:   { label:'متاح',          dot:'🟢', color:'var(--green)' },
+  closed: { label:'انتهى التقديم', dot:'🔴', color:'var(--red)' },
+  soon:   { label:'قريباً',        dot:'🟡', color:'var(--gold)' },
+};
+
+async function annLoad() {
+  const list = document.getElementById('ann-list');
+  list.innerHTML = '<div class="skel" style="height:80px;margin-bottom:10px;border-radius:10px;"></div><div class="skel" style="height:80px;margin-bottom:10px;border-radius:10px;"></div>';
+  try {
+    const { data, error } = await sb.from('announcements').select('*').order('sort_order',{ascending:true}).order('created_at',{ascending:false});
+    if (error) throw error;
+    _annList = data || [];
+    annStats();
+    annRender();
+  } catch(e) {
+    list.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+  }
+}
+
+function annStats() {
+  const el = document.getElementById('ann-stats');
+  const total   = _annList.length;
+  const visible = _annList.filter(a => a.is_visible !== false).length;
+  const open    = _annList.filter(a => a.status === 'open').length;
+  const jobs    = _annList.filter(a => a.type === 'job').length;
+  el.innerHTML = `
+    <div class="stat-card"><div class="stat-icon si-blue">📢</div><div><div class="stat-num">${total}</div><div class="stat-label">إجمالي الإعلانات</div></div></div>
+    <div class="stat-card"><div class="stat-icon si-green">👁️</div><div><div class="stat-num">${visible}</div><div class="stat-label">ظاهر على الموقع</div></div></div>
+    <div class="stat-card"><div class="stat-icon si-gold">🟢</div><div><div class="stat-num">${open}</div><div class="stat-label">متاح الآن</div></div></div>
+    <div class="stat-card"><div class="stat-icon si-purple">💼</div><div><div class="stat-num">${jobs}</div><div class="stat-label">وظيفة شاغرة</div></div></div>`;
+}
+
+function annRender() {
+  const list   = document.getElementById('ann-list');
+  const fType  = document.getElementById('ann-filter-type')?.value || '';
+  const fStatus= document.getElementById('ann-filter-status')?.value || '';
+  let data = _annList;
+  if (fType)   data = data.filter(a => a.type === fType);
+  if (fStatus) data = data.filter(a => a.status === fStatus);
+
+  if (!data.length) {
+    list.innerHTML = '<div class="empty-box"><div class="ei">📭</div><div class="et">لا توجد إعلانات</div></div>';
+    return;
+  }
+  list.innerHTML = data.map(a => {
+    const tm = ANN_TYPE[a.type]   || { label: a.type, icon:'📌', cls:'si-blue' };
+    const sm = ANN_STATUS[a.status] || ANN_STATUS.open;
+    return `
+    <div style="display:flex;align-items:flex-start;gap:14px;padding:16px;border:1px solid var(--gray-mid);border-radius:12px;margin-bottom:10px;background:${a.is_visible===false?'#fffbea':'var(--white)'};transition:box-shadow .2s;" onmouseenter="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseleave="this.style.boxShadow='none'">
+      <div class="stat-icon ${tm.cls}" style="flex-shrink:0;">${tm.icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+          <span style="font-size:.95rem;font-weight:900;color:var(--dark);">${a.title}</span>
+          <span style="font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:50px;background:var(--gray-light);color:var(--gray);">${tm.label}</span>
+          <span style="font-size:.7rem;font-weight:700;color:${sm.color};">${sm.dot} ${sm.label}</span>
+          ${a.is_visible===false ? '<span style="font-size:.7rem;background:#FEF9C3;color:#854D0E;padding:3px 8px;border-radius:50px;font-weight:700;">مخفي</span>' : ''}
+        </div>
+        <div style="font-size:.82rem;color:var(--gray);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:500px;">${(a.description||'').substring(0,120)}${(a.description||'').length>120?'...':''}</div>
+        <div style="display:flex;gap:12px;font-size:.75rem;color:var(--gray);flex-wrap:wrap;">
+          ${a.salary   ? `<span>💰 ${a.salary}</span>` : ''}
+          ${a.location ? `<span>📍 ${a.location}</span>` : ''}
+          ${a.deadline ? `<span>⏰ ${new Date(a.deadline).toLocaleDateString('ar-EG')}</span>` : ''}
+          <span>📅 ${new Date(a.created_at).toLocaleDateString('ar-EG')}</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px;flex-shrink:0;">
+        <button class="btn-ed" onclick="annOpenEdit('${a.id}')">✏️ تعديل</button>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;font-weight:700;color:var(--gray);">
+          <input type="checkbox" ${a.is_visible!==false?'checked':''} onchange="annToggleVisible('${a.id}',this)" style="accent-color:var(--green);cursor:pointer;">
+          ظاهر
+        </label>
+        <button class="btn-rm" onclick="annDelete('${a.id}','${(a.title||'').replace(/'/g,'')}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function annOpenAdd() {
+  document.getElementById('mdl-ann-title').textContent = '➕ إضافة إعلان جديد';
+  document.getElementById('ann-id').value = '';
+  document.getElementById('ann-type').value = 'job';
+  document.getElementById('ann-status').value = 'open';
+  document.getElementById('ann-title-inp').value = '';
+  document.getElementById('ann-desc').value = '';
+  document.getElementById('ann-salary').value = '';
+  document.getElementById('ann-location').value = '';
+  document.getElementById('ann-deadline').value = '';
+  document.getElementById('ann-sort').value = (_annList.length + 1).toString();
+  document.getElementById('ann-img').value = '';
+  document.getElementById('ann-visible').checked = true;
+  document.getElementById('ann-mdl-msg').innerHTML = '';
+  openMdl('mdl-ann');
+}
+
+function annOpenEdit(id) {
+  const a = _annList.find(x => x.id == id);
+  if (!a) return;
+  document.getElementById('mdl-ann-title').textContent = '✏️ تعديل الإعلان';
+  document.getElementById('ann-id').value = a.id;
+  document.getElementById('ann-type').value = a.type || 'job';
+  document.getElementById('ann-status').value = a.status || 'open';
+  document.getElementById('ann-title-inp').value = a.title || '';
+  document.getElementById('ann-desc').value = a.description || '';
+  document.getElementById('ann-salary').value = a.salary || '';
+  document.getElementById('ann-location').value = a.location || '';
+  document.getElementById('ann-deadline').value = a.deadline ? a.deadline.substring(0,10) : '';
+  document.getElementById('ann-sort').value = a.sort_order || '';
+  document.getElementById('ann-img').value = a.image_url || '';
+  document.getElementById('ann-visible').checked = a.is_visible !== false;
+  document.getElementById('ann-mdl-msg').innerHTML = '';
+  openMdl('mdl-ann');
+}
+
+async function annSave() {
+  const msg = document.getElementById('ann-mdl-msg');
+  const id  = document.getElementById('ann-id').value;
+  const title = document.getElementById('ann-title-inp').value.trim();
+  const desc  = document.getElementById('ann-desc').value.trim();
+  if (!title) { msg.innerHTML = '<div class="msg-err">❌ أدخل عنوان الإعلان</div>'; return; }
+  if (!desc)  { msg.innerHTML = '<div class="msg-err">❌ أدخل وصف الإعلان</div>'; return; }
+
+  const payload = {
+    type:        document.getElementById('ann-type').value,
+    status:      document.getElementById('ann-status').value,
+    title,
+    description: desc,
+    salary:      document.getElementById('ann-salary').value.trim() || null,
+    location:    document.getElementById('ann-location').value.trim() || null,
+    deadline:    document.getElementById('ann-deadline').value || null,
+    sort_order:  parseInt(document.getElementById('ann-sort').value) || (_annList.length + 1),
+    image_url:   document.getElementById('ann-img').value.trim() || null,
+    is_visible:  document.getElementById('ann-visible').checked,
+    updated_at:  new Date().toISOString(),
+  };
+
+  msg.innerHTML = '<div style="color:var(--blue);font-size:.85rem;">⏳ جاري الحفظ...</div>';
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('announcements').update(payload).eq('id', id));
+    } else {
+      payload.created_at = new Date().toISOString();
+      ({ error } = await sb.from('announcements').insert(payload));
+    }
+    if (error) throw error;
+    closeMdl('mdl-ann');
+    toast('✅ تم حفظ الإعلان بنجاح');
+    annLoad();
+  } catch(e) {
+    msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+  }
+}
+
+async function annToggleVisible(id, chk) {
+  try {
+    await sb.from('announcements').update({ is_visible: chk.checked, updated_at: new Date().toISOString() }).eq('id', id);
+    toast(chk.checked ? '✅ الإعلان ظاهر الآن' : '🚫 تم إخفاء الإعلان');
+    annLoad();
+  } catch(e) { toast('❌ ' + e.message, 'err'); chk.checked = !chk.checked; }
+}
+
+async function annDelete(id, title) {
+  if (!confirm(`هل تريد حذف إعلان:\n"${title}"؟`)) return;
+  try {
+    const { error } = await sb.from('announcements').delete().eq('id', id);
+    if (error) throw error;
+    toast('🗑️ تم حذف الإعلان');
+    annLoad();
   } catch(e) { toast('❌ ' + e.message, 'err'); }
 }
 </script>
