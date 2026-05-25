@@ -120,13 +120,16 @@
     try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
   });
 
-  // ── CSS لزرار Hero (يُضاف مرة واحدة) ──
+  // ── CSS لزرار Hero والزرار العائم ──
   function injectStyles() {
     if (document.getElementById('pwa-styles')) return;
     var style = document.createElement('style');
     style.id = 'pwa-styles';
     style.textContent =
-      '@keyframes pwaSlideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}' +
+      '@keyframes pwaSlideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}' +
+      '@keyframes pwaPulse{0%,100%{box-shadow:0 8px 32px rgba(26,86,219,.45)}50%{box-shadow:0 8px 48px rgba(26,86,219,.75)}}' +
+
+      /* زرار Hero في الـ header */
       '#hero-install-btn{' +
         'display:none;' +
         'align-items:center;' +
@@ -143,7 +146,40 @@
         'transition:all .3s ease;' +
         'backdrop-filter:blur(4px);' +
       '}' +
-      '#hero-install-btn:hover{background:rgba(255,255,255,0.28);transform:translateY(-2px);}';
+      '#hero-install-btn:hover{background:rgba(255,255,255,0.28);transform:translateY(-2px);}' +
+
+      /* الزرار العائم فوق الواتساب */
+      '#pwa-float-btn{' +
+        'position:fixed;' +
+        'bottom:110px;' +          /* فوق زرار الواتساب */
+        'left:32px;' +
+        'z-index:9999;' +
+        'display:none;' +
+        'align-items:center;' +
+        'gap:10px;' +
+        'background:linear-gradient(135deg,#1342B0,#1A56DB);' +
+        'color:#fff;' +
+        'padding:12px 20px 12px 16px;' +
+        'border-radius:50px;' +
+        'box-shadow:0 8px 32px rgba(26,86,219,.45);' +
+        'text-decoration:none;' +
+        'font-family:Cairo,sans-serif;' +
+        'font-size:.92rem;' +
+        'font-weight:700;' +
+        'cursor:pointer;' +
+        'border:none;' +
+        'animation:pwaPulse 2.5s infinite;' +
+        'transition:all .3s;' +
+      '}' +
+      '#pwa-float-btn:hover{transform:translateY(-4px) scale(1.04);}' +
+      '#pwa-float-btn .pwa-float-icon{font-size:1.3rem;flex-shrink:0;}' +
+      '#pwa-float-btn .pwa-float-label{font-size:.7rem;opacity:.85;display:block;font-weight:400;}' +
+
+      /* موبايل */
+      '@media(max-width:640px){' +
+        '#pwa-float-btn{bottom:90px;left:16px;padding:10px 16px 10px 12px;font-size:.85rem;}' +
+        '#pwa-float-btn .pwa-float-label{display:none;}' +
+      '}';
     document.head.appendChild(style);
   }
 
@@ -154,65 +190,26 @@
     injectStyles();
   }
 
-  // ── بناء شريط التثبيت (Popup) ──
+  // ── الزرار العائم فوق الواتساب ──
   function showInstallBanner() {
-    if (installBanner) return;
+    if (document.getElementById('pwa-float-btn')) return;
 
-    installBanner = document.createElement('div');
-    installBanner.id = 'pwa-install-banner';
-    installBanner.innerHTML =
-      '<div style="display:flex;align-items:center;gap:12px;">' +
-        '<span style="font-size:1.6rem;">📱</span>' +
-        '<div>' +
-          '<div style="font-weight:700;font-size:.95rem;">أضف التطبيق للشاشة الرئيسية</div>' +
-          '<div style="font-size:.8rem;opacity:.85;margin-top:2px;">تجربة أفضل وأسرع بدون متصفح</div>' +
-        '</div>' +
-        '<button id="pwa-close-x" style="' +
-          'margin-right:auto;background:transparent;border:none;color:#fff;' +
-          'font-size:1.1rem;cursor:pointer;line-height:1;padding:4px 8px;opacity:.7;' +
-        '">✕</button>' +
-      '</div>' +
-      '<div style="display:flex;gap:8px;margin-top:12px;">' +
-        '<button id="pwa-install-btn" style="' +
-          'flex:1;padding:10px;background:#fff;color:#1A56DB;border:none;' +
-          'border-radius:8px;font-weight:700;font-size:.9rem;cursor:pointer;' +
-          'font-family:Cairo,sans-serif;display:flex;align-items:center;' +
-          'justify-content:center;gap:6px;' +
-        '">⬇️ تثبيت الآن</button>' +
-        '<button id="pwa-dismiss-btn" style="' +
-          'padding:10px 16px;background:rgba(255,255,255,.15);color:#fff;' +
-          'border:1px solid rgba(255,255,255,.35);border-radius:8px;' +
-          'font-size:.88rem;cursor:pointer;font-family:Cairo,sans-serif;' +
-        '">لاحقاً</button>' +
+    var btn = document.createElement('button');
+    btn.id = 'pwa-float-btn';
+    btn.innerHTML =
+      '<span class="pwa-float-icon">⬇️</span>' +
+      '<div class="wa-text" style="line-height:1.2;">' +
+        '<span class="pwa-float-label">نزّل التطبيق مجاناً</span>' +
+        'تثبيت التطبيق' +
       '</div>';
 
-    Object.assign(installBanner.style, {
-      position:     'fixed',
-      bottom:       '20px',
-      right:        '16px',
-      left:         '16px',
-      background:   'linear-gradient(135deg, #1342B0, #1A56DB)',
-      color:        '#fff',
-      padding:      '16px 18px',
-      borderRadius: '16px',
-      boxShadow:    '0 8px 40px rgba(26,86,219,0.45)',
-      zIndex:       '9999',
-      fontFamily:   'Cairo, sans-serif',
-      direction:    'rtl',
-      animation:    'pwaSlideUp .4s cubic-bezier(.34,1.56,.64,1)',
-    });
+    document.body.appendChild(btn);
 
-    document.body.appendChild(installBanner);
+    // إظهار بتأخير بسيط
+    setTimeout(function() { btn.style.display = 'flex'; }, 300);
 
-    document.getElementById('pwa-install-btn').addEventListener('click', triggerInstall);
-
-    function dismissBanner() {
-      hideInstallBanner();
-      try { localStorage.setItem(STORAGE_KEY, Date.now()); } catch(e) {}
-    }
-
-    document.getElementById('pwa-dismiss-btn').addEventListener('click', dismissBanner);
-    document.getElementById('pwa-close-x').addEventListener('click', dismissBanner);
+    btn.addEventListener('click', triggerInstall);
+    installBanner = btn;
   }
 
   function hideInstallBanner() {
