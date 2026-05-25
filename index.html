@@ -1342,6 +1342,71 @@ footer { background:var(--dark); padding:60px 5% 30px; }
 #testimonials .test-stars { color:#fbbf24; }
 #testimonials .rating-badge { background:linear-gradient(135deg,rgba(26,86,219,0.8),rgba(59,130,246,0.8)); box-shadow:0 8px 30px rgba(26,86,219,0.35); }
 
+/* ══ REVIEW SUBMIT FORM ══ */
+.review-submit-wrap {
+  position: relative; z-index: 1;
+  padding: 0 5% 64px;
+  background: #050810;
+}
+.review-submit-box {
+  max-width: 680px;
+  margin: 0 auto;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 36px;
+}
+.review-submit-title {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.review-submit-sub {
+  font-size: .84rem;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 24px;
+}
+.rsf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.rsf-field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+.rsf-field label { font-size: .82rem; font-weight: 700; color: rgba(255,255,255,0.7); }
+.rsf-field input,
+.rsf-field textarea {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 11px 14px;
+  color: #fff;
+  font-family: 'Cairo', sans-serif;
+  font-size: .9rem;
+  outline: none;
+  transition: border-color .2s;
+  resize: none;
+}
+.rsf-field input::placeholder,
+.rsf-field textarea::placeholder { color: rgba(255,255,255,0.3); }
+.rsf-field input:focus,
+.rsf-field textarea:focus { border-color: rgba(26,86,219,0.7); background: rgba(26,86,219,0.08); }
+/* Star rating */
+.rsf-stars { display: flex; flex-direction: row-reverse; gap: 6px; }
+.rsf-stars input { display: none; }
+.rsf-stars label {
+  font-size: 1.6rem;
+  color: rgba(255,255,255,0.2);
+  cursor: pointer;
+  transition: color .15s;
+}
+.rsf-stars input:checked ~ label,
+.rsf-stars label:hover,
+.rsf-stars label:hover ~ label { color: #fbbf24; }
+.rsf-msg { font-size: .85rem; font-weight: 700; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; display: none; }
+.rsf-msg.ok  { display:block; background: rgba(14,159,110,0.15); color: #6ee7b7; border: 1px solid rgba(14,159,110,0.3); }
+.rsf-msg.err { display:block; background: rgba(239,68,68,0.15);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+@media(max-width:640px) { .rsf-row { grid-template-columns:1fr; } .review-submit-box { padding:24px 18px; } }
+
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2253,6 +2318,44 @@ footer { background:var(--dark); padding:60px 5% 30px; }
       <div class="rating-badge">⭐ تقييم 4.9/5 من أكثر من <span style="color:var(--blue);margin-right:4px;">1000</span> طالب</div>
     </div>
   </div>
+
+  <!-- ═══ فورم إضافة رأي جديد ═══ -->
+  <div class="review-submit-wrap">
+    <div class="review-submit-box">
+      <div class="review-submit-title">✍️ شاركنا رأيك</div>
+      <p class="review-submit-sub">رأيك يساعدنا نتحسن — سيتم مراجعته قبل النشر</p>
+      <div class="rsf-row">
+        <div class="rsf-field">
+          <label>اسمك *</label>
+          <input type="text" id="rsf-name" placeholder="محمد أحمد" maxlength="60">
+        </div>
+        <div class="rsf-field">
+          <label>بياناتك (اختياري)</label>
+          <input type="text" id="rsf-info" placeholder="طالب ثانوي — رياضيات" maxlength="80">
+        </div>
+      </div>
+      <div class="rsf-field">
+        <label>تقييمك *</label>
+        <div class="rsf-stars">
+          <input type="radio" name="rsf-rating" id="rsf-r5" value="5"><label for="rsf-r5">★</label>
+          <input type="radio" name="rsf-rating" id="rsf-r4" value="4"><label for="rsf-r4">★</label>
+          <input type="radio" name="rsf-rating" id="rsf-r3" value="3"><label for="rsf-r3">★</label>
+          <input type="radio" name="rsf-rating" id="rsf-r2" value="2"><label for="rsf-r2">★</label>
+          <input type="radio" name="rsf-rating" id="rsf-r1" value="1"><label for="rsf-r1">★</label>
+        </div>
+      </div>
+      <div class="rsf-field">
+        <label>رأيك *</label>
+        <textarea id="rsf-text" rows="4" placeholder="اكتب تجربتك مع أكاديمية سليم..." maxlength="600"></textarea>
+      </div>
+      <div class="rsf-msg" id="rsf-msg"></div>
+      <button class="btn-primary" id="rsf-submit-btn"
+        style="width:100%;justify-content:center;border-radius:12px;padding:13px;"
+        onclick="submitReview()">
+        إرسال رأيك ←
+      </button>
+    </div>
+  </div>
 </section>
 
 <!-- CONTACT -->
@@ -2308,15 +2411,15 @@ footer { background:var(--dark); padding:60px 5% 30px; }
         <div class="cp-form-card">
           <div class="cp-field">
             <label>اسمك</label>
-            <input type="text" placeholder="اسم الطالب أو ولي الأمر">
+            <input type="text" id="cf-name" placeholder="اسم الطالب أو ولي الأمر">
           </div>
           <div class="cp-field">
             <label>رقم التليفون</label>
-            <input type="tel" placeholder="05xxxxxxxx">
+            <input type="tel" id="cf-phone" placeholder="05xxxxxxxx">
           </div>
           <div class="cp-field">
             <label>المادة اللي مهتم بيها</label>
-            <select>
+            <select id="cf-subject">
               <option value="">اختار</option>
               <option>رياضيات</option>
               <option>فيزياء</option>
@@ -2327,11 +2430,12 @@ footer { background:var(--dark); padding:60px 5% 30px; }
           </div>
           <div class="cp-field">
             <label>رسالتك</label>
-            <textarea rows="4" placeholder="اكتب سؤالك أو استفسارك هنا..."></textarea>
+            <textarea id="cf-message" rows="4" placeholder="اكتب سؤالك أو استفسارك هنا..."></textarea>
           </div>
-          <button class="btn-primary"
+          <div id="cf-msg" style="font-size:.85rem;font-weight:700;padding:10px 14px;border-radius:8px;margin-bottom:8px;display:none;"></div>
+          <button class="btn-primary" id="cf-submit-btn"
             style="width:100%;border-radius:10px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:700;font-size:.95rem;padding:13px;justify-content:center;"
-            onclick="this.textContent='✅ تم الإرسال! سيتواصل معك فريقنا قريباً';this.style.opacity='.75';this.disabled=true;">
+            onclick="submitContactForm()">
             إرسال الرسالة ←
           </button>
         </div>
@@ -3743,6 +3847,120 @@ function initTestimonialsSlider() {
 }
 
 document.addEventListener('DOMContentLoaded', initTestimonialsSlider);
+</script>
+<script>
+/* ══════════════════════════════════════════
+   SUBMIT REVIEW — يرسل الرأي لـ Supabase بحالة pending
+══════════════════════════════════════════ */
+async function submitReview() {
+  var name    = (document.getElementById('rsf-name')?.value || '').trim();
+  var info    = (document.getElementById('rsf-info')?.value || '').trim();
+  var text    = (document.getElementById('rsf-text')?.value || '').trim();
+  var ratingEl = document.querySelector('input[name="rsf-rating"]:checked');
+  var rating  = ratingEl ? parseInt(ratingEl.value) : 0;
+  var msg     = document.getElementById('rsf-msg');
+  var btn     = document.getElementById('rsf-submit-btn');
+
+  msg.className = 'rsf-msg';
+  msg.style.display = 'none';
+
+  if (!name)   { msg.textContent = '❌ من فضلك أدخل اسمك'; msg.className = 'rsf-msg err'; return; }
+  if (!rating) { msg.textContent = '❌ من فضلك اختار تقييمك بالنجوم'; msg.className = 'rsf-msg err'; return; }
+  if (!text)   { msg.textContent = '❌ من فضلك اكتب رأيك'; msg.className = 'rsf-msg err'; return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الإرسال...';
+
+  try {
+    var sb = window._sb;
+    var { error } = await sb.from('student_testimonials').insert({
+      student_name:  name,
+      student_title: info || null,
+      review_text:   text,
+      rating:        rating,
+      is_active:     false,
+      is_visible:    false,
+      status:        'pending',
+      created_at:    new Date().toISOString(),
+      updated_at:    new Date().toISOString()
+    });
+    if (error) throw error;
+    msg.textContent = '✅ شكراً! رأيك وصلنا وسيتم مراجعته قريباً.';
+    msg.className = 'rsf-msg ok';
+    document.getElementById('rsf-name').value = '';
+    document.getElementById('rsf-info').value = '';
+    document.getElementById('rsf-text').value = '';
+    if (ratingEl) ratingEl.checked = false;
+    btn.textContent = '✅ تم الإرسال';
+    btn.style.opacity = '.6';
+  } catch(e) {
+    msg.textContent = '❌ حدث خطأ: ' + e.message;
+    msg.className = 'rsf-msg err';
+    btn.disabled = false;
+    btn.textContent = 'إرسال رأيك ←';
+  }
+}
+
+/* ══════════════════════════════════════════
+   SUBMIT CONTACT FORM — يحفظ الرسالة في Supabase
+══════════════════════════════════════════ */
+async function submitContactForm() {
+  var name    = (document.getElementById('cf-name')?.value || '').trim();
+  var phone   = (document.getElementById('cf-phone')?.value || '').trim();
+  var subject = (document.getElementById('cf-subject')?.value || '').trim();
+  var message = (document.getElementById('cf-message')?.value || '').trim();
+  var msg     = document.getElementById('cf-msg');
+  var btn     = document.getElementById('cf-submit-btn');
+
+  msg.style.display = 'none';
+
+  if (!name)    { showCfMsg('❌ من فضلك أدخل اسمك', false); return; }
+  if (!phone)   { showCfMsg('❌ من فضلك أدخل رقم التليفون', false); return; }
+  if (!message) { showCfMsg('❌ من فضلك اكتب رسالتك', false); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الإرسال...';
+
+  try {
+    var sb = window._sb;
+    var { error } = await sb.from('contact_messages').insert({
+      sender_name:  name,
+      phone:        phone,
+      subject:      subject || null,
+      message:      message,
+      status:       'new',
+      created_at:   new Date().toISOString()
+    });
+    if (error) throw error;
+    showCfMsg('✅ وصلتنا رسالتك! سيتواصل معك فريقنا قريباً 🚀', true);
+    document.getElementById('cf-name').value = '';
+    document.getElementById('cf-phone').value = '';
+    document.getElementById('cf-subject').value = '';
+    document.getElementById('cf-message').value = '';
+    btn.textContent = '✅ تم الإرسال';
+    btn.style.opacity = '.6';
+  } catch(e) {
+    showCfMsg('❌ حدث خطأ: ' + e.message, false);
+    btn.disabled = false;
+    btn.textContent = 'إرسال الرسالة ←';
+  }
+}
+
+function showCfMsg(text, ok) {
+  var msg = document.getElementById('cf-msg');
+  if (!msg) return;
+  msg.textContent = text;
+  msg.style.display = 'block';
+  if (ok) {
+    msg.style.background = 'rgba(14,159,110,0.12)';
+    msg.style.color = '#065F46';
+    msg.style.border = '1px solid #6EE7B7';
+  } else {
+    msg.style.background = 'rgba(239,68,68,0.08)';
+    msg.style.color = '#991B1B';
+    msg.style.border = '1px solid #FECACA';
+  }
+}
 </script>
 <script src="pwa-register.js" defer></script>
 </body>

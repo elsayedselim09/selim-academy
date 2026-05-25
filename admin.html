@@ -545,7 +545,9 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       <button class="sc-tab" data-tab="sc-pricing"  onclick="scSwitchTab(this,'sc-pricing')">💰 الأسعار</button>
       <button class="sc-tab" data-tab="sc-booking"  onclick="scSwitchTab(this,'sc-booking')">📅 الحجز</button>
       <button class="sc-tab" data-tab="sc-reviews"  onclick="scSwitchTab(this,'sc-reviews')">⭐ آراء الطلاب</button>
+      <button class="sc-tab" data-tab="sc-pending-reviews" onclick="scSwitchTab(this,'sc-pending-reviews')">🕐 آراء معلقة<span class="nav-badge" id="pending-reviews-badge" style="display:none;background:var(--gold);color:#000;">0</span></button>
       <button class="sc-tab" data-tab="sc-contact"  onclick="scSwitchTab(this,'sc-contact')">📞 التواصل</button>
+      <button class="sc-tab" data-tab="sc-messages" onclick="scSwitchTab(this,'sc-messages')">✉️ رسائل العملاء<span class="nav-badge" id="new-messages-badge" style="display:none;">0</span></button>
       <button class="sc-tab" data-tab="sc-faq"      onclick="scSwitchTab(this,'sc-faq')">❓ الأسئلة الشائعة</button>
     </div>
 
@@ -657,6 +659,41 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
         </div>
         <div class="section-body">
           <div id="sc-contact-list" style="display:flex;flex-direction:column;gap:10px;">
+            <div class="sc-skeleton"></div><div class="sc-skeleton"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── TAB: آراء معلقة (Pending Reviews) ────────── -->
+    <div class="sc-pane" id="sc-pending-reviews">
+      <div class="section-card">
+        <div class="section-head">
+          <h3>🕐 آراء في انتظار المراجعة</h3>
+          <span style="font-size:.82rem;color:var(--gray);">الآراء اللي بعتها العملاء من الموقع — اعتمد أو ارفض</span>
+        </div>
+        <div class="section-body">
+          <div id="sc-pending-reviews-list" style="display:flex;flex-direction:column;gap:12px;">
+            <div class="sc-skeleton"></div><div class="sc-skeleton"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── TAB: رسائل العملاء ────────── -->
+    <div class="sc-pane" id="sc-messages">
+      <div class="section-card">
+        <div class="section-head">
+          <h3>✉️ استفسارات ورسائل العملاء</h3>
+          <button class="btn-refresh" onclick="scLoadMessages()">🔄 تحديث</button>
+        </div>
+        <div style="display:flex;gap:8px;padding:12px 20px;border-bottom:1px solid var(--gray-mid);background:var(--gray-light);flex-wrap:wrap;">
+          <button class="filter-btn active" onclick="scFilterMessages(this,'all')">الكل</button>
+          <button class="filter-btn" onclick="scFilterMessages(this,'new')">🆕 جديد</button>
+          <button class="filter-btn" onclick="scFilterMessages(this,'replied')">✅ تم الرد</button>
+        </div>
+        <div class="section-body">
+          <div id="sc-messages-list" style="display:flex;flex-direction:column;gap:12px;">
             <div class="sc-skeleton"></div><div class="sc-skeleton"></div>
           </div>
         </div>
@@ -851,6 +888,21 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   .sc-faq-item{background:var(--white);border:1px solid var(--gray-mid);border-radius:12px;padding:16px}
   .sc-faq-q{font-weight:900;color:var(--dark);margin-bottom:6px;font-size:.9rem}
   .sc-faq-a{font-size:.84rem;color:var(--gray);line-height:1.6}
+  /* PENDING REVIEW CARD */
+  .sc-pending-item{background:var(--white);border:1.5px solid #FCD34D;border-radius:12px;padding:16px;display:flex;align-items:flex-start;gap:14px;transition:box-shadow .2s}
+  .sc-pending-item:hover{box-shadow:0 4px 16px rgba(0,0,0,.07)}
+  .sc-pending-av{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#f97316);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem;font-weight:900;flex-shrink:0}
+  /* MESSAGE CARD */
+  .sc-msg-item{background:var(--white);border:1px solid var(--gray-mid);border-radius:12px;padding:18px;transition:box-shadow .2s}
+  .sc-msg-item:hover{box-shadow:0 4px 16px rgba(0,0,0,.07)}
+  .sc-msg-item.is-new{border-right:4px solid var(--blue)}
+  .sc-msg-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+  .sc-msg-name{font-weight:900;color:var(--dark);font-size:.95rem}
+  .sc-msg-phone{font-size:.8rem;color:var(--blue);font-weight:700;margin-top:2px}
+  .sc-msg-subject{display:inline-block;background:var(--blue-light);color:var(--blue);font-size:.73rem;font-weight:700;padding:3px 10px;border-radius:50px;margin-bottom:8px}
+  .sc-msg-text{font-size:.86rem;color:var(--dark);line-height:1.7;background:var(--gray-light);padding:12px 14px;border-radius:8px;margin-bottom:10px}
+  .sc-msg-date{font-size:.74rem;color:var(--gray)}
+  .sc-msg-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   </style>
 
   <div class="page" id="page-profile">
@@ -4519,12 +4571,14 @@ function scSwitchTab(btn, paneId) {
   btn.classList.add('active');
   document.getElementById(paneId).classList.add('active');
   // lazy load data for each tab
-  if (paneId === 'sc-teachers') scLoadTeachers();
-  if (paneId === 'sc-pricing')  scLoadPricing();
-  if (paneId === 'sc-booking')  scLoadBookingFields();
-  if (paneId === 'sc-reviews')  scLoadReviews();
-  if (paneId === 'sc-contact')  scLoadContact();
-  if (paneId === 'sc-faq')      scLoadFaq();
+  if (paneId === 'sc-teachers')       scLoadTeachers();
+  if (paneId === 'sc-pricing')        scLoadPricing();
+  if (paneId === 'sc-booking')        scLoadBookingFields();
+  if (paneId === 'sc-reviews')        scLoadReviews();
+  if (paneId === 'sc-pending-reviews') scLoadPendingReviews();
+  if (paneId === 'sc-contact')        scLoadContact();
+  if (paneId === 'sc-messages')       scLoadMessages();
+  if (paneId === 'sc-faq')            scLoadFaq();
 }
 
 // ── Init ──
@@ -4533,6 +4587,9 @@ async function scInit() {
   if (_scInited) return;
   _scInited = true;
   await Promise.all([scLoadTeachers(), scLoadPricing(), scLoadBookingFields(), scLoadReviews(), scLoadContact(), scLoadFaq()]);
+  // Load badge counts silently
+  scLoadPendingReviewsBadge();
+  scLoadNewMessagesBadge();
 }
 
 // ════════════════════════════
@@ -5392,6 +5449,194 @@ async function annDelete(id, title) {
     annLoad();
   } catch(e) { toast('❌ ' + e.message, 'err'); }
 }
+
+// ════════════════════════════════════════════════════
+//  PENDING REVIEWS — آراء العملاء في انتظار المراجعة
+// ════════════════════════════════════════════════════
+let _pendingReviews = [];
+let _messagesFilter = 'all';
+
+async function scLoadPendingReviewsBadge() {
+  try {
+    const { count } = await sb.from('student_testimonials')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending');
+    const badge = document.getElementById('pending-reviews-badge');
+    if (badge) {
+      if (count > 0) { badge.textContent = count; badge.style.display = 'inline-flex'; }
+      else badge.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+async function scLoadPendingReviews() {
+  const cont = document.getElementById('sc-pending-reviews-list');
+  cont.innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
+  try {
+    const { data, error } = await sb.from('student_testimonials')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    _pendingReviews = data || [];
+    scRenderPendingReviews();
+    scLoadPendingReviewsBadge();
+  } catch(e) {
+    cont.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+  }
+}
+
+function scRenderPendingReviews() {
+  const cont = document.getElementById('sc-pending-reviews-list');
+  if (!_pendingReviews.length) {
+    cont.innerHTML = '<div class="empty-box"><div class="ei">🎉</div><div class="et">لا توجد آراء معلقة</div><div class="ed">كل الآراء تمت مراجعتها</div></div>';
+    return;
+  }
+  cont.innerHTML = _pendingReviews.map(r => {
+    const stars = '★'.repeat(r.rating || 5) + '☆'.repeat(5 - (r.rating || 5));
+    const initials = (r.student_name || '؟').substring(0, 2);
+    const date = r.created_at ? new Date(r.created_at).toLocaleDateString('ar-EG') : '';
+    return `
+    <div class="sc-pending-item" id="pr-${r.id}">
+      <div class="sc-pending-av">${initials}</div>
+      <div class="sc-review-body" style="flex:1;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+          <span class="sc-review-name">${r.student_name || '—'}</span>
+          <span style="font-size:.74rem;color:var(--gray);">${r.student_title || ''}</span>
+          <span style="font-size:.73rem;color:var(--gray);margin-right:auto;">${date}</span>
+        </div>
+        <div class="sc-review-stars">${stars}</div>
+        <div class="sc-review-text" style="margin-top:6px;">"${r.review_text || ''}"</div>
+      </div>
+      <div class="sc-review-acts">
+        <button class="btn-ok" onclick="scApprovePendingReview('${r.id}')">✅ نشر</button>
+        <button class="btn-no" onclick="scRejectPendingReview('${r.id}')">🗑️ رفض</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function scApprovePendingReview(id) {
+  try {
+    const { error } = await sb.from('student_testimonials')
+      .update({ status: 'approved', is_active: true, is_visible: true, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+    toast('✅ تم نشر الرأي على الموقع');
+    scLoadPendingReviews();
+    scLoadReviews();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+async function scRejectPendingReview(id) {
+  if (!confirm('هل تريد رفض وحذف هذا الرأي؟')) return;
+  try {
+    const { error } = await sb.from('student_testimonials').delete().eq('id', id);
+    if (error) throw error;
+    toast('🗑️ تم رفض الرأي وحذفه');
+    scLoadPendingReviews();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+// ════════════════════════════════════════════════════
+//  CONTACT MESSAGES — رسائل واستفسارات العملاء
+// ════════════════════════════════════════════════════
+let _messages = [];
+
+async function scLoadNewMessagesBadge() {
+  try {
+    const { count } = await sb.from('contact_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'new');
+    const badge = document.getElementById('new-messages-badge');
+    if (badge) {
+      if (count > 0) { badge.textContent = count; badge.style.display = 'inline-flex'; }
+      else badge.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+async function scLoadMessages() {
+  const cont = document.getElementById('sc-messages-list');
+  cont.innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
+  try {
+    let query = sb.from('contact_messages').select('*').order('created_at', { ascending: false });
+    if (_messagesFilter === 'new')     query = query.eq('status', 'new');
+    if (_messagesFilter === 'replied') query = query.eq('status', 'replied');
+    const { data, error } = await query;
+    if (error) throw error;
+    _messages = data || [];
+    scRenderMessages();
+    scLoadNewMessagesBadge();
+  } catch(e) {
+    cont.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+  }
+}
+
+function scFilterMessages(btn, filter) {
+  _messagesFilter = filter;
+  document.querySelectorAll('#sc-messages .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  scLoadMessages();
+}
+
+function scRenderMessages() {
+  const cont = document.getElementById('sc-messages-list');
+  if (!_messages.length) {
+    cont.innerHTML = '<div class="empty-box"><div class="ei">📭</div><div class="et">لا توجد رسائل</div></div>';
+    return;
+  }
+  cont.innerHTML = _messages.map(m => {
+    const date = m.created_at ? new Date(m.created_at).toLocaleString('ar-EG') : '';
+    const isNew = m.status === 'new';
+    const statusBadge = isNew
+      ? '<span class="badge b-pending">🆕 جديد</span>'
+      : '<span class="badge b-approved">✅ تم الرد</span>';
+    return `
+    <div class="sc-msg-item ${isNew ? 'is-new' : ''}" id="msg-${m.id}">
+      <div class="sc-msg-header">
+        <div>
+          <div class="sc-msg-name">👤 ${m.sender_name || '—'}</div>
+          <div class="sc-msg-phone">📞 ${m.phone || '—'}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          ${statusBadge}
+          <span class="sc-msg-date">${date}</span>
+        </div>
+      </div>
+      ${m.subject ? `<span class="sc-msg-subject">📚 ${m.subject}</span>` : ''}
+      <div class="sc-msg-text">${m.message || ''}</div>
+      <div class="sc-msg-acts">
+        ${m.phone ? `<a href="https://wa.me/${m.phone.replace(/[^0-9]/g,'')}" target="_blank" class="btn-ok" style="text-decoration:none;">💬 رد على واتساب</a>` : ''}
+        ${m.phone ? `<a href="tel:${m.phone}" class="btn-ed" style="text-decoration:none;">📞 اتصل</a>` : ''}
+        ${isNew ? `<button class="btn-pr" style="background:var(--green-light);color:var(--green);border:1px solid #6EE7B7;cursor:pointer;" onclick="scMarkMessageReplied('${m.id}')">✅ تم الرد</button>` : ''}
+        <button class="btn-rm" onclick="scDeleteMessage('${m.id}')">🗑️ حذف</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function scMarkMessageReplied(id) {
+  try {
+    const { error } = await sb.from('contact_messages')
+      .update({ status: 'replied', replied_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+    toast('✅ تم تحديد الرسالة كـ "تم الرد"');
+    scLoadMessages();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+async function scDeleteMessage(id) {
+  if (!confirm('هل تريد حذف هذه الرسالة نهائياً؟')) return;
+  try {
+    const { error } = await sb.from('contact_messages').delete().eq('id', id);
+    if (error) throw error;
+    toast('🗑️ تم حذف الرسالة');
+    scLoadMessages();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
 </script>
 </body>
 </html>
