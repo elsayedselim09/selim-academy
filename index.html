@@ -1021,7 +1021,11 @@ footer { background:var(--dark); padding:60px 5% 30px; }
   .stat-item:nth-last-child(-n+2) { border-bottom:none; }
   section { padding:52px 4%; }
   .teachers-grid { grid-template-columns:repeat(2,1fr); gap:14px; }
-  .stages-grid { grid-template-columns:1fr; gap:18px; }
+  .stages-grid { display:flex; flex-wrap:nowrap; overflow-x:auto; gap:16px; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding-bottom:12px; }
+  .stages-grid::-webkit-scrollbar { height:4px; }
+  .stages-grid::-webkit-scrollbar-track { background:rgba(0,0,0,.05); border-radius:4px; }
+  .stages-grid::-webkit-scrollbar-thumb { background:var(--blue); border-radius:4px; }
+  .stage-card { flex:0 0 80vw; max-width:300px; scroll-snap-align:start; }
   .courses-grid { grid-template-columns:1fr; }
   .contact-grid { grid-template-columns:1fr; gap:24px; }
   .cta-inner { grid-template-columns:1fr; }
@@ -1037,7 +1041,11 @@ footer { background:var(--dark); padding:60px 5% 30px; }
   .wa-float { bottom:20px; left:16px; padding:10px 16px 10px 12px; font-size:.85rem; }
   .wa-float .wa-label { display:none; }
   .scroll-top { bottom:20px; right:16px; }
-  .method-grid { grid-template-columns:1fr 1fr; }
+  .method-grid { display:flex; flex-wrap:nowrap; overflow-x:auto; gap:16px; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding-bottom:12px; }
+  .method-grid::-webkit-scrollbar { height:4px; }
+  .method-grid::-webkit-scrollbar-track { background:rgba(0,0,0,.05); border-radius:4px; }
+  .method-grid::-webkit-scrollbar-thumb { background:var(--blue); border-radius:4px; }
+  .method-card { flex:0 0 78vw; max-width:300px; scroll-snap-align:start; }
   /* Storyboard mobile */
   .sb-panel { grid-template-columns:1fr; min-height:auto; }
   .sb-panel-img { height:55vw; }
@@ -1051,7 +1059,6 @@ footer { background:var(--dark); padding:60px 5% 30px; }
 }
 @media (max-width:480px) {
   .teachers-grid { grid-template-columns:1fr; }
-  .method-grid { grid-template-columns:1fr; }
   .footer-top { grid-template-columns:1fr; }
   .pricing-cards { max-width:100%; }
   .stage-card { padding:24px 18px; }
