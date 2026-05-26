@@ -1040,59 +1040,56 @@ async function handleLogin() {
   // ── ليس إيميل → ابحث برقم الطالب أو الهاتف ──
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id)) {
 
-    var lookupCol  = '';
-    var lookupVal  = id;
+    var isStudentNum = /^\d{6,}$/.test(id);
+    var isPhone      = /^[\d\s\+\-]{7,}$/.test(id);
 
-    // رقم الطالب: أرقام فقط وطولها ≥ 6
-    if (/^\d{6,}$/.test(id)) {
-      lookupCol = 'student_number';
-      lookupVal = id; // نبعته كـ string والـ Supabase يتعامل معه
-    }
-    // رقم هاتف
-    else if (/^[\d\s\+\-]{7,}$/.test(id)) {
-      lookupCol = 'phone';
-    }
-    else {
+    if (!isStudentNum && !isPhone) {
       btn.classList.remove('loading'); btn.disabled = false;
       showAlert('login-alert','login-alert-msg','من فضلك أدخل بريد إلكتروني صحيح أو رقم الطالب أو الهاتف');
       return;
     }
 
-    // جلب الـ profile بالرقم
-    var { data: profileData, error: profileErr } = await _sb
-      .from('profiles')
-      .select('id, email')
-      .eq(lookupCol, lookupVal)
-      .maybeSingle();
+    var profileData = null;
 
-    // لو ما لاقيناش بالـ string — جرب parseInt (لو رقم طالب)
-    if ((!profileData || profileErr) && lookupCol === 'student_number') {
-      var numericVal = parseInt(id, 10);
-      var { data: profileData2, error: profileErr2 } = await _sb
+    if (isStudentNum) {
+      // الرقم محفوظ كـ text في الداتابيز → نجلب الكل ونقارن كـ string
+      var { data: allStudents, error: stuErr } = await _sb
+        .from('profiles')
+        .select('id, email, student_number')
+        .eq('role', 'student')
+        .not('student_number', 'is', null);
+
+      if (!stuErr && allStudents) {
+        var found = allStudents.find(function(s) {
+          return String(s.student_number) === String(id);
+        });
+        if (found) profileData = found;
+      }
+
+      if (!profileData) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        showAlert('login-alert','login-alert-msg','رقم الطالب غير موجود، تحقق من الرقم أو سجّل دخولك بالبريد الإلكتروني');
+        return;
+      }
+    } else {
+      // بحث بالهاتف
+      var { data: phoneProfile, error: phoneErr } = await _sb
         .from('profiles')
         .select('id, email')
-        .eq('student_number', numericVal)
+        .eq('phone', id.trim())
         .maybeSingle();
-      if (!profileErr2 && profileData2) {
-        profileData = profileData2;
-        profileErr  = null;
+
+      if (phoneErr || !phoneProfile) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        showAlert('login-alert','login-alert-msg','رقم الهاتف غير مسجل، تحقق من الرقم أو سجّل دخولك بالبريد الإلكتروني');
+        return;
       }
+      profileData = phoneProfile;
     }
 
-    // لو لقينا الـ profile لكن الإيميل فاضي → اجلبه من auth عبر الـ id
-    if (!profileErr && profileData && !profileData.email) {
-      // نجرب نجيب الإيميل عبر RPC أو admin — fallback: نطلب من المستخدم الإيميل
+    if (!profileData || !profileData.email) {
       btn.classList.remove('loading'); btn.disabled = false;
-      showAlert('login-alert','login-alert-msg','تم العثور على حسابك — من فضلك سجّل الدخول بالبريد الإلكتروني مرة واحدة ثم يمكنك استخدام رقمك');
-      return;
-    }
-
-    if (profileErr || !profileData || !profileData.email) {
-      btn.classList.remove('loading'); btn.disabled = false;
-      var notFoundMsg = lookupCol === 'student_number'
-        ? 'رقم الطالب غير موجود، تحقق من الرقم أو سجّل دخولك بالبريد الإلكتروني'
-        : 'رقم الهاتف غير مسجل، تحقق من الرقم أو سجّل دخولك بالبريد الإلكتروني';
-      showAlert('login-alert','login-alert-msg', notFoundMsg);
+      showAlert('login-alert','login-alert-msg','تم العثور على الحساب لكن البريد الإلكتروني غير مسجل — من فضلك سجّل الدخول بالبريد الإلكتروني مرة واحدة أولاً');
       return;
     }
 
