@@ -527,6 +527,15 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <p class="page-sub">جميع الطلاب المسجلين في المنصة — يمكنك إضافة اشتراك يدوياً لأي طالب تواصل معك على واتساب</p>
     <div class="section-card">
       <div class="section-head"><h3>قائمة الطلاب</h3><span id="stu-count" style="font-size:.82rem;color:var(--gray)"></span></div>
+      <div style="padding:12px 16px 0">
+        <div style="position:relative;max-width:420px">
+          <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:1rem;pointer-events:none">🔍</span>
+          <input id="stu-search" type="text" placeholder="ابحث بالاسم أو رقم الطالب أو الهاتف..."
+            oninput="filterStudents(this.value)"
+            style="width:100%;padding:9px 38px 9px 14px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;transition:border .2s;background:#fff"
+            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--gray-mid)'">
+        </div>
+      </div>
       <div id="stu-body"></div>
     </div>
   </div>
@@ -2303,9 +2312,26 @@ async function loadStudents() {
   const el = document.getElementById('stu-body');
   el.innerHTML = '<div style="padding:20px"><div class="skel" style="height:46px;margin-bottom:10px"></div><div class="skel" style="height:46px;margin-bottom:10px"></div><div class="skel" style="height:46px"></div></div>';
   try {
-    const {data,error} = await sb.from('profiles').select('id,full_name,phone,avatar_url,created_at,bio').eq('role','student').order('created_at',{ascending:false});
+    const {data,error} = await sb.from('profiles').select('id,full_name,phone,avatar_url,created_at,bio,student_number').eq('role','student').order('created_at',{ascending:false});
     if(error) throw error;
     S.students = data || [];
+
+    // ── توليد student_number للطلاب الذين ليس لديهم رقم بعد ──
+    const withoutNum = S.students.filter(s => !s.student_number);
+    if(withoutNum.length) {
+      // نجيب آخر رقم موجود في الداتابيز
+      const {data: maxRow} = await sb.from('profiles').select('student_number').eq('role','student').not('student_number','is',null).order('student_number',{ascending:false}).limit(1);
+      let lastNum = (maxRow && maxRow.length && maxRow[0].student_number) ? parseInt(String(maxRow[0].student_number).slice(4)) : 0;
+      // نرتبهم من الأقدم للأحدث عشان نديهم أرقام بالترتيب
+      const sorted = [...withoutNum].sort((a,b) => new Date(a.created_at)-new Date(b.created_at));
+      for(const s of sorted) {
+        lastNum++;
+        const year = new Date(s.created_at).getFullYear();
+        s.student_number = parseInt(String(year) + String(lastNum));
+        await sb.from('profiles').update({student_number: s.student_number}).eq('id',s.id);
+      }
+    }
+
     document.getElementById('stu-count').textContent = 'إجمالي: ' + S.students.length + ' طالب';
 
     // عدد طلبات الاشتراك لكل طالب
@@ -2335,45 +2361,73 @@ async function loadStudents() {
       });
     }
 
-    el.innerHTML = `<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>الطالب</th><th>الهاتف</th><th>طلبات الاشتراك</th><th>تاريخ التسجيل</th><th>الإجراء</th></tr></thead><tbody>
-    ${S.students.map((s,i) => {
-      const approvedReqs = approvedReqMap[s.id] || [];
-      // أول طلب مقبول بدون معلم أو أي طلب مقبول
-      const firstReq = approvedReqs.find(r => !r.assigned_teacher_id) || approvedReqs[0];
-      return `
-      <tr>
-        <td style="color:var(--gray);font-size:.78rem" onclick="openStudentDetail('${s.id}')" style="cursor:pointer">${i+1}</td>
-        <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
-          <div class="u-info">
-            <div class="u-av">${s.avatar_url ? `<img src="${s.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : ini(s.full_name)}</div>
-            <div>
-              <div class="u-name">${s.full_name||'—'}</div>
-              <div class="u-sub">📧 ${s.id.slice(0,8)}…</div>
-            </div>
-          </div>
-        </td>
-        <td style="font-size:.84rem" onclick="openStudentDetail('${s.id}')" style="cursor:pointer">${s.phone||'—'}</td>
-        <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
-          ${(rm[s.id]||[]).length === 0
-            ? '<span class="badge b-gray">لا يوجد</span>'
-            : `<span class="badge b-blue">📤 ${(rm[s.id]||[]).length} طلب</span>`
-          }
-          ${(rm[s.id]||[]).includes('approved') ? '<span class="badge b-approved" style="margin-right:4px">✅ مقبول</span>' : ''}
-        </td>
-        <td style="font-size:.76rem;color:var(--gray)" onclick="openStudentDetail('${s.id}')" style="cursor:pointer">${fds(s.created_at)}</td>
-        <td>
-          <div class="acts">
-            ${firstReq
-              ? `<button class="btn-assign" onclick="event.stopPropagation();openAssignTeacher('${firstReq.id}','${s.id}','${(firstReq.subject||'').replace(/'/g,'')}')">👨‍🏫 ${firstReq.assigned_teacher_id ? 'تغيير معلم' : 'تعيين معلم'}</button>`
-              : `<span class="badge b-gray" style="font-size:.7rem">لا طلبات مقبولة</span>`
-            }
-            <button class="btn-rm" onclick="event.stopPropagation();openDeleteStudent('${s.id}','${(s.full_name||'').replace(/'/g,"\\'")}')">🗑️ حذف</button>
-          </div>
-        </td>
-      </tr>`;
-    }).join('')}
-    </tbody></table></div>`;
+    // حفظ بيانات العرض عشان نستخدمها في الفلتر
+    S._studentsRm = rm;
+    S._studentsApprovedReqMap = approvedReqMap;
+
+    renderStudentsTable(S.students, rm, approvedReqMap);
   } catch(e) { toast('فشل تحميل الطلاب: '+e.message,'err'); }
+}
+
+function renderStudentsTable(students, rm, approvedReqMap) {
+  const el = document.getElementById('stu-body');
+  if(!students.length) {
+    el.innerHTML = `<div class="empty-box"><div class="ei">🔍</div><div class="et">لا توجد نتائج مطابقة</div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>رقم الطالب</th><th>الطالب</th><th>الهاتف</th><th>طلبات الاشتراك</th><th>تاريخ التسجيل</th><th>الإجراء</th></tr></thead><tbody>
+  ${students.map((s,i) => {
+    const approvedReqs = (approvedReqMap||{})[s.id] || [];
+    const firstReq = approvedReqs.find(r => !r.assigned_teacher_id) || approvedReqs[0];
+    return `
+    <tr>
+      <td style="color:var(--gray);font-size:.78rem;cursor:pointer" onclick="openStudentDetail('${s.id}')">${i+1}</td>
+      <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
+        <span style="display:inline-block;background:var(--blue-light);color:var(--blue);font-weight:700;font-size:.8rem;padding:3px 10px;border-radius:20px;letter-spacing:.5px">${s.student_number||'—'}</span>
+      </td>
+      <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
+        <div class="u-info">
+          <div class="u-av">${s.avatar_url ? `<img src="${s.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : ini(s.full_name)}</div>
+          <div>
+            <div class="u-name">${s.full_name||'—'}</div>
+            <div class="u-sub">📧 ${s.id.slice(0,8)}…</div>
+          </div>
+        </div>
+      </td>
+      <td style="font-size:.84rem;cursor:pointer" onclick="openStudentDetail('${s.id}')">${s.phone||'—'}</td>
+      <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
+        ${((rm||{})[s.id]||[]).length === 0
+          ? '<span class="badge b-gray">لا يوجد</span>'
+          : `<span class="badge b-blue">📤 ${((rm||{})[s.id]||[]).length} طلب</span>`
+        }
+        ${((rm||{})[s.id]||[]).includes('approved') ? '<span class="badge b-approved" style="margin-right:4px">✅ مقبول</span>' : ''}
+      </td>
+      <td style="font-size:.76rem;color:var(--gray);cursor:pointer" onclick="openStudentDetail('${s.id}')">${fds(s.created_at)}</td>
+      <td>
+        <div class="acts">
+          ${firstReq
+            ? `<button class="btn-assign" onclick="event.stopPropagation();openAssignTeacher('${firstReq.id}','${s.id}','${(firstReq.subject||'').replace(/'/g,'')}')">👨‍🏫 ${firstReq.assigned_teacher_id ? 'تغيير معلم' : 'تعيين معلم'}</button>`
+            : `<span class="badge b-gray" style="font-size:.7rem">لا طلبات مقبولة</span>`
+          }
+          <button class="btn-rm" onclick="event.stopPropagation();openDeleteStudent('${s.id}','${(s.full_name||'').replace(/'/g,"\\'")}')">🗑️ حذف</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('')}
+  </tbody></table></div>`;
+}
+
+function filterStudents(q) {
+  const term = (q||'').trim().toLowerCase();
+  const rm = S._studentsRm || {};
+  const approvedReqMap = S._studentsApprovedReqMap || {};
+  if(!term) { renderStudentsTable(S.students, rm, approvedReqMap); return; }
+  const filtered = S.students.filter(s =>
+    (s.full_name||'').toLowerCase().includes(term) ||
+    String(s.student_number||'').includes(term) ||
+    (s.phone||'').replace(/\s/g,'').includes(term.replace(/\s/g,''))
+  );
+  renderStudentsTable(filtered, rm, approvedReqMap);
 }
 
 async function openStudentDetail(studentId) {
@@ -2413,6 +2467,7 @@ async function openStudentDetail(studentId) {
       </div>
       <div class="t-mdl-name">${s.full_name || '—'}</div>
       <div class="t-mdl-spec">🎓 طالب</div>
+      ${s.student_number ? `<div style="margin-top:6px"><span style="display:inline-block;background:var(--blue-light);color:var(--blue);font-weight:700;font-size:.85rem;padding:4px 14px;border-radius:20px;letter-spacing:.5px">🪪 رقم الطالب: ${s.student_number}</span></div>` : ''}
     </div>
 
     <div class="admin-page-tabs">
@@ -4555,6 +4610,18 @@ async function confirmDeleteStudent() {
     btn.disabled = false;
     btn.textContent = '🗑️ حذف نهائياً';
   }
+}
+
+// ── توليد رقم طالب جديد (يُستدعى عند إنشاء حساب جديد) ──
+async function generateStudentNumber(userId, createdAt) {
+  try {
+    const year = new Date(createdAt || Date.now()).getFullYear();
+    const {data: maxRow} = await sb.from('profiles').select('student_number').eq('role','student').not('student_number','is',null).order('student_number',{ascending:false}).limit(1);
+    let lastSeq = (maxRow && maxRow.length && maxRow[0].student_number) ? parseInt(String(maxRow[0].student_number).slice(4)) : 0;
+    const newNum = parseInt(String(year) + String(lastSeq + 1));
+    await sb.from('profiles').update({student_number: newNum}).eq('id', userId);
+    return newNum;
+  } catch(e) { console.warn('generateStudentNumber error', e); return null; }
 }
 
 // ══════════════════════════════════════════════════════════════════
