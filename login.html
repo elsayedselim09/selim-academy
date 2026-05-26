@@ -520,14 +520,14 @@ body {
         <span id="login-alert-msg">البريد الإلكتروني أو كلمة المرور غير صحيحة</span>
       </div>
 
-      <!-- Email / Phone -->
+      <!-- Email / Phone / Student Number -->
       <div class="form-group">
-        <label>البريد الإلكتروني أو رقم الهاتف <span class="req">*</span></label>
+        <label>البريد الإلكتروني أو رقم الطالب أو الهاتف <span class="req">*</span></label>
         <div class="input-wrap">
           <span class="input-icon">✉️</span>
-          <input type="text" id="login-identifier" placeholder="example@email.com أو 05xxxxxxxx" autocomplete="username">
+          <input type="text" id="login-identifier" placeholder="example@email.com أو 202601 أو 05xxxxxxxx" autocomplete="username">
         </div>
-        <div class="field-error" id="err-login-identifier">من فضلك أدخل البريد الإلكتروني أو رقم الهاتف</div>
+        <div class="field-error" id="err-login-identifier">من فضلك أدخل البريد الإلكتروني أو رقم الطالب أو الهاتف</div>
       </div>
 
       <!-- Password -->
@@ -1037,21 +1037,43 @@ async function handleLogin() {
 
   var email = id;
 
+  // ── ليس إيميل → ابحث برقم الطالب أو الهاتف ──
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id)) {
-    var { data: profileData, error: profileErr } = await _sb
-      .from('profiles')
-      .select('id, phone')
-      .eq('phone', id)
-      .single();
 
-    if (profileErr || !profileData) {
+    var lookupCol  = '';
+    var lookupVal  = id;
+
+    // رقم الطالب: أرقام فقط تبدأ بـ 4 أرقام (السنة) وطولها ≥ 6
+    if (/^\d{6,}$/.test(id)) {
+      lookupCol = 'student_number';
+      lookupVal = parseInt(id);
+    }
+    // رقم هاتف
+    else if (/^[\d\s\+\-]{7,}$/.test(id)) {
+      lookupCol = 'phone';
+    }
+    else {
       btn.classList.remove('loading'); btn.disabled = false;
-      showAlert('login-alert','login-alert-msg','رقم الهاتف غير مسجل');
+      showAlert('login-alert','login-alert-msg','من فضلك أدخل بريد إلكتروني صحيح أو رقم الطالب أو الهاتف');
       return;
     }
-    btn.classList.remove('loading'); btn.disabled = false;
-    showAlert('login-alert','login-alert-msg','من فضلك استخدم البريد الإلكتروني لتسجيل الدخول');
-    return;
+
+    var { data: profileData, error: profileErr } = await _sb
+      .from('profiles')
+      .select('id, email')
+      .eq(lookupCol, lookupVal)
+      .maybeSingle();
+
+    if (profileErr || !profileData || !profileData.email) {
+      btn.classList.remove('loading'); btn.disabled = false;
+      var notFoundMsg = lookupCol === 'student_number'
+        ? 'رقم الطالب غير موجود، تحقق من الرقم أو سجّل دخولك بالبريد الإلكتروني'
+        : 'رقم الهاتف غير مسجل، تحقق من الرقم أو سجّل دخولك بالبريد الإلكتروني';
+      showAlert('login-alert','login-alert-msg', notFoundMsg);
+      return;
+    }
+
+    email = profileData.email;
   }
 
   var { data, error } = await _sb.auth.signInWithPassword({
@@ -1336,6 +1358,25 @@ async function handleRegister() {
       if(stream)     profilePayload.grade_stream = stream;
     }
     await _sb.from('profiles').upsert(profilePayload);
+
+    // ── توليد رقم الطالب تلقائياً عند التسجيل ──
+    if (role === 'student' && data.user) {
+      try {
+        var year = new Date().getFullYear();
+        var { data: maxRow } = await _sb
+          .from('profiles')
+          .select('student_number')
+          .eq('role','student')
+          .not('student_number','is',null)
+          .order('student_number',{ascending:false})
+          .limit(1);
+        var lastSeq = (maxRow && maxRow.length && maxRow[0].student_number)
+          ? parseInt(String(maxRow[0].student_number).slice(4))
+          : 0;
+        var newNum = parseInt(String(year) + String(lastSeq + 1));
+        await _sb.from('profiles').update({ student_number: newNum }).eq('id', data.user.id);
+      } catch(numErr) { console.warn('student_number gen error', numErr); }
+    }
   }
 
   // ── Step 4: تسجيل الدخول تلقائياً فوراً بعد إنشاء الحساب ──
