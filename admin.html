@@ -2380,20 +2380,19 @@ function renderStudentsTable(students, rm, approvedReqMap) {
     el.innerHTML = `<div class="empty-box"><div class="ei">🔍</div><div class="et">لا توجد نتائج مطابقة</div></div>`;
     return;
   }
-  el.innerHTML = `<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>رقم الطالب</th><th>الترتيب</th><th>الطالب</th><th>الهاتف</th><th>طلبات الاشتراك</th><th>تاريخ التسجيل</th><th>الإجراء</th></tr></thead><tbody>
+  el.innerHTML = `<div class="tbl-wrap"><table class="data-table"><thead><tr><th>الترتيب</th><th>رقم الطالب</th><th>الطالب</th><th>الهاتف</th><th>طلبات الاشتراك</th><th>تاريخ التسجيل</th><th>الإجراء</th></tr></thead><tbody>
   ${students.map((s,i) => {
     const approvedReqs = (approvedReqMap||{})[s.id] || [];
     const firstReq = approvedReqs.find(r => !r.assigned_teacher_id) || approvedReqs[0];
-    // ترتيب تنازلي: الأعلى في القائمة (أحدث طالب) = 1
-    const rowOrder = i + 1;
+    // الترتيب: أقدم طالب = 1، أحدث طالب = أكبر رقم
+    const rowOrder = students.length - i;
     return `
     <tr>
-      <td style="color:var(--gray);font-size:.78rem;cursor:pointer" onclick="openStudentDetail('${s.id}')">${students.length - i}</td>
-      <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
-        <span style="display:inline-block;background:var(--blue-light);color:var(--blue);font-weight:700;font-size:.8rem;padding:3px 10px;border-radius:20px;letter-spacing:.5px">${s.student_number||'—'}</span>
-      </td>
       <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer;text-align:center">
         <span style="display:inline-block;background:var(--purple-light);color:var(--purple);font-weight:900;font-size:.82rem;padding:3px 10px;border-radius:8px;border:1px solid #DDD6FE">${rowOrder}</span>
+      </td>
+      <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
+        <span style="display:inline-block;background:var(--blue-light);color:var(--blue);font-weight:700;font-size:.8rem;padding:3px 10px;border-radius:20px;letter-spacing:.5px">${s.student_number||'—'}</span>
       </td>
       <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
         <div class="u-info">
