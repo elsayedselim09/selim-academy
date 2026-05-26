@@ -4540,7 +4540,7 @@ async function confirmDeleteStudent() {
     // 4. حذف الـ profile
     await sb.from('profiles').delete().eq('id', _deleteStudentId);
     // 5. حذف المستخدم من auth عبر RPC
-    await sb.rpc('delete_user_by_id', { target_user_id: _deleteStudentId }).catch(function(){});
+    try { await sb.rpc('delete_user_by_id', { target_user_id: _deleteStudentId }); } catch(ignored) {}
 
     document.getElementById('mdl-delete-student').classList.remove('show');
     toast('✅ تم حذف الطالب بنجاح');
