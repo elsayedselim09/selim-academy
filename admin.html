@@ -2317,20 +2317,22 @@ async function loadStudents() {
     S.students = data || [];
 
     // ── توليد student_number للطلاب الذين ليس لديهم رقم بعد ──
-    // Prefix ثابت للطلاب: 20260 → أمثلة: 202601, 202602, 202603, ...
-    const STUDENT_PREFIX = 202600;
+    // Prefix ثابت نصي للطلاب: '20260'
+    // الأرقام: 202601 → 202602 → ... → 202609 → 2026010 → 2026011 → ...
+    const STU_PFX = '20260';
     const withoutNum = S.students.filter(s => !s.student_number);
     if(withoutNum.length) {
-      // نجيب آخر رقم موجود في الداتابيز
-      const {data: maxRow} = await sb.from('profiles').select('student_number').eq('role','student').not('student_number','is',null).order('student_number',{ascending:false}).limit(1);
-      let lastSeq = (maxRow && maxRow.length && maxRow[0].student_number)
-        ? (parseInt(String(maxRow[0].student_number)) - STUDENT_PREFIX)
+      // نجيب آخر رقم موجود ونرتب حسب الطول ثم القيمة لضمان الترتيب الصحيح
+      const {data: allNums} = await sb.from('profiles').select('student_number').eq('role','student').not('student_number','is',null);
+      const nums = (allNums||[]).map(r => String(r.student_number)).filter(n => n.startsWith(STU_PFX));
+      let lastSeq = nums.length > 0
+        ? Math.max(...nums.map(n => parseInt(n.slice(STU_PFX.length)) || 0))
         : 0;
-      // نرتبهم من الأقدم للأحدث عشان نديهم أرقام بالترتيب
+      // نرتبهم من الأقدم للأحدث
       const sorted = [...withoutNum].sort((a,b) => new Date(a.created_at)-new Date(b.created_at));
       for(const s of sorted) {
         lastSeq++;
-        s.student_number = STUDENT_PREFIX + lastSeq;
+        s.student_number = STU_PFX + lastSeq;
         await sb.from('profiles').update({student_number: s.student_number}).eq('id',s.id);
       }
     }
@@ -3245,18 +3247,20 @@ async function loadTeachers() {
     S.teachers = data || [];
 
     // ── توليد teacher_number للمعلمين الذين ليس لديهم رقم بعد ──
-    // Prefix ثابت للمعلمين: 20261 → أمثلة: 202611, 202612, ...
-    const TEACHER_PREFIX = 202610;
+    // Prefix ثابت نصي للمعلمين: '20261'
+    // الأرقام: 202611 → 202612 → ... → 202619 → 2026110 → 2026111 → ...
+    const TCH_PFX = '20261';
     const teachersWithoutNum = S.teachers.filter(t => !t.teacher_number);
     if(teachersWithoutNum.length) {
-      const {data: maxRow} = await sb.from('profiles').select('teacher_number').eq('role','teacher').not('teacher_number','is',null).order('teacher_number',{ascending:false}).limit(1);
-      let lastSeq = (maxRow && maxRow.length && maxRow[0].teacher_number)
-        ? (parseInt(String(maxRow[0].teacher_number)) - TEACHER_PREFIX)
+      const {data: allNums} = await sb.from('profiles').select('teacher_number').eq('role','teacher').not('teacher_number','is',null);
+      const nums = (allNums||[]).map(r => String(r.teacher_number)).filter(n => n.startsWith(TCH_PFX));
+      let lastSeq = nums.length > 0
+        ? Math.max(...nums.map(n => parseInt(n.slice(TCH_PFX.length)) || 0))
         : 0;
       const sorted = [...teachersWithoutNum].sort((a,b) => new Date(a.created_at)-new Date(b.created_at));
       for(const t of sorted) {
         lastSeq++;
-        t.teacher_number = TEACHER_PREFIX + lastSeq;
+        t.teacher_number = TCH_PFX + lastSeq;
         await sb.from('profiles').update({teacher_number: t.teacher_number}).eq('id',t.id);
       }
     }
@@ -4651,15 +4655,16 @@ async function confirmDeleteStudent() {
 }
 
 // ── توليد رقم طالب جديد (يُستدعى عند إنشاء حساب جديد) ──
-// Prefix ثابت للطلاب: 20260 → أمثلة: 202601, 202602, ...
+// Prefix ثابت نصي: '20260' → 202601 → 202602 → ... → 2026010 → ...
 async function generateStudentNumber(userId, createdAt) {
   try {
-    const STUDENT_PREFIX = 202600;
-    const {data: maxRow} = await sb.from('profiles').select('student_number').eq('role','student').not('student_number','is',null).order('student_number',{ascending:false}).limit(1);
-    let lastSeq = (maxRow && maxRow.length && maxRow[0].student_number)
-      ? (parseInt(String(maxRow[0].student_number)) - STUDENT_PREFIX)
+    const STU_PFX = '20260';
+    const {data: allNums} = await sb.from('profiles').select('student_number').eq('role','student').not('student_number','is',null);
+    const nums = (allNums||[]).map(r => String(r.student_number)).filter(n => n.startsWith(STU_PFX));
+    const lastSeq = nums.length > 0
+      ? Math.max(...nums.map(n => parseInt(n.slice(STU_PFX.length)) || 0))
       : 0;
-    const newNum = STUDENT_PREFIX + lastSeq + 1;
+    const newNum = STU_PFX + (lastSeq + 1);
     await sb.from('profiles').update({student_number: newNum}).eq('id', userId);
     return newNum;
   } catch(e) { console.warn('generateStudentNumber error', e); return null; }
