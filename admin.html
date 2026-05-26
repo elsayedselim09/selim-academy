@@ -2317,8 +2317,8 @@ async function loadStudents() {
     S.students = data || [];
 
     // ── توليد student_number للطلاب الذين ليس لديهم رقم بعد ──
-    // Prefix ثابت للطلاب: 20260 → أمثلة: 202600001, 202600002, ...
-    const STUDENT_PREFIX = 202600000;
+    // Prefix ثابت للطلاب: 20260 → أمثلة: 202601, 202602, 202603, ...
+    const STUDENT_PREFIX = 202600;
     const withoutNum = S.students.filter(s => !s.student_number);
     if(withoutNum.length) {
       // نجيب آخر رقم موجود في الداتابيز
@@ -2378,15 +2378,20 @@ function renderStudentsTable(students, rm, approvedReqMap) {
     el.innerHTML = `<div class="empty-box"><div class="ei">🔍</div><div class="et">لا توجد نتائج مطابقة</div></div>`;
     return;
   }
-  el.innerHTML = `<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>رقم الطالب</th><th>الطالب</th><th>الهاتف</th><th>طلبات الاشتراك</th><th>تاريخ التسجيل</th><th>الإجراء</th></tr></thead><tbody>
+  el.innerHTML = `<div class="tbl-wrap"><table class="data-table"><thead><tr><th>#</th><th>رقم الطالب</th><th>الترتيب</th><th>الطالب</th><th>الهاتف</th><th>طلبات الاشتراك</th><th>تاريخ التسجيل</th><th>الإجراء</th></tr></thead><tbody>
   ${students.map((s,i) => {
     const approvedReqs = (approvedReqMap||{})[s.id] || [];
     const firstReq = approvedReqs.find(r => !r.assigned_teacher_id) || approvedReqs[0];
+    // ترتيب تنازلي: الأعلى في القائمة (أحدث طالب) = 1
+    const rowOrder = i + 1;
     return `
     <tr>
-      <td style="color:var(--gray);font-size:.78rem;cursor:pointer" onclick="openStudentDetail('${s.id}')">${i+1}</td>
+      <td style="color:var(--gray);font-size:.78rem;cursor:pointer" onclick="openStudentDetail('${s.id}')">${students.length - i}</td>
       <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
         <span style="display:inline-block;background:var(--blue-light);color:var(--blue);font-weight:700;font-size:.8rem;padding:3px 10px;border-radius:20px;letter-spacing:.5px">${s.student_number||'—'}</span>
+      </td>
+      <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer;text-align:center">
+        <span style="display:inline-block;background:var(--purple-light);color:var(--purple);font-weight:900;font-size:.82rem;padding:3px 10px;border-radius:8px;border:1px solid #DDD6FE">${rowOrder}</span>
       </td>
       <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
         <div class="u-info">
@@ -3240,8 +3245,8 @@ async function loadTeachers() {
     S.teachers = data || [];
 
     // ── توليد teacher_number للمعلمين الذين ليس لديهم رقم بعد ──
-    // Prefix ثابت للمعلمين: 20261 → أمثلة: 202610001, 202610002, ...
-    const TEACHER_PREFIX = 202610000;
+    // Prefix ثابت للمعلمين: 20261 → أمثلة: 202611, 202612, ...
+    const TEACHER_PREFIX = 202610;
     const teachersWithoutNum = S.teachers.filter(t => !t.teacher_number);
     if(teachersWithoutNum.length) {
       const {data: maxRow} = await sb.from('profiles').select('teacher_number').eq('role','teacher').not('teacher_number','is',null).order('teacher_number',{ascending:false}).limit(1);
@@ -4646,12 +4651,15 @@ async function confirmDeleteStudent() {
 }
 
 // ── توليد رقم طالب جديد (يُستدعى عند إنشاء حساب جديد) ──
+// Prefix ثابت للطلاب: 20260 → أمثلة: 202601, 202602, ...
 async function generateStudentNumber(userId, createdAt) {
   try {
-    const year = new Date(createdAt || Date.now()).getFullYear();
+    const STUDENT_PREFIX = 202600;
     const {data: maxRow} = await sb.from('profiles').select('student_number').eq('role','student').not('student_number','is',null).order('student_number',{ascending:false}).limit(1);
-    let lastSeq = (maxRow && maxRow.length && maxRow[0].student_number) ? parseInt(String(maxRow[0].student_number).slice(4)) : 0;
-    const newNum = parseInt(String(year) + String(lastSeq + 1));
+    let lastSeq = (maxRow && maxRow.length && maxRow[0].student_number)
+      ? (parseInt(String(maxRow[0].student_number)) - STUDENT_PREFIX)
+      : 0;
+    const newNum = STUDENT_PREFIX + lastSeq + 1;
     await sb.from('profiles').update({student_number: newNum}).eq('id', userId);
     return newNum;
   } catch(e) { console.warn('generateStudentNumber error', e); return null; }
