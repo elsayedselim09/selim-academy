@@ -1043,10 +1043,10 @@ async function handleLogin() {
     var lookupCol  = '';
     var lookupVal  = id;
 
-    // رقم الطالب: أرقام فقط تبدأ بـ 4 أرقام (السنة) وطولها ≥ 6
+    // رقم الطالب: أرقام فقط وطولها ≥ 6
     if (/^\d{6,}$/.test(id)) {
       lookupCol = 'student_number';
-      lookupVal = parseInt(id);
+      lookupVal = id; // نبعته كـ string والـ Supabase يتعامل معه
     }
     // رقم هاتف
     else if (/^[\d\s\+\-]{7,}$/.test(id)) {
@@ -1058,11 +1058,34 @@ async function handleLogin() {
       return;
     }
 
+    // جلب الـ profile بالرقم
     var { data: profileData, error: profileErr } = await _sb
       .from('profiles')
       .select('id, email')
       .eq(lookupCol, lookupVal)
       .maybeSingle();
+
+    // لو ما لاقيناش بالـ string — جرب parseInt (لو رقم طالب)
+    if ((!profileData || profileErr) && lookupCol === 'student_number') {
+      var numericVal = parseInt(id, 10);
+      var { data: profileData2, error: profileErr2 } = await _sb
+        .from('profiles')
+        .select('id, email')
+        .eq('student_number', numericVal)
+        .maybeSingle();
+      if (!profileErr2 && profileData2) {
+        profileData = profileData2;
+        profileErr  = null;
+      }
+    }
+
+    // لو لقينا الـ profile لكن الإيميل فاضي → اجلبه من auth عبر الـ id
+    if (!profileErr && profileData && !profileData.email) {
+      // نجرب نجيب الإيميل عبر RPC أو admin — fallback: نطلب من المستخدم الإيميل
+      btn.classList.remove('loading'); btn.disabled = false;
+      showAlert('login-alert','login-alert-msg','تم العثور على حسابك — من فضلك سجّل الدخول بالبريد الإلكتروني مرة واحدة ثم يمكنك استخدام رقمك');
+      return;
+    }
 
     if (profileErr || !profileData || !profileData.email) {
       btn.classList.remove('loading'); btn.disabled = false;
