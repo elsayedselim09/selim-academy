@@ -510,7 +510,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
         <button class="filter-btn"        id="tf-approved" onclick="setTeacherFilter('approved')">✅ معتمدون</button>
         <button class="filter-btn"        id="tf-rejected" onclick="setTeacherFilter('rejected')">❌ مرفوضون</button>
         <button class="filter-btn"        id="tf-all"      onclick="setTeacherFilter('all')">📋 الكل</button>
-        <input class="search-input" id="teacher-search" type="text" placeholder="🔍 بحث بالاسم..." oninput="renderTeachersTable()">
+        <input class="search-input" id="teacher-search" type="text" placeholder="🔍 بحث بالاسم أو رقم المعلم أو الهاتف..." oninput="renderTeachersTable()">
       </div>
       <div id="teachers-body"></div>
     </div>
@@ -3309,7 +3309,7 @@ function renderTeachersTable() {
     data = data.filter(t => getTeacherStatus(t) === S.teacherFilter);
   }
   if(search) {
-    data = data.filter(t => (t.full_name||'').toLowerCase().includes(search) || (t.phone||'').includes(search) || (t.specialization||'').toLowerCase().includes(search));
+    data = data.filter(t => (t.full_name||'').toLowerCase().includes(search) || (t.phone||'').replace(/\s/g,'').includes(search.replace(/\s/g,'')) || (t.specialization||'').toLowerCase().includes(search) || String(t.teacher_number||'').includes(search));
   }
 
   // Stats bar
