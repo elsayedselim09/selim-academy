@@ -2317,17 +2317,20 @@ async function loadStudents() {
     S.students = data || [];
 
     // ── توليد student_number للطلاب الذين ليس لديهم رقم بعد ──
+    // Prefix ثابت للطلاب: 20260 → أمثلة: 202600001, 202600002, ...
+    const STUDENT_PREFIX = 202600000;
     const withoutNum = S.students.filter(s => !s.student_number);
     if(withoutNum.length) {
       // نجيب آخر رقم موجود في الداتابيز
       const {data: maxRow} = await sb.from('profiles').select('student_number').eq('role','student').not('student_number','is',null).order('student_number',{ascending:false}).limit(1);
-      let lastNum = (maxRow && maxRow.length && maxRow[0].student_number) ? parseInt(String(maxRow[0].student_number).slice(4)) : 0;
+      let lastSeq = (maxRow && maxRow.length && maxRow[0].student_number)
+        ? (parseInt(String(maxRow[0].student_number)) - STUDENT_PREFIX)
+        : 0;
       // نرتبهم من الأقدم للأحدث عشان نديهم أرقام بالترتيب
       const sorted = [...withoutNum].sort((a,b) => new Date(a.created_at)-new Date(b.created_at));
       for(const s of sorted) {
-        lastNum++;
-        const year = new Date(s.created_at).getFullYear();
-        s.student_number = parseInt(String(year) + String(lastNum));
+        lastSeq++;
+        s.student_number = STUDENT_PREFIX + lastSeq;
         await sb.from('profiles').update({student_number: s.student_number}).eq('id',s.id);
       }
     }
@@ -3229,12 +3232,29 @@ async function loadTeachers() {
   try {
     const { data, error } = await sb
       .from('profiles')
-      .select('id,full_name,phone,avatar_url,specialization,experience_years,bio,teacher_approved,profile_visibility,created_at,role')
+      .select('id,full_name,phone,avatar_url,specialization,experience_years,bio,teacher_approved,profile_visibility,created_at,role,teacher_number')
       .eq('role','teacher')
       .order('created_at', { ascending:false });
     if(error) throw error;
 
     S.teachers = data || [];
+
+    // ── توليد teacher_number للمعلمين الذين ليس لديهم رقم بعد ──
+    // Prefix ثابت للمعلمين: 20261 → أمثلة: 202610001, 202610002, ...
+    const TEACHER_PREFIX = 202610000;
+    const teachersWithoutNum = S.teachers.filter(t => !t.teacher_number);
+    if(teachersWithoutNum.length) {
+      const {data: maxRow} = await sb.from('profiles').select('teacher_number').eq('role','teacher').not('teacher_number','is',null).order('teacher_number',{ascending:false}).limit(1);
+      let lastSeq = (maxRow && maxRow.length && maxRow[0].teacher_number)
+        ? (parseInt(String(maxRow[0].teacher_number)) - TEACHER_PREFIX)
+        : 0;
+      const sorted = [...teachersWithoutNum].sort((a,b) => new Date(a.created_at)-new Date(b.created_at));
+      for(const t of sorted) {
+        lastSeq++;
+        t.teacher_number = TEACHER_PREFIX + lastSeq;
+        await sb.from('profiles').update({teacher_number: t.teacher_number}).eq('id',t.id);
+      }
+    }
 
     // Show pending count in badge
     const pendingCount = S.teachers.filter(t => t.teacher_approved === null || t.teacher_approved === false).length;
@@ -3329,8 +3349,20 @@ function renderTeachersTable() {
     return '';
   };
 
-  el.innerHTML = statsHTML + `<div>` + data.map(t => `
+  // ترتيب المعلمين: آخر منضم = أعلى القائمة (data مرتبة desc بالفعل)
+  el.innerHTML = statsHTML + `<div>` + data.map((t, idx) => {
+    // الترتيب: العدد الكلي للمعلمين المفلترين ناقص الـ index (آخر منضم = رقم 1)
+    const orderNum = data.length - idx;
+    return `
     <div class="teacher-row" id="trow-${t.id}" onclick="openTeacherDetail('${t.id}')" style="cursor:pointer">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:48px;flex-shrink:0">
+        <span style="font-size:.68rem;color:var(--gray);font-weight:600">#ترتيب</span>
+        <span style="background:var(--purple-light);color:var(--purple);font-weight:900;font-size:.88rem;padding:4px 10px;border-radius:8px;border:1px solid #DDD6FE">${orderNum}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:100px;flex-shrink:0">
+        <span style="font-size:.68rem;color:var(--gray);font-weight:600">رقم المعلم</span>
+        <span style="background:var(--blue-light);color:var(--blue);font-weight:700;font-size:.78rem;padding:3px 10px;border-radius:20px;letter-spacing:.5px;border:1px solid #BFDBFE">${t.teacher_number || '—'}</span>
+      </div>
       <div class="t-av">${t.avatar_url ? `<img src="${t.avatar_url}">` : ini(t.full_name)}</div>
       <div class="t-info">
         <div class="t-name">${t.full_name || '—'}</div>
@@ -3353,7 +3385,8 @@ function renderTeachersTable() {
         })()}
         <div class="t-acts" id="tacts-${t.id}" onclick="event.stopPropagation()">${actionBtns(t)}</div>
       </div>
-    </div>`).join('') + `</div>`;
+    </div>`;
+  }).join('') + `</div>`;
 }
 
 async function openTeacherDetail(teacherId) {
