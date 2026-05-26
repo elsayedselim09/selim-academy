@@ -1052,18 +1052,33 @@ async function handleLogin() {
     var profileData = null;
 
     if (isStudentNum) {
-      // الرقم محفوظ كـ text في الداتابيز → نجلب الكل ونقارن كـ string
+      // الرقم محفوظ كـ text في الداتابيز
+      // نجيب كل الطلاب مع أرقامهم ونقارن كـ string
+      console.log('[Login] Searching student_number:', id);
+
       var { data: allStudents, error: stuErr } = await _sb
         .from('profiles')
         .select('id, email, student_number')
         .eq('role', 'student')
         .not('student_number', 'is', null);
 
-      if (!stuErr && allStudents) {
+      console.log('[Login] allStudents result:', allStudents, 'error:', stuErr);
+
+      if (stuErr) {
+        console.error('[Login] RLS blocking query:', stuErr);
+        btn.classList.remove('loading'); btn.disabled = false;
+        showAlert('login-alert','login-alert-msg','حدث خطأ في البحث، من فضلك سجّل دخولك بالبريد الإلكتروني');
+        return;
+      }
+
+      if (allStudents && allStudents.length > 0) {
         var found = allStudents.find(function(s) {
-          return String(s.student_number) === String(id);
+          return String(s.student_number).trim() === String(id).trim();
         });
+        console.log('[Login] found:', found);
         if (found) profileData = found;
+      } else {
+        console.warn('[Login] allStudents is empty — likely RLS blocking anon access');
       }
 
       if (!profileData) {
