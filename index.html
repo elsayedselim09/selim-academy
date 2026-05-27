@@ -1577,6 +1577,7 @@ footer { background:var(--dark); padding:60px 5% 30px; }
       <li><a href="#testimonials">⭐ الآراء</a></li>
       <li><a href="#booking">📅 احجز</a></li>
       <li><a href="#contact">✉️ تواصل</a></li>
+      <li><a href="courses.html" style="color:var(--blue);font-weight:900;">📚 كورساتي</a></li>
       <li><a href="announcements.html" style="color:var(--gold);font-weight:900;">📢 الإعلانات</a></li>
       <li><a href="free.html" style="color:var(--green);font-weight:900;">🎁 مجاني</a></li>
     </ul>
@@ -1602,6 +1603,7 @@ footer { background:var(--dark); padding:60px 5% 30px; }
     <li><a href="#booking" onclick="closeNavDrawer()">📅 احجز</a></li>
     <li><a href="#method" onclick="closeNavDrawer()">📖 المنهجية</a></li>
     <li><a href="#contact" onclick="closeNavDrawer()">✉️ تواصل معنا</a></li>
+    <li><a href="courses.html" style="color:var(--blue);font-weight:900;" onclick="closeNavDrawer()">📚 كورساتي</a></li>
     <li><a href="announcements.html" style="color:var(--gold);font-weight:900;" onclick="closeNavDrawer()">📢 الإعلانات</a></li>
     <li><a href="free.html" style="color:var(--green);font-weight:900;">🎁 محتوى مجاني</a></li>
   </ul>
@@ -1806,6 +1808,40 @@ footer { background:var(--dark); padding:60px 5% 30px; }
         <a href="#booking" class="stage-btn">احجز الآن ←</a>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- ═══ MY COURSES SECTION ═══ -->
+<section id="my-courses" style="padding:70px 5% 60px; background:var(--gray-light); position:relative; overflow:hidden;">
+
+  <!-- background decoration -->
+  <div style="position:absolute;top:-60px;left:-60px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(26,86,219,0.06),transparent);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,0.07),transparent);pointer-events:none;"></div>
+
+  <!-- header row -->
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:36px;flex-wrap:wrap;gap:16px;" class="reveal">
+    <div>
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(26,86,219,0.1);border:1px solid rgba(26,86,219,0.2);color:var(--blue);padding:5px 16px;border-radius:50px;font-size:.78rem;font-weight:700;margin-bottom:12px;">
+        📚 كورساتي
+      </div>
+      <h2 style="font-size:clamp(1.4rem,2.5vw,2rem);font-weight:900;color:var(--dark);line-height:1.3;">
+        تعلّم أي شيء،<br><span style="color:var(--blue);">في أي وقت</span>
+      </h2>
+      <p style="color:var(--gray);font-size:.88rem;margin-top:8px;max-width:420px;line-height:1.7;">من التعليم المدرسي إلى اللغات والمهارات — كل الكورسات في مكان واحد</p>
+    </div>
+    <a href="courses.html" id="more-courses-link" style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border:2px solid var(--blue);border-radius:50px;color:var(--blue);font-weight:700;font-size:.88rem;text-decoration:none;transition:all .25s;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='var(--blue)';this.style.color='#fff';" onmouseout="this.style.background='transparent';this.style.color='var(--blue)';">
+      مزيد من الكورسات ←
+    </a>
+  </div>
+
+  <!-- 3 featured cards -->
+  <div id="featured-courses-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:22px;" class="reveal"></div>
+
+  <!-- bottom CTA -->
+  <div style="text-align:center;margin-top:36px;" class="reveal">
+    <a href="courses.html" style="display:inline-flex;align-items:center;gap:10px;padding:13px 32px;background:linear-gradient(135deg,var(--blue),var(--blue-mid));color:#fff;border-radius:50px;font-weight:700;font-size:.95rem;text-decoration:none;box-shadow:0 4px 20px rgba(26,86,219,0.35);transition:all .25s;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 30px rgba(26,86,219,0.5)';" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 20px rgba(26,86,219,0.35)';">
+      🎓 استعرض جميع الكورسات
+    </a>
   </div>
 </section>
 
@@ -3839,5 +3875,79 @@ function showCfMsg(text, ok) {
 }
 </script>
 <script src="pwa-register.js" defer></script>
+
+<!-- ═══ FEATURED COURSES LOADER ═══ -->
+<script src="courses-data.js"></script>
+<script>
+(function() {
+  /* اختار 3 كورسات مميزة للعرض في الرئيسية */
+  const FEATURED_IDS = [
+    'school-high-physics',
+    'lang-english-conv',
+    'crafts-sewing'
+  ];
+
+  function getLevelClass(level) {
+    if (level === 'مبتدئ')  return 'background:rgba(14,159,110,0.1);color:#065F46;';
+    if (level === 'متوسط') return 'background:rgba(245,158,11,0.1);color:#92400E;';
+    if (level === 'متقدم') return 'background:rgba(239,68,68,0.1);color:#991B1B;';
+    return 'background:rgba(26,86,219,0.1);color:#1342B0;';
+  }
+
+  function getBadgeHtml(badge) {
+    if (!badge) return '';
+    const styles = {
+      'جديد':          'background:rgba(14,159,110,0.12);color:#065F46;border:1px solid rgba(14,159,110,0.3);',
+      'الأكثر طلباً': 'background:rgba(26,86,219,0.1);color:#1A56DB;border:1px solid rgba(26,86,219,0.25);',
+      'قريباً':        'background:rgba(245,158,11,0.1);color:#B45309;border:1px solid rgba(245,158,11,0.3);'
+    };
+    return `<span style="position:absolute;top:14px;left:14px;font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:20px;${styles[badge]||''}">${badge}</span>`;
+  }
+
+  function buildFeaturedCard(course) {
+    const isComing = course.price === 'قريباً';
+    const waURL    = `https://wa.me/201012142749?text=${encodeURIComponent(course.waMsg)}`;
+    return `
+    <div style="background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,0.07);border:1.5px solid transparent;overflow:hidden;display:flex;flex-direction:column;transition:all .28s;position:relative;"
+         onmouseover="this.style.transform='translateY(-5px)';this.style.boxShadow='0 8px 40px rgba(0,0,0,0.13)';this.style.borderColor='#3B82F6';"
+         onmouseout="this.style.transform='';this.style.boxShadow='0 4px 24px rgba(0,0,0,0.07)';this.style.borderColor='transparent';">
+      ${getBadgeHtml(course.badge)}
+      <div style="padding:22px 18px 16px;flex:1;">
+        <div style="width:52px;height:52px;border-radius:14px;background:#F9FAFB;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin-bottom:14px;">${course.icon}</div>
+        <div style="font-size:.98rem;font-weight:800;color:#111928;margin-bottom:6px;line-height:1.4;">${course.title}</div>
+        <div style="font-size:.78rem;color:#6B7280;margin-bottom:10px;">👤 ${course.instructor}</div>
+        <div style="font-size:.8rem;color:#6B7280;line-height:1.65;margin-bottom:14px;">${course.desc}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:6px;${getLevelClass(course.level)}">${course.level}</span>
+          <span style="font-size:.72rem;color:#6B7280;background:#F9FAFB;padding:3px 8px;border-radius:6px;">⏱️ ${course.duration}</span>
+          <span style="font-size:.72rem;color:#6B7280;background:#F9FAFB;padding:3px 8px;border-radius:6px;">📋 ${course.sessions}</span>
+        </div>
+      </div>
+      <div style="padding:14px 18px 18px;border-top:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div style="font-size:${isComing?'.82':'0.92'}rem;font-weight:900;color:${isComing?'#6B7280':'#111928'};">${course.price}</div>
+        ${isComing
+          ? `<button style="padding:9px 16px;background:#E5E7EB;color:#6B7280;border-radius:9px;font-weight:700;font-size:.8rem;border:none;font-family:'Cairo',sans-serif;cursor:default;">قريباً</button>`
+          : `<a href="${waURL}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:linear-gradient(135deg,#1A56DB,#3B82F6);color:#fff;border-radius:9px;font-weight:700;font-size:.8rem;text-decoration:none;font-family:'Cairo',sans-serif;box-shadow:0 3px 12px rgba(26,86,219,0.3);transition:all .2s;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='';">💬 اشترك الآن</a>`
+        }
+      </div>
+    </div>`;
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var grid = document.getElementById('featured-courses-grid');
+    if (!grid || !window.SELIM_COURSES) return;
+
+    var courses = window.SELIM_COURSES.COURSES;
+    var featured = FEATURED_IDS.map(function(id) {
+      return courses.find(function(c){ return c.id === id; });
+    }).filter(Boolean);
+
+    /* لو ما لاقيناش — خد أول 3 */
+    if (!featured.length) featured = courses.slice(0,3);
+
+    grid.innerHTML = featured.map(buildFeaturedCard).join('');
+  });
+})();
+</script>
 </body>
 </html>
