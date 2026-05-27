@@ -1746,8 +1746,22 @@ footer { background:var(--dark); padding:60px 5% 30px; }
     </a>
   </div>
 
-  <!-- 3 featured cards -->
-  <div id="featured-courses-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:22px;position:relative;z-index:1;" class="reveal"></div>
+  <!-- scroll arrows -->
+  <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:14px;position:relative;z-index:1;">
+    <button onclick="document.getElementById('featured-courses-grid').scrollBy({left:320,behavior:'smooth'})" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;" onmouseover="this.style.background='rgba(26,86,219,0.4)';this.style.borderColor='#60a5fa';" onmouseout="this.style.background='rgba(255,255,255,0.08)';this.style.borderColor='rgba(255,255,255,0.15)';">&#8592;</button>
+    <button onclick="document.getElementById('featured-courses-grid').scrollBy({left:-320,behavior:'smooth'})" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;" onmouseover="this.style.background='rgba(26,86,219,0.4)';this.style.borderColor='#60a5fa';" onmouseout="this.style.background='rgba(255,255,255,0.08)';this.style.borderColor='rgba(255,255,255,0.15)';">&#8594;</button>
+  </div>
+
+  <!-- horizontal scroll cards -->
+  <div id="featured-courses-grid"
+       style="display:flex;flex-direction:row;gap:22px;overflow-x:auto;overflow-y:visible;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:16px;position:relative;z-index:1;scrollbar-width:thin;scrollbar-color:rgba(26,86,219,0.6) rgba(255,255,255,0.05);"
+       class="reveal"></div>
+  <style>
+    #featured-courses-grid::-webkit-scrollbar { height: 5px; }
+    #featured-courses-grid::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+    #featured-courses-grid::-webkit-scrollbar-thumb { background: rgba(26,86,219,0.6); border-radius: 10px; }
+    #featured-courses-grid > div { min-width: 300px; max-width: 300px; scroll-snap-align: start; flex-shrink: 0; }
+  </style>
 
   <!-- bottom CTA -->
   <div style="text-align:center;margin-top:36px;position:relative;z-index:1;" class="reveal">
