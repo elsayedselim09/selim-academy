@@ -82,8 +82,7 @@ nav {
   position:relative; overflow:hidden;
 }
 .courses-hero::before {
-  content:'';
-  position:absolute; inset:0;
+  content:''; position:absolute; inset:0;
   background:
     radial-gradient(ellipse 60% 50% at 30% 50%, rgba(26,86,219,0.18), transparent),
     radial-gradient(ellipse 40% 40% at 80% 20%, rgba(201,168,76,0.1), transparent);
@@ -95,42 +94,45 @@ nav {
     linear-gradient(90deg, rgba(26,86,219,0.06) 1px, transparent 1px);
   background-size:50px 50px;
 }
-.courses-hero-inner {
-  position:relative; z-index:1;
-  max-width:700px;
-}
+.courses-hero-inner { position:relative; z-index:1; max-width:700px; }
 .courses-hero-tag {
   display:inline-flex; align-items:center; gap:8px;
   background:rgba(201,168,76,0.15); border:1px solid rgba(201,168,76,0.3);
   color:var(--sb-gold); padding:5px 16px; border-radius:50px;
   font-size:.8rem; font-weight:700; margin-bottom:18px;
 }
-.courses-hero-title {
-  font-size:clamp(1.8rem,4vw,3rem);
-  font-weight:900; color:#fff; line-height:1.25; margin-bottom:14px;
-}
-.courses-hero-title span {
-  background:linear-gradient(135deg,#60a5fa,#3b82f6);
-  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-}
+.courses-hero-title { font-size:clamp(1.8rem,4vw,3rem); font-weight:900; color:#fff; line-height:1.25; margin-bottom:14px; }
+.courses-hero-title span { background:linear-gradient(135deg,#60a5fa,#3b82f6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 .courses-hero-sub { color:rgba(255,255,255,0.6); font-size:.95rem; line-height:1.8; margin-bottom:30px; }
 .courses-hero-stats { display:flex; gap:32px; flex-wrap:wrap; }
 .hero-stat { text-align:center; }
 .hero-stat-num { font-size:1.7rem; font-weight:900; color:#fff; }
 .hero-stat-label { font-size:.75rem; color:rgba(255,255,255,0.45); margin-top:2px; }
 
+/* ══ LOADING ══ */
+.page-loader {
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:80px 20px; gap:16px;
+}
+.loader-spinner {
+  width:44px; height:44px;
+  border:3px solid var(--gray-mid);
+  border-top-color:var(--blue);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.loader-text { color:var(--gray); font-size:.9rem; font-weight:600; }
+
 /* ══ FILTER BAR ══ */
 .filter-bar {
-  background:#fff;
-  border-bottom:1px solid var(--gray-mid);
-  padding:0 5%;
-  position:sticky; top:64px; z-index:90;
+  background:#fff; border-bottom:1px solid var(--gray-mid);
+  padding:0 5%; position:sticky; top:64px; z-index:90;
   box-shadow:0 2px 12px rgba(0,0,0,0.04);
 }
 .filter-bar-inner {
   display:flex; align-items:center; gap:10px;
-  overflow-x:auto; padding:14px 0;
-  scrollbar-width:none;
+  overflow-x:auto; padding:14px 0; scrollbar-width:none;
 }
 .filter-bar-inner::-webkit-scrollbar { display:none; }
 .filter-pill {
@@ -139,26 +141,18 @@ nav {
   border:1.5px solid var(--gray-mid);
   background:#fff; color:var(--gray);
   font-family:'Cairo',sans-serif; font-size:.82rem; font-weight:700;
-  cursor:pointer; white-space:nowrap;
-  transition:all .2s;
-  flex-shrink:0;
+  cursor:pointer; white-space:nowrap; transition:all .2s; flex-shrink:0;
 }
 .filter-pill:hover { border-color:var(--blue); color:var(--blue); }
-.filter-pill.active {
-  background:var(--blue); color:#fff; border-color:var(--blue);
-  box-shadow:0 4px 14px rgba(26,86,219,0.3);
-}
+.filter-pill.active { background:var(--blue); color:#fff; border-color:var(--blue); box-shadow:0 4px 14px rgba(26,86,219,0.3); }
 .filter-pill.coming-pill { opacity:.6; cursor:default; }
 
-/* ══ MAIN CONTENT ══ */
+/* ══ MAIN ══ */
 .courses-main { padding:48px 5% 80px; }
 
 /* ══ CATEGORY SECTION ══ */
 .cat-section { margin-bottom:56px; }
-.cat-header {
-  display:flex; align-items:center; justify-content:space-between;
-  margin-bottom:22px;
-}
+.cat-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
 .cat-title-wrap { display:flex; align-items:center; gap:12px; }
 .cat-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 .cat-title { font-size:1.2rem; font-weight:900; color:var(--dark); }
@@ -173,135 +167,75 @@ nav {
 /* ══ HORIZONTAL SCROLL ══ */
 .courses-track-wrap { position:relative; }
 .courses-track {
-  display:flex; gap:20px;
-  overflow-x:auto; padding:8px 4px 20px;
-  scroll-behavior:smooth;
-  scrollbar-width:thin;
-  scrollbar-color:var(--blue) #f1f1f1;
+  display:flex; gap:20px; overflow-x:auto; padding:8px 4px 20px;
+  scroll-behavior:smooth; scrollbar-width:thin; scrollbar-color:var(--blue) #f1f1f1;
 }
 .courses-track::-webkit-scrollbar { height:4px; }
 .courses-track::-webkit-scrollbar-thumb { background:var(--blue); border-radius:2px; }
 
 /* ══ COURSE CARD ══ */
 .course-card {
-  flex-shrink:0;
-  width:260px;
-  background:#fff;
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  border:1.5px solid transparent;
-  overflow:hidden;
+  flex-shrink:0; width:260px; background:#fff;
+  border-radius:var(--radius); box-shadow:var(--shadow);
+  border:1.5px solid transparent; overflow:hidden;
   display:flex; flex-direction:column;
-  transition:all .28s cubic-bezier(.4,0,.2,1);
-  position:relative;
+  transition:all .28s cubic-bezier(.4,0,.2,1); position:relative;
 }
-.course-card:hover {
-  transform:translateY(-5px);
-  box-shadow:var(--shadow-lg);
-  border-color:var(--blue-mid);
-}
-.course-card-top {
-  padding:22px 18px 16px;
-  flex:1;
-}
-.card-icon-wrap {
-  width:52px; height:52px;
-  border-radius:14px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:1.6rem; margin-bottom:14px;
-  background:var(--gray-light);
-}
-.card-badge {
-  position:absolute; top:14px; left:14px;
-  font-size:.68rem; font-weight:800; padding:3px 9px; border-radius:20px;
-  letter-spacing:.3px;
-}
+.course-card:hover { transform:translateY(-5px); box-shadow:var(--shadow-lg); border-color:var(--blue-mid); }
+.course-card-top { padding:22px 18px 16px; flex:1; }
+.card-icon-wrap { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.6rem; margin-bottom:14px; background:var(--gray-light); }
+.card-badge { position:absolute; top:14px; left:14px; font-size:.68rem; font-weight:800; padding:3px 9px; border-radius:20px; letter-spacing:.3px; }
 .badge-new    { background:rgba(14,159,110,0.12); color:#065F46; border:1px solid rgba(14,159,110,0.3); }
-.badge-top    { background:rgba(26,86,219,0.1);   color:var(--blue);  border:1px solid rgba(26,86,219,0.25); }
+.badge-top    { background:rgba(26,86,219,0.1);   color:var(--blue); border:1px solid rgba(26,86,219,0.25); }
 .badge-coming { background:rgba(245,158,11,0.1);  color:#B45309; border:1px solid rgba(245,158,11,0.3); }
-
 .card-title { font-size:.98rem; font-weight:800; color:var(--dark); margin-bottom:6px; line-height:1.4; }
 .card-instructor { font-size:.78rem; color:var(--gray); margin-bottom:10px; }
 .card-desc { font-size:.8rem; color:var(--gray); line-height:1.65; margin-bottom:14px; }
-.card-meta {
-  display:flex; gap:8px; flex-wrap:wrap;
-}
-.card-meta-item {
-  display:inline-flex; align-items:center; gap:4px;
-  font-size:.72rem; color:var(--gray);
-  background:var(--gray-light); padding:3px 8px; border-radius:6px;
-}
-.card-level {
-  display:inline-flex; align-items:center; gap:4px;
-  font-size:.72rem; font-weight:600; padding:3px 10px; border-radius:6px;
-}
+.card-meta { display:flex; gap:8px; flex-wrap:wrap; }
+.card-meta-item { display:inline-flex; align-items:center; gap:4px; font-size:.72rem; color:var(--gray); background:var(--gray-light); padding:3px 8px; border-radius:6px; }
+.card-level { display:inline-flex; align-items:center; gap:4px; font-size:.72rem; font-weight:600; padding:3px 10px; border-radius:6px; }
 .level-beginner { background:rgba(14,159,110,0.1); color:#065F46; }
-.level-mid      { background:rgba(245,158,11,0.1);  color:#92400E; }
-.level-adv      { background:rgba(239,68,68,0.1);   color:#991B1B; }
-.level-all      { background:rgba(26,86,219,0.1);   color:var(--blue-dark); }
-
-.course-card-bottom {
-  padding:14px 18px 18px;
-  border-top:1px solid var(--gray-mid);
-  display:flex; align-items:center; justify-content:space-between;
-  gap:10px;
-}
+.level-mid      { background:rgba(245,158,11,0.1); color:#92400E; }
+.level-adv      { background:rgba(239,68,68,0.1);  color:#991B1B; }
+.level-all      { background:rgba(26,86,219,0.1);  color:var(--blue-dark); }
+.course-card-bottom { padding:14px 18px 18px; border-top:1px solid var(--gray-mid); display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .card-price { font-size:.92rem; font-weight:900; color:var(--dark); }
-.card-price.free { color:var(--green); }
 .card-price.soon { color:var(--gray); font-size:.82rem; }
-
 .btn-subscribe {
-  display:inline-flex; align-items:center; gap:6px;
-  padding:9px 16px;
+  display:inline-flex; align-items:center; gap:6px; padding:9px 16px;
   background:linear-gradient(135deg, var(--blue), var(--blue-mid));
   color:#fff; border-radius:9px; font-weight:700; font-size:.8rem;
-  text-decoration:none; border:none; cursor:pointer;
-  font-family:'Cairo',sans-serif;
-  transition:all .2s;
-  white-space:nowrap; flex-shrink:0;
+  text-decoration:none; border:none; cursor:pointer; font-family:'Cairo',sans-serif;
+  transition:all .2s; white-space:nowrap; flex-shrink:0;
   box-shadow:0 3px 12px rgba(26,86,219,0.3);
 }
 .btn-subscribe:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(26,86,219,0.5); }
-.btn-subscribe.coming-btn {
-  background:var(--gray-mid); color:var(--gray);
-  box-shadow:none; cursor:default;
-}
+.btn-subscribe.coming-btn { background:var(--gray-mid); color:var(--gray); box-shadow:none; cursor:default; }
 .btn-subscribe.coming-btn:hover { transform:none; box-shadow:none; }
 
-/* ══ COMING SOON SECTION ══ */
+/* ══ COMING CARDS ══ */
 .coming-section { margin-bottom:56px; }
 .coming-grid { display:flex; gap:20px; flex-wrap:wrap; }
 .coming-card {
-  flex:0 0 260px;
-  background:#fff; border-radius:var(--radius);
-  border:1.5px dashed var(--gray-mid);
-  padding:24px 20px;
-  display:flex; flex-direction:column; align-items:flex-start;
-  opacity:.75;
+  flex:0 0 260px; background:#fff; border-radius:var(--radius);
+  border:1.5px dashed var(--gray-mid); padding:24px 20px;
+  display:flex; flex-direction:column; align-items:flex-start; opacity:.75;
 }
 .coming-card-icon { font-size:2rem; margin-bottom:12px; }
 .coming-card-title { font-size:1rem; font-weight:800; color:var(--dark); margin-bottom:6px; }
 .coming-card-sub { font-size:.8rem; color:var(--gray); line-height:1.6; margin-bottom:14px; }
-.coming-soon-tag {
-  font-size:.72rem; font-weight:700;
-  background:rgba(245,158,11,0.1); color:#B45309;
-  border:1px solid rgba(245,158,11,0.3);
-  padding:4px 12px; border-radius:20px;
-}
+.coming-soon-tag { font-size:.72rem; font-weight:700; background:rgba(245,158,11,0.1); color:#B45309; border:1px solid rgba(245,158,11,0.3); padding:4px 12px; border-radius:20px; }
 
-/* ══ EMPTY STATE ══ */
+/* ══ EMPTY / ERROR ══ */
 .empty-state { text-align:center; padding:60px 20px; color:var(--gray); }
 .empty-state-icon { font-size:3rem; margin-bottom:16px; }
 .empty-state-title { font-size:1.1rem; font-weight:700; color:var(--dark); margin-bottom:8px; }
+.error-box { background:#fff; border:1.5px solid #fecaca; border-radius:12px; padding:24px; margin:40px auto; max-width:500px; text-align:center; }
+.error-box-title { font-size:1rem; font-weight:800; color:#991B1B; margin-bottom:8px; }
+.error-box-sub { font-size:.84rem; color:var(--gray); line-height:1.7; }
 
 /* ══ FOOTER ══ */
-.courses-footer {
-  background:var(--sb-bg);
-  padding:40px 5%;
-  text-align:center;
-  color:rgba(255,255,255,0.4);
-  font-size:.82rem;
-}
+.courses-footer { background:var(--sb-bg); padding:40px 5%; text-align:center; color:rgba(255,255,255,0.4); font-size:.82rem; }
 .courses-footer a { color:var(--sb-gold); text-decoration:none; }
 
 /* ══ RESPONSIVE ══ */
@@ -318,8 +252,8 @@ nav {
 }
 
 /* ══ ANIMATIONS ══ */
-.fade-in { animation:fadeIn .5s ease both; }
-@keyframes fadeIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+.fade-in { animation:fadeIn .45s ease both; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 </style>
 </head>
 <body>
@@ -345,72 +279,105 @@ nav {
 <div class="courses-hero">
   <div class="courses-hero-grid"></div>
   <div class="courses-hero-inner fade-in">
-    <div class="courses-hero-tag">
-      <span>📚</span> كورساتي
-    </div>
+    <div class="courses-hero-tag"><span>📚</span> كورساتي</div>
     <h1 class="courses-hero-title">كل ما تحتاجه<br><span>في مكان واحد</span></h1>
     <p class="courses-hero-sub">استعرض مئات الكورسات في التعليم المدرسي، اللغات، المهارات، الحرف، القرآن وأكثر — تعلّم من بيتك مع أفضل المدرسين.</p>
-    <div class="courses-hero-stats" id="heroStats"></div>
+    <div class="courses-hero-stats" id="heroStats">
+      <div class="hero-stat"><div class="hero-stat-num" id="stat-courses">—</div><div class="hero-stat-label">كورس متاح</div></div>
+      <div class="hero-stat"><div class="hero-stat-num" id="stat-cats">—</div><div class="hero-stat-label">فئة متخصصة</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">100%</div><div class="hero-stat-label">أونلاين</div></div>
+    </div>
   </div>
 </div>
 
 <!-- FILTER BAR -->
 <div class="filter-bar">
-  <div class="filter-bar-inner" id="filterBar"></div>
+  <div class="filter-bar-inner" id="filterBar">
+    <button class="filter-pill active" onclick="setFilter('all',this)">🗂️ الكل</button>
+  </div>
 </div>
 
 <!-- MAIN -->
-<main class="courses-main" id="coursesMain"></main>
+<main class="courses-main" id="coursesMain">
+  <div class="page-loader">
+    <div class="loader-spinner"></div>
+    <div class="loader-text">جاري تحميل الكورسات...</div>
+  </div>
+</main>
 
 <!-- FOOTER -->
 <footer class="courses-footer">
   <p>© 2025 أكاديمية سليم — جميع الحقوق محفوظة &nbsp;|&nbsp; <a href="https://wa.me/201012142749">تواصل معنا</a></p>
 </footer>
 
-<!-- DATA -->
-<script src="courses-data.js"></script>
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-/* ══════════════════════════════════════
-   COURSES PAGE ENGINE
-══════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   SUPABASE CONFIG — نفس credentials الموقع
+══════════════════════════════════════════════ */
+const SB_URL  = 'https://hjhoudwknwnxfndrgpfe.supabase.co';
+const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s';
+const _sb     = window.supabase.createClient(SB_URL, SB_KEY);
 
-const { CATEGORIES, COURSES } = window.SELIM_COURSES;
+/* ══ STATE ══ */
+let allCategories = [];
+let allCourses    = [];
+let activeFilter  = 'all';
+let searchQuery   = '';
 
-let activeFilter = 'all';
-let searchQuery  = '';
+/* ══ BOOT ══ */
+document.addEventListener('DOMContentLoaded', initPage);
 
-/* ── init ── */
-document.addEventListener('DOMContentLoaded', () => {
-  buildHeroStats();
-  buildFilterBar();
-  renderAll();
-});
-
-/* ── hero stats ── */
-function buildHeroStats() {
-  const activeCats   = CATEGORIES.filter(c => c.status === 'active').length;
-  const activeCourses = COURSES.length;
-  const comingCats   = CATEGORIES.filter(c => c.status === 'coming').length;
-
-  document.getElementById('heroStats').innerHTML = `
-    <div class="hero-stat"><div class="hero-stat-num">${activeCourses}+</div><div class="hero-stat-label">كورس متاح</div></div>
-    <div class="hero-stat"><div class="hero-stat-num">${activeCats + comingCats}</div><div class="hero-stat-label">فئة متخصصة</div></div>
-    <div class="hero-stat"><div class="hero-stat-num">100%</div><div class="hero-stat-label">أونلاين</div></div>
-  `;
+async function initPage() {
+  try {
+    await Promise.all([loadCategories(), loadCourses()]);
+    buildFilterBar();
+    updateHeroStats();
+    renderAll();
+  } catch (err) {
+    showError('تعذّر تحميل الكورسات. تحقق من اتصالك بالإنترنت وأعد المحاولة.', err.message);
+  }
 }
 
-/* ── filter bar ── */
+/* ══ LOAD CATEGORIES ══ */
+async function loadCategories() {
+  const { data, error } = await _sb
+    .from('course_categories')
+    .select('*')
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  allCategories = data || [];
+}
+
+/* ══ LOAD COURSES ══ */
+async function loadCourses() {
+  const { data, error } = await _sb
+    .from('courses')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  allCourses = data || [];
+}
+
+/* ══ HERO STATS ══ */
+function updateHeroStats() {
+  document.getElementById('stat-courses').textContent = allCourses.length + '+';
+  document.getElementById('stat-cats').textContent    = allCategories.length;
+}
+
+/* ══ FILTER BAR ══ */
 function buildFilterBar() {
   const bar = document.getElementById('filterBar');
+  let html  = `<button class="filter-pill active" onclick="setFilter('all',this)">🗂️ الكل</button>`;
 
-  let html = `<button class="filter-pill active" onclick="setFilter('all',this)">🗂️ الكل</button>`;
-
-  CATEGORIES.forEach(cat => {
-    const cls = cat.status === 'coming' ? 'coming-pill' : '';
+  allCategories.forEach(cat => {
+    const cls    = cat.status === 'coming' ? 'coming-pill' : '';
+    const suffix = cat.status === 'coming' ? '<span style="font-size:.65rem;opacity:.7;">قريباً</span>' : '';
     html += `<button class="filter-pill ${cls}" onclick="setFilter('${cat.id}',this)" data-id="${cat.id}">
-      ${cat.label}
-      ${cat.status === 'coming' ? '<span style="font-size:.65rem;opacity:.7;">قريباً</span>' : ''}
+      ${cat.label} ${suffix}
     </button>`;
   });
 
@@ -421,14 +388,12 @@ function setFilter(id, btn) {
   activeFilter = id;
   searchQuery  = '';
   document.getElementById('searchInput').value = '';
-
   document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
-
   renderAll();
 }
 
-/* ── search ── */
+/* ══ SEARCH ══ */
 function handleSearch(val) {
   searchQuery  = val.trim().toLowerCase();
   activeFilter = 'all';
@@ -437,70 +402,67 @@ function handleSearch(val) {
   renderAll();
 }
 
-/* ── badge helpers ── */
-function getBadgeClass(badge) {
-  if (!badge) return '';
-  if (badge === 'جديد')           return 'badge-new';
-  if (badge === 'الأكثر طلباً')  return 'badge-top';
-  if (badge === 'قريباً')         return 'badge-coming';
+/* ══ HELPERS ══ */
+function badgeCls(badge) {
+  if (badge === 'جديد')          return 'badge-new';
+  if (badge === 'الأكثر طلباً') return 'badge-top';
+  if (badge === 'قريباً')        return 'badge-coming';
   return '';
 }
-
-function getLevelClass(level) {
-  if (level === 'مبتدئ')              return 'level-beginner';
-  if (level === 'متوسط')             return 'level-mid';
-  if (level === 'متقدم')             return 'level-adv';
+function levelCls(level) {
+  if (level === 'مبتدئ') return 'level-beginner';
+  if (level === 'متوسط') return 'level-mid';
+  if (level === 'متقدم') return 'level-adv';
   return 'level-all';
 }
 
-/* ── card html ── */
-function buildCard(course) {
-  const badgeCls  = getBadgeClass(course.badge);
-  const levelCls  = getLevelClass(course.level);
-  const isComing  = course.price === 'قريباً';
-  const waURL     = `https://wa.me/201012142749?text=${encodeURIComponent(course.waMsg)}`;
+/* ══ BUILD CARD ══ */
+function buildCard(c) {
+  const isComing = c.price === 'قريباً';
+  const waURL    = `https://wa.me/201012142749?text=${encodeURIComponent(c.wa_message)}`;
+  const bc       = badgeCls(c.badge);
+  const lc       = levelCls(c.level);
 
   return `
   <div class="course-card fade-in">
-    ${course.badge ? `<span class="card-badge ${badgeCls}">${course.badge}</span>` : ''}
+    ${c.badge ? `<span class="card-badge ${bc}">${c.badge}</span>` : ''}
     <div class="course-card-top">
-      <div class="card-icon-wrap">${course.icon}</div>
-      <div class="card-title">${course.title}</div>
-      <div class="card-instructor">👤 ${course.instructor}</div>
-      <div class="card-desc">${course.desc}</div>
+      <div class="card-icon-wrap">${c.icon}</div>
+      <div class="card-title">${c.title}</div>
+      <div class="card-instructor">👤 ${c.instructor}</div>
+      <div class="card-desc">${c.description}</div>
       <div class="card-meta">
-        <span class="card-level ${levelCls}">${course.level}</span>
-        <span class="card-meta-item">⏱️ ${course.duration}</span>
-        <span class="card-meta-item">📋 ${course.sessions}</span>
+        <span class="card-level ${lc}">${c.level}</span>
+        <span class="card-meta-item">⏱️ ${c.duration}</span>
+        <span class="card-meta-item">📋 ${c.sessions}</span>
       </div>
     </div>
     <div class="course-card-bottom">
-      <div class="card-price ${isComing ? 'soon' : ''}">${course.price}</div>
+      <div class="card-price ${isComing ? 'soon' : ''}">${c.price}</div>
       ${isComing
         ? `<button class="btn-subscribe coming-btn">قريباً</button>`
-        : `<a href="${waURL}" target="_blank" class="btn-subscribe">💬 اشترك الآن</a>`
-      }
+        : `<a href="${waURL}" target="_blank" class="btn-subscribe">💬 اشترك الآن</a>`}
     </div>
   </div>`;
 }
 
-/* ── main render ── */
+/* ══ MAIN RENDER ══ */
 function renderAll() {
   const main = document.getElementById('coursesMain');
 
-  /* filter courses */
-  let filtered = COURSES.filter(c => {
-    const catOk = activeFilter === 'all' || c.category === activeFilter;
+  /* ─ filter ─ */
+  let filtered = allCourses.filter(c => {
+    const catOk    = activeFilter === 'all' || c.category_id === activeFilter;
     const searchOk = !searchQuery ||
       c.title.toLowerCase().includes(searchQuery) ||
-      c.desc.toLowerCase().includes(searchQuery) ||
+      c.description.toLowerCase().includes(searchQuery) ||
       c.instructor.toLowerCase().includes(searchQuery);
     return catOk && searchOk;
   });
 
+  /* ─ search results view ─ */
   if (searchQuery) {
-    /* search results — flat grid */
-    if (filtered.length === 0) {
+    if (!filtered.length) {
       main.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">🔍</div>
@@ -509,7 +471,6 @@ function renderAll() {
         </div>`;
       return;
     }
-
     main.innerHTML = `
       <div class="cat-section">
         <div class="cat-header">
@@ -526,15 +487,19 @@ function renderAll() {
     return;
   }
 
-  /* category view */
-  const activeCats  = CATEGORIES.filter(c => c.status === 'active' && (activeFilter === 'all' || c.id === activeFilter));
-  const comingCats  = activeFilter === 'all' ? CATEGORIES.filter(c => c.status === 'coming') : [];
+  /* ─ category view ─ */
+  const activeCats = allCategories.filter(c =>
+    c.status === 'active' && (activeFilter === 'all' || c.id === activeFilter)
+  );
+  const comingCats = activeFilter === 'all'
+    ? allCategories.filter(c => c.status === 'coming')
+    : [];
 
   let html = '';
 
   activeCats.forEach(cat => {
-    const catCourses = filtered.filter(c => c.category === cat.id);
-    if (catCourses.length === 0) return;
+    const catCourses = filtered.filter(c => c.category_id === cat.id);
+    if (!catCourses.length) return;
 
     html += `
     <div class="cat-section" id="cat-${cat.id}">
@@ -546,15 +511,13 @@ function renderAll() {
         </div>
       </div>
       <div class="courses-track-wrap">
-        <div class="courses-track">
-          ${catCourses.map(buildCard).join('')}
-        </div>
+        <div class="courses-track">${catCourses.map(buildCard).join('')}</div>
       </div>
     </div>`;
   });
 
-  /* coming soon categories */
-  if (comingCats.length > 0) {
+  /* ─ coming soon ─ */
+  if (comingCats.length) {
     html += `
     <div class="coming-section">
       <div class="cat-header">
@@ -571,8 +534,7 @@ function renderAll() {
             <div class="coming-card-title">${cat.label}</div>
             <div class="coming-card-sub">هذا القسم قيد الإعداد — سيُطلق قريباً بكورسات متميزة.</div>
             <span class="coming-soon-tag">⏳ قريباً</span>
-          </div>
-        `).join('')}
+          </div>`).join('')}
       </div>
     </div>`;
   }
@@ -585,6 +547,17 @@ function renderAll() {
   }
 
   main.innerHTML = html;
+}
+
+/* ══ ERROR ══ */
+function showError(msg, detail) {
+  console.error('Courses load error:', detail);
+  document.getElementById('coursesMain').innerHTML = `
+    <div class="error-box">
+      <div class="error-box-title">⚠️ تعذّر التحميل</div>
+      <div class="error-box-sub">${msg}</div>
+      <button onclick="location.reload()" style="margin-top:16px;padding:10px 24px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-family:'Cairo',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer;">🔄 إعادة المحاولة</button>
+    </div>`;
 }
 </script>
 </body>
