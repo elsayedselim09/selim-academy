@@ -3883,59 +3883,57 @@ function showCfMsg(text, ok) {
 <script src="pwa-register.js" defer></script>
 
 <!-- ═══ FEATURED COURSES — DYNAMIC FROM SUPABASE ═══ -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function() {
   var SB_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co';
   var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s';
-  var db = window.supabase.createClient(SB_URL, SB_KEY);
 
-  function getLevelStyle(level) {
-    if (level === 'مبتدئ') return 'background:rgba(14,159,110,0.1);color:#065F46;';
-    if (level === 'متوسط') return 'background:rgba(245,158,11,0.1);color:#92400E;';
-    if (level === 'متقدم') return 'background:rgba(239,68,68,0.1);color:#991B1B;';
+  function lvStyle(l) {
+    if (l==='مبتدئ') return 'background:rgba(14,159,110,0.1);color:#065F46;';
+    if (l==='متوسط') return 'background:rgba(245,158,11,0.1);color:#92400E;';
+    if (l==='متقدم') return 'background:rgba(239,68,68,0.1);color:#991B1B;';
     return 'background:rgba(26,86,219,0.1);color:#1342B0;';
   }
 
-  function getBadgeHtml(badge) {
-    if (!badge) return '';
+  function badgeHtml(b) {
+    if (!b) return '';
     var s = {
-      'جديد':          'background:rgba(14,159,110,0.12);color:#065F46;border:1px solid rgba(14,159,110,0.3);',
-      'الأكثر طلباً': 'background:rgba(26,86,219,0.1);color:#1A56DB;border:1px solid rgba(26,86,219,0.25);',
-      'قريباً':        'background:rgba(245,158,11,0.1);color:#B45309;border:1px solid rgba(245,158,11,0.3);'
+      'جديد':         'background:rgba(14,159,110,0.12);color:#065F46;border:1px solid rgba(14,159,110,0.3);',
+      'الأكثر طلباً':'background:rgba(26,86,219,0.1);color:#1A56DB;border:1px solid rgba(26,86,219,0.25);',
+      'قريباً':       'background:rgba(245,158,11,0.1);color:#B45309;border:1px solid rgba(245,158,11,0.3);'
     };
-    return '<span style="position:absolute;top:14px;left:14px;font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:20px;' + (s[badge]||'') + '">' + badge + '</span>';
+    return '<span style="position:absolute;top:14px;left:14px;font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:20px;'+(s[b]||'')+'">'+b+'</span>';
   }
 
   function buildCard(c) {
     var isComing = c.price === 'قريباً';
-    var waURL    = 'https://wa.me/201012142749?text=' + encodeURIComponent(c.wa_message || '');
+    var waURL    = 'https://wa.me/201012142749?text=' + encodeURIComponent(c.wa_message||'');
     return '<div style="background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,0.07);border:1.5px solid transparent;overflow:hidden;display:flex;flex-direction:column;transition:all .28s;position:relative;"'
-      + ' onmouseover="this.style.transform='translateY(-5px)';this.style.boxShadow='0 8px 40px rgba(0,0,0,0.13)';this.style.borderColor='#3B82F6';"'
-      + ' onmouseout="this.style.transform='';this.style.boxShadow='0 4px 24px rgba(0,0,0,0.07)';this.style.borderColor='transparent';">'
-      + getBadgeHtml(c.badge)
+      +' onmouseover="this.style.transform='translateY(-5px)';this.style.boxShadow='0 8px 40px rgba(0,0,0,0.13)';this.style.borderColor='#3B82F6';"'
+      +' onmouseout="this.style.transform='';this.style.boxShadow='0 4px 24px rgba(0,0,0,0.07)';this.style.borderColor='transparent';">'
+      + badgeHtml(c.badge)
       + '<div style="padding:22px 18px 16px;flex:1;">'
-      + '<div style="width:52px;height:52px;border-radius:14px;background:#F9FAFB;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin-bottom:14px;">' + (c.icon||'📚') + '</div>'
-      + '<div style="font-size:.98rem;font-weight:800;color:#111928;margin-bottom:6px;line-height:1.4;">' + c.title + '</div>'
-      + '<div style="font-size:.78rem;color:#6B7280;margin-bottom:10px;">👤 ' + c.instructor + '</div>'
-      + '<div style="font-size:.8rem;color:#6B7280;line-height:1.65;margin-bottom:14px;">' + (c.description||'') + '</div>'
+      + '<div style="width:52px;height:52px;border-radius:14px;background:#F9FAFB;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin-bottom:14px;">'+(c.icon||'📚')+'</div>'
+      + '<div style="font-size:.98rem;font-weight:800;color:#111928;margin-bottom:6px;line-height:1.4;">'+c.title+'</div>'
+      + '<div style="font-size:.78rem;color:#6B7280;margin-bottom:10px;">👤 '+c.instructor+'</div>'
+      + '<div style="font-size:.8rem;color:#6B7280;line-height:1.65;margin-bottom:14px;">'+(c.description||'')+'</div>'
       + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
-      + '<span style="font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:6px;' + getLevelStyle(c.level) + '">' + c.level + '</span>'
-      + '<span style="font-size:.72rem;color:#6B7280;background:#F9FAFB;padding:3px 8px;border-radius:6px;">⏱️ ' + c.duration + '</span>'
-      + '<span style="font-size:.72rem;color:#6B7280;background:#F9FAFB;padding:3px 8px;border-radius:6px;">📋 ' + c.sessions + '</span>'
+      + '<span style="font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:6px;'+lvStyle(c.level)+'">'+c.level+'</span>'
+      + '<span style="font-size:.72rem;color:#6B7280;background:#F9FAFB;padding:3px 8px;border-radius:6px;">⏱️ '+c.duration+'</span>'
+      + '<span style="font-size:.72rem;color:#6B7280;background:#F9FAFB;padding:3px 8px;border-radius:6px;">📋 '+c.sessions+'</span>'
       + '</div></div>'
       + '<div style="padding:14px 18px 18px;border-top:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-      + '<div style="font-size:' + (isComing?'.82':'0.92') + 'rem;font-weight:900;color:' + (isComing?'#6B7280':'#111928') + ';">' + c.price + '</div>'
+      + '<div style="font-size:'+(isComing?'.82':'0.92')+'rem;font-weight:900;color:'+(isComing?'#6B7280':'#111928')+';">'+c.price+'</div>'
       + (isComing
           ? '<button style="padding:9px 16px;background:#E5E7EB;color:#6B7280;border-radius:9px;font-weight:700;font-size:.8rem;border:none;font-family:'Cairo',sans-serif;cursor:default;">قريباً</button>'
-          : '<a href="' + waURL + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:linear-gradient(135deg,#1A56DB,#3B82F6);color:#fff;border-radius:9px;font-weight:700;font-size:.8rem;text-decoration:none;font-family:'Cairo',sans-serif;box-shadow:0 3px 12px rgba(26,86,219,0.3);">💬 اشترك الآن</a>')
+          : '<a href="'+waURL+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:linear-gradient(135deg,#1A56DB,#3B82F6);color:#fff;border-radius:9px;font-weight:700;font-size:.8rem;text-decoration:none;font-family:'Cairo',sans-serif;box-shadow:0 3px 12px rgba(26,86,219,0.3);">💬 اشترك الآن</a>')
       + '</div></div>';
   }
 
   function showSkeleton(grid) {
     var sk = '';
-    for (var i=0;i<3;i++) {
-      sk += '<div style="min-width:300px;max-width:300px;height:320px;background:rgba(255,255,255,0.06);border-radius:14px;animation:pulse 1.5s ease-in-out infinite;"></div>';
+    for(var i=0;i<3;i++) {
+      sk += '<div style="min-width:280px;max-width:280px;height:300px;background:rgba(255,255,255,0.06);border-radius:14px;flex-shrink:0;"></div>';
     }
     grid.innerHTML = sk;
   }
@@ -3946,6 +3944,10 @@ function showCfMsg(text, ok) {
 
     showSkeleton(grid);
 
+    // استخدم الـ Supabase client الموجود في الصفحة
+    var db = window._sb || (window.supabase && window.supabase.createClient(SB_URL, SB_KEY));
+    if (!db) { grid.innerHTML = ''; return; }
+
     db.from('catalog_courses')
       .select('*')
       .eq('is_active', true)
@@ -3953,7 +3955,7 @@ function showCfMsg(text, ok) {
       .order('sort_order')
       .then(function(res) {
         if (res.error || !res.data || !res.data.length) {
-          grid.innerHTML = '<div style="color:rgba(255,255,255,0.4);padding:40px;font-size:.9rem;">لا توجد كورسات مميزة حالياً</div>';
+          grid.innerHTML = '<div style="color:rgba(255,255,255,0.4);padding:40px;font-size:.9rem;text-align:center;">لا توجد كورسات مميزة حالياً</div>';
           return;
         }
         grid.innerHTML = res.data.map(buildCard).join('');
