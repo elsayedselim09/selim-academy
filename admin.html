@@ -2458,7 +2458,7 @@ function setCatFilter(f) {
 
 /* ── جدول الكورسات ── */
 function renderCatalogTable() {
-  const q   = (document.getElementById('catalog-search')?.value||'').toLowerCase();
+  const q      = (document.getElementById('catalog-search')?.value||'').toLowerCase();
   const catMap = Object.fromEntries(_catalogCats.map(c=>[c.id,c]));
 
   let list = _catalogCourses.filter(c => {
@@ -2476,19 +2476,36 @@ function renderCatalogTable() {
     return;
   }
 
+  const featuredCount = _catalogCourses.filter(c=>c.featured && c.is_active).length;
+  const featuredNote  = `
+    <div style="padding:11px 18px;background:rgba(245,158,11,0.08);border-bottom:1px solid rgba(245,158,11,0.2);font-size:.82rem;color:#92400E;font-weight:700;display:flex;align-items:center;gap:8px;">
+      ⭐ <span>${featuredCount} كورس يظهر حالياً في الصفحة الرئيسية</span>
+      <span style="font-weight:400;color:#B45309;margin-right:4px">— الكورسات المميزة لها خلفية صفراء فاتحة</span>
+    </div>`;
+
   const rows = list.map(c => {
-    const cat     = catMap[c.category_id] || {};
+    const cat       = catMap[c.category_id] || {};
     const badgeHtml = c.badge
       ? `<span style="font-size:.68rem;padding:2px 8px;border-radius:12px;font-weight:700;background:rgba(26,86,219,.1);color:var(--blue)">${c.badge}</span>`
       : '';
     const statusDot = c.is_active
       ? `<span style="color:var(--green);font-weight:700">● مفعّل</span>`
       : `<span style="color:var(--gray);font-weight:700">● مخفي</span>`;
-    return `<tr>
+    const featuredBtn = c.featured
+      ? `<button onclick="toggleFeatured('${c.id}',false)"
+           style="padding:6px 11px;border-radius:7px;border:1.5px solid #F59E0B;background:rgba(245,158,11,0.12);color:#B45309;font-size:.78rem;font-weight:800;cursor:pointer;font-family:'Cairo',sans-serif;white-space:nowrap">
+           ⭐ في الرئيسية
+         </button>`
+      : `<button onclick="toggleFeatured('${c.id}',true)"
+           style="padding:6px 11px;border-radius:7px;border:1.5px solid var(--gray-mid);background:transparent;color:var(--gray);font-size:.78rem;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;white-space:nowrap">
+           ☆ تمييز
+         </button>`;
+    const rowBg = c.featured ? 'background:rgba(245,158,11,0.04);' : '';
+    return `<tr style="${rowBg}">
       <td style="font-size:1.3rem;width:44px;text-align:center">${c.icon}</td>
       <td>
         <div style="font-weight:700;color:var(--dark);margin-bottom:2px">${c.title}</div>
-        <div style="font-size:.76rem;color:var(--gray)">${c.description?.slice(0,60)||''}${(c.description?.length||0)>60?'...':''}</div>
+        <div style="font-size:.76rem;color:var(--gray)">${(c.description||'').slice(0,60)}${(c.description||'').length>60?'...':''}</div>
         ${badgeHtml}
       </td>
       <td>
@@ -2504,13 +2521,14 @@ function renderCatalogTable() {
       <td style="font-weight:800;color:${c.price==='قريباً'?'var(--gray)':'var(--dark)'};font-size:.88rem">${c.price}</td>
       <td style="font-size:.82rem">${statusDot}</td>
       <td>
-        <div style="display:flex;gap:6px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${featuredBtn}
           <button onclick="openCatalogModal('${c.id}')"
-            style="padding:6px 12px;border-radius:7px;border:1.5px solid var(--blue);background:transparent;color:var(--blue);font-size:.78rem;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif">
+            style="padding:6px 11px;border-radius:7px;border:1.5px solid var(--blue);background:transparent;color:var(--blue);font-size:.78rem;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif">
             ✏️ تعديل
           </button>
-          <button onclick="askDelCatalog('${c.id}','${c.title.replace(/'/g,"\\'")}' )"
-            style="padding:6px 12px;border-radius:7px;border:1.5px solid var(--red);background:transparent;color:var(--red);font-size:.78rem;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif">
+          <button onclick="askDelCatalog('${c.id}','${c.title.replace(/'/g,"\'")}' )"
+            style="padding:6px 10px;border-radius:7px;border:1.5px solid var(--red);background:transparent;color:var(--red);font-size:.78rem;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif">
             🗑️
           </button>
         </div>
@@ -2520,21 +2538,27 @@ function renderCatalogTable() {
 
   document.getElementById('catalog-body').innerHTML = `
     <div style="overflow-x:auto">
+      ${featuredNote}
       <table class="data-table">
         <thead><tr>
-          <th></th>
-          <th>الكورس</th>
-          <th>الفئة</th>
-          <th>المدرس</th>
-          <th>المستوى / المدة</th>
-          <th>السعر</th>
-          <th>الحالة</th>
-          <th>إجراءات</th>
+          <th></th><th>الكورس</th><th>الفئة</th><th>المدرس</th>
+          <th>المستوى / المدة</th><th>السعر</th><th>الحالة</th><th>إجراءات</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
 }
+
+/* ── تمييز / إلغاء تمييز كورس في الرئيسية ── */
+async function toggleFeatured(id, val) {
+  const { error } = await sb.from('catalog_courses')
+    .update({ featured: val, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) { alert('خطأ: ' + error.message); return; }
+  showToast(val ? '⭐ تم تمييز الكورس — سيظهر في الصفحة الرئيسية' : '☆ تم إزالة الكورس من الصفحة الرئيسية');
+  await loadCatalog();
+}
+
 
 /* ── فتح Modal إضافة ── */
 function openCatalogModal(id) {
