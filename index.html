@@ -3908,25 +3908,26 @@ function showCfMsg(text, ok) {
   function buildCard(c) {
     var isComing = c.price === 'قريباً';
     var waURL    = 'https://wa.me/201012142749?text=' + encodeURIComponent(c.wa_message||'');
-    return '<div style="background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,0.07);border:1.5px solid transparent;overflow:hidden;display:flex;flex-direction:column;transition:all .28s;position:relative;"'
-      +' onmouseover="this.style.transform='translateY(-5px)';this.style.boxShadow='0 8px 40px rgba(0,0,0,0.13)';this.style.borderColor='#3B82F6';"'
-      +' onmouseout="this.style.transform='';this.style.boxShadow='0 4px 24px rgba(0,0,0,0.07)';this.style.borderColor='transparent';">'
+    var hoverOn  = "this.style.transform='translateY(-5px)';this.style.boxShadow='0 8px 40px rgba(0,0,0,0.13)';this.style.borderColor='#3B82F6';";
+    var hoverOff = "this.style.transform='';this.style.boxShadow='0 4px 24px rgba(0,0,0,0.07)';this.style.borderColor='transparent';";
+    var cardBtn  = isComing
+      ? '<button style="padding:9px 16px;background:#E5E7EB;color:#6B7280;border-radius:9px;font-weight:700;font-size:.8rem;border:none;font-family:Cairo,sans-serif;cursor:default;">قريباً</button>'
+      : '<a href="' + waURL + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:linear-gradient(135deg,#1A56DB,#3B82F6);color:#fff;border-radius:9px;font-weight:700;font-size:.8rem;text-decoration:none;font-family:Cairo,sans-serif;box-shadow:0 3px 12px rgba(26,86,219,0.3);">💬 اشترك الآن</a>';
+    return '<div style="background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,0.07);border:1.5px solid transparent;overflow:hidden;display:flex;flex-direction:column;transition:all .28s;position:relative;" onmouseover="' + hoverOn + '" onmouseout="' + hoverOff + '">'
       + badgeHtml(c.badge)
       + '<div style="padding:22px 18px 16px;flex:1;">'
-      + '<div style="width:52px;height:52px;border-radius:14px;background:#F9FAFB;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin-bottom:14px;">'+(c.icon||'📚')+'</div>'
-      + '<div style="font-size:.98rem;font-weight:800;color:#111928;margin-bottom:6px;line-height:1.4;">'+c.title+'</div>'
-      + '<div style="font-size:.78rem;color:#6B7280;margin-bottom:10px;">👤 '+c.instructor+'</div>'
-      + '<div style="font-size:.8rem;color:#6B7280;line-height:1.65;margin-bottom:14px;">'+(c.description||'')+'</div>'
+      + '<div style="width:52px;height:52px;border-radius:14px;background:#F9FAFB;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin-bottom:14px;">' + (c.icon||'📚') + '</div>'
+      + '<div style="font-size:.98rem;font-weight:800;color:#111928;margin-bottom:6px;line-height:1.4;">' + c.title + '</div>'
+      + '<div style="font-size:.78rem;color:#6B7280;margin-bottom:10px;">👤 ' + c.instructor + '</div>'
+      + '<div style="font-size:.8rem;color:#6B7280;line-height:1.65;margin-bottom:14px;">' + (c.description||'') + '</div>'
       + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
-      + '<span style="font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:6px;'+lvStyle(c.level)+'">'+c.level+'</span>'
-      + '<span style="font-size:.72rem;color:#6B7280;background:#F9FAFB;padding:3px 8px;border-radius:6px;">⏱️ '+c.duration+'</span>'
-      + '<span style="font-size:.72rem;color:#6B7280;background:#F9FAFB;padding:3px 8px;border-radius:6px;">📋 '+c.sessions+'</span>'
+      + '<span style="font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:6px;' + lvStyle(c.level) + '">' + c.level + '</span>'
+      + '<span style="font-size:.72rem;color:#6B7280;background:#F9FAFB;padding:3px 8px;border-radius:6px;">⏱️ ' + c.duration + '</span>'
+      + '<span style="font-size:.72rem;color:#6B7280;background:#F9FAFB;padding:3px 8px;border-radius:6px;">📋 ' + c.sessions + '</span>'
       + '</div></div>'
       + '<div style="padding:14px 18px 18px;border-top:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-      + '<div style="font-size:'+(isComing?'.82':'0.92')+'rem;font-weight:900;color:'+(isComing?'#6B7280':'#111928')+';">'+c.price+'</div>'
-      + (isComing
-          ? '<button style="padding:9px 16px;background:#E5E7EB;color:#6B7280;border-radius:9px;font-weight:700;font-size:.8rem;border:none;font-family:'Cairo',sans-serif;cursor:default;">قريباً</button>'
-          : '<a href="'+waURL+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:linear-gradient(135deg,#1A56DB,#3B82F6);color:#fff;border-radius:9px;font-weight:700;font-size:.8rem;text-decoration:none;font-family:'Cairo',sans-serif;box-shadow:0 3px 12px rgba(26,86,219,0.3);">💬 اشترك الآن</a>')
+      + '<div style="font-size:' + (isComing?'.82':'0.92') + 'rem;font-weight:900;color:' + (isComing?'#6B7280':'#111928') + ';">' + c.price + '</div>'
+      + cardBtn
       + '</div></div>';
   }
 
