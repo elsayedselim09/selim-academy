@@ -293,6 +293,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <button class="nav-item"        id="nav-admin-exams" onclick="goTo('admin-exams')"><span class="nav-icon">📝</span> إحصائيات الاختبارات</button>
     <div class="nav-label">إدارة الموقع</div>
     <button class="nav-item"        id="nav-site-content" onclick="goTo('site-content')"><span class="nav-icon">🌐</span> إدارة المحتوى</button>
+    <button class="nav-item"        id="nav-catalog"      onclick="goTo('catalog')"><span class="nav-icon">🎓</span> إدارة الكورسات</button>
     <button class="nav-item"        id="nav-announcements" onclick="goTo('announcements')"><span class="nav-icon">📢</span> الإعلانات</button>
     <div class="nav-label">الحساب</div>
     <button class="nav-item"        id="nav-profile"   onclick="goTo('profile')"><span class="nav-icon">👤</span> حسابي</button>
@@ -744,6 +745,150 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     </div>
 
   </div><!-- end page-site-content -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       صفحة إدارة الكورسات — CATALOG MANAGEMENT
+  ═══════════════════════════════════════════════════════ -->
+  <div class="page" id="page-catalog">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div class="page-title">🎓 إدارة الكورسات</div>
+        <p class="page-sub">أضف أو عدّل أو احذف الكورسات التي تظهر في صفحة "كورساتي" على الموقع</p>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn-primary" style="background:var(--green)" onclick="openCatalogModal()">➕ إضافة كورس جديد</button>
+        <button class="btn-refresh" onclick="loadCatalog()">🔄 تحديث</button>
+      </div>
+    </div>
+
+    <div id="catalog-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:20px"></div>
+
+    <div class="section-card" style="margin-bottom:20px">
+      <div class="filter-bar" style="flex-wrap:wrap;gap:8px;padding:14px 16px">
+        <button class="filter-btn active" id="catf-all" onclick="setCatFilter('all')">📋 الكل</button>
+        <div id="catf-btns" style="display:contents"></div>
+        <input class="search-input" id="catalog-search" type="text"
+          placeholder="🔍 ابحث بالعنوان أو المدرس أو الفئة..."
+          oninput="renderCatalogTable()"
+          style="margin-right:auto">
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div id="catalog-body">
+        <div style="padding:40px;text-align:center">
+          <div style="width:36px;height:36px;border:3px solid var(--gray-mid);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px"></div>
+          <p style="color:var(--gray);font-size:.88rem">جاري تحميل الكورسات...</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL: إضافة / تعديل كورس -->
+  <div class="mdl" id="mdl-catalog">
+    <div class="mdl-box" style="max-width:560px;max-height:90vh;overflow-y:auto">
+      <div class="mdl-icon" id="mdl-cat-icon-preview">📚</div>
+      <div class="mdl-title" id="mdl-cat-title">إضافة كورس جديد</div>
+      <input type="hidden" id="cat-edit-id">
+      <div class="fg-row">
+        <div class="fg" style="flex:0 0 110px">
+          <label>الأيقونة (إيموجي)</label>
+          <input type="text" id="cat-icon" placeholder="📖" maxlength="6"
+            oninput="document.getElementById('mdl-cat-icon-preview').textContent=this.value||'📚'"
+            style="text-align:center;font-size:1.4rem">
+        </div>
+        <div class="fg" style="flex:1">
+          <label>اسم الكورس *</label>
+          <input type="text" id="cat-title-input" placeholder="مثال: رياضيات الثانوية العامة">
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg">
+          <label>الفئة *</label>
+          <select id="cat-category"></select>
+        </div>
+        <div class="fg">
+          <label>المدرس</label>
+          <input type="text" id="cat-instructor" placeholder="م. السيد سليم">
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg">
+          <label>المستوى</label>
+          <select id="cat-level">
+            <option value="مبتدئ">مبتدئ</option>
+            <option value="متوسط">متوسط</option>
+            <option value="متقدم">متقدم</option>
+            <option value="جميع المستويات" selected>جميع المستويات</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>المدة</label>
+          <input type="text" id="cat-duration" placeholder="مثال: 10 أسابيع">
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg">
+          <label>عدد الحصص</label>
+          <input type="text" id="cat-sessions" placeholder="مثال: 30 حصة">
+        </div>
+        <div class="fg">
+          <label>السعر</label>
+          <input type="text" id="cat-price" placeholder="20 ر.س / حصة أو قريباً">
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg">
+          <label>الشارة</label>
+          <select id="cat-badge">
+            <option value="">بدون شارة</option>
+            <option value="جديد">🟢 جديد</option>
+            <option value="الأكثر طلباً">🔵 الأكثر طلباً</option>
+            <option value="قريباً">🟡 قريباً</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>الحالة</label>
+          <select id="cat-active">
+            <option value="true">✅ مفعّل (يظهر للزوار)</option>
+            <option value="false">🔴 مخفي</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label>وصف الكورس *</label>
+        <textarea id="cat-desc" rows="3" placeholder="وصف مختصر يظهر على الكارت..." style="resize:vertical"></textarea>
+      </div>
+      <div class="fg">
+        <label>رسالة الواتساب عند الاشتراك</label>
+        <input type="text" id="cat-wa" placeholder="أريد الاشتراك في كورس: ...">
+      </div>
+      <div class="fg">
+        <label>ترتيب الظهور (رقم أصغر = يظهر أولاً)</label>
+        <input type="number" id="cat-sort" value="0" min="0">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn-primary" style="flex:1" onclick="saveCatalogCourse()">💾 حفظ الكورس</button>
+        <button class="btn-refresh" onclick="closeMdl('mdl-catalog')">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: تأكيد حذف -->
+  <div class="mdl" id="mdl-cat-del">
+    <div class="mdl-box" style="max-width:400px">
+      <div class="mdl-icon">🗑️</div>
+      <div class="mdl-title">تأكيد الحذف</div>
+      <p style="color:var(--gray);font-size:.9rem;margin-bottom:20px;text-align:center" id="mdl-cat-del-name"></p>
+      <div style="display:flex;gap:10px">
+        <button class="btn-primary" style="flex:1;background:var(--red)" onclick="confirmDelCatalog()">🗑️ نعم، احذف</button>
+        <button class="btn-refresh" onclick="closeMdl('mdl-cat-del')">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- ════════════ MODALS for site content ════════════ -->
 
@@ -1454,7 +1599,7 @@ function goTo(name) {
   document.getElementById('nav-'+name).classList.add('active');
   closeSidebar();
   if (name !== 'sessions' && _sessInterval) { clearInterval(_sessInterval); _sessInterval = null; }
-  const loaders = {courses:loadCourses, sessions:initSessions, students:()=>{ switchStudentTab('list'); loadStudents(); }, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit, announcements:annLoad};
+  const loaders = {courses:loadCourses, sessions:initSessions, students:()=>{ switchStudentTab('list'); loadStudents(); }, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit, announcements:annLoad, catalog:loadCatalog};
   if(loaders[name]) loaders[name]();
   if(name==='requests') renderReqTable();
 }
@@ -2250,6 +2395,274 @@ function renderStudentSchedules() {
     </tr>`).join('')}
     </tbody>
   </table></div>`;
+}
+
+
+/* ══════════════════════════════════════════════════════
+   إدارة الكورسات — CATALOG MANAGEMENT
+   الجداول: catalog_categories + catalog_courses
+══════════════════════════════════════════════════════ */
+
+let _catalogCats    = [];
+let _catalogCourses = [];
+let _catalogFilter  = 'all';
+let _catDelId       = null;
+
+/* ── تحميل البيانات ── */
+async function loadCatalog() {
+  try {
+    const [cRes, crRes] = await Promise.all([
+      sb.from('catalog_categories').select('*').order('sort_order'),
+      sb.from('catalog_courses').select('*').order('sort_order')
+    ]);
+    if (cRes.error)  throw cRes.error;
+    if (crRes.error) throw crRes.error;
+    _catalogCats    = cRes.data  || [];
+    _catalogCourses = crRes.data || [];
+    buildCatalogStats();
+    buildCatFilterBtns();
+    renderCatalogTable();
+  } catch(e) {
+    document.getElementById('catalog-body').innerHTML =
+      `<div style="padding:30px;text-align:center;color:var(--red)">⚠️ خطأ: ${e.message}</div>`;
+  }
+}
+
+/* ── إحصائيات ── */
+function buildCatalogStats() {
+  const total  = _catalogCourses.length;
+  const active = _catalogCourses.filter(c=>c.is_active).length;
+  const hidden = total - active;
+  const cats   = _catalogCats.filter(c=>c.status==='active').length;
+  document.getElementById('catalog-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-label">إجمالي الكورسات</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">${active}</div><div class="stat-label">مفعّل</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--gray)">${hidden}</div><div class="stat-label">مخفي</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${cats}</div><div class="stat-label">فئة نشطة</div></div>`;
+}
+
+/* ── أزرار الفلتر ── */
+function buildCatFilterBtns() {
+  const wrap = document.getElementById('catf-btns');
+  wrap.innerHTML = _catalogCats.map(c =>
+    `<button class="filter-btn" id="catf-${c.id}" onclick="setCatFilter('${c.id}')">${c.label}</button>`
+  ).join('');
+}
+
+function setCatFilter(f) {
+  _catalogFilter = f;
+  document.querySelectorAll('[id^="catf-"]').forEach(b => b.classList.remove('active'));
+  (document.getElementById('catf-'+f) || document.getElementById('catf-all')).classList.add('active');
+  renderCatalogTable();
+}
+
+/* ── جدول الكورسات ── */
+function renderCatalogTable() {
+  const q   = (document.getElementById('catalog-search')?.value||'').toLowerCase();
+  const catMap = Object.fromEntries(_catalogCats.map(c=>[c.id,c]));
+
+  let list = _catalogCourses.filter(c => {
+    const catOk = _catalogFilter==='all' || c.category_id===_catalogFilter;
+    const qOk   = !q ||
+      c.title.toLowerCase().includes(q) ||
+      (c.instructor||'').toLowerCase().includes(q) ||
+      (catMap[c.category_id]?.label||'').toLowerCase().includes(q);
+    return catOk && qOk;
+  });
+
+  if (!list.length) {
+    document.getElementById('catalog-body').innerHTML =
+      '<div style="padding:40px;text-align:center;color:var(--gray)">لا توجد كورسات تطابق البحث</div>';
+    return;
+  }
+
+  const rows = list.map(c => {
+    const cat     = catMap[c.category_id] || {};
+    const badgeHtml = c.badge
+      ? `<span style="font-size:.68rem;padding:2px 8px;border-radius:12px;font-weight:700;background:rgba(26,86,219,.1);color:var(--blue)">${c.badge}</span>`
+      : '';
+    const statusDot = c.is_active
+      ? `<span style="color:var(--green);font-weight:700">● مفعّل</span>`
+      : `<span style="color:var(--gray);font-weight:700">● مخفي</span>`;
+    return `<tr>
+      <td style="font-size:1.3rem;width:44px;text-align:center">${c.icon}</td>
+      <td>
+        <div style="font-weight:700;color:var(--dark);margin-bottom:2px">${c.title}</div>
+        <div style="font-size:.76rem;color:var(--gray)">${c.description?.slice(0,60)||''}${(c.description?.length||0)>60?'...':''}</div>
+        ${badgeHtml}
+      </td>
+      <td>
+        <span style="font-size:.75rem;background:${cat.color||'#eee'}22;color:${cat.color||'#888'};padding:3px 10px;border-radius:20px;font-weight:700;border:1px solid ${cat.color||'#ddd'}44">
+          ${cat.label||c.category_id}
+        </span>
+      </td>
+      <td style="font-size:.82rem">${c.instructor}</td>
+      <td style="font-size:.82rem">
+        <div>${c.level}</div>
+        <div style="color:var(--gray);font-size:.74rem">${c.duration} · ${c.sessions}</div>
+      </td>
+      <td style="font-weight:800;color:${c.price==='قريباً'?'var(--gray)':'var(--dark)'};font-size:.88rem">${c.price}</td>
+      <td style="font-size:.82rem">${statusDot}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button onclick="openCatalogModal('${c.id}')"
+            style="padding:6px 12px;border-radius:7px;border:1.5px solid var(--blue);background:transparent;color:var(--blue);font-size:.78rem;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif">
+            ✏️ تعديل
+          </button>
+          <button onclick="askDelCatalog('${c.id}','${c.title.replace(/'/g,"\\'")}' )"
+            style="padding:6px 12px;border-radius:7px;border:1.5px solid var(--red);background:transparent;color:var(--red);font-size:.78rem;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif">
+            🗑️
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('catalog-body').innerHTML = `
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr>
+          <th></th>
+          <th>الكورس</th>
+          <th>الفئة</th>
+          <th>المدرس</th>
+          <th>المستوى / المدة</th>
+          <th>السعر</th>
+          <th>الحالة</th>
+          <th>إجراءات</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+/* ── فتح Modal إضافة ── */
+function openCatalogModal(id) {
+  // populate categories select
+  const sel = document.getElementById('cat-category');
+  sel.innerHTML = _catalogCats.map(c =>
+    `<option value="${c.id}">${c.label}</option>`
+  ).join('');
+
+  if (!id) {
+    // ADD mode
+    document.getElementById('mdl-cat-title').textContent = '➕ إضافة كورس جديد';
+    document.getElementById('mdl-cat-icon-preview').textContent = '📚';
+    document.getElementById('cat-edit-id').value    = '';
+    document.getElementById('cat-icon').value       = '';
+    document.getElementById('cat-title-input').value= '';
+    document.getElementById('cat-instructor').value = 'قريباً';
+    document.getElementById('cat-level').value      = 'جميع المستويات';
+    document.getElementById('cat-duration').value   = '';
+    document.getElementById('cat-sessions').value   = '';
+    document.getElementById('cat-price').value      = 'قريباً';
+    document.getElementById('cat-badge').value      = '';
+    document.getElementById('cat-active').value     = 'true';
+    document.getElementById('cat-desc').value       = '';
+    document.getElementById('cat-wa').value         = '';
+    document.getElementById('cat-sort').value       = '0';
+  } else {
+    // EDIT mode
+    const c = _catalogCourses.find(x=>x.id===id);
+    if (!c) return;
+    document.getElementById('mdl-cat-title').textContent = '✏️ تعديل الكورس';
+    document.getElementById('mdl-cat-icon-preview').textContent = c.icon||'📚';
+    document.getElementById('cat-edit-id').value    = c.id;
+    document.getElementById('cat-icon').value       = c.icon||'';
+    document.getElementById('cat-title-input').value= c.title||'';
+    document.getElementById('cat-category').value   = c.category_id||'';
+    document.getElementById('cat-instructor').value = c.instructor||'';
+    document.getElementById('cat-level').value      = c.level||'جميع المستويات';
+    document.getElementById('cat-duration').value   = c.duration||'';
+    document.getElementById('cat-sessions').value   = c.sessions||'';
+    document.getElementById('cat-price').value      = c.price||'';
+    document.getElementById('cat-badge').value      = c.badge||'';
+    document.getElementById('cat-active').value     = String(c.is_active);
+    document.getElementById('cat-desc').value       = c.description||'';
+    document.getElementById('cat-wa').value         = c.wa_message||'';
+    document.getElementById('cat-sort').value       = c.sort_order||0;
+  }
+  openMdl('mdl-catalog');
+}
+
+/* ── حفظ كورس ── */
+async function saveCatalogCourse() {
+  const editId = document.getElementById('cat-edit-id').value.trim();
+  const title  = document.getElementById('cat-title-input').value.trim();
+  const cat    = document.getElementById('cat-category').value;
+  const desc   = document.getElementById('cat-desc').value.trim();
+
+  if (!title) { alert('من فضلك أدخل اسم الكورس'); return; }
+  if (!cat)   { alert('من فضلك اختر الفئة'); return; }
+  if (!desc)  { alert('من فضلك أدخل وصف الكورس'); return; }
+
+  const payload = {
+    category_id : cat,
+    icon        : document.getElementById('cat-icon').value.trim() || '📚',
+    title,
+    instructor  : document.getElementById('cat-instructor').value.trim() || 'قريباً',
+    level       : document.getElementById('cat-level').value,
+    duration    : document.getElementById('cat-duration').value.trim() || 'مستمر',
+    sessions    : document.getElementById('cat-sessions').value.trim() || 'حسب الاحتياج',
+    price       : document.getElementById('cat-price').value.trim() || 'قريباً',
+    badge       : document.getElementById('cat-badge').value,
+    is_active   : document.getElementById('cat-active').value === 'true',
+    description : desc,
+    wa_message  : document.getElementById('cat-wa').value.trim(),
+    sort_order  : parseInt(document.getElementById('cat-sort').value)||0,
+    updated_at  : new Date().toISOString()
+  };
+
+  let err;
+  if (editId) {
+    // UPDATE
+    const res = await sb.from('catalog_courses').update(payload).eq('id', editId);
+    err = res.error;
+  } else {
+    // INSERT — generate text id from title
+    const newId = 'course-' + Date.now();
+    const res   = await sb.from('catalog_courses').insert({id: newId, ...payload});
+    err = res.error;
+  }
+
+  if (err) { alert('خطأ: ' + err.message); return; }
+
+  closeMdl('mdl-catalog');
+  showToast(editId ? '✅ تم تحديث الكورس بنجاح' : '✅ تم إضافة الكورس بنجاح');
+  await loadCatalog();
+}
+
+/* ── حذف كورس ── */
+function askDelCatalog(id, name) {
+  _catDelId = id;
+  document.getElementById('mdl-cat-del-name').textContent =
+    `هل تريد حذف كورس "${name}" نهائياً من قاعدة البيانات؟`;
+  openMdl('mdl-cat-del');
+}
+
+async function confirmDelCatalog() {
+  if (!_catDelId) return;
+  const { error } = await sb.from('catalog_courses').delete().eq('id', _catDelId);
+  if (error) { alert('خطأ: ' + error.message); return; }
+  closeMdl('mdl-cat-del');
+  showToast('🗑️ تم حذف الكورس');
+  _catDelId = null;
+  await loadCatalog();
+}
+
+/* ── toast helper (reuse or define) ── */
+function showToast(msg) {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1F2A37;color:#fff;padding:12px 28px;border-radius:50px;font-family:Cairo,sans-serif;font-size:.9rem;font-weight:700;z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,.25);transition:opacity .3s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._to);
+  t._to = setTimeout(()=>{ t.style.opacity='0'; }, 2800);
 }
 
 // Legacy stubs (kept so goTo mapping doesn't break)
