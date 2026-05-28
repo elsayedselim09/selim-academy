@@ -2613,23 +2613,33 @@ async function saveCatalogCourse() {
     updated_at  : new Date().toISOString()
   };
 
-  let err;
-  if (editId) {
-    // UPDATE
-    const res = await sb.from('catalog_courses').update(payload).eq('id', editId);
-    err = res.error;
-  } else {
-    // INSERT — generate text id from title
-    const newId = 'course-' + Date.now();
-    const res   = await sb.from('catalog_courses').insert({id: newId, ...payload});
-    err = res.error;
+  // تعطيل الزر أثناء الحفظ
+  const saveBtn = document.querySelector('#mdl-catalog .btn-primary');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ جاري الحفظ...'; }
+
+  try {
+    let error;
+    if (editId) {
+      const res = await sb.from('catalog_courses').update(payload).eq('id', editId);
+      error = res.error;
+    } else {
+      // INSERT بدون id — Supabase بيعمل TEXT id تلقائي
+      const res = await sb.from('catalog_courses').insert([payload]);
+      error = res.error;
+    }
+
+    if (error) {
+      console.error('Catalog save error:', error);
+      alert('خطأ في الحفظ: ' + error.message);
+      return;
+    }
+
+    closeMdl('mdl-catalog');
+    showToast(editId ? '✅ تم تحديث الكورس بنجاح' : '✅ تم إضافة الكورس بنجاح');
+    await loadCatalog();
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 حفظ الكورس'; }
   }
-
-  if (err) { alert('خطأ: ' + err.message); return; }
-
-  closeMdl('mdl-catalog');
-  showToast(editId ? '✅ تم تحديث الكورس بنجاح' : '✅ تم إضافة الكورس بنجاح');
-  await loadCatalog();
 }
 
 /* ── حذف كورس ── */
