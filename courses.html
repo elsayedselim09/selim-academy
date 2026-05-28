@@ -4,527 +4,373 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>كورساتي | أكاديمية سليم</title>
-<meta name="description" content="استعرض جميع كورسات أكاديمية سليم — تعليم مدرسي، لغات، مهارات، حرف، قرآن وأكثر.">
 <link rel="icon" type="image/png" sizes="192x192" href="https://www.selimacademy.com/icon-192x192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-
 <style>
-:root {
-  --blue:       #1A56DB;
-  --blue-dark:  #1342B0;
-  --blue-mid:   #3B82F6;
-  --blue-light: #EBF5FF;
-  --green:      #0E9F6E;
-  --gold:       #F59E0B;
-  --dark:       #111928;
-  --dark-mid:   #1F2A37;
-  --gray:       #6B7280;
-  --gray-light: #F9FAFB;
-  --gray-mid:   #E5E7EB;
-  --white:      #ffffff;
-  --sb-bg:      #050810;
-  --sb-gold:    #c9a84c;
-  --radius:     14px;
-  --shadow:     0 4px 24px rgba(0,0,0,0.08);
-  --shadow-lg:  0 8px 40px rgba(0,0,0,0.14);
+:root{
+  --blue:#1A56DB;--blue-mid:#3B82F6;--blue-light:#EBF5FF;
+  --green:#0E9F6E;--gold:#F59E0B;
+  --dark:#111928;--gray:#6B7280;--gray-light:#F9FAFB;--gray-mid:#E5E7EB;
+  --sb-bg:#050810;--sb-gold:#c9a84c;
+  --radius:14px;
+  --shadow:0 4px 24px rgba(0,0,0,0.08);
+  --shadow-lg:0 8px 40px rgba(0,0,0,0.14);
 }
-* { margin:0; padding:0; box-sizing:border-box; }
-html { scroll-behavior:smooth; }
-body {
-  font-family:'Cairo',sans-serif;
-  background:var(--gray-light);
-  color:var(--dark);
-  direction:rtl;
-  overflow-x:hidden;
-}
-::-webkit-scrollbar { width:5px; height:5px; }
-::-webkit-scrollbar-track { background:#f1f1f1; }
-::-webkit-scrollbar-thumb { background:var(--blue); border-radius:3px; }
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Cairo',sans-serif;background:var(--gray-light);color:var(--dark);direction:rtl;overflow-x:hidden}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:#f1f1f1}
+::-webkit-scrollbar-thumb{background:var(--blue);border-radius:3px}
 
-/* ══ NAV ══ */
-nav {
-  position:fixed; top:0; left:0; width:100%;
-  z-index:999;
-  background:rgba(255,255,255,0.97);
-  backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--gray-mid);
-  padding:0 5%;
-  box-shadow:0 2px 20px rgba(0,0,0,0.06);
-}
-.nav-inner { display:flex; align-items:center; justify-content:space-between; height:64px; gap:12px; }
-.nav-logo { font-size:1.25rem; font-weight:900; color:var(--blue); display:flex; align-items:center; gap:8px; text-decoration:none; }
-.nav-logo-icon { width:34px; height:34px; border-radius:8px; overflow:hidden; }
-.nav-logo-icon img { width:100%; height:100%; object-fit:cover; }
-.nav-back {
-  display:inline-flex; align-items:center; gap:6px;
-  padding:8px 16px; border-radius:8px;
-  background:var(--blue-light); color:var(--blue);
-  font-weight:700; font-size:.85rem; text-decoration:none;
-  transition:all .2s;
-}
-.nav-back:hover { background:var(--blue); color:#fff; }
-.nav-search-wrap { flex:1; max-width:400px; margin:0 20px; position:relative; }
-.nav-search {
-  width:100%; padding:9px 16px 9px 40px;
-  border:1.5px solid var(--gray-mid); border-radius:50px;
-  font-family:'Cairo',sans-serif; font-size:.88rem;
-  background:#fff; color:var(--dark); outline:none;
-  transition:border-color .2s;
-}
-.nav-search:focus { border-color:var(--blue); }
-.nav-search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--gray); font-size:.9rem; }
+/* NAV */
+nav{position:fixed;top:0;left:0;width:100%;z-index:999;background:rgba(255,255,255,0.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--gray-mid);padding:0 5%;box-shadow:0 2px 20px rgba(0,0,0,0.06)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:64px;gap:12px}
+.nav-logo{font-size:1.25rem;font-weight:900;color:var(--blue);display:flex;align-items:center;gap:8px;text-decoration:none}
+.nav-logo img{width:34px;height:34px;border-radius:8px;object-fit:cover}
+.nav-back{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;background:var(--blue-light);color:var(--blue);font-weight:700;font-size:.85rem;text-decoration:none;transition:all .2s}
+.nav-back:hover{background:var(--blue);color:#fff}
+.nav-search-wrap{flex:1;max-width:400px;margin:0 20px;position:relative}
+.nav-search{width:100%;padding:9px 16px 9px 40px;border:1.5px solid var(--gray-mid);border-radius:50px;font-family:'Cairo',sans-serif;font-size:.88rem;background:#fff;color:var(--dark);outline:none;transition:border-color .2s}
+.nav-search:focus{border-color:var(--blue)}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--gray)}
 
-/* ══ HERO ══ */
-.courses-hero {
-  background:linear-gradient(135deg, var(--sb-bg) 0%, #0d1429 60%, #0a1520 100%);
-  padding:110px 5% 60px;
-  position:relative; overflow:hidden;
-}
-.courses-hero::before {
-  content:''; position:absolute; inset:0;
-  background:
-    radial-gradient(ellipse 60% 50% at 30% 50%, rgba(26,86,219,0.18), transparent),
-    radial-gradient(ellipse 40% 40% at 80% 20%, rgba(201,168,76,0.1), transparent);
-}
-.courses-hero-grid {
-  position:absolute; inset:0;
-  background-image:
-    linear-gradient(rgba(26,86,219,0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(26,86,219,0.06) 1px, transparent 1px);
-  background-size:50px 50px;
-}
-.courses-hero-inner { position:relative; z-index:1; max-width:700px; }
-.courses-hero-tag {
-  display:inline-flex; align-items:center; gap:8px;
-  background:rgba(201,168,76,0.15); border:1px solid rgba(201,168,76,0.3);
-  color:var(--sb-gold); padding:5px 16px; border-radius:50px;
-  font-size:.8rem; font-weight:700; margin-bottom:18px;
-}
-.courses-hero-title { font-size:clamp(1.8rem,4vw,3rem); font-weight:900; color:#fff; line-height:1.25; margin-bottom:14px; }
-.courses-hero-title span { background:linear-gradient(135deg,#60a5fa,#3b82f6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-.courses-hero-sub { color:rgba(255,255,255,0.6); font-size:.95rem; line-height:1.8; margin-bottom:30px; }
-.courses-hero-stats { display:flex; gap:32px; flex-wrap:wrap; }
-.hero-stat { text-align:center; }
-.hero-stat-num { font-size:1.7rem; font-weight:900; color:#fff; }
-.hero-stat-label { font-size:.75rem; color:rgba(255,255,255,0.45); margin-top:2px; }
+/* HERO */
+.hero{background:linear-gradient(135deg,var(--sb-bg) 0%,#0d1429 60%,#0a1520 100%);padding:110px 5% 60px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 30% 50%,rgba(26,86,219,.18),transparent),radial-gradient(ellipse 40% 40% at 80% 20%,rgba(201,168,76,.1),transparent)}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(26,86,219,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(26,86,219,.06) 1px,transparent 1px);background-size:50px 50px}
+.hero-inner{position:relative;z-index:1;max-width:700px}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);color:var(--sb-gold);padding:5px 16px;border-radius:50px;font-size:.8rem;font-weight:700;margin-bottom:18px}
+.hero-title{font-size:clamp(1.8rem,4vw,3rem);font-weight:900;color:#fff;line-height:1.25;margin-bottom:14px}
+.hero-title span{background:linear-gradient(135deg,#60a5fa,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{color:rgba(255,255,255,.6);font-size:.95rem;line-height:1.8;margin-bottom:30px}
+.hero-stats{display:flex;gap:32px;flex-wrap:wrap}
+.stat-num{font-size:1.7rem;font-weight:900;color:#fff}
+.stat-label{font-size:.75rem;color:rgba(255,255,255,.45);margin-top:2px}
 
-/* ══ LOADING ══ */
-.page-loader {
-  display:flex; flex-direction:column; align-items:center;
-  justify-content:center; padding:80px 20px; gap:16px;
-}
-.loader-spinner {
-  width:44px; height:44px;
-  border:3px solid var(--gray-mid);
-  border-top-color:var(--blue);
-  border-radius:50%;
-  animation:spin .8s linear infinite;
-}
-@keyframes spin { to { transform:rotate(360deg); } }
-.loader-text { color:var(--gray); font-size:.9rem; font-weight:600; }
+/* LOADER */
+.page-loader{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:16px}
+.spinner{width:44px;height:44px;border:3px solid var(--gray-mid);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-txt{color:var(--gray);font-size:.9rem;font-weight:600}
 
-/* ══ FILTER BAR ══ */
-.filter-bar {
-  background:#fff; border-bottom:1px solid var(--gray-mid);
-  padding:0 5%; position:sticky; top:64px; z-index:90;
-  box-shadow:0 2px 12px rgba(0,0,0,0.04);
-}
-.filter-bar-inner {
-  display:flex; align-items:center; gap:10px;
-  overflow-x:auto; padding:14px 0; scrollbar-width:none;
-}
-.filter-bar-inner::-webkit-scrollbar { display:none; }
-.filter-pill {
-  display:inline-flex; align-items:center; gap:6px;
-  padding:7px 16px; border-radius:50px;
-  border:1.5px solid var(--gray-mid);
-  background:#fff; color:var(--gray);
-  font-family:'Cairo',sans-serif; font-size:.82rem; font-weight:700;
-  cursor:pointer; white-space:nowrap; transition:all .2s; flex-shrink:0;
-}
-.filter-pill:hover { border-color:var(--blue); color:var(--blue); }
-.filter-pill.active { background:var(--blue); color:#fff; border-color:var(--blue); box-shadow:0 4px 14px rgba(26,86,219,0.3); }
-.filter-pill.coming-pill { opacity:.6; cursor:default; }
+/* FILTER BAR */
+.filter-bar{background:#fff;border-bottom:1px solid var(--gray-mid);padding:0 5%;position:sticky;top:64px;z-index:90;box-shadow:0 2px 12px rgba(0,0,0,.04)}
+.filter-inner{display:flex;align-items:center;gap:10px;overflow-x:auto;padding:14px 0;scrollbar-width:none}
+.filter-inner::-webkit-scrollbar{display:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:50px;border:1.5px solid var(--gray-mid);background:#fff;color:var(--gray);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0}
+.pill:hover{border-color:var(--blue);color:var(--blue)}
+.pill.active{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 4px 14px rgba(26,86,219,.3)}
+.pill.coming{opacity:.6;cursor:default}
 
-/* ══ MAIN ══ */
-.courses-main { padding:48px 5% 80px; }
+/* MAIN */
+.main{padding:48px 5% 80px}
 
-/* ══ CATEGORY SECTION ══ */
-.cat-section { margin-bottom:56px; }
-.cat-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
-.cat-title-wrap { display:flex; align-items:center; gap:12px; }
-.cat-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-.cat-title { font-size:1.2rem; font-weight:900; color:var(--dark); }
-.cat-count { font-size:.8rem; color:var(--gray); background:var(--gray-mid); padding:3px 10px; border-radius:20px; font-weight:600; }
-.coming-badge-cat {
-  font-size:.72rem; font-weight:700;
-  background:rgba(245,158,11,0.12); color:#D97706;
-  border:1px solid rgba(245,158,11,0.3);
-  padding:3px 10px; border-radius:20px;
+/* CAT SECTION */
+.cat-sec{margin-bottom:56px}
+.cat-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.cat-hdr-left{display:flex;align-items:center;gap:12px}
+.cat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.cat-name{font-size:1.2rem;font-weight:900;color:var(--dark)}
+.cat-cnt{font-size:.8rem;color:var(--gray);background:var(--gray-mid);padding:3px 10px;border-radius:20px;font-weight:600}
+.coming-tag-cat{font-size:.72rem;font-weight:700;background:rgba(245,158,11,.12);color:#D97706;border:1px solid rgba(245,158,11,.3);padding:3px 10px;border-radius:20px}
+
+/* SCROLL TRACK */
+.track{display:flex;gap:20px;overflow-x:auto;padding:8px 4px 20px;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--blue) #f1f1f1}
+.track::-webkit-scrollbar{height:4px}
+.track::-webkit-scrollbar-thumb{background:var(--blue);border-radius:2px}
+
+/* CARD */
+.card{flex-shrink:0;width:260px;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);border:1.5px solid transparent;overflow:hidden;display:flex;flex-direction:column;transition:all .28s cubic-bezier(.4,0,.2,1);position:relative}
+.card:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg);border-color:var(--blue-mid)}
+.card-top{padding:22px 18px 16px;flex:1}
+.card-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin-bottom:14px;background:var(--gray-light)}
+.badge{position:absolute;top:14px;left:14px;font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:20px}
+.badge-new{background:rgba(14,159,110,.12);color:#065F46;border:1px solid rgba(14,159,110,.3)}
+.badge-top{background:rgba(26,86,219,.1);color:var(--blue);border:1px solid rgba(26,86,219,.25)}
+.badge-soon{background:rgba(245,158,11,.1);color:#B45309;border:1px solid rgba(245,158,11,.3)}
+.card-title{font-size:.98rem;font-weight:800;color:var(--dark);margin-bottom:6px;line-height:1.4}
+.card-instructor{font-size:.78rem;color:var(--gray);margin-bottom:10px}
+.card-desc{font-size:.8rem;color:var(--gray);line-height:1.65;margin-bottom:14px}
+.card-meta{display:flex;gap:8px;flex-wrap:wrap}
+.meta-item{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;color:var(--gray);background:var(--gray-light);padding:3px 8px;border-radius:6px}
+.level{display:inline-flex;align-items:center;font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:6px}
+.lv-b{background:rgba(14,159,110,.1);color:#065F46}
+.lv-m{background:rgba(245,158,11,.1);color:#92400E}
+.lv-a{background:rgba(239,68,68,.1);color:#991B1B}
+.lv-all{background:rgba(26,86,219,.1);color:#1342B0}
+.card-bot{padding:14px 18px 18px;border-top:1px solid var(--gray-mid);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card-price{font-size:.92rem;font-weight:900;color:var(--dark)}
+.card-price.soon{color:var(--gray);font-size:.82rem}
+.btn-sub{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:linear-gradient(135deg,var(--blue),var(--blue-mid));color:#fff;border-radius:9px;font-weight:700;font-size:.8rem;text-decoration:none;border:none;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .2s;white-space:nowrap;flex-shrink:0;box-shadow:0 3px 12px rgba(26,86,219,.3)}
+.btn-sub:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(26,86,219,.5)}
+.btn-sub.disabled{background:var(--gray-mid);color:var(--gray);box-shadow:none;cursor:default}
+.btn-sub.disabled:hover{transform:none;box-shadow:none}
+
+/* COMING SECTION */
+.coming-grid{display:flex;gap:20px;flex-wrap:wrap}
+.coming-card{flex:0 0 260px;background:#fff;border-radius:var(--radius);border:1.5px dashed var(--gray-mid);padding:24px 20px;display:flex;flex-direction:column;align-items:flex-start;opacity:.75}
+.coming-card-icon{font-size:2rem;margin-bottom:12px}
+.coming-card-title{font-size:1rem;font-weight:800;color:var(--dark);margin-bottom:6px}
+.coming-card-sub{font-size:.8rem;color:var(--gray);line-height:1.6;margin-bottom:14px}
+.soon-tag{font-size:.72rem;font-weight:700;background:rgba(245,158,11,.1);color:#B45309;border:1px solid rgba(245,158,11,.3);padding:4px 12px;border-radius:20px}
+
+/* EMPTY / ERROR */
+.empty{text-align:center;padding:60px 20px;color:var(--gray)}
+.empty-icon{font-size:3rem;margin-bottom:16px}
+.empty-title{font-size:1.1rem;font-weight:700;color:var(--dark);margin-bottom:8px}
+.err-box{background:#fff;border:1.5px solid #fecaca;border-radius:12px;padding:24px;margin:40px auto;max-width:500px;text-align:center}
+.err-title{font-size:1rem;font-weight:800;color:#991B1B;margin-bottom:8px}
+.err-sub{font-size:.84rem;color:var(--gray);line-height:1.7}
+.btn-retry{margin-top:16px;padding:10px 24px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-family:'Cairo',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer}
+
+/* FOOTER */
+footer{background:var(--sb-bg);padding:40px 5%;text-align:center;color:rgba(255,255,255,.4);font-size:.82rem}
+footer a{color:var(--sb-gold);text-decoration:none}
+
+/* ANIMATIONS */
+.fade-in{animation:fi .45s ease both}
+@keyframes fi{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:768px){
+  .nav-search-wrap{display:none}
+  .hero{padding:90px 5% 50px}
+  .hero-stats{gap:20px}
+  .card{width:230px}
+  .pill{font-size:.78rem;padding:6px 13px}
 }
-
-/* ══ HORIZONTAL SCROLL ══ */
-.courses-track-wrap { position:relative; }
-.courses-track {
-  display:flex; gap:20px; overflow-x:auto; padding:8px 4px 20px;
-  scroll-behavior:smooth; scrollbar-width:thin; scrollbar-color:var(--blue) #f1f1f1;
+@media(max-width:480px){
+  .card{width:210px}
+  .cat-name{font-size:1rem}
 }
-.courses-track::-webkit-scrollbar { height:4px; }
-.courses-track::-webkit-scrollbar-thumb { background:var(--blue); border-radius:2px; }
-
-/* ══ COURSE CARD ══ */
-.course-card {
-  flex-shrink:0; width:260px; background:#fff;
-  border-radius:var(--radius); box-shadow:var(--shadow);
-  border:1.5px solid transparent; overflow:hidden;
-  display:flex; flex-direction:column;
-  transition:all .28s cubic-bezier(.4,0,.2,1); position:relative;
-}
-.course-card:hover { transform:translateY(-5px); box-shadow:var(--shadow-lg); border-color:var(--blue-mid); }
-.course-card-top { padding:22px 18px 16px; flex:1; }
-.card-icon-wrap { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.6rem; margin-bottom:14px; background:var(--gray-light); }
-.card-badge { position:absolute; top:14px; left:14px; font-size:.68rem; font-weight:800; padding:3px 9px; border-radius:20px; letter-spacing:.3px; }
-.badge-new    { background:rgba(14,159,110,0.12); color:#065F46; border:1px solid rgba(14,159,110,0.3); }
-.badge-top    { background:rgba(26,86,219,0.1);   color:var(--blue); border:1px solid rgba(26,86,219,0.25); }
-.badge-coming { background:rgba(245,158,11,0.1);  color:#B45309; border:1px solid rgba(245,158,11,0.3); }
-.card-title { font-size:.98rem; font-weight:800; color:var(--dark); margin-bottom:6px; line-height:1.4; }
-.card-instructor { font-size:.78rem; color:var(--gray); margin-bottom:10px; }
-.card-desc { font-size:.8rem; color:var(--gray); line-height:1.65; margin-bottom:14px; }
-.card-meta { display:flex; gap:8px; flex-wrap:wrap; }
-.card-meta-item { display:inline-flex; align-items:center; gap:4px; font-size:.72rem; color:var(--gray); background:var(--gray-light); padding:3px 8px; border-radius:6px; }
-.card-level { display:inline-flex; align-items:center; gap:4px; font-size:.72rem; font-weight:600; padding:3px 10px; border-radius:6px; }
-.level-beginner { background:rgba(14,159,110,0.1); color:#065F46; }
-.level-mid      { background:rgba(245,158,11,0.1); color:#92400E; }
-.level-adv      { background:rgba(239,68,68,0.1);  color:#991B1B; }
-.level-all      { background:rgba(26,86,219,0.1);  color:var(--blue-dark); }
-.course-card-bottom { padding:14px 18px 18px; border-top:1px solid var(--gray-mid); display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.card-price { font-size:.92rem; font-weight:900; color:var(--dark); }
-.card-price.soon { color:var(--gray); font-size:.82rem; }
-.btn-subscribe {
-  display:inline-flex; align-items:center; gap:6px; padding:9px 16px;
-  background:linear-gradient(135deg, var(--blue), var(--blue-mid));
-  color:#fff; border-radius:9px; font-weight:700; font-size:.8rem;
-  text-decoration:none; border:none; cursor:pointer; font-family:'Cairo',sans-serif;
-  transition:all .2s; white-space:nowrap; flex-shrink:0;
-  box-shadow:0 3px 12px rgba(26,86,219,0.3);
-}
-.btn-subscribe:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(26,86,219,0.5); }
-.btn-subscribe.coming-btn { background:var(--gray-mid); color:var(--gray); box-shadow:none; cursor:default; }
-.btn-subscribe.coming-btn:hover { transform:none; box-shadow:none; }
-
-/* ══ COMING CARDS ══ */
-.coming-section { margin-bottom:56px; }
-.coming-grid { display:flex; gap:20px; flex-wrap:wrap; }
-.coming-card {
-  flex:0 0 260px; background:#fff; border-radius:var(--radius);
-  border:1.5px dashed var(--gray-mid); padding:24px 20px;
-  display:flex; flex-direction:column; align-items:flex-start; opacity:.75;
-}
-.coming-card-icon { font-size:2rem; margin-bottom:12px; }
-.coming-card-title { font-size:1rem; font-weight:800; color:var(--dark); margin-bottom:6px; }
-.coming-card-sub { font-size:.8rem; color:var(--gray); line-height:1.6; margin-bottom:14px; }
-.coming-soon-tag { font-size:.72rem; font-weight:700; background:rgba(245,158,11,0.1); color:#B45309; border:1px solid rgba(245,158,11,0.3); padding:4px 12px; border-radius:20px; }
-
-/* ══ EMPTY / ERROR ══ */
-.empty-state { text-align:center; padding:60px 20px; color:var(--gray); }
-.empty-state-icon { font-size:3rem; margin-bottom:16px; }
-.empty-state-title { font-size:1.1rem; font-weight:700; color:var(--dark); margin-bottom:8px; }
-.error-box { background:#fff; border:1.5px solid #fecaca; border-radius:12px; padding:24px; margin:40px auto; max-width:500px; text-align:center; }
-.error-box-title { font-size:1rem; font-weight:800; color:#991B1B; margin-bottom:8px; }
-.error-box-sub { font-size:.84rem; color:var(--gray); line-height:1.7; }
-
-/* ══ FOOTER ══ */
-.courses-footer { background:var(--sb-bg); padding:40px 5%; text-align:center; color:rgba(255,255,255,0.4); font-size:.82rem; }
-.courses-footer a { color:var(--sb-gold); text-decoration:none; }
-
-/* ══ RESPONSIVE ══ */
-@media(max-width:768px) {
-  .nav-search-wrap { display:none; }
-  .courses-hero { padding:90px 5% 50px; }
-  .courses-hero-stats { gap:20px; }
-  .course-card { width:230px; }
-  .filter-pill { font-size:.78rem; padding:6px 13px; }
-}
-@media(max-width:480px) {
-  .course-card { width:210px; }
-  .cat-title { font-size:1rem; }
-}
-
-/* ══ ANIMATIONS ══ */
-.fade-in { animation:fadeIn .45s ease both; }
-@keyframes fadeIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 </style>
 </head>
 <body>
 
-<!-- NAV -->
 <nav>
   <div class="nav-inner">
     <a href="index.html" class="nav-logo">
-      <div class="nav-logo-icon">
-        <img src="https://www.selimacademy.com/icon-192x192.png" alt="أكاديمية سليم">
-      </div>
+      <img src="https://www.selimacademy.com/icon-192x192.png" alt="أكاديمية سليم">
       أكاديمية سليم
     </a>
     <div class="nav-search-wrap">
-      <span class="nav-search-icon">🔍</span>
-      <input type="text" class="nav-search" id="searchInput" placeholder="ابحث عن كورس..." oninput="handleSearch(this.value)">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="nav-search" id="searchInput" placeholder="ابحث عن كورس..." oninput="onSearch(this.value)">
     </div>
     <a href="index.html" class="nav-back">← الرئيسية</a>
   </div>
 </nav>
 
-<!-- HERO -->
-<div class="courses-hero">
-  <div class="courses-hero-grid"></div>
-  <div class="courses-hero-inner fade-in">
-    <div class="courses-hero-tag"><span>📚</span> كورساتي</div>
-    <h1 class="courses-hero-title">كل ما تحتاجه<br><span>في مكان واحد</span></h1>
-    <p class="courses-hero-sub">استعرض مئات الكورسات في التعليم المدرسي، اللغات، المهارات، الحرف، القرآن وأكثر — تعلّم من بيتك مع أفضل المدرسين.</p>
-    <div class="courses-hero-stats" id="heroStats">
-      <div class="hero-stat"><div class="hero-stat-num" id="stat-courses">—</div><div class="hero-stat-label">كورس متاح</div></div>
-      <div class="hero-stat"><div class="hero-stat-num" id="stat-cats">—</div><div class="hero-stat-label">فئة متخصصة</div></div>
-      <div class="hero-stat"><div class="hero-stat-num">100%</div><div class="hero-stat-label">أونلاين</div></div>
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-inner fade-in">
+    <div class="hero-tag">📚 كورساتي</div>
+    <h1 class="hero-title">كل ما تحتاجه<br><span>في مكان واحد</span></h1>
+    <p class="hero-sub">استعرض مئات الكورسات في التعليم المدرسي، اللغات، المهارات، الحرف، القرآن وأكثر — تعلّم من بيتك مع أفضل المدرسين.</p>
+    <div class="hero-stats">
+      <div><div class="stat-num" id="sCourses">—</div><div class="stat-label">كورس متاح</div></div>
+      <div><div class="stat-num" id="sCats">—</div><div class="stat-label">فئة متخصصة</div></div>
+      <div><div class="stat-num">100%</div><div class="stat-label">أونلاين</div></div>
     </div>
   </div>
 </div>
 
-<!-- FILTER BAR -->
 <div class="filter-bar">
-  <div class="filter-bar-inner" id="filterBar">
-    <button class="filter-pill active" onclick="setFilter('all',this)">🗂️ الكل</button>
+  <div class="filter-inner" id="filterBar">
+    <button class="pill active" onclick="setFilter('all',this)">🗂️ الكل</button>
   </div>
 </div>
 
-<!-- MAIN -->
-<main class="courses-main" id="coursesMain">
+<main class="main" id="main">
   <div class="page-loader">
-    <div class="loader-spinner"></div>
-    <div class="loader-text">جاري تحميل الكورسات...</div>
+    <div class="spinner"></div>
+    <div class="loader-txt">جاري تحميل الكورسات...</div>
   </div>
 </main>
 
-<!-- FOOTER -->
-<footer class="courses-footer">
-  <p>© 2025 أكاديمية سليم — جميع الحقوق محفوظة &nbsp;|&nbsp; <a href="https://wa.me/201012142749">تواصل معنا</a></p>
+<footer>
+  <p>© 2025 أكاديمية سليم — جميع الحقوق محفوظة &nbsp;|&nbsp;
+     <a href="https://wa.me/201012142749">تواصل معنا</a></p>
 </footer>
 
-<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
-/* ══════════════════════════════════════════════
-   SUPABASE CONFIG — نفس credentials الموقع
-══════════════════════════════════════════════ */
-const SB_URL  = 'https://hjhoudwknwnxfndrgpfe.supabase.co';
-const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s';
-const _sb     = window.supabase.createClient(SB_URL, SB_KEY);
+/* ═══════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════ */
+const SB_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s';
+const db = window.supabase.createClient(SB_URL, SB_KEY);
 
-/* ══ STATE ══ */
-let allCategories = [];
-let allCourses    = [];
-let activeFilter  = 'all';
-let searchQuery   = '';
+/* ═══ STATE ═══ */
+let cats    = [];
+let courses = [];
+let filter  = 'all';
+let search  = '';
 
-/* ══ BOOT ══ */
-document.addEventListener('DOMContentLoaded', initPage);
+/* ═══ BOOT ═══ */
+document.addEventListener('DOMContentLoaded', boot);
 
-async function initPage() {
+async function boot() {
   try {
-    await Promise.all([loadCategories(), loadCourses()]);
-    buildFilterBar();
-    updateHeroStats();
-    renderAll();
-  } catch (err) {
-    showError('تعذّر تحميل الكورسات. تحقق من اتصالك بالإنترنت وأعد المحاولة.', err.message);
+    const [catsRes, coursesRes] = await Promise.all([
+      db.from('catalog_categories').select('*').order('sort_order'),
+      db.from('catalog_courses').select('*').eq('is_active', true).order('sort_order')
+    ]);
+    if (catsRes.error)    throw catsRes.error;
+    if (coursesRes.error) throw coursesRes.error;
+
+    cats    = catsRes.data    || [];
+    courses = coursesRes.data || [];
+
+    document.getElementById('sCourses').textContent = courses.length + '+';
+    document.getElementById('sCats').textContent    = cats.length;
+
+    buildFilter();
+    render();
+  } catch(e) {
+    showError('تعذّر تحميل الكورسات. تحقق من اتصالك وأعد المحاولة.', e.message);
   }
 }
 
-/* ══ LOAD CATEGORIES ══ */
-async function loadCategories() {
-  const { data, error } = await _sb
-    .from('course_categories')
-    .select('*')
-    .order('sort_order', { ascending: true });
-  if (error) throw error;
-  allCategories = data || [];
-}
-
-/* ══ LOAD COURSES ══ */
-async function loadCourses() {
-  const { data, error } = await _sb
-    .from('courses')
-    .select('*')
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true });
-  if (error) throw error;
-  allCourses = data || [];
-}
-
-/* ══ HERO STATS ══ */
-function updateHeroStats() {
-  document.getElementById('stat-courses').textContent = allCourses.length + '+';
-  document.getElementById('stat-cats').textContent    = allCategories.length;
-}
-
-/* ══ FILTER BAR ══ */
-function buildFilterBar() {
-  const bar = document.getElementById('filterBar');
-  let html  = `<button class="filter-pill active" onclick="setFilter('all',this)">🗂️ الكل</button>`;
-
-  allCategories.forEach(cat => {
-    const cls    = cat.status === 'coming' ? 'coming-pill' : '';
-    const suffix = cat.status === 'coming' ? '<span style="font-size:.65rem;opacity:.7;">قريباً</span>' : '';
-    html += `<button class="filter-pill ${cls}" onclick="setFilter('${cat.id}',this)" data-id="${cat.id}">
-      ${cat.label} ${suffix}
-    </button>`;
+/* ═══ FILTER BAR ═══ */
+function buildFilter() {
+  const bar  = document.getElementById('filterBar');
+  let   html = `<button class="pill active" onclick="setFilter('all',this)">🗂️ الكل</button>`;
+  cats.forEach(c => {
+    const cls = c.status === 'coming' ? 'coming' : '';
+    const sfx = c.status === 'coming' ? '<span style="font-size:.65rem;opacity:.7;">قريباً</span>' : '';
+    html += `<button class="pill ${cls}" onclick="setFilter('${c.id}',this)">${c.label} ${sfx}</button>`;
   });
-
   bar.innerHTML = html;
 }
 
 function setFilter(id, btn) {
-  activeFilter = id;
-  searchQuery  = '';
+  filter = id; search = '';
   document.getElementById('searchInput').value = '';
-  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
-  renderAll();
+  render();
 }
 
-/* ══ SEARCH ══ */
-function handleSearch(val) {
-  searchQuery  = val.trim().toLowerCase();
-  activeFilter = 'all';
-  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-  document.querySelector('.filter-pill').classList.add('active');
-  renderAll();
+function onSearch(val) {
+  search = val.trim().toLowerCase(); filter = 'all';
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  document.querySelector('.pill').classList.add('active');
+  render();
 }
 
-/* ══ HELPERS ══ */
-function badgeCls(badge) {
-  if (badge === 'جديد')          return 'badge-new';
-  if (badge === 'الأكثر طلباً') return 'badge-top';
-  if (badge === 'قريباً')        return 'badge-coming';
+/* ═══ HELPERS ═══ */
+function badgeCls(b) {
+  if (b === 'جديد')          return 'badge-new';
+  if (b === 'الأكثر طلباً') return 'badge-top';
+  if (b === 'قريباً')        return 'badge-soon';
   return '';
 }
-function levelCls(level) {
-  if (level === 'مبتدئ') return 'level-beginner';
-  if (level === 'متوسط') return 'level-mid';
-  if (level === 'متقدم') return 'level-adv';
-  return 'level-all';
+function lvCls(l) {
+  if (l === 'مبتدئ') return 'lv-b';
+  if (l === 'متوسط') return 'lv-m';
+  if (l === 'متقدم') return 'lv-a';
+  return 'lv-all';
 }
 
-/* ══ BUILD CARD ══ */
+/* ═══ CARD ═══ */
 function buildCard(c) {
-  const isComing = c.price === 'قريباً';
-  const waURL    = `https://wa.me/201012142749?text=${encodeURIComponent(c.wa_message)}`;
-  const bc       = badgeCls(c.badge);
-  const lc       = levelCls(c.level);
-
+  const soon  = c.price === 'قريباً';
+  const waURL = `https://wa.me/201012142749?text=${encodeURIComponent(c.wa_message)}`;
+  const bc    = badgeCls(c.badge);
+  const lc    = lvCls(c.level);
   return `
-  <div class="course-card fade-in">
-    ${c.badge ? `<span class="card-badge ${bc}">${c.badge}</span>` : ''}
-    <div class="course-card-top">
-      <div class="card-icon-wrap">${c.icon}</div>
+  <div class="card fade-in">
+    ${c.badge ? `<span class="badge ${bc}">${c.badge}</span>` : ''}
+    <div class="card-top">
+      <div class="card-icon">${c.icon}</div>
       <div class="card-title">${c.title}</div>
       <div class="card-instructor">👤 ${c.instructor}</div>
       <div class="card-desc">${c.description}</div>
       <div class="card-meta">
-        <span class="card-level ${lc}">${c.level}</span>
-        <span class="card-meta-item">⏱️ ${c.duration}</span>
-        <span class="card-meta-item">📋 ${c.sessions}</span>
+        <span class="level ${lc}">${c.level}</span>
+        <span class="meta-item">⏱️ ${c.duration}</span>
+        <span class="meta-item">📋 ${c.sessions}</span>
       </div>
     </div>
-    <div class="course-card-bottom">
-      <div class="card-price ${isComing ? 'soon' : ''}">${c.price}</div>
-      ${isComing
-        ? `<button class="btn-subscribe coming-btn">قريباً</button>`
-        : `<a href="${waURL}" target="_blank" class="btn-subscribe">💬 اشترك الآن</a>`}
+    <div class="card-bot">
+      <div class="card-price${soon?' soon':''}">${c.price}</div>
+      ${soon
+        ? `<button class="btn-sub disabled">قريباً</button>`
+        : `<a href="${waURL}" target="_blank" class="btn-sub">💬 اشترك الآن</a>`}
     </div>
   </div>`;
 }
 
-/* ══ MAIN RENDER ══ */
-function renderAll() {
-  const main = document.getElementById('coursesMain');
+/* ═══ RENDER ═══ */
+function render() {
+  const main = document.getElementById('main');
 
-  /* ─ filter ─ */
-  let filtered = allCourses.filter(c => {
-    const catOk    = activeFilter === 'all' || c.category_id === activeFilter;
-    const searchOk = !searchQuery ||
-      c.title.toLowerCase().includes(searchQuery) ||
-      c.description.toLowerCase().includes(searchQuery) ||
-      c.instructor.toLowerCase().includes(searchQuery);
-    return catOk && searchOk;
+  let filtered = courses.filter(c => {
+    const catOk  = filter === 'all' || c.category_id === filter;
+    const srcOk  = !search
+      || c.title.toLowerCase().includes(search)
+      || c.description.toLowerCase().includes(search)
+      || c.instructor.toLowerCase().includes(search);
+    return catOk && srcOk;
   });
 
-  /* ─ search results view ─ */
-  if (searchQuery) {
+  /* ── search results ── */
+  if (search) {
     if (!filtered.length) {
-      main.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">🔍</div>
-          <div class="empty-state-title">لا توجد نتائج لـ "${searchQuery}"</div>
-          <p>جرّب كلمة أخرى أو استعرض الفئات</p>
-        </div>`;
+      main.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div>
+        <div class="empty-title">لا نتائج لـ "${search}"</div>
+        <p>جرّب كلمة أخرى أو استعرض الفئات</p></div>`;
       return;
     }
     main.innerHTML = `
-      <div class="cat-section">
-        <div class="cat-header">
-          <div class="cat-title-wrap">
-            <div class="cat-dot" style="background:var(--blue);"></div>
-            <span class="cat-title">نتائج البحث</span>
-            <span class="cat-count">${filtered.length} كورس</span>
+      <div class="cat-sec">
+        <div class="cat-hdr">
+          <div class="cat-hdr-left">
+            <div class="cat-dot" style="background:var(--blue)"></div>
+            <span class="cat-name">نتائج البحث</span>
+            <span class="cat-cnt">${filtered.length} كورس</span>
           </div>
         </div>
-        <div class="courses-track-wrap">
-          <div class="courses-track">${filtered.map(buildCard).join('')}</div>
-        </div>
+        <div class="track">${filtered.map(buildCard).join('')}</div>
       </div>`;
     return;
   }
 
-  /* ─ category view ─ */
-  const activeCats = allCategories.filter(c =>
-    c.status === 'active' && (activeFilter === 'all' || c.id === activeFilter)
+  /* ── category view ── */
+  const activeCats = cats.filter(c =>
+    c.status === 'active' && (filter === 'all' || c.id === filter)
   );
-  const comingCats = activeFilter === 'all'
-    ? allCategories.filter(c => c.status === 'coming')
-    : [];
+  const comingCats = filter === 'all' ? cats.filter(c => c.status === 'coming') : [];
 
   let html = '';
 
   activeCats.forEach(cat => {
-    const catCourses = filtered.filter(c => c.category_id === cat.id);
-    if (!catCourses.length) return;
-
+    const list = filtered.filter(c => c.category_id === cat.id);
+    if (!list.length) return;
     html += `
-    <div class="cat-section" id="cat-${cat.id}">
-      <div class="cat-header">
-        <div class="cat-title-wrap">
-          <div class="cat-dot" style="background:${cat.color};"></div>
-          <span class="cat-title">${cat.label}</span>
-          <span class="cat-count">${catCourses.length} كورس</span>
+    <div class="cat-sec" id="cat-${cat.id}">
+      <div class="cat-hdr">
+        <div class="cat-hdr-left">
+          <div class="cat-dot" style="background:${cat.color}"></div>
+          <span class="cat-name">${cat.label}</span>
+          <span class="cat-cnt">${list.length} كورس</span>
         </div>
       </div>
-      <div class="courses-track-wrap">
-        <div class="courses-track">${catCourses.map(buildCard).join('')}</div>
-      </div>
+      <div class="track">${list.map(buildCard).join('')}</div>
     </div>`;
   });
 
-  /* ─ coming soon ─ */
   if (comingCats.length) {
     html += `
-    <div class="coming-section">
-      <div class="cat-header">
-        <div class="cat-title-wrap">
-          <div class="cat-dot" style="background:#F59E0B;"></div>
-          <span class="cat-title">🚀 أقسام قريباً</span>
-          <span class="coming-badge-cat">تحت الإعداد</span>
+    <div class="cat-sec">
+      <div class="cat-hdr">
+        <div class="cat-hdr-left">
+          <div class="cat-dot" style="background:#F59E0B"></div>
+          <span class="cat-name">🚀 أقسام قريباً</span>
+          <span class="coming-tag-cat">تحت الإعداد</span>
         </div>
       </div>
       <div class="coming-grid">
@@ -533,30 +379,26 @@ function renderAll() {
             <div class="coming-card-icon">${cat.label.split(' ')[0]}</div>
             <div class="coming-card-title">${cat.label}</div>
             <div class="coming-card-sub">هذا القسم قيد الإعداد — سيُطلق قريباً بكورسات متميزة.</div>
-            <span class="coming-soon-tag">⏳ قريباً</span>
+            <span class="soon-tag">⏳ قريباً</span>
           </div>`).join('')}
       </div>
     </div>`;
   }
 
-  if (!html) {
-    html = `<div class="empty-state">
-      <div class="empty-state-icon">📭</div>
-      <div class="empty-state-title">لا توجد كورسات في هذه الفئة حتى الآن</div>
-    </div>`;
-  }
-
-  main.innerHTML = html;
+  main.innerHTML = html || `<div class="empty">
+    <div class="empty-icon">📭</div>
+    <div class="empty-title">لا توجد كورسات في هذه الفئة حتى الآن</div>
+  </div>`;
 }
 
-/* ══ ERROR ══ */
+/* ═══ ERROR ═══ */
 function showError(msg, detail) {
-  console.error('Courses load error:', detail);
-  document.getElementById('coursesMain').innerHTML = `
-    <div class="error-box">
-      <div class="error-box-title">⚠️ تعذّر التحميل</div>
-      <div class="error-box-sub">${msg}</div>
-      <button onclick="location.reload()" style="margin-top:16px;padding:10px 24px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-family:'Cairo',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer;">🔄 إعادة المحاولة</button>
+  console.error(detail);
+  document.getElementById('main').innerHTML = `
+    <div class="err-box">
+      <div class="err-title">⚠️ تعذّر التحميل</div>
+      <div class="err-sub">${msg}</div>
+      <button class="btn-retry" onclick="location.reload()">🔄 إعادة المحاولة</button>
     </div>`;
 }
 </script>
