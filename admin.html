@@ -6299,7 +6299,7 @@ async function scLoadBylaws() {
   const cont = document.getElementById('sc-bylaws-list');
   if (!cont) return;
   cont.innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
-  const { data, error } = await _sb.from('academy_bylaws')
+  const { data, error } = await sb.from('academy_bylaws')
     .select('*').eq('role', _bylawCurrentRole).order('section_order');
   if (error) { cont.innerHTML = '<div style="padding:20px;color:var(--red)">❌ ' + error.message + '</div>'; return; }
   if (!data.length) { cont.innerHTML = '<div style="padding:20px;color:var(--gray);text-align:center">لا توجد بنود</div>'; return; }
@@ -6331,7 +6331,7 @@ function scOpenAddBylaw() {
 }
 
 async function scEditBylaw(id) {
-  const { data, error } = await _sb.from('academy_bylaws').select('*').eq('id', id).single();
+  const { data, error } = await sb.from('academy_bylaws').select('*').eq('id', id).single();
   if (error || !data) { toast('❌ تعذر تحميل البند', 'err'); return; }
   document.getElementById('sc-bylaw-id').value = data.id;
   document.getElementById('sc-bylaw-role').value = data.role;
@@ -6360,9 +6360,9 @@ async function scSaveBylaw() {
     const payload = { role, section_order: order, title, content, is_active: active, updated_at: new Date().toISOString() };
     let error;
     if (id) {
-      ({ error } = await _sb.from('academy_bylaws').update(payload).eq('id', id));
+      ({ error } = await sb.from('academy_bylaws').update(payload).eq('id', id));
     } else {
-      ({ error } = await _sb.from('academy_bylaws').insert(payload));
+      ({ error } = await sb.from('academy_bylaws').insert(payload));
     }
     if (error) throw error;
     toast(id ? '✅ تم تحديث البند' : '✅ تمت الإضافة');
@@ -6374,7 +6374,7 @@ async function scSaveBylaw() {
 async function scDeleteBylaw(id) {
   if (!confirm('هل أنت متأكد من حذف هذا البند؟')) return;
   try {
-    const { error } = await _sb.from('academy_bylaws').delete().eq('id', id);
+    const { error } = await sb.from('academy_bylaws').delete().eq('id', id);
     if (error) throw error;
     toast('🗑️ تم حذف البند');
     scLoadBylaws();
