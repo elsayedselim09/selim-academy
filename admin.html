@@ -578,6 +578,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       <button class="sc-tab" data-tab="sc-contact"  onclick="scSwitchTab(this,'sc-contact')">📞 التواصل</button>
       <button class="sc-tab" data-tab="sc-messages" onclick="scSwitchTab(this,'sc-messages')">✉️ رسائل العملاء<span class="nav-badge" id="new-messages-badge" style="display:none;">0</span></button>
       <button class="sc-tab" data-tab="sc-faq"      onclick="scSwitchTab(this,'sc-faq')">❓ الأسئلة الشائعة</button>
+      <button class="sc-tab" data-tab="sc-bylaws"   onclick="scSwitchTab(this,'sc-bylaws')">📋 إدارة اللوائح</button>
     </div>
 
     <!-- ────────── TAB: المدرسين ────────── -->
@@ -739,6 +740,26 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
         <div class="section-body">
           <div id="sc-faq-list" style="display:flex;flex-direction:column;gap:10px;">
             <div class="sc-skeleton"></div><div class="sc-skeleton"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ BYLAWS PANE ══ -->
+    <div class="sc-pane" id="sc-bylaws">
+      <div class="section-card">
+        <div class="section-head">
+          <h3>📋 إدارة لوائح الأكاديمية</h3>
+          <button class="btn-primary" onclick="scOpenAddBylaw()">+ إضافة بند جديد</button>
+        </div>
+        <div class="section-body">
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <button class="filter-btn active" id="bylaw-filter-teacher"    onclick="setBylawFilter('teacher')">👨‍🏫 المعلمون</button>
+            <button class="filter-btn"        id="bylaw-filter-student"    onclick="setBylawFilter('student')">🎓 الطلاب</button>
+            <button class="filter-btn"        id="bylaw-filter-supervisor" onclick="setBylawFilter('supervisor')">🛡️ المشرفون</button>
+          </div>
+          <div id="sc-bylaws-list" style="display:flex;flex-direction:column;gap:10px;">
+            <div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>
           </div>
         </div>
       </div>
@@ -993,6 +1014,35 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       <div class="mdl-btns">
         <button class="mdl-cancel" onclick="closeMdl('mdl-sc-faq')">إلغاء</button>
         <button class="mdl-confirm mc-save" onclick="scSaveFaq()">💾 حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Bylaw Add/Edit -->
+  <div class="mdl" id="mdl-sc-bylaw">
+    <div class="mdl-box wide" style="max-width:620px;">
+      <div class="mdl-icon">📋</div>
+      <div class="mdl-title" id="mdl-sc-bylaw-title">إضافة بند جديد</div>
+      <input type="hidden" id="sc-bylaw-id">
+      <div class="fg">
+        <label>الفئة</label>
+        <select id="sc-bylaw-role" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.9rem;outline:none;background:#fff">
+          <option value="teacher">👨‍🏫 المعلمون</option>
+          <option value="student">🎓 الطلاب</option>
+          <option value="supervisor">🛡️ المشرفون</option>
+        </select>
+      </div>
+      <div class="fg"><label>رقم الترتيب</label><input type="number" id="sc-bylaw-order" min="1" placeholder="1, 2, 3..."></div>
+      <div class="fg"><label>عنوان البند (مثال: أولاً: مواعيد العمل)</label><input type="text" id="sc-bylaw-title" placeholder="عنوان البند..."></div>
+      <div class="fg"><label>المحتوى (كل بند في سطر مستقل — مثال: 1. النص هنا)</label><textarea id="sc-bylaw-content" rows="8" placeholder="1. البند الأول&#10;2. البند الثاني&#10;3. البند الثالث..." style="font-size:.88rem;line-height:1.75;"></textarea></div>
+      <div class="fg" style="flex-direction:row;align-items:center;gap:10px;">
+        <input type="checkbox" id="sc-bylaw-active" checked style="width:18px;height:18px;accent-color:var(--blue);">
+        <label style="font-size:.9rem;font-weight:700;cursor:pointer;" for="sc-bylaw-active">نشط (يظهر في الموقع)</label>
+      </div>
+      <div id="sc-bylaw-msg" style="font-size:.83rem;color:var(--red);margin-top:4px;"></div>
+      <div class="mdl-btns">
+        <button class="mdl-cancel" onclick="closeMdl('mdl-sc-bylaw')">إلغاء</button>
+        <button class="mdl-confirm mc-save" onclick="scSaveBylaw()">💾 حفظ</button>
       </div>
     </div>
   </div>
@@ -5173,6 +5223,7 @@ function scSwitchTab(btn, paneId) {
   if (paneId === 'sc-contact')        scLoadContact();
   if (paneId === 'sc-messages')       scLoadMessages();
   if (paneId === 'sc-faq')            scLoadFaq();
+  if (paneId === 'sc-bylaws')         scLoadBylaws();
 }
 
 // ── Init ──
@@ -6228,6 +6279,105 @@ async function scDeleteMessage(id) {
     if (error) throw error;
     toast('🗑️ تم حذف الرسالة');
     scLoadMessages();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+/* ════════════════════════════════════════════
+   BYLAWS MANAGEMENT — إدارة اللوائح
+════════════════════════════════════════════ */
+let _bylawCurrentRole = 'teacher';
+
+function setBylawFilter(role) {
+  _bylawCurrentRole = role;
+  ['teacher','student','supervisor'].forEach(r => {
+    document.getElementById('bylaw-filter-' + r)?.classList.toggle('active', r === role);
+  });
+  scLoadBylaws();
+}
+
+async function scLoadBylaws() {
+  const cont = document.getElementById('sc-bylaws-list');
+  if (!cont) return;
+  cont.innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
+  const { data, error } = await _sb.from('academy_bylaws')
+    .select('*').eq('role', _bylawCurrentRole).order('section_order');
+  if (error) { cont.innerHTML = '<div style="padding:20px;color:var(--red)">❌ ' + error.message + '</div>'; return; }
+  if (!data.length) { cont.innerHTML = '<div style="padding:20px;color:var(--gray);text-align:center">لا توجد بنود</div>'; return; }
+  const roleLabel = { teacher:'المعلم', student:'الطالب', supervisor:'المشرف' };
+  cont.innerHTML = data.map(b => `
+    <div style="background:var(--white);border:1px solid var(--gray-mid);border-radius:12px;padding:16px 20px;display:flex;align-items:flex-start;gap:14px;">
+      <div style="width:34px;height:34px;min-width:34px;background:var(--blue-light);color:var(--blue);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:900;">${b.section_order}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:900;color:var(--dark);margin-bottom:4px;font-size:.92rem;">${b.title}</div>
+        <div style="font-size:.78rem;color:var(--gray);line-height:1.6;white-space:pre-line;max-height:80px;overflow:hidden;text-overflow:ellipsis;">${b.content.substring(0,200)}${b.content.length>200?'...':''}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">
+        <span style="font-size:.7rem;padding:3px 10px;border-radius:50px;background:${b.is_active?'var(--green-light)':'var(--red-light)'};color:${b.is_active?'var(--green)':'var(--red)'};font-weight:700;">${b.is_active?'✅ نشط':'❌ مخفي'}</span>
+        <button class="btn-sm btn-edit" onclick="scEditBylaw(${b.id})">✏️ تعديل</button>
+        <button class="btn-sm btn-del"  onclick="scDeleteBylaw(${b.id})">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+function scOpenAddBylaw() {
+  document.getElementById('sc-bylaw-id').value = '';
+  document.getElementById('sc-bylaw-role').value = _bylawCurrentRole;
+  document.getElementById('sc-bylaw-order').value = '';
+  document.getElementById('sc-bylaw-title').value = '';
+  document.getElementById('sc-bylaw-content').value = '';
+  document.getElementById('sc-bylaw-active').checked = true;
+  document.getElementById('mdl-sc-bylaw-title').textContent = '➕ إضافة بند جديد';
+  openMdl('mdl-sc-bylaw');
+}
+
+async function scEditBylaw(id) {
+  const { data, error } = await _sb.from('academy_bylaws').select('*').eq('id', id).single();
+  if (error || !data) { toast('❌ تعذر تحميل البند', 'err'); return; }
+  document.getElementById('sc-bylaw-id').value = data.id;
+  document.getElementById('sc-bylaw-role').value = data.role;
+  document.getElementById('sc-bylaw-order').value = data.section_order;
+  document.getElementById('sc-bylaw-title').value = data.title;
+  document.getElementById('sc-bylaw-content').value = data.content;
+  document.getElementById('sc-bylaw-active').checked = data.is_active;
+  document.getElementById('mdl-sc-bylaw-title').textContent = '✏️ تعديل بند';
+  openMdl('mdl-sc-bylaw');
+}
+
+async function scSaveBylaw() {
+  const id      = document.getElementById('sc-bylaw-id').value;
+  const role    = document.getElementById('sc-bylaw-role').value;
+  const order   = parseInt(document.getElementById('sc-bylaw-order').value) || 0;
+  const title   = document.getElementById('sc-bylaw-title').value.trim();
+  const content = document.getElementById('sc-bylaw-content').value.trim();
+  const active  = document.getElementById('sc-bylaw-active').checked;
+  const msgEl   = document.getElementById('sc-bylaw-msg');
+
+  msgEl.textContent = '';
+  if (!title)   { msgEl.textContent = '❌ العنوان مطلوب'; return; }
+  if (!content) { msgEl.textContent = '❌ المحتوى مطلوب'; return; }
+
+  try {
+    const payload = { role, section_order: order, title, content, is_active: active, updated_at: new Date().toISOString() };
+    let error;
+    if (id) {
+      ({ error } = await _sb.from('academy_bylaws').update(payload).eq('id', id));
+    } else {
+      ({ error } = await _sb.from('academy_bylaws').insert(payload));
+    }
+    if (error) throw error;
+    toast(id ? '✅ تم تحديث البند' : '✅ تمت الإضافة');
+    closeMdl('mdl-sc-bylaw');
+    scLoadBylaws();
+  } catch(e) { msgEl.textContent = '❌ ' + e.message; }
+}
+
+async function scDeleteBylaw(id) {
+  if (!confirm('هل أنت متأكد من حذف هذا البند؟')) return;
+  try {
+    const { error } = await _sb.from('academy_bylaws').delete().eq('id', id);
+    if (error) throw error;
+    toast('🗑️ تم حذف البند');
+    scLoadBylaws();
   } catch(e) { toast('❌ ' + e.message, 'err'); }
 }
 

@@ -1084,7 +1084,15 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
     <button class="hamburger" onclick="openSidebar()">☰</button>
     <div class="header-welcome">مرحباً، <span id="hdr-name">معلم</span> 👋</div>
   </div>
-  <div class="teacher-badge">👨‍🏫 لوحة المعلم</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <a href="bylaws.html?role=teacher" target="_blank"
+       style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:rgba(26,86,219,0.08);color:var(--blue);border:1px solid rgba(26,86,219,0.25);border-radius:9px;font-size:.8rem;font-weight:700;text-decoration:none;font-family:'Cairo',sans-serif;transition:all .2s;white-space:nowrap;"
+       onmouseover="this.style.background='var(--blue)';this.style.color='#fff';"
+       onmouseout="this.style.background='rgba(26,86,219,0.08)';this.style.color='var(--blue)';">
+      📋 لائحة المعلم
+    </a>
+    <div class="teacher-badge">👨‍🏫 لوحة المعلم</div>
+  </div>
 </header>
 
 <!-- APP MAIN -->

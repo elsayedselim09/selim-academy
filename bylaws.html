@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>لوائح أكاديمية سليم | اللائحة الرسمية</title>
+<meta name="description" content="اللائحة الرسمية لأكاديمية سليم للتعليم الإلكتروني — لائحة المعلمين والطلاب والمشرفين">
+<link rel="canonical" href="https://www.selimacademy.com/bylaws.html">
+<link rel="icon" type="image/png" sizes="192x192" href="https://www.selimacademy.com/icon-192x192.png">
+<link rel="apple-touch-icon" href="https://www.selimacademy.com/icon-192x192.png">
+<meta name="theme-color" content="#0a0e1a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --blue:#1A56DB; --blue-dark:#1342B0; --blue-light:#EBF5FF; --blue-mid:#3B82F6;
+  --green:#0E9F6E; --gold:#F59E0B;
+  --dark:#111928; --dark-mid:#1F2A37;
+  --gray:#6B7280; --gray-light:#F9FAFB; --gray-mid:#E5E7EB;
+  --white:#ffffff; --radius:12px;
+  --sb-bg:#050810; --sb-gold:#c9a84c;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Cairo',sans-serif;background:var(--white);color:var(--dark);direction:rtl;overflow-x:hidden}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:#0a0e1a}
+::-webkit-scrollbar-thumb{background:var(--blue);border-radius:3px}
+
+/* ══ NAV ══ */
+nav{position:fixed;top:0;left:0;width:100%;z-index:999;background:rgba(255,255,255,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--gray-mid);padding:0 5%;transition:background .4s,box-shadow .4s}
+nav.scrolled{background:rgba(10,14,26,0.95);border-bottom-color:rgba(255,255,255,0.08);box-shadow:0 4px 30px rgba(0,0,0,0.3)}
+nav.scrolled .nav-logo{color:#fff}
+nav.scrolled .nav-links a{color:rgba(255,255,255,0.7)}
+nav.scrolled .nav-links a:hover{color:#fff}
+nav.scrolled .nav-hamburger{color:#fff}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:64px;gap:12px}
+.nav-logo{font-size:1.3rem;font-weight:900;color:var(--blue);display:flex;align-items:center;gap:8px;text-decoration:none;flex-shrink:0;transition:color .3s}
+.nav-logo-icon{width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0}
+.nav-logo-icon img{width:100%;height:100%;object-fit:cover;display:block}
+.nav-links{display:flex;gap:20px;list-style:none;flex:1;justify-content:center}
+.nav-links a{color:var(--dark);text-decoration:none;font-size:.88rem;font-weight:600;display:flex;align-items:center;gap:5px;transition:color .2s;white-space:nowrap}
+.nav-links a:hover{color:var(--blue)}
+.nav-links a.active{color:var(--blue);font-weight:900}
+.nav-btns{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.btn-wa{width:38px;height:38px;background:#25D366;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-size:1rem;transition:transform .2s;flex-shrink:0}
+.btn-wa:hover{transform:scale(1.1)}
+.btn-login{padding:8px 18px;border:2px solid var(--blue);color:var(--blue);border-radius:8px;font-weight:700;font-size:.88rem;text-decoration:none;transition:all .2s;font-family:'Cairo',sans-serif;white-space:nowrap;flex-shrink:0}
+.btn-login:hover{background:var(--blue);color:#fff}
+.nav-hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;color:var(--dark);font-size:1.4rem;flex-shrink:0;transition:color .3s}
+.nav-drawer{display:none;position:fixed;top:64px;right:0;left:0;background:#fff;border-bottom:2px solid var(--gray-mid);padding:16px 5%;z-index:998;box-shadow:0 8px 24px rgba(0,0,0,.1);animation:slideDown .25s ease}
+@keyframes slideDown{from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)}}
+.nav-drawer.open{display:block}
+.nav-drawer ul{list-style:none;display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+.nav-drawer ul a{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;color:var(--dark);text-decoration:none;font-size:.92rem;font-weight:600;transition:background .2s}
+.nav-drawer ul a:hover{background:var(--blue-light);color:var(--blue)}
+.nav-drawer-btns{display:flex;gap:10px}
+.nav-drawer-btns a{flex:1;text-align:center;padding:12px;border-radius:10px;font-weight:700;font-size:.9rem;text-decoration:none;font-family:'Cairo',sans-serif}
+
+/* ══ PAGE HERO ══ */
+.bylaws-hero{
+  min-height:340px;
+  background:var(--sb-bg);
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;
+  padding:100px 5% 60px;
+}
+.bylaws-hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(26,86,219,0.35),transparent),radial-gradient(ellipse 40% 40% at 80% 90%,rgba(201,168,76,0.12),transparent);animation:bgShift 8s ease-in-out infinite alternate}
+@keyframes bgShift{0%{opacity:1;transform:scale(1)} 100%{opacity:.8;transform:scale(1.05)}}
+.bylaws-hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(26,86,219,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(26,86,219,0.07) 1px,transparent 1px);background-size:60px 60px;animation:gridMove 20s linear infinite}
+@keyframes gridMove{from{background-position:0 0} to{background-position:60px 60px}}
+.bylaws-hero-inner{position:relative;z-index:2;text-align:center;width:100%}
+.bylaws-hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.35);color:var(--sb-gold);padding:6px 16px;border-radius:50px;font-size:.82rem;font-weight:700;margin-bottom:20px}
+.bylaws-hero-title{font-size:clamp(1.8rem,3vw,2.8rem);font-weight:900;color:#fff;margin-bottom:14px;line-height:1.2}
+.bylaws-hero-title span{background:linear-gradient(135deg,#fbbf24,#f59e0b,#fbbf24);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmerGold 3s linear infinite}
+@keyframes shimmerGold{0%{background-position:0%} 100%{background-position:200%}}
+.bylaws-hero-sub{font-size:.95rem;color:rgba(255,255,255,0.6);max-width:560px;margin:0 auto;line-height:1.8}
+
+/* ══ MAIN CONTENT ══ */
+.bylaws-wrap{max-width:1100px;margin:0 auto;padding:50px 5% 80px}
+
+/* ══ TABS BAR ══ */
+.bylaws-tabs{display:flex;gap:0;background:var(--gray-light);border:1px solid var(--gray-mid);border-radius:16px;padding:6px;margin-bottom:40px;flex-wrap:wrap;gap:6px}
+.bylaw-tab{flex:1;min-width:160px;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 20px;border-radius:12px;border:none;background:transparent;font-family:'Cairo',sans-serif;font-size:.95rem;font-weight:700;color:var(--gray);cursor:pointer;transition:all .25s}
+.bylaw-tab:hover{background:rgba(26,86,219,0.06);color:var(--blue)}
+.bylaw-tab.active{background:var(--white);color:var(--blue);box-shadow:0 2px 12px rgba(0,0,0,.09)}
+.bylaw-tab-icon{font-size:1.2rem}
+.bylaw-tab-label{font-size:.9rem}
+.bylaw-tab-count{background:var(--blue-light);color:var(--blue);border-radius:50px;font-size:.7rem;font-weight:900;padding:2px 8px}
+.bylaw-tab.active .bylaw-tab-count{background:var(--blue);color:#fff}
+
+/* ══ TAB CONTENT ══ */
+.bylaw-content{display:none;animation:fadeIn .3s ease}
+.bylaw-content.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)}}
+
+/* ══ ROLE HEADER ══ */
+.bylaw-role-header{background:linear-gradient(135deg,var(--dark),var(--dark-mid));border-radius:16px;padding:28px 32px;margin-bottom:32px;display:flex;align-items:center;gap:20px;position:relative;overflow:hidden}
+.bylaw-role-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 0% 50%,rgba(26,86,219,0.2),transparent)}
+.bylaw-role-icon{width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;position:relative;z-index:1}
+.icon-teacher{background:rgba(26,86,219,0.25);border:1px solid rgba(26,86,219,0.4)}
+.icon-student{background:rgba(14,159,110,0.25);border:1px solid rgba(14,159,110,0.4)}
+.icon-supervisor{background:rgba(201,168,76,0.25);border:1px solid rgba(201,168,76,0.4)}
+.bylaw-role-info{position:relative;z-index:1}
+.bylaw-role-name{font-size:1.4rem;font-weight:900;color:#fff;margin-bottom:4px}
+.bylaw-role-desc{font-size:.88rem;color:rgba(255,255,255,0.55);line-height:1.6}
+.bylaw-update-note{margin-right:auto;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 16px;font-size:.78rem;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-shrink:0;position:relative;z-index:1}
+
+/* ══ SECTIONS GRID ══ */
+.bylaw-sections{display:flex;flex-direction:column;gap:16px}
+
+/* ══ SECTION CARD ══ */
+.bylaw-section{background:var(--white);border:1px solid var(--gray-mid);border-radius:14px;overflow:hidden;transition:box-shadow .25s}
+.bylaw-section:hover{box-shadow:0 4px 20px rgba(0,0,0,.07)}
+.bylaw-section-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;cursor:pointer;gap:12px;user-select:none}
+.bylaw-section-head:hover{background:var(--gray-light)}
+.bylaw-section-num{width:36px;height:36px;border-radius:10px;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:900;flex-shrink:0}
+.bylaw-section-title{font-size:.98rem;font-weight:900;color:var(--dark);flex:1}
+.bylaw-section-arrow{color:var(--gray);font-size:1rem;transition:transform .25s;flex-shrink:0}
+.bylaw-section.open .bylaw-section-arrow{transform:rotate(180deg)}
+.bylaw-section-body{display:none;padding:0 24px 22px;border-top:1px solid var(--gray-mid)}
+.bylaw-section.open .bylaw-section-body{display:block;animation:bodyFade .2s ease}
+@keyframes bodyFade{from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)}}
+.bylaw-items{list-style:none;display:flex;flex-direction:column;gap:0;margin-top:16px}
+.bylaw-item{display:flex;gap:14px;padding:10px 0;border-bottom:1px solid var(--gray-mid)}
+.bylaw-item:last-child{border-bottom:none}
+.bylaw-item-num{width:26px;height:26px;min-width:26px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;flex-shrink:0;margin-top:1px}
+.bylaw-item-text{font-size:.9rem;color:var(--dark);line-height:1.75;flex:1}
+
+/* ══ LOADER ══ */
+.bylaw-loader{display:flex;flex-direction:column;gap:12px;padding:20px 0}
+.skel{background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:10px}
+@keyframes shimmer{0%{background-position:200% 0} 100%{background-position:-200% 0}}
+
+/* ══ EXPAND ALL BUTTON ══ */
+.bylaw-controls{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.bylaw-controls-label{font-size:.88rem;color:var(--gray);font-weight:600}
+.bylaw-expand-btn{padding:8px 16px;border:1.5px solid var(--gray-mid);background:var(--white);color:var(--gray);border-radius:8px;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.bylaw-expand-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}
+
+/* ══ PRINT BUTTON ══ */
+.bylaw-print-btn{padding:8px 16px;border:1.5px solid var(--blue);background:var(--blue-light);color:var(--blue);border-radius:8px;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.bylaw-print-btn:hover{background:var(--blue);color:#fff}
+
+/* ══ NOTICE BOX ══ */
+.bylaw-notice{background:rgba(26,86,219,0.06);border:1px solid rgba(26,86,219,0.2);border-radius:12px;padding:16px 20px;margin-top:32px;display:flex;align-items:flex-start;gap:12px}
+.bylaw-notice-icon{font-size:1.3rem;flex-shrink:0;margin-top:2px}
+.bylaw-notice-text{font-size:.88rem;color:var(--dark);line-height:1.75}
+.bylaw-notice-text strong{color:var(--blue)}
+
+/* ══ FOOTER ══ */
+footer{background:var(--dark);color:rgba(255,255,255,.6);padding:40px 5% 24px}
+.footer-top{display:grid;grid-template-columns:1fr auto;gap:40px;margin-bottom:28px;flex-wrap:wrap}
+.footer-logo{display:flex;align-items:center;gap:10px;font-size:1.1rem;font-weight:900;color:#fff;margin-bottom:10px}
+.footer-logo-icon{width:36px;height:36px;border-radius:8px;overflow:hidden}
+.footer-logo-icon img{width:100%;height:100%;object-fit:cover}
+.footer-desc{font-size:.83rem;line-height:1.7;max-width:340px}
+.footer-links{display:flex;flex-wrap:wrap;gap:12px 24px}
+.footer-links a{color:rgba(255,255,255,.5);text-decoration:none;font-size:.82rem;font-weight:600;transition:color .2s}
+.footer-links a:hover{color:#fff}
+hr.footer-divider{border:none;border-top:1px solid rgba(255,255,255,.08);margin-bottom:20px}
+.footer-bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.footer-copy{font-size:.8rem}
+
+/* ══ WA FLOAT ══ */
+.wa-float{position:fixed;bottom:28px;left:28px;z-index:998;display:flex;align-items:center;gap:12px;background:#25D366;color:#fff;border-radius:50px;padding:10px 18px 10px 14px;text-decoration:none;box-shadow:0 6px 24px rgba(37,211,102,.4);transition:transform .25s,box-shadow .25s}
+.wa-float:hover{transform:translateY(-3px);box-shadow:0 10px 32px rgba(37,211,102,.5)}
+.wa-icon{width:26px;height:26px;flex-shrink:0}
+.wa-text{display:flex;flex-direction:column;line-height:1.3}
+.wa-label{font-size:.78rem;font-weight:900}
+.wa-float span:last-child{font-size:.7rem;opacity:.85}
+.scroll-top{position:fixed;bottom:28px;right:28px;z-index:998;width:42px;height:42px;background:var(--blue);color:#fff;border:none;border-radius:50%;font-size:1rem;cursor:pointer;opacity:0;transform:translateY(10px);transition:all .3s;display:flex;align-items:center;justify-content:center}
+.scroll-top.show{opacity:1;transform:translateY(0)}
+
+/* ══ RESPONSIVE ══ */
+@media(max-width:768px){
+  .nav-links,.nav-btns .btn-login{display:none}
+  .nav-hamburger{display:block}
+  .bylaws-tabs{flex-direction:column}
+  .bylaw-tab{min-width:unset}
+  .bylaw-role-header{flex-wrap:wrap}
+  .bylaw-update-note{margin-right:0}
+  .bylaw-controls{flex-direction:column;align-items:flex-start}
+  .footer-top{grid-template-columns:1fr}
+}
+
+@media print{
+  nav,.wa-float,.scroll-top{display:none!important}
+  .bylaws-hero{min-height:auto;padding:40px 5% 30px}
+  .bylaw-section-body{display:block!important}
+  .bylaw-section-arrow{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav id="main-nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <div class="nav-logo-icon"><img src="https://www.selimacademy.com/icon-192x192.png" alt="سليم"></div>
+      أكاديمية سليم
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">🏠 الرئيسية</a></li>
+      <li><a href="vision.html">✨ رؤيتنا</a></li>
+      <li><a href="index.html#teachers">👨‍🏫 فريق التدريس</a></li>
+      <li><a href="courses.html">📚 كورساتي</a></li>
+      <li><a href="index.html#pricing">💰 الأسعار</a></li>
+      <li><a href="index.html#testimonials">⭐ الآراء</a></li>
+      <li><a href="index.html#booking">📅 احجز</a></li>
+      <li><a href="announcements.html" style="color:var(--gold);font-weight:900;">📢 الإعلانات</a></li>
+      <li><a href="free.html" style="color:var(--green);font-weight:900;">🎁 مجاني</a></li>
+      <li><a href="bylaws.html" class="active" style="color:var(--blue);font-weight:900;">📋 اللوائح</a></li>
+    </ul>
+    <div class="nav-btns">
+      <a href="https://wa.me/qr/2XDTSZMSXAV7D1" target="_blank" class="btn-wa" title="واتساب">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      </a>
+      <a href="login.html" class="btn-login">تسجيل</a>
+    </div>
+    <button class="nav-hamburger" id="nav-hamburger" onclick="toggleNavDrawer()">☰</button>
+  </div>
+</nav>
+
+<!-- Drawer -->
+<div class="nav-drawer" id="nav-drawer">
+  <ul>
+    <li><a href="index.html" onclick="closeNavDrawer()">🏠 الرئيسية</a></li>
+    <li><a href="vision.html" onclick="closeNavDrawer()">✨ رؤيتنا</a></li>
+    <li><a href="index.html#teachers" onclick="closeNavDrawer()">👨‍🏫 المدرسين</a></li>
+    <li><a href="courses.html" onclick="closeNavDrawer()">📚 كورساتي</a></li>
+    <li><a href="index.html#pricing" onclick="closeNavDrawer()">💰 الأسعار</a></li>
+    <li><a href="index.html#testimonials" onclick="closeNavDrawer()">⭐ الآراء</a></li>
+    <li><a href="index.html#booking" onclick="closeNavDrawer()">📅 احجز</a></li>
+    <li><a href="announcements.html" style="color:var(--gold);font-weight:900;" onclick="closeNavDrawer()">📢 الإعلانات</a></li>
+    <li><a href="free.html" style="color:var(--green);font-weight:900;" onclick="closeNavDrawer()">🎁 محتوى مجاني</a></li>
+    <li><a href="bylaws.html" style="color:var(--blue);font-weight:900;" onclick="closeNavDrawer()">📋 اللوائح</a></li>
+  </ul>
+  <div class="nav-drawer-btns">
+    <a href="login.html" style="background:var(--green);color:#fff;">تسجيل</a>
+  </div>
+</div>
+
+<!-- ══ HERO ══ -->
+<section class="bylaws-hero">
+  <div class="bylaws-hero-bg"></div>
+  <div class="bylaws-hero-grid"></div>
+  <div class="bylaws-hero-inner">
+    <div class="bylaws-hero-badge">📋 اللائحة الرسمية</div>
+    <h1 class="bylaws-hero-title">لوائح <span>أكاديمية سليم</span></h1>
+    <p class="bylaws-hero-sub">اللائحة الرسمية المنظِّمة للعمل داخل الأكاديمية — تشمل حقوق وواجبات المعلمين والطلاب والمشرفين لضمان بيئة تعليمية متميزة ومنضبطة</p>
+  </div>
+</section>
+
+<!-- ══ MAIN ══ -->
+<div class="bylaws-wrap">
+
+  <!-- TABS -->
+  <div class="bylaws-tabs" id="bylaws-tabs">
+    <button class="bylaw-tab active" data-role="teacher" onclick="switchTab('teacher',this)">
+      <span class="bylaw-tab-icon">👨‍🏫</span>
+      <span class="bylaw-tab-label">لائحة المعلمين</span>
+      <span class="bylaw-tab-count" id="tc-teacher">...</span>
+    </button>
+    <button class="bylaw-tab" data-role="student" onclick="switchTab('student',this)">
+      <span class="bylaw-tab-icon">🎓</span>
+      <span class="bylaw-tab-label">لائحة الطلاب</span>
+      <span class="bylaw-tab-count" id="tc-student">...</span>
+    </button>
+    <button class="bylaw-tab" data-role="supervisor" onclick="switchTab('supervisor',this)">
+      <span class="bylaw-tab-icon">🛡️</span>
+      <span class="bylaw-tab-label">لائحة المشرفين</span>
+      <span class="bylaw-tab-count" id="tc-supervisor">...</span>
+    </button>
+  </div>
+
+  <!-- TEACHER CONTENT -->
+  <div class="bylaw-content active" id="content-teacher">
+    <div class="bylaw-role-header">
+      <div class="bylaw-role-icon icon-teacher">👨‍🏫</div>
+      <div class="bylaw-role-info">
+        <div class="bylaw-role-name">لائحة المعلمين</div>
+        <div class="bylaw-role-desc">تنظم العملية التعليمية وتحدد حقوق وواجبات المعلمين داخل الأكاديمية</div>
+      </div>
+      <div class="bylaw-update-note">📅 <span id="updated-teacher">محدَّثة</span></div>
+    </div>
+    <div class="bylaw-controls">
+      <div class="bylaw-controls-label" id="sections-count-teacher">جاري التحميل...</div>
+      <div style="display:flex;gap:8px">
+        <button class="bylaw-expand-btn" onclick="expandAll('teacher')">📂 فتح الكل</button>
+        <button class="bylaw-print-btn" onclick="printBylaw('teacher')">🖨️ طباعة</button>
+      </div>
+    </div>
+    <div class="bylaw-sections" id="sections-teacher">
+      <div class="bylaw-loader">
+        <div class="skel" style="height:60px"></div>
+        <div class="skel" style="height:60px"></div>
+        <div class="skel" style="height:60px"></div>
+        <div class="skel" style="height:60px"></div>
+        <div class="skel" style="height:60px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT CONTENT -->
+  <div class="bylaw-content" id="content-student">
+    <div class="bylaw-role-header">
+      <div class="bylaw-role-icon icon-student">🎓</div>
+      <div class="bylaw-role-info">
+        <div class="bylaw-role-name">لائحة الطلاب</div>
+        <div class="bylaw-role-desc">تنظم الاشتراكات والالتزامات وتحدد حقوق وواجبات الطلاب وأولياء الأمور</div>
+      </div>
+      <div class="bylaw-update-note">📅 <span id="updated-student">محدَّثة</span></div>
+    </div>
+    <div class="bylaw-controls">
+      <div class="bylaw-controls-label" id="sections-count-student">جاري التحميل...</div>
+      <div style="display:flex;gap:8px">
+        <button class="bylaw-expand-btn" onclick="expandAll('student')">📂 فتح الكل</button>
+        <button class="bylaw-print-btn" onclick="printBylaw('student')">🖨️ طباعة</button>
+      </div>
+    </div>
+    <div class="bylaw-sections" id="sections-student">
+      <div class="bylaw-loader">
+        <div class="skel" style="height:60px"></div>
+        <div class="skel" style="height:60px"></div>
+        <div class="skel" style="height:60px"></div>
+        <div class="skel" style="height:60px"></div>
+        <div class="skel" style="height:60px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPERVISOR CONTENT -->
+  <div class="bylaw-content" id="content-supervisor">
+    <div class="bylaw-role-header">
+      <div class="bylaw-role-icon icon-supervisor">🛡️</div>
+      <div class="bylaw-role-info">
+        <div class="bylaw-role-name">لائحة المشرفين</div>
+        <div class="bylaw-role-desc">تنظم الإدارة والمتابعة والتشغيل وتحدد مهام وصلاحيات المشرفين</div>
+      </div>
+      <div class="bylaw-update-note">📅 <span id="updated-supervisor">محدَّثة</span></div>
+    </div>
+    <div class="bylaw-controls">
+      <div class="bylaw-controls-label" id="sections-count-supervisor">جاري التحميل...</div>
+      <div style="display:flex;gap:8px">
+        <button class="bylaw-expand-btn" onclick="expandAll('supervisor')">📂 فتح الكل</button>
+        <button class="bylaw-print-btn" onclick="printBylaw('supervisor')">🖨️ طباعة</button>
+      </div>
+    </div>
+    <div class="bylaw-sections" id="sections-supervisor">
+      <div class="bylaw-loader">
+        <div class="skel" style="height:60px"></div>
+        <div class="skel" style="height:60px"></div>
+        <div class="skel" style="height:60px"></div>
+        <div class="skel" style="height:60px"></div>
+        <div class="skel" style="height:60px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTICE -->
+  <div class="bylaw-notice">
+    <div class="bylaw-notice-icon">ℹ️</div>
+    <div class="bylaw-notice-text">
+      <strong>تنبيه هام:</strong> تُعتبر هذه اللوائح ملزِمة لجميع المنتسبين إلى الأكاديمية. يُعدّ التسجيل أو العمل أو التعاون مع أكاديمية سليم موافقةً كاملةً على جميع بنود هذه اللائحة. تحتفظ الأكاديمية بحق تعديل أو تحديث اللوائح متى دعت الحاجة مع إشعار المعنيين بالتحديثات.
+    </div>
+  </div>
+
+</div><!-- end bylaws-wrap -->
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div class="footer-top">
+    <div>
+      <div class="footer-logo"><div class="footer-logo-icon"><img src="https://www.selimacademy.com/icon-192x192.png" alt="سليم"></div> أكاديمية سليم</div>
+      <p class="footer-desc">أكاديمية سليم — منصة التعلم التفاعلية التي تجمع بين أفضل المدرسين والطلاب في بيئة تعليمية متكاملة.</p>
+    </div>
+    <div class="footer-links">
+      <a href="index.html">الرئيسية</a>
+      <a href="index.html#teachers">المدرسين</a>
+      <a href="index.html#pricing">الأسعار</a>
+      <a href="index.html#booking">الحجز</a>
+      <a href="bylaws.html">اللوائح</a>
+      <a href="index.html#contact">تواصل معنا</a>
+    </div>
+  </div>
+  <hr class="footer-divider">
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2025 أكاديمية سليم. جميع الحقوق محفوظة.</div>
+  </div>
+</footer>
+
+<!-- FLOATING WA -->
+<a href="https://wa.me/qr/2XDTSZMSXAV7D1" target="_blank" class="wa-float">
+  <svg class="wa-icon" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="white" opacity=".15"/><path d="M16 5C10.477 5 6 9.477 6 15c0 1.89.52 3.66 1.43 5.17L6 27l7.05-1.4A10.94 10.94 0 0016 26c5.523 0 10-4.477 10-10S21.523 5 16 5z" fill="white"/><path d="M21.5 18.9c-.3-.15-1.77-.87-2.04-.97-.28-.1-.48-.15-.68.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.18-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.68-1.63-.93-2.23-.24-.58-.49-.5-.68-.51H11.9c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.87 1.22 3.07.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.7.63.71.22 1.36.19 1.87.12.57-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.34z" fill="#25D366"/></svg>
+  <div class="wa-text"><span class="wa-label">تواصل معنا الآن</span><span>للاشتراك والاستفسار</span></div>
+</a>
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">▲</button>
+
+<script>
+var SB_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s';
+
+var _sb = supabase.createClient(SB_URL, SB_KEY);
+var _cache = {};
+var _currentRole = 'teacher';
+
+/* ══ NAV ══ */
+function toggleNavDrawer(){
+  document.getElementById('nav-drawer').classList.toggle('open');
+}
+function closeNavDrawer(){
+  document.getElementById('nav-drawer').classList.remove('open');
+}
+window.addEventListener('scroll',function(){
+  var nav = document.getElementById('main-nav');
+  if(window.scrollY>20) nav.classList.add('scrolled');
+  else nav.classList.remove('scrolled');
+  var btn = document.getElementById('scrollTop');
+  if(window.scrollY>300) btn.classList.add('show');
+  else btn.classList.remove('show');
+});
+
+/* ══ TABS ══ */
+function switchTab(role, el){
+  document.querySelectorAll('.bylaw-tab').forEach(function(t){t.classList.remove('active')});
+  document.querySelectorAll('.bylaw-content').forEach(function(c){c.classList.remove('active')});
+  el.classList.add('active');
+  document.getElementById('content-' + role).classList.add('active');
+  _currentRole = role;
+  if(!_cache[role]) loadBylaw(role);
+}
+
+/* ══ LOAD FROM SUPABASE ══ */
+async function loadBylaw(role){
+  var container = document.getElementById('sections-' + role);
+  container.innerHTML = '<div class="bylaw-loader"><div class="skel" style="height:60px"></div><div class="skel" style="height:60px"></div><div class="skel" style="height:60px"></div><div class="skel" style="height:60px"></div><div class="skel" style="height:60px"></div></div>';
+  try{
+    var res = await _sb.from('academy_bylaws').select('*').eq('role',role).eq('is_active',true).order('section_order');
+    if(res.error) throw res.error;
+    var data = res.data || [];
+    _cache[role] = data;
+    renderBylaw(role, data);
+  } catch(e){
+    container.innerHTML = '<div style="padding:32px;text-align:center;color:var(--gray);font-size:.9rem;">⚠️ تعذر تحميل اللائحة. يرجى المحاولة مرة أخرى.</div>';
+  }
+}
+
+function renderBylaw(role, data){
+  var container = document.getElementById('sections-' + role);
+  var countEl   = document.getElementById('sections-count-' + role);
+  var tcEl      = document.getElementById('tc-' + role);
+  var updEl     = document.getElementById('updated-' + role);
+
+  if(tcEl) tcEl.textContent = data.length + ' بند';
+  if(countEl) countEl.textContent = data.length + ' بند في هذه اللائحة';
+  if(updEl && data.length){
+    var d = new Date(data[0].updated_at);
+    updEl.textContent = 'محدَّثة ' + d.toLocaleDateString('ar-EG',{year:'numeric',month:'long'});
+  }
+
+  if(!data.length){
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--gray);font-size:.9rem;">لا توجد بنود في هذه اللائحة حالياً.</div>';
+    return;
+  }
+
+  container.innerHTML = data.map(function(sec, idx){
+    var lines = sec.content.split('\n').filter(function(l){return l.trim()});
+    var itemsHtml = lines.map(function(line){
+      line = line.trim();
+      var m = line.match(/^(\d+)\.\s*(.+)$/);
+      if(m){
+        return '<li class="bylaw-item"><div class="bylaw-item-num">'+m[1]+'</div><div class="bylaw-item-text">'+m[2]+'</div></li>';
+      }
+      return '<li class="bylaw-item" style="padding-right:40px;"><div class="bylaw-item-text">'+line+'</div></li>';
+    }).join('');
+
+    return '<div class="bylaw-section" id="sec-'+role+'-'+sec.id+'">'
+      + '<div class="bylaw-section-head" onclick="toggleSection(\'sec-'+role+'-'+sec.id+'\')">'
+      + '<div class="bylaw-section-num">'+(idx+1)+'</div>'
+      + '<div class="bylaw-section-title">'+sec.title+'</div>'
+      + '<div class="bylaw-section-arrow">▼</div>'
+      + '</div>'
+      + '<div class="bylaw-section-body"><ul class="bylaw-items">'+itemsHtml+'</ul></div>'
+      + '</div>';
+  }).join('');
+}
+
+function toggleSection(id){
+  var el = document.getElementById(id);
+  if(!el) return;
+  el.classList.toggle('open');
+}
+
+function expandAll(role){
+  var sections = document.querySelectorAll('#sections-' + role + ' .bylaw-section');
+  var allOpen = Array.from(sections).every(function(s){return s.classList.contains('open')});
+  sections.forEach(function(s){ allOpen ? s.classList.remove('open') : s.classList.add('open') });
+  var btn = document.querySelector('#content-'+role+' .bylaw-expand-btn');
+  if(btn) btn.textContent = allOpen ? '📂 فتح الكل' : '📁 إغلاق الكل';
+}
+
+function printBylaw(role){
+  // Open all sections for print
+  document.querySelectorAll('#sections-' + role + ' .bylaw-section').forEach(function(s){s.classList.add('open')});
+  window.print();
+}
+
+/* ══ INIT ══ */
+document.addEventListener('DOMContentLoaded',function(){
+  // Auto-open tab from URL param ?role=teacher|student|supervisor
+  const urlRole = new URLSearchParams(window.location.search).get('role');
+  if (urlRole && ['teacher','student','supervisor'].includes(urlRole)) {
+    const tabEl = document.querySelector('.bylaw-tab[data-role="' + urlRole + '"]');
+    if (tabEl) switchTab(urlRole, tabEl);
+  } else {
+    loadBylaw('teacher');
+  }
+  // Load counts for all roles
+  ['student','supervisor'].forEach(function(role){
+    _sb.from('academy_bylaws').select('id',{count:'exact'}).eq('role',role).eq('is_active',true)
+      .then(function(res){
+        var el = document.getElementById('tc-' + role);
+        if(el) el.textContent = (res.count||0) + ' بند';
+      });
+  });
+});
+</script>
+</body>
+</html>
