@@ -6405,7 +6405,7 @@ async function viewEssaySubmissions(unitId, unitTitle) {
   try {
     const { data: subs, error } = await sb
       .from('homework_essay_answers')
-      .select('id, student_id, answer_text, file_url, submitted_at, grade, teacher_feedback, profiles(full_name)')
+      .select('id, student_id, answer_text, file_url, submitted_at, grade, teacher_feedback')
       .eq('unit_id', unitId)
       .order('submitted_at', { ascending: false });
     if (error) throw error;
@@ -6419,8 +6419,17 @@ async function viewEssaySubmissions(unitId, unitTitle) {
       return;
     }
 
+    // جلب أسماء الطلاب بشكل منفصل
+    const studentIds = [...new Set(subs.map(s => s.student_id))];
+    const { data: profilesData } = await sb
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', studentIds);
+    const profilesMap = {};
+    (profilesData || []).forEach(p => { profilesMap[p.id] = p.full_name; });
+
     el.innerHTML = subs.map(s => {
-      const name     = s.profiles?.full_name || 'طالب';
+      const name     = profilesMap[s.student_id] || 'طالب';
       const date     = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('ar-EG') : '—';
       const hasGrade = s.grade !== null && s.grade !== undefined;
       return `
