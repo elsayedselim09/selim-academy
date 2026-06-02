@@ -6156,7 +6156,9 @@ async function saveHomework() {
   if (!rawSubj)     { setMsg('hw-modal-msg','الرجاء اختيار المادة','err'); return; }
   if (!rawGrade)    { setMsg('hw-modal-msg','الرجاء اختيار الصف','err'); return; }
 
-  const [subjId, subjName] = rawSubj.split('||');
+  const [subjId, subjNameRaw] = rawSubj.split('||');
+  // نحذف جزء المنهج مثل " - سعودي" أو " - اماراتي" لمطابقة teacher_enrollments
+  const subjName = subjNameRaw ? subjNameRaw.split(/\s*-\s*/)[0].trim() : subjNameRaw;
   const [gradeId]          = rawGrade.split('||');
 
   const btn = document.getElementById('hw-save-btn');

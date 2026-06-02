@@ -3325,10 +3325,66 @@ function homeworkSubject() {
         <div class="hw-lessons-grid">${skeletonCards}</div>
        </div>`
     : units.map(unit => {
-        const lessons  = unit.lessons || [];
-        const doneLess = lessons.filter(l => attempts[l.id]?.stars > 0).length;
+        const lessons   = unit.lessons || [];
+        const isEssay   = unit.mode === 'pdf' && unit.pdf_type === 'essay';
+        const isMcqPdf  = unit.mode === 'pdf' && unit.pdf_type !== 'essay';
+        const doneLess  = lessons.filter(l => attempts[l.id]?.stars > 0).length;
         const totalLess = lessons.length;
 
+        // ── واجب مقالي: زر عرض PDF + رفع إجابة ──
+        if (isEssay) {
+          return `
+          <div class="hw-unit-wrap">
+            <div class="hw-unit-header">
+              <span class="hw-unit-title">📋 ${unit.title}</span>
+              <span class="hw-unit-progress" style="background:#F5F3FF;color:#7C3AED;border:1px solid #DDD6FE">✍️ مقالي</span>
+            </div>
+            <div style="padding:16px 4px;display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+              ${unit.media_url ? `
+                <a href="${unit.media_url}" target="_blank"
+                   style="display:inline-flex;align-items:center;gap:8px;padding:11px 20px;
+                          background:linear-gradient(135deg,#1A56DB,#3B82F6);color:#fff;
+                          border-radius:10px;font-weight:700;font-size:.88rem;text-decoration:none">
+                  📄 عرض ملف الواجب
+                </a>` : '<span style="color:var(--gray);font-size:.85rem">لا يوجد ملف مرفق</span>'}
+              <button class="hw-action-btn hw-btn-start"
+                style="background:linear-gradient(135deg,#0891B2,#06B6D4)"
+                onclick="openEssaySubmit('${unit.id}','${unit.title.replace(/'/g,"\\'")}','${unit.media_url||''}')">
+                📤 رفع إجابتي
+              </button>
+            </div>
+          </div>`;
+        }
+
+        // ── واجب PDF اختياري: عرض PDF + حل الأسئلة ──
+        if (isMcqPdf) {
+          const lesson = lessons[0];
+          const att    = lesson ? attempts[lesson.id] : null;
+          const isDone = att && att.score_pct !== null;
+          return `
+          <div class="hw-unit-wrap">
+            <div class="hw-unit-header">
+              <span class="hw-unit-title">☑️ ${unit.title}</span>
+              <span class="hw-unit-progress" style="background:var(--blue-light);color:var(--blue);border:1px solid #BFDBFE">PDF اختياري</span>
+            </div>
+            <div style="padding:16px 4px;display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+              ${unit.media_url ? `
+                <a href="${unit.media_url}" target="_blank"
+                   style="display:inline-flex;align-items:center;gap:8px;padding:11px 20px;
+                          background:linear-gradient(135deg,#1A56DB,#3B82F6);color:#fff;
+                          border-radius:10px;font-weight:700;font-size:.88rem;text-decoration:none">
+                  📄 فتح ملف الأسئلة
+                </a>` : ''}
+              ${lesson ? (isDone
+                ? `<button class="hw-action-btn hw-btn-review" onclick="openLessonQuiz('${lesson.id}','${lesson.title.replace(/'/g,"\\'")}',true)">👁 مراجعة إجاباتي</button>`
+                : `<button class="hw-action-btn hw-btn-start" onclick="openLessonQuiz('${lesson.id}','${lesson.title.replace(/'/g,"\\'")}',false)">▶ أدخل إجاباتي</button>`
+              ) : ''}
+              ${isDone ? `<span style="color:var(--green);font-weight:700;font-size:.85rem">✅ ${Math.round(att.score_pct)}%</span>` : ''}
+            </div>
+          </div>`;
+        }
+
+        // ── واجب يدوي (أسئلة نصية) ──
         const lessonsHTML = lessons.length === 0
           ? `<div class="empty-box"><div class="ei">📝</div><div class="et">لا توجد دروس بعد</div></div>`
           : lessons.map(lesson => {
@@ -3336,8 +3392,6 @@ function homeworkSubject() {
               const pct   = att ? att.score_pct : null;
               const stars = att ? att.stars : 0;
               const isDone    = att && att.score_pct !== null;
-              const isStarted = att && !isDone; // لو بدأ لكن لم ينتهِ (نادر)
-
               const topClass  = isDone ? 'done-green' : '';
               const numLabel  = lesson.lesson_number != null ? `${lesson.lesson_number}.` : '';
 
@@ -3388,13 +3442,12 @@ async function loadHomeworkSubjectData() {
   if (!subj) return;
 
   try {
-    // 1. جلب الوحدات
+    // 1. جلب الوحدات (نبحث بـ teacher_id + grade_id فقط لأن subject_name قد يختلف بين التسجيل والواجب)
     const { data: units, error: uErr } = await sb
       .from('homework_units')
-      .select('id, title, order_index')
+      .select('id, title, order_index, subject_name, mode, pdf_type, media_url')
       .eq('teacher_id', subj.teacher_id)
       .eq('grade_id', subj.grade_id)
-      .eq('subject_name', subj.subject_name)
       .order('order_index', { ascending: true });
     if (uErr) throw uErr;
 
@@ -3732,8 +3785,188 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     const ov = document.getElementById('hw-quiz-overlay');
     if (ov && ov.classList.contains('show')) { closeQuiz(); }
+    const ev = document.getElementById('essay-overlay');
+    if (ev && ev.classList.contains('show')) { closeEssaySubmit(); }
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// واجب مقالي — رفع إجابة الطالب
+// ═══════════════════════════════════════════════════════════════════
+function openEssaySubmit(unitId, unitTitle, pdfUrl) {
+  // إنشاء الـ overlay إذا لم يكن موجوداً
+  if (!document.getElementById('essay-overlay')) {
+    const ov = document.createElement('div');
+    ov.id = 'essay-overlay';
+    ov.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;
+      display:flex;align-items:center;justify-content:center;
+      opacity:0;pointer-events:none;transition:.25s;padding:16px;`;
+    ov.innerHTML = `<div id="essay-box" style="
+      background:#fff;border-radius:20px;width:100%;max-width:520px;
+      padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25);
+      max-height:90vh;overflow-y:auto;position:relative;font-family:'Cairo',sans-serif"></div>`;
+    ov.addEventListener('click', e => { if (e.target === ov) closeEssaySubmit(); });
+    document.body.appendChild(ov);
+  }
+
+  const ov  = document.getElementById('essay-overlay');
+  const box = document.getElementById('essay-box');
+  ov.classList.add('show');
+  ov.style.opacity = '1'; ov.style.pointerEvents = 'auto';
+  document.body.style.overflow = 'hidden';
+
+  // نتحقق أولاً إذا رفع الطالب إجابة سابقاً
+  (async () => {
+    let prevAnswer = null;
+    if (STATE.user) {
+      const { data } = await sb.from('homework_essay_answers')
+        .select('id, answer_text, file_url, submitted_at, teacher_feedback, grade')
+        .eq('unit_id', unitId)
+        .eq('student_id', STATE.user.id)
+        .maybeSingle();
+      prevAnswer = data;
+    }
+
+    box.innerHTML = `
+      <button onclick="closeEssaySubmit()" style="
+        position:absolute;top:14px;left:16px;background:none;border:none;
+        font-size:1.4rem;cursor:pointer;color:#666;line-height:1">✕</button>
+
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:2rem;margin-bottom:6px">✍️</div>
+        <div style="font-weight:800;font-size:1.05rem;color:#1e293b">${unitTitle}</div>
+        <div style="color:#64748b;font-size:.82rem;margin-top:4px">واجب مقالي</div>
+      </div>
+
+      ${pdfUrl ? `
+      <a href="${pdfUrl}" target="_blank" style="
+        display:flex;align-items:center;gap:10px;padding:12px 16px;
+        background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:12px;
+        color:#1D4ED8;font-weight:700;font-size:.88rem;text-decoration:none;
+        margin-bottom:18px">
+        📄 <span>عرض ملف الواجب</span>
+        <span style="margin-right:auto;font-size:.75rem;opacity:.7">↗ فتح في تبويب جديد</span>
+      </a>` : ''}
+
+      ${prevAnswer ? `
+      <div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:14px;padding:16px;margin-bottom:18px">
+        <div style="font-weight:700;color:#166534;margin-bottom:8px">✅ إجابتك المرفوعة</div>
+        ${prevAnswer.answer_text ? `<div style="font-size:.85rem;color:#374151;background:#fff;padding:10px;border-radius:8px;margin-bottom:8px;white-space:pre-wrap">${prevAnswer.answer_text}</div>` : ''}
+        ${prevAnswer.file_url ? `<a href="${prevAnswer.file_url}" target="_blank" style="color:#1D4ED8;font-size:.85rem;font-weight:700">📎 الملف المرفق</a>` : ''}
+        <div style="font-size:.75rem;color:#6B7280;margin-top:8px">
+          رُفع في: ${new Date(prevAnswer.submitted_at).toLocaleDateString('ar-EG',{day:'numeric',month:'long',year:'numeric'})}
+        </div>
+        ${prevAnswer.teacher_feedback ? `
+        <div style="margin-top:12px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:12px">
+          <div style="font-weight:700;color:#C2410C;font-size:.85rem;margin-bottom:4px">💬 تعليق المعلم</div>
+          <div style="font-size:.85rem;color:#374151">${prevAnswer.teacher_feedback}</div>
+          ${prevAnswer.grade != null ? `<div style="font-weight:800;color:#7C3AED;font-size:1rem;margin-top:8px">الدرجة: ${prevAnswer.grade}</div>` : ''}
+        </div>` : '<div style="font-size:.8rem;color:#9CA3AF;margin-top:6px">⏳ في انتظار تصحيح المعلم</div>'}
+      </div>
+      <div style="font-weight:700;color:#374151;margin-bottom:10px;font-size:.9rem">تعديل إجابتك:</div>
+      ` : `
+      <div style="font-weight:700;color:#374151;margin-bottom:10px;font-size:.9rem">إجابتك:</div>
+      `}
+
+      <textarea id="essay-text-input" placeholder="اكتب إجابتك هنا..." style="
+        width:100%;min-height:130px;border:1.5px solid #E2E8F0;border-radius:12px;
+        padding:12px;font-family:'Cairo',sans-serif;font-size:.88rem;resize:vertical;
+        outline:none;box-sizing:border-box;direction:rtl;transition:.2s;color:#1e293b"
+        onfocus="this.style.borderColor='#7C3AED'"
+        onblur="this.style.borderColor='#E2E8F0'"
+      >${prevAnswer?.answer_text || ''}</textarea>
+
+      <div style="margin-top:14px">
+        <label style="font-weight:700;color:#374151;font-size:.88rem;display:block;margin-bottom:8px">
+          📎 رفع ملف (PDF أو صورة) — اختياري
+        </label>
+        <input type="file" id="essay-file-input" accept=".pdf,.jpg,.jpeg,.png"
+          style="font-family:'Cairo',sans-serif;font-size:.82rem;width:100%">
+      </div>
+
+      <div id="essay-submit-msg" style="margin-top:12px;min-height:20px;font-size:.82rem;text-align:center"></div>
+
+      <button onclick="submitEssayAnswer('${unitId}')" id="essay-submit-btn" style="
+        margin-top:16px;width:100%;padding:13px;background:linear-gradient(135deg,#7C3AED,#A855F7);
+        color:#fff;border:none;border-radius:12px;font-family:'Cairo',sans-serif;
+        font-weight:800;font-size:.95rem;cursor:pointer;transition:.2s"
+        onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+        📤 ${prevAnswer ? 'تحديث إجابتي' : 'إرسال الإجابة'}
+      </button>`;
+  })();
+}
+
+async function submitEssayAnswer(unitId) {
+  const textVal = document.getElementById('essay-text-input')?.value?.trim() || '';
+  const fileInp = document.getElementById('essay-file-input');
+  const msgEl   = document.getElementById('essay-submit-msg');
+  const btn     = document.getElementById('essay-submit-btn');
+
+  if (!textVal && (!fileInp || !fileInp.files || fileInp.files.length === 0)) {
+    msgEl.style.color = '#EF4444';
+    msgEl.textContent = '⚠️ الرجاء كتابة إجابة أو رفع ملف';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ جارٍ الإرسال...';
+  msgEl.textContent = '';
+
+  try {
+    let fileUrl = null;
+
+    // رفع الملف لو موجود
+    if (fileInp && fileInp.files && fileInp.files.length > 0) {
+      const file = fileInp.files[0];
+      const ext  = file.name.split('.').pop();
+      const path = `essay-answers/${STATE.user.id}/${unitId}_${Date.now()}.${ext}`;
+      const { error: upErr } = await sb.storage.from('homework').upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = sb.storage.from('homework').getPublicUrl(path);
+      fileUrl = urlData?.publicUrl || null;
+    }
+
+    // حفظ أو تحديث الإجابة
+    const payload = {
+      unit_id      : unitId,
+      student_id   : STATE.user.id,
+      answer_text  : textVal || null,
+      file_url     : fileUrl,
+      submitted_at : new Date().toISOString(),
+    };
+
+    // نتحقق إذا يوجد سجل سابق
+    const { data: existing } = await sb.from('homework_essay_answers')
+      .select('id').eq('unit_id', unitId).eq('student_id', STATE.user.id).maybeSingle();
+
+    if (existing?.id) {
+      const { error } = await sb.from('homework_essay_answers')
+        .update(payload).eq('id', existing.id);
+      if (error) throw error;
+    } else {
+      const { error } = await sb.from('homework_essay_answers').insert(payload);
+      if (error) throw error;
+    }
+
+    msgEl.style.color = '#16A34A';
+    msgEl.textContent = '✅ تم إرسال إجابتك بنجاح!';
+    btn.textContent   = '✅ تم الإرسال';
+    setTimeout(() => closeEssaySubmit(), 1800);
+
+  } catch(err) {
+    btn.disabled    = false;
+    btn.textContent = '📤 إعادة المحاولة';
+    msgEl.style.color = '#EF4444';
+    msgEl.textContent = '⚠️ ' + err.message;
+  }
+}
+
+function closeEssaySubmit() {
+  const ov = document.getElementById('essay-overlay');
+  if (ov) { ov.style.opacity = '0'; ov.style.pointerEvents = 'none'; ov.classList.remove('show'); }
+  document.body.style.overflow = '';
+}
 
 </script>
 <script>
