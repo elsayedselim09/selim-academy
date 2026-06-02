@@ -5744,46 +5744,8 @@ boot();
 // AUTO-MIGRATE: إنشاء جداول المقالي إن لم تكن موجودة
 // ══════════════════════════════════════════════
 async function ensureEssayTables() {
-  // 1. إضافة عمود pdf_type لجدول homework_units إن لم يكن موجوداً
-  await sb.rpc('exec_sql', {
-    sql: `ALTER TABLE homework_units ADD COLUMN IF NOT EXISTS pdf_type text DEFAULT NULL;`
-  }).catch(() => {});
-
-  // 2. إنشاء جدول homework_essay_submissions
-  await sb.rpc('exec_sql', {
-    sql: `
-      CREATE TABLE IF NOT EXISTS homework_essay_submissions (
-        id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        unit_id       uuid REFERENCES homework_units(id) ON DELETE CASCADE,
-        student_id    uuid REFERENCES profiles(id) ON DELETE CASCADE,
-        submission_url text NOT NULL,
-        submitted_at  timestamptz DEFAULT now(),
-        score         numeric,
-        feedback      text,
-        graded_at     timestamptz,
-        UNIQUE(unit_id, student_id)
-      );
-    `
-  }).catch(() => {});
-
-  // 3. Row Level Security
-  await sb.rpc('exec_sql', {
-    sql: `
-      ALTER TABLE homework_essay_submissions ENABLE ROW LEVEL SECURITY;
-      DROP POLICY IF EXISTS "students_manage_own" ON homework_essay_submissions;
-      CREATE POLICY "students_manage_own" ON homework_essay_submissions
-        FOR ALL USING (student_id = auth.uid());
-      DROP POLICY IF EXISTS "teachers_read_grade" ON homework_essay_submissions;
-      CREATE POLICY "teachers_read_grade" ON homework_essay_submissions
-        FOR ALL USING (
-          EXISTS (
-            SELECT 1 FROM homework_units u
-            WHERE u.id = unit_id
-            AND u.teacher_id = auth.uid()
-          )
-        );
-    `
-  }).catch(() => {});
+  try { await sb.from('homework_essay_submissions').select('id').limit(1); }
+  catch(e) { console.warn('homework_essay_submissions table missing - run SQL migration'); }
 }
 ensureEssayTables();
 
@@ -5824,16 +5786,32 @@ async function loadHomeworkUnits() {
   el.innerHTML = '<div class="skel" style="height:90px;border-radius:14px;margin-bottom:10px"></div><div class="skel" style="height:90px;border-radius:14px;margin-bottom:10px"></div>';
 
   try {
-    let q = sb.from('homework_units').select(`
-      id, title, subject_name, grade_id, order_index, created_at, mode, pdf_type,
-      homework_lessons(id, title, lesson_number,
-        homework_questions(id)
-      )
-    `).eq('teacher_id', ST.user.id).order('order_index');
+    // نحاول مع الأعمدة الجديدة أولاً
+    let units, error;
+    ({ data: units, error } = await ((() => {
+      let q = sb.from('homework_units').select(`
+        id, title, subject_name, grade_id, order_index, created_at, mode, pdf_type, media_url,
+        homework_lessons(id, title, lesson_number,
+          homework_questions(id)
+        )
+      `).eq('teacher_id', ST.user.id).order('order_index');
+      if (filterSubj) q = q.eq('subject_name', filterSubj);
+      return q;
+    })()));
 
-    if (filterSubj) q = q.eq('subject_name', filterSubj);
-
-    const { data: units, error } = await q;
+    // إن فشل بسبب أعمدة غير موجودة، نعيد المحاولة بدونها
+    if (error && (error.message.includes('media_url') || error.message.includes('pdf_type') || error.message.includes('WITHIN GROUP'))) {
+      ({ data: units, error } = await ((() => {
+        let q = sb.from('homework_units').select(`
+          id, title, subject_name, grade_id, order_index, created_at, mode,
+          homework_lessons(id, title, lesson_number,
+            homework_questions(id)
+          )
+        `).eq('teacher_id', ST.user.id).order('order_index');
+        if (filterSubj) q = q.eq('subject_name', filterSubj);
+        return q;
+      })()));
+    }
     if (error) throw error;
 
     // إحصائيات
@@ -6266,11 +6244,21 @@ async function saveHomework() {
 
     // ── 1. إنشاء الوحدة ──
     const pdfType = (mode === 'pdf') ? (window._hwPdfTab || 'mcq') : null;
-    const { data: unit, error: e1 } = await sb.from('homework_units').insert({
+    // نحاول مع الأعمدة الجديدة أولاً، وإن فشل نحاول بدونها (قبل تشغيل Migration)
+    let unit, e1;
+    ({ data: unit, error: e1 } = await sb.from('homework_units').insert({
       teacher_id: ST.user.id, grade_id: gradeId,
       subject_name: subjName, title: unitTitle, order_index: 0,
       mode, media_url: mediaUrl, pdf_type: pdfType
-    }).select().single();
+    }).select().single());
+    if (e1) {
+      // fallback: بدون الأعمدة الجديدة (قبل تشغيل SQL Migration)
+      ({ data: unit, error: e1 } = await sb.from('homework_units').insert({
+        teacher_id: ST.user.id, grade_id: gradeId,
+        subject_name: subjName, title: unitTitle, order_index: 0,
+        mode
+      }).select().single());
+    }
     if (e1) throw e1;
 
     // ── 2. إنشاء الدرس ──
