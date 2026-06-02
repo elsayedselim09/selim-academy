@@ -3921,9 +3921,9 @@ async function submitEssayAnswer(unitId) {
       const file = fileInp.files[0];
       const ext  = file.name.split('.').pop();
       const path = `essay-answers/${STATE.user.id}/${unitId}_${Date.now()}.${ext}`;
-      const { error: upErr } = await sb.storage.from('homework').upload(path, file, { upsert: true });
+      const { error: upErr } = await sb.storage.from('teacher-content').upload(path, file, { upsert: true });
       if (upErr) throw upErr;
-      const { data: urlData } = sb.storage.from('homework').getPublicUrl(path);
+      const { data: signedData } = await sb.storage.from('teacher-content').createSignedUrl(path, 31536000);
       fileUrl = urlData?.publicUrl || null;
     }
 
@@ -4614,7 +4614,7 @@ async function openSubDetailModal(reqId) {
 <script src="/push-init.js"></script>
 <script>
   // تهيئة Push Notifications بعد تسجيل الدخول مباشرة
-  supabase.auth.onAuthStateChange(async (event, session) => {
+  sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       await PushNotifications.init(session.user.id, session.access_token);
     }
