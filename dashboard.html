@@ -3331,8 +3331,11 @@ function homeworkSubject() {
         const doneLess  = lessons.filter(l => attempts[l.id]?.stars > 0).length;
         const totalLess = lessons.length;
 
-        // ── واجب مقالي: زر عرض PDF + رفع إجابة ──
+        // ── واجب مقالي: زر عرض PDF + رفع إجابة + عرض الدرجة ──
         if (isEssay) {
+          const ea = unit.essayAnswer;
+          const hasSubmit = !!ea;
+          const isGraded  = ea && ea.grade !== null && ea.grade !== undefined;
           return `
           <div class="hw-unit-wrap">
             <div class="hw-unit-header">
@@ -3346,15 +3349,24 @@ function homeworkSubject() {
                           background:linear-gradient(135deg,#1A56DB,#3B82F6);color:#fff;
                           border-radius:10px;font-weight:700;font-size:.88rem;text-decoration:none">
                   📄 عرض ملف الواجب
-                </a>` : '<span style="color:var(--gray);font-size:.85rem">لا يوجد ملف مرفق</span>'}
-              <button class="hw-action-btn hw-btn-start"
-                style="background:linear-gradient(135deg,#0891B2,#06B6D4)"
+                </a>` : ''}
+              <button class="hw-action-btn ${hasSubmit ? 'hw-btn-review' : 'hw-btn-start'}"
+                style="background:${hasSubmit ? 'linear-gradient(135deg,#0891B2,#06B6D4)' : 'linear-gradient(135deg,#7C3AED,#A855F7)'}"
                 onclick="openEssaySubmit('${unit.id}','${unit.title.replace(/'/g,"\\'")}','${unit.media_url||''}')">
-                📤 رفع إجابتي
+                ${hasSubmit ? '✏️ تعديل إجابتي' : '📤 رفع إجابتي'}
               </button>
+              ${isGraded ? `
+                <div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:12px;padding:10px 16px">
+                  <div style="font-weight:800;color:#166534;font-size:1rem">✅ درجتك: ${ea.grade}</div>
+                  ${ea.teacher_feedback ? `<div style="font-size:.8rem;color:#374151;margin-top:4px">💬 ${ea.teacher_feedback}</div>` : ''}
+                </div>` : hasSubmit ? `
+                <span style="color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700">
+                  ⏳ في انتظار التصحيح
+                </span>` : ''}
             </div>
           </div>`;
         }
+
 
         // ── واجب PDF اختياري: عرض PDF + حل الأسئلة ──
         if (isMcqPdf) {
@@ -3484,11 +3496,25 @@ async function loadHomeworkSubjectData() {
       (atts || []).forEach(a => { attemptsMap[a.lesson_id] = a; });
     }
 
-    // 4. تجميع الوحدات مع دروسها
+    // 4. جلب إجابات الواجبات المقالية للطالب
+    const essayUnitIds = (units || []).filter(u => u.mode === 'pdf' && u.pdf_type === 'essay').map(u => u.id);
+    let essayAnswersMap = {};
+    if (essayUnitIds.length > 0 && STATE.user) {
+      const { data: essayAnss } = await sb
+        .from('homework_essay_answers')
+        .select('unit_id, answer_text, file_url, submitted_at, grade, teacher_feedback')
+        .eq('student_id', STATE.user.id)
+        .in('unit_id', essayUnitIds);
+      (essayAnss || []).forEach(a => { essayAnswersMap[a.unit_id] = a; });
+    }
+
+    // 5. تجميع الوحدات مع دروسها وإجاباتها المقالية
     STATE.hwAttempts = attemptsMap;
+    STATE.hwEssayAnswers = essayAnswersMap;
     STATE.hwUnits = units.map(u => ({
       ...u,
       lessons: (lessons || []).filter(l => l.unit_id === u.id),
+      essayAnswer: essayAnswersMap[u.id] || null,
     }));
 
     // 5. إعادة رسم المحتوى
@@ -3952,7 +3978,11 @@ async function submitEssayAnswer(unitId) {
     msgEl.style.color = '#16A34A';
     msgEl.textContent = '✅ تم إرسال إجابتك بنجاح!';
     btn.textContent   = '✅ تم الإرسال';
-    setTimeout(() => closeEssaySubmit(), 1800);
+    // نعيد جلب البيانات ثم نغلق النافذة
+    setTimeout(async () => {
+      await loadHomeworkSubjectData();
+      closeEssaySubmit();
+    }, 1500);
 
   } catch(err) {
     btn.disabled    = false;
@@ -3966,6 +3996,8 @@ function closeEssaySubmit() {
   const ov = document.getElementById('essay-overlay');
   if (ov) { ov.style.opacity = '0'; ov.style.pointerEvents = 'none'; ov.classList.remove('show'); }
   document.body.style.overflow = '';
+  // تحديث صفحة الواجب لتعكس آخر حالة (درجة / تعليق)
+  if (STATE.currentPage === 'homeworkSubject') loadHomeworkSubjectData();
 }
 
 </script>
