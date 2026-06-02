@@ -1166,7 +1166,14 @@ async function refreshSubscription() {
       .select('teacher_id,grade_id,subject_name,grade_name').eq('student_id', STATE.user.id);
 
     STATE.enrollments = (freshReqs||[]).map(r => {
-      const matchedEnr = (teEnr||[]).find(te => te.teacher_id === r.assigned_teacher_id && te.subject_name === r.subject);
+      const matchedEnr = (teEnr||[]).find(te =>
+        te.teacher_id === r.assigned_teacher_id &&
+        te.grade_name  && r.grade &&
+        te.grade_name.trim() === r.grade.trim()
+      ) || (teEnr||[]).find(te =>
+        te.teacher_id === r.assigned_teacher_id &&
+        te.subject_name === r.subject
+      );
       return {
         id: 'req-' + r.id, user_id: STATE.user.id,
         course_id: r.course_id || null, teacher_id: r.assigned_teacher_id,
@@ -1231,7 +1238,15 @@ async function fetchAllData(userId) {
   // ── بناء قائمة الكورسات من الطلبات المقبولة (بدون تكرار) ──
   STATE.approvedReqs = approved;
   STATE.enrollments  = approved.map(r => {
-    const matchedEnr = teEnr.find(te => te.teacher_id === r.assigned_teacher_id && te.subject_name === r.subject);
+    // مطابقة بـ teacher_id + grade_name لتمييز المواد المختلفة لنفس المعلم
+    const matchedEnr = teEnr.find(te =>
+      te.teacher_id === r.assigned_teacher_id &&
+      te.grade_name  && r.grade &&
+      te.grade_name.trim() === r.grade.trim()
+    ) || teEnr.find(te =>
+      te.teacher_id === r.assigned_teacher_id &&
+      te.subject_name === r.subject
+    );
     return {
       id               : 'req-' + r.id,
       user_id          : userId,
