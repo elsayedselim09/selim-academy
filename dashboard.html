@@ -3924,7 +3924,7 @@ async function submitEssayAnswer(unitId) {
       const { error: upErr } = await sb.storage.from('teacher-content').upload(path, file, { upsert: true });
       if (upErr) throw upErr;
       const { data: signedData } = await sb.storage.from('teacher-content').createSignedUrl(path, 31536000);
-      fileUrl = urlData?.publicUrl || null;
+      fileUrl = signedData?.signedUrl || null;
     }
 
     // حفظ أو تحديث الإجابة
@@ -4616,7 +4616,9 @@ async function openSubDetailModal(reqId) {
   // تهيئة Push Notifications بعد تسجيل الدخول مباشرة
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
-      await PushNotifications.init(session.user.id, session.access_token);
+      if (typeof PushNotifications !== 'undefined' && PushNotifications.init) {
+        try { await PushNotifications.init(session.user.id, session.access_token); } catch(e) {}
+      }
     }
   });
 </script>
