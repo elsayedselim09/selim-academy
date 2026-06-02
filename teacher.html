@@ -5741,6 +5741,53 @@ document.querySelectorAll('input[name="prof-visibility"]').forEach(radio => {
 boot();
 
 // ══════════════════════════════════════════════
+// AUTO-MIGRATE: إنشاء جداول المقالي إن لم تكن موجودة
+// ══════════════════════════════════════════════
+async function ensureEssayTables() {
+  // 1. إضافة عمود pdf_type لجدول homework_units إن لم يكن موجوداً
+  await sb.rpc('exec_sql', {
+    sql: `ALTER TABLE homework_units ADD COLUMN IF NOT EXISTS pdf_type text DEFAULT NULL;`
+  }).catch(() => {});
+
+  // 2. إنشاء جدول homework_essay_submissions
+  await sb.rpc('exec_sql', {
+    sql: `
+      CREATE TABLE IF NOT EXISTS homework_essay_submissions (
+        id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        unit_id       uuid REFERENCES homework_units(id) ON DELETE CASCADE,
+        student_id    uuid REFERENCES profiles(id) ON DELETE CASCADE,
+        submission_url text NOT NULL,
+        submitted_at  timestamptz DEFAULT now(),
+        score         numeric,
+        feedback      text,
+        graded_at     timestamptz,
+        UNIQUE(unit_id, student_id)
+      );
+    `
+  }).catch(() => {});
+
+  // 3. Row Level Security
+  await sb.rpc('exec_sql', {
+    sql: `
+      ALTER TABLE homework_essay_submissions ENABLE ROW LEVEL SECURITY;
+      DROP POLICY IF EXISTS "students_manage_own" ON homework_essay_submissions;
+      CREATE POLICY "students_manage_own" ON homework_essay_submissions
+        FOR ALL USING (student_id = auth.uid());
+      DROP POLICY IF EXISTS "teachers_read_grade" ON homework_essay_submissions;
+      CREATE POLICY "teachers_read_grade" ON homework_essay_submissions
+        FOR ALL USING (
+          EXISTS (
+            SELECT 1 FROM homework_units u
+            WHERE u.id = unit_id
+            AND u.teacher_id = auth.uid()
+          )
+        );
+    `
+  }).catch(() => {});
+}
+ensureEssayTables();
+
+// ══════════════════════════════════════════════
 // OFFLINE EXAMS — اختبارات ورقية
 // ══════════════════════════════════════════════
 
@@ -5778,7 +5825,7 @@ async function loadHomeworkUnits() {
 
   try {
     let q = sb.from('homework_units').select(`
-      id, title, subject_name, grade_id, order_index, created_at,
+      id, title, subject_name, grade_id, order_index, created_at, mode, pdf_type,
       homework_lessons(id, title, lesson_number,
         homework_questions(id)
       )
@@ -5807,27 +5854,46 @@ async function loadHomeworkUnits() {
     }
 
     el.innerHTML = units.map(u => {
-      const lessons = u.homework_lessons || [];
-      const qCount  = lessons.reduce((s,l) => s + (l.homework_questions||[]).length, 0);
+      const lessons   = u.homework_lessons || [];
+      const qCount    = lessons.reduce((s,l) => s + (l.homework_questions||[]).length, 0);
+      const isEssay   = u.mode === 'pdf' && u.pdf_type === 'essay';
+      const isMcqPdf  = u.mode === 'pdf' && u.pdf_type !== 'essay';
+      const typeBadge = isEssay
+        ? `<span style="background:#F5F3FF;color:#7C3AED;border:1px solid #DDD6FE;border-radius:50px;padding:2px 10px;font-size:.7rem;font-weight:700">✍️ مقالي</span>`
+        : isMcqPdf
+        ? `<span style="background:var(--blue-light);color:var(--blue);border:1px solid #BFDBFE;border-radius:50px;padding:2px 10px;font-size:.7rem;font-weight:700">☑️ اختياري</span>`
+        : '';
       return `
       <div class="section-card" style="margin-bottom:14px">
         <div class="section-head">
           <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:1.4rem">📦</span>
+            <span style="font-size:1.4rem">${isEssay ? '📋' : '📦'}</span>
             <div>
-              <h3 style="font-size:.95rem">${u.title}</h3>
-              <div style="font-size:.78rem;color:var(--gray)">${u.subject_name} · ${lessons.length} درس · ${qCount} سؤال</div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <h3 style="font-size:.95rem">${u.title}</h3>
+                ${typeBadge}
+              </div>
+              <div style="font-size:.78rem;color:var(--gray)">${u.subject_name} · ${lessons.length} درس${isEssay ? '' : ' · ' + qCount + ' سؤال'}</div>
             </div>
           </div>
-          <div style="display:flex;gap:8px">
-            <button class="btn-primary" style="font-size:.78rem;padding:5px 12px;background:linear-gradient(135deg,#7C3AED,#A78BFA);border-color:#7C3AED"
-              onclick="openAddLessonModal('${u.id}','${u.subject_name.replace(/'/g,"\\'")}','${u.grade_id||''}')">➕ درس</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${isEssay ? `<button class="btn-primary" style="font-size:.78rem;padding:5px 12px;background:linear-gradient(135deg,#0891B2,#06B6D4);border-color:#0891B2"
+              onclick="viewEssaySubmissions('${u.id}','${u.title.replace(/'/g,"\\'")}')">📥 إجابات الطلاب</button>` : ''}
+            ${!isEssay ? `<button class="btn-primary" style="font-size:.78rem;padding:5px 12px;background:linear-gradient(135deg,#7C3AED,#A78BFA);border-color:#7C3AED"
+              onclick="openAddLessonModal('${u.id}','${u.subject_name.replace(/'/g,"\\'")}','${u.grade_id||''}')">➕ درس</button>` : ''}
             <button class="btn-secondary" style="font-size:.78rem;padding:5px 12px;color:var(--red)"
               onclick="deleteHomeworkUnit('${u.id}')">🗑</button>
           </div>
         </div>
         <div class="section-body" style="padding:0">
-          ${lessons.length === 0
+          ${isEssay
+            ? `<div style="padding:16px 20px;display:flex;align-items:center;gap:12px">
+                <a href="${u.media_url||'#'}" target="_blank"
+                  style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--blue-light);color:var(--blue);border:1.5px solid #BFDBFE;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none">
+                  📄 عرض ملف الواجب
+                </a>
+              </div>`
+            : lessons.length === 0
             ? `<div style="padding:16px;text-align:center;color:var(--gray);font-size:.85rem">لا توجد دروس — اضغط ➕ درس لإضافة درس</div>`
             : lessons.map(l => `
               <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--gray-mid)">
@@ -5862,6 +5928,11 @@ function openHomeworkModal() {
   document.getElementById('hw-pdf-selected-name').textContent = '';
   document.getElementById('hw-pdf-answer-key').innerHTML = '';
   document.getElementById('hw-pdf-qcount').value = 10;
+  document.getElementById('hw-essay-pdf-zone-text').textContent = 'اضغط لاختيار ملف PDF الواجب أو اسحبه هنا';
+  document.getElementById('hw-essay-pdf-selected-name').textContent = '';
+  window._hwPdfTab = 'mcq';
+  // إعادة ضبط تبويبي PDF
+  setTimeout(() => switchPdfTab('mcq'), 0);
 
   // إعادة ضبط نوع الواجب → يدوي
   document.querySelector('input[name="hw_mode"][value="manual"]').checked = true;
@@ -5936,6 +6007,43 @@ function generateHwPdfAnswerKey() {
   document.getElementById('hw-pdf-answer-key').innerHTML = html;
 }
 
+
+// ── تبديل تبويب PDF (اختياري / مقالي) ──
+function switchPdfTab(tab) {
+  const isMcq = tab === 'mcq';
+  document.getElementById('hw-pdf-mcq-section').style.display    = isMcq ? 'block' : 'none';
+  document.getElementById('hw-pdf-essay-section').style.display  = isMcq ? 'none'  : 'block';
+  const mcqBtn   = document.getElementById('pdf-tab-mcq');
+  const essayBtn = document.getElementById('pdf-tab-essay');
+  if (isMcq) {
+    mcqBtn.style.cssText   = 'flex:1;padding:11px;border-radius:10px;font-family:Cairo,sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;border:2px solid #7C3AED;background:linear-gradient(135deg,#7C3AED,#A78BFA);color:#fff;transition:all .2s';
+    essayBtn.style.cssText = 'flex:1;padding:11px;border-radius:10px;font-family:Cairo,sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;border:2px solid var(--gray-mid);background:var(--gray-light);color:var(--gray);transition:all .2s';
+  } else {
+    essayBtn.style.cssText = 'flex:1;padding:11px;border-radius:10px;font-family:Cairo,sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;border:2px solid #7C3AED;background:linear-gradient(135deg,#7C3AED,#A78BFA);color:#fff;transition:all .2s';
+    mcqBtn.style.cssText   = 'flex:1;padding:11px;border-radius:10px;font-family:Cairo,sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;border:2px solid var(--gray-mid);background:var(--gray-light);color:var(--gray);transition:all .2s';
+  }
+  // حفظ الحالة الحالية
+  window._hwPdfTab = tab;
+}
+
+// ── Essay PDF helpers ──
+function handleHwEssayPdfDrop(e) {
+  e.preventDefault();
+  document.getElementById('hw-essay-pdf-drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') {
+    // نحاكي إسناد الملف
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('hw-essay-pdf-file-input').files = dt.files;
+    handleHwEssayPdfSelected({ files: [file] });
+  }
+}
+function handleHwEssayPdfSelected(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('hw-essay-pdf-zone-text').textContent = '📎 ' + file.name + ' (' + fsize(file.size) + ')';
+  document.getElementById('hw-essay-pdf-selected-name').textContent = '';
+}
 
 // ── إضافة سؤال في مودال الواجب (مع صور الخيارات + لصق سكرين شوت) ──
 function addHomeworkQuestion() {
@@ -6082,26 +6190,43 @@ async function saveHomework() {
 
     // ══ وضع PDF ══
     if (mode === 'pdf') {
-      const pdfFile = document.getElementById('hw-pdf-file-input').files[0];
-      if (!pdfFile) { setMsg('hw-modal-msg','الرجاء اختيار ملف PDF','err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
-      btn.textContent = '⏳ رفع الملف...';
-      const ext  = pdfFile.name.split('.').pop();
-      const path = `homework_pdfs/${ST.user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await sb.storage.from('teacher-content').upload(path, pdfFile, { upsert: false });
-      if (upErr) throw upErr;
-      mediaUrl = await getSupabaseSignedUrl('teacher-content', path, 604800);
+      const pdfTab = window._hwPdfTab || 'mcq';
 
-      const count = parseInt(document.getElementById('hw-pdf-qcount').value) || 10;
-      for (let i = 1; i <= count; i++) {
-        const ans = parseInt(document.getElementById('hw-pdf-ans-'+i).value);
-        questions.push({
-          question_text: 'سؤال ' + i,
-          options: [
-            { text:'A', is_correct: ans===0 }, { text:'B', is_correct: ans===1 },
-            { text:'C', is_correct: ans===2 }, { text:'D', is_correct: ans===3 }
-          ],
-          order_index: i-1
-        });
+      if (pdfTab === 'mcq') {
+        // ── اختياري: الكود الأصلي ──
+        const pdfFile = document.getElementById('hw-pdf-file-input').files[0];
+        if (!pdfFile) { setMsg('hw-modal-msg','الرجاء اختيار ملف PDF','err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
+        btn.textContent = '⏳ رفع الملف...';
+        const ext  = pdfFile.name.split('.').pop();
+        const path = `homework_pdfs/${ST.user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await sb.storage.from('teacher-content').upload(path, pdfFile, { upsert: false });
+        if (upErr) throw upErr;
+        mediaUrl = await getSupabaseSignedUrl('teacher-content', path, 604800);
+
+        const count = parseInt(document.getElementById('hw-pdf-qcount').value) || 10;
+        for (let i = 1; i <= count; i++) {
+          const ans = parseInt(document.getElementById('hw-pdf-ans-'+i).value);
+          questions.push({
+            question_text: 'سؤال ' + i,
+            options: [
+              { text:'A', is_correct: ans===0 }, { text:'B', is_correct: ans===1 },
+              { text:'C', is_correct: ans===2 }, { text:'D', is_correct: ans===3 }
+            ],
+            order_index: i-1
+          });
+        }
+
+      } else {
+        // ── مقالي: رفع PDF الواجب فقط — بدون Answer Key ──
+        const essayFile = document.getElementById('hw-essay-pdf-file-input').files[0];
+        if (!essayFile) { setMsg('hw-modal-msg','الرجاء اختيار ملف PDF الواجب','err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
+        btn.textContent = '⏳ رفع الملف...';
+        const ext  = essayFile.name.split('.').pop();
+        const path = `homework_pdfs/${ST.user.id}/essay_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await sb.storage.from('teacher-content').upload(path, essayFile, { upsert: false });
+        if (upErr) throw upErr;
+        mediaUrl = await getSupabaseSignedUrl('teacher-content', path, 604800);
+        // لا أسئلة في المقالي — questions تبقى []
       }
 
     // ══ وضع يدوي ══
@@ -6140,10 +6265,11 @@ async function saveHomework() {
     }
 
     // ── 1. إنشاء الوحدة ──
+    const pdfType = (mode === 'pdf') ? (window._hwPdfTab || 'mcq') : null;
     const { data: unit, error: e1 } = await sb.from('homework_units').insert({
       teacher_id: ST.user.id, grade_id: gradeId,
       subject_name: subjName, title: unitTitle, order_index: 0,
-      mode, media_url: mediaUrl
+      mode, media_url: mediaUrl, pdf_type: pdfType
     }).select().single();
     if (e1) throw e1;
 
@@ -6275,6 +6401,91 @@ async function saveAddedQuestions() {
     loadHomeworkUnits();
   } catch(e) { setMsg('hwq-modal-msg','خطأ: '+e.message,'err'); }
   finally { btn.disabled = false; btn.textContent = '💾 حفظ'; }
+}
+
+// ══════════════════════════════════════════════
+// ESSAY SUBMISSIONS — إجابات الطلاب المقالية
+// ══════════════════════════════════════════════
+async function viewEssaySubmissions(unitId, unitTitle) {
+  const mdl = document.getElementById('mdl-essay-submissions');
+  document.getElementById('essay-sub-title').textContent = unitTitle;
+  document.getElementById('essay-sub-list').innerHTML = '<div class="skel" style="height:70px;border-radius:10px;margin-bottom:8px"></div><div class="skel" style="height:70px;border-radius:10px;margin-bottom:8px"></div>';
+  mdl.classList.add('show');
+
+  try {
+    const { data: subs, error } = await sb
+      .from('homework_essay_submissions')
+      .select('id, student_id, submission_url, submitted_at, score, feedback, profiles(full_name)')
+      .eq('unit_id', unitId)
+      .order('submitted_at', { ascending: false });
+    if (error) throw error;
+
+    const el = document.getElementById('essay-sub-list');
+    if (!subs || subs.length === 0) {
+      el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--gray)">
+        <div style="font-size:2.5rem;margin-bottom:10px">📭</div>
+        <p style="font-weight:700">لم يرفع أي طالب إجابته بعد</p>
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = subs.map(s => {
+      const name    = s.profiles?.full_name || 'طالب';
+      const date    = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('ar-EG') : '—';
+      const hasScore = s.score !== null && s.score !== undefined;
+      return `
+      <div style="border:1.5px solid var(--gray-mid);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#A78BFA);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:.9rem;flex-shrink:0">
+          ${name.charAt(0)}
+        </div>
+        <div style="flex:1;min-width:120px">
+          <div style="font-weight:700;font-size:.9rem">${name}</div>
+          <div style="font-size:.75rem;color:var(--gray)">رُفع: ${date}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <a href="${s.submission_url}" target="_blank"
+            style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:var(--blue-light);color:var(--blue);border:1.5px solid #BFDBFE;border-radius:8px;font-size:.8rem;font-weight:700;text-decoration:none">
+            📄 عرض الإجابة
+          </a>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="number" id="score-${s.id}" value="${hasScore ? s.score : ''}" placeholder="الدرجة"
+              style="width:80px;padding:7px 10px;border:1.5px solid var(--gray-mid);border-radius:8px;font-family:Cairo,sans-serif;font-size:.82rem;text-align:center">
+            <button onclick="saveEssayScore('${s.id}','${s.student_id}','${unitId}')"
+              style="padding:7px 12px;background:var(--green);color:#fff;border:none;border-radius:8px;font-family:Cairo,sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">
+              💾 حفظ
+            </button>
+          </div>
+          ${hasScore ? `<span style="background:var(--green-light);color:var(--green);border:1px solid #6EE7B7;border-radius:50px;padding:3px 10px;font-size:.75rem;font-weight:700">✅ ${s.score}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('essay-sub-list').innerHTML = `<div style="color:var(--red);padding:16px">خطأ: ${e.message}</div>`;
+  }
+}
+
+async function saveEssayScore(subId, studentId, unitId) {
+  const score = document.getElementById('score-'+subId).value.trim();
+  if (score === '') { toast('أدخل الدرجة أولاً','err'); return; }
+  try {
+    const { error } = await sb.from('homework_essay_submissions')
+      .update({ score: parseFloat(score), graded_at: new Date().toISOString() })
+      .eq('id', subId);
+    if (error) throw error;
+    // إشعار الطالب
+    await sb.from('notifications').insert({
+      user_id: studentId,
+      icon: '📝',
+      text: `تم تصحيح واجبك المقالي — درجتك: ${score}`,
+      is_read: false
+    });
+    toast('✅ تم حفظ الدرجة وإشعار الطالب');
+    // تحديث الشارة في الصفحة
+    const scoreEl = document.getElementById('score-'+subId);
+    if (scoreEl) scoreEl.closest('div[style*="border:1.5px"]').querySelector('span[style*="green-light"]')
+      ? null : scoreEl.closest('div[style*="border:1.5px"]').insertAdjacentHTML('beforeend',
+        `<span style="background:var(--green-light);color:var(--green);border:1px solid #6EE7B7;border-radius:50px;padding:3px 10px;font-size:.75rem;font-weight:700">✅ ${score}</span>`);
+  } catch(e) { toast('خطأ: '+e.message,'err'); }
 }
 
 // ── حذف وحدة ──
@@ -6862,26 +7073,70 @@ async function deleteOfflineExam(examId, title) {
 
     <!-- ── حاوية PDF ── -->
     <div id="hw-pdf-container" style="display:none;border-top:1px solid var(--gray-mid);margin-bottom:16px;padding-top:16px">
-      <div class="fg">
-        <label>ملف الـ PDF *</label>
-        <div class="upload-zone" id="hw-pdf-drop-zone"
-          onclick="document.getElementById('hw-pdf-file-input').click()"
-          ondragover="handleDragOver(event,'hw-pdf-drop-zone')"
-          ondragleave="handleDragLeave('hw-pdf-drop-zone')"
-          ondrop="handleHwPdfDrop(event)">
-          <div class="uz-icon">📄</div>
-          <div class="uz-text" id="hw-pdf-zone-text">اضغط لاختيار ملف PDF أو اسحبه هنا</div>
-          <div class="uz-sub">ملفات PDF فقط — حجم أقصى 50 MB</div>
-          <input type="file" id="hw-pdf-file-input" style="display:none" accept=".pdf" onchange="handleHwPdfSelected(this)">
-          <div id="hw-pdf-selected-name" style="margin-top:10px;font-size:.82rem;color:#7C3AED;font-weight:700"></div>
+
+      <!-- تبويبي نوع PDF -->
+      <div style="display:flex;gap:10px;margin-bottom:18px">
+        <button type="button" id="pdf-tab-mcq" onclick="switchPdfTab('mcq')"
+          style="flex:1;padding:11px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;border:2px solid #7C3AED;background:linear-gradient(135deg,#7C3AED,#A78BFA);color:#fff;transition:all .2s">
+          ☑️ اختياري
+        </button>
+        <button type="button" id="pdf-tab-essay" onclick="switchPdfTab('essay')"
+          style="flex:1;padding:11px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;border:2px solid var(--gray-mid);background:var(--gray-light);color:var(--gray);transition:all .2s">
+          ✍️ مقالي
+        </button>
+      </div>
+
+      <!-- ── محتوى: اختياري ── -->
+      <div id="hw-pdf-mcq-section">
+        <div class="fg">
+          <label>ملف الـ PDF *</label>
+          <div class="upload-zone" id="hw-pdf-drop-zone"
+            onclick="document.getElementById('hw-pdf-file-input').click()"
+            ondragover="handleDragOver(event,'hw-pdf-drop-zone')"
+            ondragleave="handleDragLeave('hw-pdf-drop-zone')"
+            ondrop="handleHwPdfDrop(event)">
+            <div class="uz-icon">📄</div>
+            <div class="uz-text" id="hw-pdf-zone-text">اضغط لاختيار ملف PDF أو اسحبه هنا</div>
+            <div class="uz-sub">ملفات PDF فقط — حجم أقصى 50 MB</div>
+            <input type="file" id="hw-pdf-file-input" style="display:none" accept=".pdf" onchange="handleHwPdfSelected(this)">
+            <div id="hw-pdf-selected-name" style="margin-top:10px;font-size:.82rem;color:#7C3AED;font-weight:700"></div>
+          </div>
+        </div>
+        <div class="fg" style="max-width:200px">
+          <label>عدد الأسئلة *</label>
+          <input type="number" id="hw-pdf-qcount" value="10" min="1" max="100" onchange="generateHwPdfAnswerKey()">
+        </div>
+        <h3 style="font-size:1rem;font-weight:900;margin-bottom:12px">🔑 نموذج الإجابة (Answer Key)</h3>
+        <div id="hw-pdf-answer-key" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px"></div>
+      </div>
+
+      <!-- ── محتوى: مقالي ── -->
+      <div id="hw-pdf-essay-section" style="display:none">
+        <div style="background:#F5F3FF;border:1.5px solid #EDE9FE;border-radius:12px;padding:14px;margin-bottom:16px;font-size:.83rem;color:#5B21B6;line-height:1.8">
+          <strong>📌 آلية العمل:</strong><br>
+          • ترفع ملف PDF الواجب هنا<br>
+          • الطالب يرفع إجابته كـ PDF أو صور (تُجمَّع تلقائياً في ملف PDF باسمه)<br>
+          • تستعرض إجابات الطلاب ويمكنك منحهم الدرجات لاحقاً
+        </div>
+        <div class="fg">
+          <label>ملف PDF الواجب (للطالب) *</label>
+          <div class="upload-zone" id="hw-essay-pdf-drop-zone"
+            onclick="document.getElementById('hw-essay-pdf-file-input').click()"
+            ondragover="handleDragOver(event,'hw-essay-pdf-drop-zone')"
+            ondragleave="handleDragLeave('hw-essay-pdf-drop-zone')"
+            ondrop="handleHwEssayPdfDrop(event)">
+            <div class="uz-icon">📋</div>
+            <div class="uz-text" id="hw-essay-pdf-zone-text">اضغط لاختيار ملف PDF الواجب أو اسحبه هنا</div>
+            <div class="uz-sub">ملفات PDF فقط — حجم أقصى 50 MB</div>
+            <input type="file" id="hw-essay-pdf-file-input" style="display:none" accept=".pdf" onchange="handleHwEssayPdfSelected(this)">
+            <div id="hw-essay-pdf-selected-name" style="margin-top:10px;font-size:.82rem;color:#7C3AED;font-weight:700"></div>
+          </div>
+        </div>
+        <div style="background:var(--green-light);border:1px solid #6EE7B7;border-radius:10px;padding:12px;font-size:.82rem;color:#065F46;margin-top:8px">
+          ✅ الطالب سيرفع إجابته من صفحته — لا يلزمك إعداد أي شيء إضافي
         </div>
       </div>
-      <div class="fg" style="max-width:200px">
-        <label>عدد الأسئلة *</label>
-        <input type="number" id="hw-pdf-qcount" value="10" min="1" max="100" onchange="generateHwPdfAnswerKey()">
-      </div>
-      <h3 style="font-size:1rem;font-weight:900;margin-bottom:12px">🔑 نموذج الإجابة (Answer Key)</h3>
-      <div id="hw-pdf-answer-key" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px"></div>
+
     </div>
 
     <!-- ── حاوية الأسئلة اليدوية ── -->
@@ -6928,6 +7183,15 @@ async function deleteOfflineExam(examId, title) {
       <button class="btn-primary" id="hwq-save-btn" onclick="saveAddedQuestions()"
         style="background:linear-gradient(135deg,#7C3AED,#A78BFA);border-color:#7C3AED">💾 حفظ الأسئلة</button>
     </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: إجابات الطلاب المقالية ══ -->
+<div class="mdl" id="mdl-essay-submissions">
+  <div class="mdl-box" style="position:relative;max-width:680px;width:100%;max-height:88vh;overflow-y:auto">
+    <button class="mdl-close" onclick="document.getElementById('mdl-essay-submissions').classList.remove('show')">✕ إغلاق</button>
+    <div class="mdl-title" style="color:#0891B2">📥 إجابات الطلاب — <span id="essay-sub-title" style="font-size:.85rem;font-weight:600;color:var(--gray)"></span></div>
+    <div id="essay-sub-list" style="margin-top:4px"></div>
   </div>
 </div>
 
