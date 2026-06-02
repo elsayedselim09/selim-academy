@@ -4376,5 +4376,17 @@ async function openSubDetailModal(reqId) {
   </div>
 </div>
 
+
+<!-- ══ Push Notifications Init ══ -->
+<script src="/push-init.js"></script>
+<script>
+  // تهيئة Push Notifications بعد تسجيل الدخول مباشرة
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      await PushNotifications.init(session.user.id, session.access_token);
+    }
+  });
+</script>
+
 </body>
 </html>
