@@ -2080,6 +2080,14 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       <label>الرابط (للفيديوهات فقط) *</label>
       <input type="url" id="edit-mat-url" style="direction:ltr">
     </div>
+    <!-- ✅ خيار المجاني عند التعديل -->
+    <div style="display:flex;align-items:flex-start;gap:10px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 14px;margin-top:4px">
+      <input type="checkbox" id="edit-mat-is-free" style="width:18px;height:18px;accent-color:var(--green);cursor:pointer;margin-top:2px">
+      <div>
+        <div style="font-size:.88rem;font-weight:900;color:#065F46">🎁 محتوى مجاني للجميع</div>
+        <div style="font-size:.75rem;color:#047857">سيظهر في صفحة المحتوى المجاني ويتاح لكل الطلاب</div>
+      </div>
+    </div>
     <div id="edit-mat-msg"></div>
     <div class="mdl-btns">
       <button class="btn-secondary" onclick="closeEditMaterialModal()">إلغاء</button>
@@ -3201,6 +3209,7 @@ function openEditMaterialModal(id) {
     document.getElementById('edit-mat-url-div').style.display = 'none';
     document.getElementById('edit-mat-url').value = '';
   }
+  document.getElementById('edit-mat-is-free').checked = mat.is_free || false;
   document.getElementById('edit-mat-msg').innerHTML = '';
   document.getElementById('mdl-edit-material').classList.add('show');
 }
@@ -3213,7 +3222,7 @@ async function saveEditMaterial() {
   const url = document.getElementById('edit-mat-url').value.trim();
   if(!title) { setMsg('edit-mat-msg','العنوان مطلوب','err'); return; }
 
-  const payload = { title };
+  const payload = { title, is_free: document.getElementById('edit-mat-is-free').checked };
   if (ST.pendingEditMat.type === 'video') {
     if(!url) { setMsg('edit-mat-msg','الرابط مطلوب','err'); return; }
     payload.url = url;

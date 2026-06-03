@@ -1460,6 +1460,14 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       <label>الرابط (للفيديوهات فقط) *</label>
       <input type="url" id="edit-admin-mat-url" style="direction:ltr">
     </div>
+    <!-- ✅ خيار المجاني عند التعديل -->
+    <div style="display:flex;align-items:flex-start;gap:10px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 14px;margin-top:4px">
+      <input type="checkbox" id="edit-admin-mat-is-free" style="width:18px;height:18px;accent-color:var(--green);cursor:pointer;margin-top:2px">
+      <div>
+        <div style="font-size:.88rem;font-weight:900;color:#065F46">🎁 محتوى مجاني للجميع</div>
+        <div style="font-size:.75rem;color:#047857">سيظهر في صفحة المحتوى المجاني ويتاح لكل الطلاب</div>
+      </div>
+    </div>
     <div id="edit-admin-mat-msg"></div>
     <div class="mdl-btns">
       <button class="mdl-cancel" onclick="closeEditAdminMaterial()">إلغاء</button>
@@ -2199,6 +2207,7 @@ function openEditAdminMaterial(id) {
   } else {
     document.getElementById('edit-admin-mat-url-div').style.display = 'none';
   }
+  document.getElementById('edit-admin-mat-is-free').checked = mat.is_free || false;
   document.getElementById('edit-admin-mat-msg').innerHTML = '';
   document.getElementById('mdl-edit-admin-material').classList.add('show');
 }
@@ -2213,7 +2222,7 @@ async function saveEditAdminMaterial() {
   const title = document.getElementById('edit-admin-mat-title').value.trim();
   if(!title){ document.getElementById('edit-admin-mat-msg').innerHTML='<div class="msg-err">العنوان مطلوب</div>'; return; }
   
-  const payload = { title };
+  const payload = { title, is_free: document.getElementById('edit-admin-mat-is-free').checked };
   if (S.adminPendingEditMat.type === 'video') {
     const url = document.getElementById('edit-admin-mat-url').value.trim();
     if(!url){ document.getElementById('edit-admin-mat-msg').innerHTML='<div class="msg-err">الرابط مطلوب</div>'; return; }
