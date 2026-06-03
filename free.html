@@ -380,10 +380,30 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       </div>
       <span class="sec-count" id="materials-count">0 مادة</span>
     </div>
-    <div class="cards-grid" id="materials-grid">
-      <div class="skel" style="height:280px;border-radius:18px"></div>
-      <div class="skel" style="height:280px;border-radius:18px"></div>
-      <div class="skel" style="height:280px;border-radius:18px"></div>
+    <!-- تبويبات الملفات / الفيديوهات -->
+    <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid var(--gray-mid)">
+      <button id="mat-tab-files-btn" onclick="switchMatTab('files')"
+        style="padding:10px 24px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer;border-bottom:3px solid var(--blue);color:var(--blue);margin-bottom:-2px;transition:all .2s;display:flex;align-items:center;gap:6px">
+        📎 الملفات <span id="mat-files-count" style="background:var(--blue-light);color:var(--blue);border-radius:50px;padding:1px 8px;font-size:.72rem;font-weight:900">0</span>
+      </button>
+      <button id="mat-tab-videos-btn" onclick="switchMatTab('videos')"
+        style="padding:10px 24px;border:none;background:none;font-family:'Cairo',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;color:var(--gray);margin-bottom:-2px;transition:all .2s;display:flex;align-items:center;gap:6px">
+        🎬 الفيديوهات <span id="mat-videos-count" style="background:var(--gray-light);color:var(--gray);border-radius:50px;padding:1px 8px;font-size:.72rem;font-weight:900">0</span>
+      </button>
+    </div>
+    <div id="mat-tab-files">
+      <div class="cards-grid" id="materials-files-grid">
+        <div class="skel" style="height:280px;border-radius:18px"></div>
+        <div class="skel" style="height:280px;border-radius:18px"></div>
+        <div class="skel" style="height:280px;border-radius:18px"></div>
+      </div>
+    </div>
+    <div id="mat-tab-videos" style="display:none">
+      <div class="cards-grid" id="materials-videos-grid">
+        <div class="skel" style="height:280px;border-radius:18px"></div>
+        <div class="skel" style="height:280px;border-radius:18px"></div>
+        <div class="skel" style="height:280px;border-radius:18px"></div>
+      </div>
     </div>
   </div>
 
@@ -627,10 +647,14 @@ function applyFilters() {
   renderMaterials();
 
   // Update tab counts
+  const filesCount  = ST.filteredMaterials.filter(m => m.type !== 'video').length;
+  const videosCount = ST.filteredMaterials.filter(m => m.type === 'video').length;
   document.getElementById('sessions-tab-count').textContent = ST.filteredSessions.length;
   document.getElementById('materials-tab-count').textContent = ST.filteredMaterials.length;
   document.getElementById('sessions-count').textContent = ST.filteredSessions.length + ' حصة';
   document.getElementById('materials-count').textContent = ST.filteredMaterials.length + ' مادة';
+  document.getElementById('mat-files-count').textContent  = filesCount;
+  document.getElementById('mat-videos-count').textContent = videosCount;
 }
 
 function clearFilters() {
@@ -649,6 +673,24 @@ function switchTab(tab) {
   document.getElementById('tab-materials').style.display = tab === 'materials' ? 'block' : 'none';
   document.getElementById('tab-sessions-btn').classList.toggle('active', tab === 'sessions');
   document.getElementById('tab-materials-btn').classList.toggle('active', tab === 'materials');
+}
+
+function switchMatTab(tab) {
+  const isFiles = tab === 'files';
+  document.getElementById('mat-tab-files').style.display  = isFiles ? 'block' : 'none';
+  document.getElementById('mat-tab-videos').style.display = isFiles ? 'none'  : 'block';
+  const filesBtnStyle  = document.getElementById('mat-tab-files-btn').style;
+  const videosBtnStyle = document.getElementById('mat-tab-videos-btn').style;
+  filesBtnStyle.borderBottomColor  = isFiles ? 'var(--blue)' : 'transparent';
+  filesBtnStyle.color              = isFiles ? 'var(--blue)' : 'var(--gray)';
+  videosBtnStyle.borderBottomColor = isFiles ? 'transparent' : 'var(--blue)';
+  videosBtnStyle.color             = isFiles ? 'var(--gray)'  : 'var(--blue)';
+  const filesCount  = document.getElementById('mat-files-count');
+  const videosCount = document.getElementById('mat-videos-count');
+  filesCount.style.background  = isFiles ? 'var(--blue-light)' : 'var(--gray-light)';
+  filesCount.style.color       = isFiles ? 'var(--blue)'       : 'var(--gray)';
+  videosCount.style.background = isFiles ? 'var(--gray-light)' : 'var(--blue-light)';
+  videosCount.style.color      = isFiles ? 'var(--gray)'       : 'var(--blue)';
 }
 
 // ══════════════════════════════════════════
@@ -740,15 +782,22 @@ function renderSessions() {
 // RENDER MATERIALS
 // ══════════════════════════════════════════
 function renderMaterials() {
-  const grid = document.getElementById('materials-grid');
-  const list = ST.filteredMaterials;
+  const filesList  = ST.filteredMaterials.filter(m => m.type !== 'video');
+  const videosList = ST.filteredMaterials.filter(m => m.type === 'video');
+
+  renderMatGrid('materials-files-grid',  filesList,  '📎', 'ملفات', 'لا توجد ملفات مجانية حالياً');
+  renderMatGrid('materials-videos-grid', videosList, '🎬', 'فيديوهات', 'لا توجد فيديوهات مجانية حالياً');
+}
+
+function renderMatGrid(gridId, list, icon, label, emptyMsg) {
+  const grid = document.getElementById(gridId);
 
   if(!list.length) {
     grid.innerHTML = `
       <div style="grid-column:1/-1">
         <div class="empty-state">
-          <div class="empty-icon">📚</div>
-          <div class="empty-title">لا توجد مواد مجانية حالياً</div>
+          <div class="empty-icon">${icon}</div>
+          <div class="empty-title">${emptyMsg}</div>
           <div class="empty-sub">جرّب تغيير الفلتر أو تحقق لاحقاً</div>
         </div>
       </div>`;
@@ -798,6 +847,8 @@ function renderMaterials() {
           <a href="${m.url||'#'}" target="_blank" class="btn-open">${isVideo ? '▶️ شاهد الآن' : '⬇️ تحميل'}</a>
         </div>
       </div>`;
+  }).join('');
+}
   }).join('');
 }
 
