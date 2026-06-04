@@ -292,6 +292,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <div class="nav-label">الاختبارات</div>
     <button class="nav-item"        id="nav-admin-exams" onclick="goTo('admin-exams')"><span class="nav-icon">📝</span> إحصائيات الاختبارات</button>
     <div class="nav-label">إدارة الموقع</div>
+    <button class="nav-item"        id="nav-visitors"     onclick="goTo('visitors')"><span class="nav-icon">📊</span> إحصائيات الزوار</button>
     <button class="nav-item"        id="nav-site-content" onclick="goTo('site-content')"><span class="nav-icon">🌐</span> إدارة المحتوى</button>
     <button class="nav-item"        id="nav-catalog"      onclick="goTo('catalog')"><span class="nav-icon">🎓</span> إدارة الكورسات</button>
     <button class="nav-item"        id="nav-announcements" onclick="goTo('announcements')"><span class="nav-icon">📢</span> الإعلانات</button>
@@ -441,6 +442,59 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
         <input class="search-input" id="req-search" type="text" placeholder="🔍 بحث..." oninput="renderReqTable()">
       </div>
       <div id="req-body"></div>
+    </div>
+  </div>
+
+  <!-- VISITORS ANALYTICS -->
+  <div class="page" id="page-visitors">
+    <div class="page-title">📊 إحصائيات الزوار</div>
+    <p class="page-sub">تتبع عدد الزوار اليومي والكلي وتفاصيل كل زيارة</p>
+
+    <!-- Summary Stats -->
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px" id="vis-stats-row">
+      <div class="stat-card">
+        <div class="stat-icon si-blue">👁️</div>
+        <div><div class="stat-num" id="vis-today-count">—</div><div class="stat-label">زيارات اليوم</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-green">📈</div>
+        <div><div class="stat-num" id="vis-total-count">—</div><div class="stat-label">إجمالي الزيارات</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-purple">🔗</div>
+        <div><div class="stat-num" id="vis-pages-count">—</div><div class="stat-label">صفحات مختلفة</div></div>
+      </div>
+    </div>
+
+    <!-- Date Timeline Bar -->
+    <div class="section-card" style="margin-bottom:20px">
+      <div class="section-head">
+        <h3>📅 الزيارات حسب التاريخ (آخر 30 يوم)</h3>
+        <button class="btn-refresh" onclick="visLoad()">🔄 تحديث</button>
+      </div>
+      <div style="padding:16px 20px">
+        <!-- Chart bars -->
+        <div id="vis-chart" style="display:flex;align-items:flex-end;gap:4px;height:100px;overflow-x:auto;padding-bottom:4px"></div>
+        <!-- Scrollable date pills -->
+        <div id="vis-date-pills" style="display:flex;gap:6px;overflow-x:auto;padding:12px 0 4px;flex-wrap:nowrap"></div>
+      </div>
+    </div>
+
+    <!-- Detail Table -->
+    <div class="section-card">
+      <div class="section-head">
+        <h3 id="vis-detail-title">📋 تفاصيل الزيارات</h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="search-input" id="vis-search" type="text" placeholder="🔍 بحث في الصفحات..." oninput="visRenderTable()" style="min-width:160px">
+        </div>
+      </div>
+      <div id="vis-detail-body">
+        <div style="padding:20px">
+          <div class="skel" style="height:44px;margin-bottom:8px;border-radius:8px"></div>
+          <div class="skel" style="height:44px;margin-bottom:8px;border-radius:8px"></div>
+          <div class="skel" style="height:44px;border-radius:8px"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1657,7 +1711,7 @@ function goTo(name) {
   document.getElementById('nav-'+name).classList.add('active');
   closeSidebar();
   if (name !== 'sessions' && _sessInterval) { clearInterval(_sessInterval); _sessInterval = null; }
-  const loaders = {courses:loadCourses, sessions:initSessions, students:()=>{ switchStudentTab('list'); loadStudents(); }, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit, announcements:annLoad, catalog:loadCatalog};
+  const loaders = {courses:loadCourses, sessions:initSessions, students:()=>{ switchStudentTab('list'); loadStudents(); }, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit, announcements:annLoad, catalog:loadCatalog, visitors:visLoad};
   if(loaders[name]) loaders[name]();
   if(name==='requests') renderReqTable();
 }
@@ -6388,6 +6442,235 @@ async function scDeleteBylaw(id) {
     toast('🗑️ تم حذف البند');
     scLoadBylaws();
   } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  📊  VISITORS ANALYTICS — إحصائيات الزوار
+// ══════════════════════════════════════════════════════════════════
+
+let _visAllRows   = [];   // all records loaded
+let _visFiltered  = [];   // after date/search filter
+let _visSelDate   = null; // selected date string 'YYYY-MM-DD' or null = all
+let _visInited    = false;
+
+async function visLoad() {
+  _visInited = true;
+  _visAllRows = [];
+  _visSelDate = null;
+
+  // show skeletons
+  document.getElementById('vis-today-count').textContent = '—';
+  document.getElementById('vis-total-count').textContent = '—';
+  document.getElementById('vis-pages-count').textContent = '—';
+  document.getElementById('vis-chart').innerHTML = '<div style="color:var(--gray);font-size:.82rem;padding:10px">⏳ جاري التحميل...</div>';
+  document.getElementById('vis-date-pills').innerHTML = '';
+  document.getElementById('vis-detail-body').innerHTML = '<div style="padding:20px"><div class="skel" style="height:44px;margin-bottom:8px;border-radius:8px"></div><div class="skel" style="height:44px;margin-bottom:8px;border-radius:8px"></div><div class="skel" style="height:44px;border-radius:8px"></div></div>';
+
+  try {
+    // جلب آخر 30 يوم
+    const from30 = new Date();
+    from30.setDate(from30.getDate() - 29);
+    from30.setHours(0,0,0,0);
+
+    const { data, error } = await sb
+      .from('page_views')
+      .select('id, page, referrer, created_at, session_id')
+      .gte('created_at', from30.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    _visAllRows = data || [];
+
+    visRenderStats();
+    visRenderChart();
+    visRenderDatePills();
+    visRenderTable();
+  } catch(e) {
+    document.getElementById('vis-chart').innerHTML = `<div style="color:var(--red);padding:10px">❌ ${e.message}</div>`;
+    document.getElementById('vis-detail-body').innerHTML = `<div style="padding:20px;color:var(--red)">❌ تأكد من إنشاء جدول page_views في Supabase</div>`;
+  }
+}
+
+// ── إحصائيات المجموع ──
+function visRenderStats() {
+  const todayStr = new Date().toISOString().slice(0,10);
+  const todayRows = _visAllRows.filter(r => r.created_at.slice(0,10) === todayStr);
+  const uniquePages = new Set(_visAllRows.map(r => r.page)).size;
+
+  document.getElementById('vis-today-count').textContent = todayRows.length.toLocaleString('ar-EG');
+  document.getElementById('vis-total-count').textContent = _visAllRows.length.toLocaleString('ar-EG');
+  document.getElementById('vis-pages-count').textContent = uniquePages.toLocaleString('ar-EG');
+}
+
+// ── رسم الأعمدة البيانية ──
+function visRenderChart() {
+  const chartEl = document.getElementById('vis-chart');
+  // تجميع حسب اليوم
+  const byDay = {};
+  _visAllRows.forEach(r => {
+    const d = r.created_at.slice(0,10);
+    byDay[d] = (byDay[d] || 0) + 1;
+  });
+
+  // توليد آخر 30 يوم
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0,10));
+  }
+
+  const maxVal = Math.max(...days.map(d => byDay[d] || 0), 1);
+  const todayStr = new Date().toISOString().slice(0,10);
+
+  chartEl.innerHTML = days.map(d => {
+    const count = byDay[d] || 0;
+    const pct = Math.round((count / maxVal) * 100);
+    const isToday = d === todayStr;
+    const isSel = d === _visSelDate;
+    const barColor = isSel ? 'var(--blue-dark)' : isToday ? 'var(--blue)' : 'var(--blue-mid)';
+    const label = new Date(d + 'T12:00:00').toLocaleDateString('ar-EG', { day:'2-digit', month:'short' });
+    return `<div title="${label}: ${count} زيارة"
+      onclick="visSelectDate('${d}')"
+      style="flex:1;min-width:18px;max-width:32px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;transition:opacity .2s"
+      onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
+      <span style="font-size:.6rem;color:${isSel?'var(--blue-dark)':'var(--gray)'};font-weight:${isSel?'900':'600'}">${count||''}</span>
+      <div style="width:100%;background:${barColor};border-radius:4px 4px 0 0;height:${Math.max(pct,2)}%;min-height:${count>0?'4px':'2px'};transition:all .2s;border:${isSel?'2px solid var(--blue-dark)':'none'}"></div>
+    </div>`;
+  }).join('');
+}
+
+// ── أزرار التواريخ ──
+function visRenderDatePills() {
+  const pillsEl = document.getElementById('vis-date-pills');
+  const byDay = {};
+  _visAllRows.forEach(r => {
+    const d = r.created_at.slice(0,10);
+    byDay[d] = (byDay[d] || 0) + 1;
+  });
+
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0,10));
+  }
+
+  const todayStr = new Date().toISOString().slice(0,10);
+
+  pillsEl.innerHTML = `<button onclick="visSelectDate(null)"
+    style="padding:5px 14px;border-radius:50px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;border:1.5px solid ${_visSelDate===null?'var(--blue)':'var(--gray-mid)'};background:${_visSelDate===null?'var(--blue)':'var(--white)'};color:${_visSelDate===null?'#fff':'var(--gray)'}">
+    📋 الكل (${_visAllRows.length})
+  </button>` +
+  days.filter(d => byDay[d]).reverse().map(d => {
+    const count = byDay[d] || 0;
+    const isSel = d === _visSelDate;
+    const isToday = d === todayStr;
+    const label = isToday ? '📅 اليوم' : new Date(d + 'T12:00:00').toLocaleDateString('ar-EG', { weekday:'short', day:'2-digit', month:'short' });
+    return `<button onclick="visSelectDate('${d}')"
+      style="padding:5px 14px;border-radius:50px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;border:1.5px solid ${isSel?'var(--blue)':'var(--gray-mid)'};background:${isSel?'var(--blue)':'var(--white)'};color:${isSel?'#fff':'var(--gray)'}">
+      ${label} (${count})
+    </button>`;
+  }).join('');
+}
+
+// ── اختيار يوم معين ──
+function visSelectDate(dateStr) {
+  _visSelDate = dateStr;
+  visRenderChart();
+  visRenderDatePills();
+  visRenderTable();
+  const titleEl = document.getElementById('vis-detail-title');
+  if (!dateStr) {
+    titleEl.textContent = '📋 تفاصيل الزيارات (آخر 30 يوم)';
+  } else {
+    const label = new Date(dateStr + 'T12:00:00').toLocaleDateString('ar-EG', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    titleEl.textContent = `📋 زيارات ${label}`;
+  }
+}
+
+// ── جدول التفاصيل ──
+function visRenderTable() {
+  const q = (document.getElementById('vis-search')?.value || '').toLowerCase();
+
+  _visFiltered = _visAllRows.filter(r => {
+    const matchDate = !_visSelDate || r.created_at.slice(0,10) === _visSelDate;
+    const matchQ    = !q || (r.page||'').toLowerCase().includes(q) || (r.referrer||'').toLowerCase().includes(q);
+    return matchDate && matchQ;
+  });
+
+  const el = document.getElementById('vis-detail-body');
+  if (!_visFiltered.length) {
+    el.innerHTML = `<div class="empty-box"><div class="ei">📭</div><div class="et">لا توجد زيارات</div><div class="ed">لم يتم تسجيل أي زيارة لهذا اليوم أو الفلتر المحدد</div></div>`;
+    return;
+  }
+
+  // تجميع حسب الصفحة لإظهار الإحصائيات
+  const pageStats = {};
+  _visFiltered.forEach(r => {
+    const p = r.page || '/';
+    if (!pageStats[p]) pageStats[p] = 0;
+    pageStats[p]++;
+  });
+
+  // عرض ملخص الصفحات أولاً
+  const topPages = Object.entries(pageStats).sort((a,b) => b[1]-a[1]);
+  const maxPg = topPages[0]?.[1] || 1;
+
+  const summaryHtml = `
+    <div style="padding:16px 20px;border-bottom:1px solid var(--gray-mid);background:var(--gray-light)">
+      <div style="font-size:.82rem;font-weight:700;color:var(--dark);margin-bottom:10px">📄 الصفحات الأكثر زيارة (${_visFiltered.length} زيارة)</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${topPages.slice(0,8).map(([page, cnt]) => {
+          const pct = Math.round((cnt/maxPg)*100);
+          const pageName = page === '/' ? '🏠 الرئيسية' : page.replace(/\.html$/,'').replace(/\//g,' › ');
+          return `<div style="display:flex;align-items:center;gap:10px">
+            <div style="font-size:.78rem;color:var(--dark);font-weight:600;min-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${page}">${pageName}</div>
+            <div style="flex:1;background:var(--gray-mid);border-radius:50px;height:8px;overflow:hidden">
+              <div style="width:${pct}%;background:var(--blue);height:100%;border-radius:50px;transition:width .4s"></div>
+            </div>
+            <div style="font-size:.8rem;font-weight:700;color:var(--blue);min-width:32px;text-align:left">${cnt}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  // جدول التفاصيل الكاملة
+  const rowsHtml = `<div class="tbl-wrap">
+    <table class="data-table">
+      <thead><tr>
+        <th>#</th>
+        <th>الصفحة</th>
+        <th>المصدر (Referrer)</th>
+        <th>Session</th>
+        <th>وقت الزيارة</th>
+      </tr></thead>
+      <tbody>
+      ${_visFiltered.map((r,i) => {
+        const dt = new Date(r.created_at);
+        const dateStr = dt.toLocaleDateString('ar-EG', { day:'2-digit', month:'short', year:'numeric' });
+        const timeStr = dt.toLocaleTimeString('ar-EG', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true });
+        const pageName = r.page === '/' ? '🏠 الرئيسية' : (r.page || '—');
+        const ref = r.referrer || '—';
+        const sess = r.session_id ? r.session_id.slice(0,8)+'…' : '—';
+        return `<tr>
+          <td style="color:var(--gray);font-size:.76rem">${i+1}</td>
+          <td>
+            <span style="background:var(--blue-light);color:var(--blue);padding:3px 9px;border-radius:6px;font-size:.78rem;font-weight:700">${pageName}</span>
+          </td>
+          <td style="font-size:.78rem;color:var(--gray);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${ref}">${ref}</td>
+          <td style="font-size:.75rem;color:var(--gray);font-family:monospace">${sess}</td>
+          <td>
+            <div style="font-size:.8rem;font-weight:600;color:var(--dark)">${dateStr}</div>
+            <div style="font-size:.73rem;color:var(--gray)">${timeStr}</div>
+          </td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+
+  el.innerHTML = summaryHtml + rowsHtml;
 }
 
 </script>
