@@ -3001,18 +3001,18 @@ function renderStudentsTable(students, rm, approvedReqMap) {
     el.innerHTML = `<div class="empty-box"><div class="ei">🔍</div><div class="et">لا توجد نتائج مطابقة</div></div>`;
     return;
   }
-  // ترتيب حسب رقم الطالب: طول الرقم أولاً ثم القيمة — يضمن 202601 < 2026010 < 20260100
+  // ترتيب حسب رقم الطالب: الأحدث فوق (طول الرقم تنازلياً ثم القيمة تنازلياً)
   const sorted = [...students].sort((a, b) => {
     const na = String(a.student_number || ''), nb = String(b.student_number || '');
-    if (na.length !== nb.length) return na.length - nb.length;
-    return na.localeCompare(nb);
+    if (na.length !== nb.length) return nb.length - na.length;
+    return nb.localeCompare(na);
   });
   el.innerHTML = `<div class="tbl-wrap"><table class="data-table"><thead><tr><th>الترتيب</th><th>رقم الطالب</th><th>الطالب</th><th>الهاتف</th><th>طلبات الاشتراك</th><th>تاريخ التسجيل</th><th>الإجراء</th></tr></thead><tbody>
   ${sorted.map((s,i) => {
     const approvedReqs = (approvedReqMap||{})[s.id] || [];
     const firstReq = approvedReqs.find(r => !r.assigned_teacher_id) || approvedReqs[0];
-    // الترتيب: أقدم طالب = 1، أحدث طالب = أكبر رقم
-    const rowOrder = i + 1;
+    // الترتيب: أحدث طالب = أكبر رقم (فوق)، أقدم طالب = 1 (أسفل)
+    const rowOrder = sorted.length - i;
     return `
     <tr>
       <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer;text-align:center">
