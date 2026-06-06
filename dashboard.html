@@ -4682,10 +4682,20 @@ async function openSubDetailModal(reqId) {
     if (!_pvsb) return;
     let sid = sessionStorage.getItem('_vsid');
     if (!sid) { sid = crypto.randomUUID(); sessionStorage.setItem('_vsid', sid); }
+    const { data: { user } } = await _pvsb.auth.getUser().catch(() => ({ data: { user: null } }));
+    let userType = 'guest', userId = null;
+    if (user) {
+      userId = user.id;
+      const { data: prof } = await _pvsb.from('profiles').select('role').eq('id', user.id).maybeSingle();
+      const role = prof?.role || 'student';
+      userType = (role === 'admin') ? 'admin' : (role === 'teacher') ? 'teacher' : 'student';
+    }
     await _pvsb.from('page_views').insert({
       page: window.location.pathname || '/',
       referrer: document.referrer || null,
-      session_id: sid
+      session_id: sid,
+      user_id: userId,
+      user_type: userType
     });
   } catch(e) {}
 })();

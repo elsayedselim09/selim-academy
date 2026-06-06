@@ -448,21 +448,41 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   <!-- VISITORS ANALYTICS -->
   <div class="page" id="page-visitors">
     <div class="page-title">📊 إحصائيات الزوار</div>
-    <p class="page-sub">تتبع عدد الزوار اليومي والكلي وتفاصيل كل زيارة</p>
+    <p class="page-sub">تتبع تفاصيل كل زيارة ومعرفة هوية الزائر — طالب أم معلم أم إداري أم زائر جديد</p>
 
-    <!-- Summary Stats -->
-    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px" id="vis-stats-row">
+    <!-- Stats Row 1: Total Counts -->
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
       <div class="stat-card">
         <div class="stat-icon si-blue">👁️</div>
         <div><div class="stat-num" id="vis-today-count">—</div><div class="stat-label">زيارات اليوم</div></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon si-green">📈</div>
-        <div><div class="stat-num" id="vis-total-count">—</div><div class="stat-label">إجمالي الزيارات</div></div>
+        <div><div class="stat-num" id="vis-total-count">—</div><div class="stat-label">إجمالي الزيارات (30 يوم)</div></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon si-purple">🔗</div>
         <div><div class="stat-num" id="vis-pages-count">—</div><div class="stat-label">صفحات مختلفة</div></div>
+      </div>
+    </div>
+
+    <!-- Stats Row 2: Visitor Types -->
+    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px">
+      <div class="stat-card" style="cursor:pointer;border-bottom:3px solid var(--blue)" onclick="visSetTypeFilter('student')">
+        <div class="stat-icon si-blue">👥</div>
+        <div><div class="stat-num" id="vis-count-student">—</div><div class="stat-label">زيارات الطلاب</div></div>
+      </div>
+      <div class="stat-card" style="cursor:pointer;border-bottom:3px solid var(--purple)" onclick="visSetTypeFilter('teacher')">
+        <div class="stat-icon si-purple">👨‍🏫</div>
+        <div><div class="stat-num" id="vis-count-teacher">—</div><div class="stat-label">زيارات المعلمين</div></div>
+      </div>
+      <div class="stat-card" style="cursor:pointer;border-bottom:3px solid var(--green)" onclick="visSetTypeFilter('admin')">
+        <div class="stat-icon si-green">⚙️</div>
+        <div><div class="stat-num" id="vis-count-admin">—</div><div class="stat-label">زيارات الإدارة</div></div>
+      </div>
+      <div class="stat-card" style="cursor:pointer;border-bottom:3px solid var(--gold)" onclick="visSetTypeFilter('guest')">
+        <div class="stat-icon si-gold">🌐</div>
+        <div><div class="stat-num" id="vis-count-guest">—</div><div class="stat-label">زوار جدد (خارجيون)</div></div>
       </div>
     </div>
 
@@ -473,9 +493,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
         <button class="btn-refresh" onclick="visLoad()">🔄 تحديث</button>
       </div>
       <div style="padding:16px 20px">
-        <!-- Chart bars -->
         <div id="vis-chart" style="display:flex;align-items:flex-end;gap:4px;height:100px;overflow-x:auto;padding-bottom:4px"></div>
-        <!-- Scrollable date pills -->
         <div id="vis-date-pills" style="display:flex;gap:6px;overflow-x:auto;padding:12px 0 4px;flex-wrap:nowrap"></div>
       </div>
     </div>
@@ -485,7 +503,15 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       <div class="section-head">
         <h3 id="vis-detail-title">📋 تفاصيل الزيارات</h3>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input class="search-input" id="vis-search" type="text" placeholder="🔍 بحث في الصفحات..." oninput="visRenderTable()" style="min-width:160px">
+          <!-- Type filter pills -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="vis-type-pills">
+            <button class="filter-btn active" onclick="visSetTypeFilter(null)" id="vtp-all">الكل</button>
+            <button class="filter-btn" onclick="visSetTypeFilter('student')" id="vtp-student">👥 طلاب</button>
+            <button class="filter-btn" onclick="visSetTypeFilter('teacher')" id="vtp-teacher">👨‍🏫 معلمون</button>
+            <button class="filter-btn" onclick="visSetTypeFilter('admin')" id="vtp-admin">⚙️ إدارة</button>
+            <button class="filter-btn" onclick="visSetTypeFilter('guest')" id="vtp-guest">🌐 زوار جدد</button>
+          </div>
+          <input class="search-input" id="vis-search" type="text" placeholder="🔍 بحث بالاسم أو الصفحة..." oninput="visRenderTable()" style="min-width:180px">
         </div>
       </div>
       <div id="vis-detail-body">
@@ -6448,133 +6474,129 @@ async function scDeleteBylaw(id) {
 //  📊  VISITORS ANALYTICS — إحصائيات الزوار
 // ══════════════════════════════════════════════════════════════════
 
-let _visAllRows   = [];   // all records loaded
-let _visFiltered  = [];   // after date/search filter
-let _visSelDate   = null; // selected date string 'YYYY-MM-DD' or null = all
-let _visInited    = false;
+let _visAllRows     = [];   // all records loaded
+let _visFiltered    = [];   // after date/search filter
+let _visSelDate     = null; // selected date string 'YYYY-MM-DD' or null = all
+let _visSelType     = null; // 'student'|'teacher'|'admin'|'guest'|null
+let _visInited      = false;
+let _visProfilesMap = {};   // user_id → { full_name, role, student_number, teacher_number }
 
 async function visLoad() {
-  _visInited = true;
+  _visInited  = true;
   _visAllRows = [];
   _visSelDate = null;
+  _visSelType = null;
+  _visProfilesMap = {};
 
-  // show skeletons
-  document.getElementById('vis-today-count').textContent = '—';
-  document.getElementById('vis-total-count').textContent = '—';
-  document.getElementById('vis-pages-count').textContent = '—';
-  document.getElementById('vis-chart').innerHTML = '<div style="color:var(--gray);font-size:.82rem;padding:10px">⏳ جاري التحميل...</div>';
+  ['vis-today-count','vis-total-count','vis-pages-count',
+   'vis-count-student','vis-count-teacher','vis-count-admin','vis-count-guest']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.textContent = '—'; });
+  document.getElementById('vis-chart').innerHTML = '<div style="color:var(--gray);font-size:.82rem;padding:10px">جاري التحميل...</div>';
   document.getElementById('vis-date-pills').innerHTML = '';
   document.getElementById('vis-detail-body').innerHTML = '<div style="padding:20px"><div class="skel" style="height:44px;margin-bottom:8px;border-radius:8px"></div><div class="skel" style="height:44px;margin-bottom:8px;border-radius:8px"></div><div class="skel" style="height:44px;border-radius:8px"></div></div>';
 
   try {
-    // جلب آخر 30 يوم
     const from30 = new Date();
     from30.setDate(from30.getDate() - 29);
     from30.setHours(0,0,0,0);
 
     const { data, error } = await sb
       .from('page_views')
-      .select('id, page, referrer, created_at, session_id')
+      .select('id, page, referrer, created_at, session_id, user_id, user_type')
       .gte('created_at', from30.toISOString())
       .order('created_at', { ascending: false });
 
     if (error) throw error;
     _visAllRows = data || [];
 
+    const userIds = [...new Set(_visAllRows.filter(r => r.user_id).map(r => r.user_id))];
+    if (userIds.length > 0) {
+      const { data: profiles } = await sb
+        .from('profiles')
+        .select('id, full_name, role, student_number, teacher_number, email')
+        .in('id', userIds);
+      (profiles || []).forEach(p => { _visProfilesMap[p.id] = p; });
+    }
+
     visRenderStats();
     visRenderChart();
     visRenderDatePills();
     visRenderTable();
   } catch(e) {
-    document.getElementById('vis-chart').innerHTML = `<div style="color:var(--red);padding:10px">❌ ${e.message}</div>`;
-    document.getElementById('vis-detail-body').innerHTML = `<div style="padding:20px;color:var(--red)">❌ تأكد من إنشاء جدول page_views في Supabase</div>`;
+    document.getElementById('vis-chart').innerHTML = '<div style="color:var(--red);padding:10px">خطأ: ' + e.message + '</div>';
+    document.getElementById('vis-detail-body').innerHTML = '<div style="padding:20px;color:var(--red)">تأكد من إنشاء جدول page_views في Supabase</div>';
   }
 }
 
-// ── إحصائيات المجموع ──
 function visRenderStats() {
   const todayStr = new Date().toISOString().slice(0,10);
   const todayRows = _visAllRows.filter(r => r.created_at.slice(0,10) === todayStr);
   const uniquePages = new Set(_visAllRows.map(r => r.page)).size;
-
   document.getElementById('vis-today-count').textContent = todayRows.length.toLocaleString('ar-EG');
   document.getElementById('vis-total-count').textContent = _visAllRows.length.toLocaleString('ar-EG');
   document.getElementById('vis-pages-count').textContent = uniquePages.toLocaleString('ar-EG');
+  ['student','teacher','admin','guest'].forEach(type => {
+    const cnt = _visAllRows.filter(r => (r.user_type || 'guest') === type).length;
+    const el = document.getElementById('vis-count-' + type);
+    if (el) el.textContent = cnt.toLocaleString('ar-EG');
+  });
 }
 
-// ── رسم الأعمدة البيانية ──
+function visSetTypeFilter(type) {
+  _visSelType = type;
+  ['all','student','teacher','admin','guest'].forEach(t => {
+    const btn = document.getElementById('vtp-' + t);
+    if (!btn) return;
+    const isActive = (t === 'all' && type === null) || t === type;
+    btn.classList.toggle('active', isActive);
+  });
+  visRenderTable();
+}
+
 function visRenderChart() {
   const chartEl = document.getElementById('vis-chart');
-  // تجميع حسب اليوم
   const byDay = {};
-  _visAllRows.forEach(r => {
-    const d = r.created_at.slice(0,10);
-    byDay[d] = (byDay[d] || 0) + 1;
-  });
-
-  // توليد آخر 30 يوم
+  _visAllRows.forEach(r => { const d = r.created_at.slice(0,10); byDay[d] = (byDay[d]||0)+1; });
   const days = [];
   for (let i = 29; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
+    const d = new Date(); d.setDate(d.getDate()-i);
     days.push(d.toISOString().slice(0,10));
   }
-
-  const maxVal = Math.max(...days.map(d => byDay[d] || 0), 1);
+  const maxVal = Math.max(...Object.values(byDay), 1);
   const todayStr = new Date().toISOString().slice(0,10);
-
   chartEl.innerHTML = days.map(d => {
-    const count = byDay[d] || 0;
-    const pct = Math.round((count / maxVal) * 100);
-    const isToday = d === todayStr;
+    const cnt = byDay[d] || 0;
+    const h = Math.max(Math.round((cnt/maxVal)*92), cnt>0?4:0);
     const isSel = d === _visSelDate;
-    const barColor = isSel ? 'var(--blue-dark)' : isToday ? 'var(--blue)' : 'var(--blue-mid)';
-    const label = new Date(d + 'T12:00:00').toLocaleDateString('ar-EG', { day:'2-digit', month:'short' });
-    return `<div title="${label}: ${count} زيارة"
-      onclick="visSelectDate('${d}')"
-      style="flex:1;min-width:18px;max-width:32px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;transition:opacity .2s"
-      onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
-      <span style="font-size:.6rem;color:${isSel?'var(--blue-dark)':'var(--gray)'};font-weight:${isSel?'900':'600'}">${count||''}</span>
-      <div style="width:100%;background:${barColor};border-radius:4px 4px 0 0;height:${Math.max(pct,2)}%;min-height:${count>0?'4px':'2px'};transition:all .2s;border:${isSel?'2px solid var(--blue-dark)':'none'}"></div>
-    </div>`;
+    const isT = d === todayStr;
+    const bg = isSel ? 'var(--blue)' : isT ? 'var(--blue-mid)' : 'var(--blue-light)';
+    return '<div title="' + d + ': ' + cnt + ' زيارة" onclick="visSelectDate(\'' + d + '\')" style="flex:1;min-width:10px;background:' + bg + ';height:' + h + 'px;border-radius:3px 3px 0 0;cursor:pointer;transition:all .2s;' + (cnt===0?'opacity:.25':'') + '"></div>';
   }).join('');
 }
 
-// ── أزرار التواريخ ──
 function visRenderDatePills() {
-  const pillsEl = document.getElementById('vis-date-pills');
   const byDay = {};
-  _visAllRows.forEach(r => {
-    const d = r.created_at.slice(0,10);
-    byDay[d] = (byDay[d] || 0) + 1;
-  });
-
+  _visAllRows.forEach(r => { const d = r.created_at.slice(0,10); byDay[d] = (byDay[d]||0)+1; });
   const days = [];
   for (let i = 29; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
+    const d = new Date(); d.setDate(d.getDate()-i);
     days.push(d.toISOString().slice(0,10));
   }
-
   const todayStr = new Date().toISOString().slice(0,10);
+  const pillsEl = document.getElementById('vis-date-pills');
 
-  pillsEl.innerHTML = `<button onclick="visSelectDate(null)"
-    style="padding:5px 14px;border-radius:50px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;border:1.5px solid ${_visSelDate===null?'var(--blue)':'var(--gray-mid)'};background:${_visSelDate===null?'var(--blue)':'var(--white)'};color:${_visSelDate===null?'#fff':'var(--gray)'}">
-    📋 الكل (${_visAllRows.length})
-  </button>` +
-  days.filter(d => byDay[d]).reverse().map(d => {
-    const count = byDay[d] || 0;
-    const isSel = d === _visSelDate;
-    const isToday = d === todayStr;
-    const label = isToday ? '📅 اليوم' : new Date(d + 'T12:00:00').toLocaleDateString('ar-EG', { weekday:'short', day:'2-digit', month:'short' });
-    return `<button onclick="visSelectDate('${d}')"
-      style="padding:5px 14px;border-radius:50px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;border:1.5px solid ${isSel?'var(--blue)':'var(--gray-mid)'};background:${isSel?'var(--blue)':'var(--white)'};color:${isSel?'#fff':'var(--gray)'}">
-      ${label} (${count})
-    </button>`;
-  }).join('');
+  const selStyle = (active) => 'padding:5px 14px;border-radius:50px;font-family:\'Cairo\',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;border:1.5px solid ' + (active?'var(--blue)':'var(--gray-mid)') + ';background:' + (active?'var(--blue)':'var(--white)') + ';color:' + (active?'#fff':'var(--gray)') + ';';
+
+  pillsEl.innerHTML = '<button onclick="visSelectDate(null)" style="' + selStyle(_visSelDate===null) + '">الكل (' + _visAllRows.length + ')</button>' +
+    days.filter(d => byDay[d]).reverse().map(d => {
+      const count = byDay[d]||0;
+      const isSel = d === _visSelDate;
+      const isToday = d === todayStr;
+      const label = isToday ? 'اليوم' : new Date(d+'T12:00:00').toLocaleDateString('ar-EG',{weekday:'short',day:'2-digit',month:'short'});
+      return '<button onclick="visSelectDate(\'' + d + '\')" style="' + selStyle(isSel) + '">' + label + ' (' + count + ')</button>';
+    }).join('');
 }
 
-// ── اختيار يوم معين ──
 function visSelectDate(dateStr) {
   _visSelDate = dateStr;
   visRenderChart();
@@ -6582,93 +6604,105 @@ function visSelectDate(dateStr) {
   visRenderTable();
   const titleEl = document.getElementById('vis-detail-title');
   if (!dateStr) {
-    titleEl.textContent = '📋 تفاصيل الزيارات (آخر 30 يوم)';
+    titleEl.textContent = 'تفاصيل الزيارات (آخر 30 يوم)';
   } else {
-    const label = new Date(dateStr + 'T12:00:00').toLocaleDateString('ar-EG', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
-    titleEl.textContent = `📋 زيارات ${label}`;
+    const label = new Date(dateStr+'T12:00:00').toLocaleDateString('ar-EG',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+    titleEl.textContent = 'زيارات ' + label;
   }
 }
 
-// ── جدول التفاصيل ──
-function visRenderTable() {
-  const q = (document.getElementById('vis-search')?.value || '').toLowerCase();
+function visTypeBadge(type) {
+  const cfg = {
+    student: { label:'طالب',        bg:'var(--blue-light)',   color:'var(--blue)',   border:'#BFDBFE' },
+    teacher: { label:'معلم',         bg:'var(--purple-light)', color:'var(--purple)', border:'#DDD6FE' },
+    admin:   { label:'إدارة',        bg:'var(--green-light)',  color:'var(--green)',  border:'#6EE7B7' },
+    guest:   { label:'زائر جديد',    bg:'var(--gold-light)',   color:'#92400E',       border:'#FCD34D' },
+  };
+  const c = cfg[type] || cfg.guest;
+  return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:50px;font-size:.74rem;font-weight:700;background:' + c.bg + ';color:' + c.color + ';border:1px solid ' + c.border + '">' + c.label + '</span>';
+}
 
+function visRenderTable() {
+  const q = (document.getElementById('vis-search')?.value || '').toLowerCase().trim();
   _visFiltered = _visAllRows.filter(r => {
+    const type = r.user_type || 'guest';
+    const prof = r.user_id ? _visProfilesMap[r.user_id] : null;
+    const name = prof ? (prof.full_name||'') : '';
     const matchDate = !_visSelDate || r.created_at.slice(0,10) === _visSelDate;
-    const matchQ    = !q || (r.page||'').toLowerCase().includes(q) || (r.referrer||'').toLowerCase().includes(q);
-    return matchDate && matchQ;
+    const matchType = !_visSelType || type === _visSelType;
+    const matchQ    = !q || (r.page||'').toLowerCase().includes(q) || (r.referrer||'').toLowerCase().includes(q) || name.toLowerCase().includes(q);
+    return matchDate && matchType && matchQ;
   });
 
   const el = document.getElementById('vis-detail-body');
   if (!_visFiltered.length) {
-    el.innerHTML = `<div class="empty-box"><div class="ei">📭</div><div class="et">لا توجد زيارات</div><div class="ed">لم يتم تسجيل أي زيارة لهذا اليوم أو الفلتر المحدد</div></div>`;
+    el.innerHTML = '<div class="empty-box"><div class="ei">📭</div><div class="et">لا توجد زيارات</div><div class="ed">لا توجد زيارات تطابق الفلتر المحدد</div></div>';
     return;
   }
 
-  // تجميع حسب الصفحة لإظهار الإحصائيات
   const pageStats = {};
-  _visFiltered.forEach(r => {
-    const p = r.page || '/';
-    if (!pageStats[p]) pageStats[p] = 0;
-    pageStats[p]++;
-  });
+  _visFiltered.forEach(r => { const p = r.page||'/'; pageStats[p] = (pageStats[p]||0)+1; });
+  const topPages = Object.entries(pageStats).sort((a,b)=>b[1]-a[1]);
+  const maxPg = topPages[0]?.[1]||1;
 
-  // عرض ملخص الصفحات أولاً
-  const topPages = Object.entries(pageStats).sort((a,b) => b[1]-a[1]);
-  const maxPg = topPages[0]?.[1] || 1;
+  const typeCount = {student:0,teacher:0,admin:0,guest:0};
+  _visFiltered.forEach(r => { typeCount[r.user_type||'guest']++; });
 
-  const summaryHtml = `
-    <div style="padding:16px 20px;border-bottom:1px solid var(--gray-mid);background:var(--gray-light)">
-      <div style="font-size:.82rem;font-weight:700;color:var(--dark);margin-bottom:10px">📄 الصفحات الأكثر زيارة (${_visFiltered.length} زيارة)</div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        ${topPages.slice(0,8).map(([page, cnt]) => {
-          const pct = Math.round((cnt/maxPg)*100);
-          const pageName = page === '/' ? '🏠 الرئيسية' : page.replace(/\.html$/,'').replace(/\//g,' › ');
-          return `<div style="display:flex;align-items:center;gap:10px">
-            <div style="font-size:.78rem;color:var(--dark);font-weight:600;min-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${page}">${pageName}</div>
-            <div style="flex:1;background:var(--gray-mid);border-radius:50px;height:8px;overflow:hidden">
-              <div style="width:${pct}%;background:var(--blue);height:100%;border-radius:50px;transition:width .4s"></div>
-            </div>
-            <div style="font-size:.8rem;font-weight:700;color:var(--blue);min-width:32px;text-align:left">${cnt}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
+  const summaryHtml = '<div style="padding:16px 20px;border-bottom:1px solid var(--gray-mid);background:var(--gray-light)">'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">'
+    + '<div style="background:var(--blue-light);color:var(--blue);border:1px solid #BFDBFE;padding:5px 14px;border-radius:50px;font-size:.78rem;font-weight:700">👥 طلاب: ' + typeCount.student + '</div>'
+    + '<div style="background:var(--purple-light);color:var(--purple);border:1px solid #DDD6FE;padding:5px 14px;border-radius:50px;font-size:.78rem;font-weight:700">👨‍🏫 معلمون: ' + typeCount.teacher + '</div>'
+    + '<div style="background:var(--green-light);color:var(--green);border:1px solid #6EE7B7;padding:5px 14px;border-radius:50px;font-size:.78rem;font-weight:700">⚙️ إدارة: ' + typeCount.admin + '</div>'
+    + '<div style="background:var(--gold-light);color:#92400E;border:1px solid #FCD34D;padding:5px 14px;border-radius:50px;font-size:.78rem;font-weight:700">🌐 زوار جدد: ' + typeCount.guest + '</div>'
+    + '</div>'
+    + '<div style="font-size:.82rem;font-weight:700;color:var(--dark);margin-bottom:10px">📄 الصفحات الأكثر زيارة</div>'
+    + '<div style="display:flex;flex-direction:column;gap:6px">'
+    + topPages.slice(0,8).map(function(entry) {
+        var page = entry[0]; var cnt = entry[1];
+        var pct = Math.round((cnt/maxPg)*100);
+        var pageName = page==='/'?'الرئيسية':page.replace(/\.html$/,'').replace(/\//g,' › ');
+        return '<div style="display:flex;align-items:center;gap:10px">'
+          + '<div style="font-size:.78rem;color:var(--dark);font-weight:600;min-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + page + '">' + pageName + '</div>'
+          + '<div style="flex:1;background:var(--gray-mid);border-radius:50px;height:8px;overflow:hidden">'
+          + '<div style="width:' + pct + '%;background:var(--blue);height:100%;border-radius:50px;transition:width .4s"></div>'
+          + '</div>'
+          + '<div style="font-size:.8rem;font-weight:700;color:var(--blue);min-width:32px;text-align:left">' + cnt + '</div>'
+          + '</div>';
+      }).join('')
+    + '</div></div>';
 
-  // جدول التفاصيل الكاملة
-  const rowsHtml = `<div class="tbl-wrap">
-    <table class="data-table">
-      <thead><tr>
-        <th>#</th>
-        <th>الصفحة</th>
-        <th>المصدر (Referrer)</th>
-        <th>Session</th>
-        <th>وقت الزيارة</th>
-      </tr></thead>
-      <tbody>
-      ${_visFiltered.map((r,i) => {
-        const dt = new Date(r.created_at);
-        const dateStr = dt.toLocaleDateString('ar-EG', { day:'2-digit', month:'short', year:'numeric' });
-        const timeStr = dt.toLocaleTimeString('ar-EG', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true });
-        const pageName = r.page === '/' ? '🏠 الرئيسية' : (r.page || '—');
-        const ref = r.referrer || '—';
-        const sess = r.session_id ? r.session_id.slice(0,8)+'…' : '—';
-        return `<tr>
-          <td style="color:var(--gray);font-size:.76rem">${i+1}</td>
-          <td>
-            <span style="background:var(--blue-light);color:var(--blue);padding:3px 9px;border-radius:6px;font-size:.78rem;font-weight:700">${pageName}</span>
-          </td>
-          <td style="font-size:.78rem;color:var(--gray);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${ref}">${ref}</td>
-          <td style="font-size:.75rem;color:var(--gray);font-family:monospace">${sess}</td>
-          <td>
-            <div style="font-size:.8rem;font-weight:600;color:var(--dark)">${dateStr}</div>
-            <div style="font-size:.73rem;color:var(--gray)">${timeStr}</div>
-          </td>
-        </tr>`;
-      }).join('')}
-      </tbody>
-    </table>
-  </div>`;
+  const rowsHtml = '<div class="tbl-wrap"><table class="data-table"><thead><tr>'
+    + '<th>#</th><th>نوع الزائر</th><th>اسم المستخدم</th><th>الصفحة</th><th>المصدر</th><th>وقت الزيارة</th>'
+    + '</tr></thead><tbody>'
+    + _visFiltered.map(function(r, i) {
+        var dt = new Date(r.created_at);
+        var dateStr = dt.toLocaleDateString('ar-EG',{day:'2-digit',month:'short',year:'numeric'});
+        var timeStr = dt.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+        var pageName = (r.page==='/'||!r.page) ? 'الرئيسية' : r.page;
+        var ref = r.referrer || '—';
+        var type = r.user_type || 'guest';
+        var prof = r.user_id ? _visProfilesMap[r.user_id] : null;
+        var userHtml;
+        if (prof) {
+          var num = prof.student_number || prof.teacher_number || '';
+          var sub = num ? ('# ' + num) : (prof.email || '');
+          userHtml = '<div class="u-info"><div class="u-av" style="font-size:.7rem">' + ((prof.full_name||'?')[0]) + '</div>'
+            + '<div><div class="u-name">' + (prof.full_name||'—') + '</div>'
+            + (sub ? '<div class="u-sub">' + sub + '</div>' : '')
+            + '</div></div>';
+        } else {
+          userHtml = '<span style="color:var(--gray);font-size:.78rem">زائر غير مسجّل</span>';
+        }
+        return '<tr>'
+          + '<td style="color:var(--gray);font-size:.76rem">' + (i+1) + '</td>'
+          + '<td>' + visTypeBadge(type) + '</td>'
+          + '<td>' + userHtml + '</td>'
+          + '<td><span style="background:var(--blue-light);color:var(--blue);padding:3px 9px;border-radius:6px;font-size:.78rem;font-weight:700">' + pageName + '</span></td>'
+          + '<td style="font-size:.78rem;color:var(--gray);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + ref + '">' + ref + '</td>'
+          + '<td><div style="font-size:.8rem;font-weight:600;color:var(--dark)">' + dateStr + '</div><div style="font-size:.73rem;color:var(--gray)">' + timeStr + '</div></td>'
+          + '</tr>';
+      }).join('')
+    + '</tbody></table></div>';
 
   el.innerHTML = summaryHtml + rowsHtml;
 }

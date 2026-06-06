@@ -417,7 +417,9 @@ function showError(msg, detail) {
     await _pvsb.from('page_views').insert({
       page: window.location.pathname || '/',
       referrer: document.referrer || null,
-      session_id: sid
+      session_id: sid,
+      user_id: null,
+      user_type: 'guest'
     });
   } catch(e) {}
 })();
