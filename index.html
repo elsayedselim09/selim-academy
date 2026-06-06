@@ -142,10 +142,14 @@ nav.scrolled {
   box-shadow: 0 4px 30px rgba(0,0,0,0.3);
 }
 nav.scrolled .nav-logo { color: #fff; }
+nav.scrolled .nav-priority-btns .btn-register { background: var(--green); border-color: var(--green); color: #fff; }
 nav.scrolled .nav-links a { color: rgba(255,255,255,0.7); }
 nav.scrolled .nav-links a:hover { color: #fff; }
 nav.scrolled .nav-hamburger { color: #fff; }
 .nav-inner { display:flex; align-items:center; justify-content:space-between; height:64px; gap:12px; }
+/* مجموعة الشعار + أزرار التسجيل/واتساب (دايما ظاهرة) */
+.nav-logo-group { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.nav-priority-btns { display:flex; align-items:center; gap:8px; }
 .nav-logo { font-size:1.3rem; font-weight:900; color:var(--blue); display:flex; align-items:center; gap:8px; text-decoration:none; flex-shrink:0; transition: color 0.3s; }
 .nav-logo-icon { width:36px; height:36px; border-radius:8px; overflow:hidden; flex-shrink:0; }
 .nav-logo-icon img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -265,6 +269,21 @@ nav.scrolled .nav-hamburger { color: #fff; }
 .hero-sub { font-size:1rem; color:rgba(255,255,255,0.65); line-height:1.85; margin-bottom:32px; max-width:480px; }
 
 .hero-btns { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:40px; }
+.btn-register-hero {
+  padding:13px 28px;
+  background: linear-gradient(135deg, #0E9F6E, #059669);
+  color:#fff; border-radius:10px; font-weight:900; font-size:.95rem;
+  text-decoration:none; border:none; cursor:pointer;
+  transition:all .25s; font-family:'Cairo',sans-serif;
+  display:inline-flex; align-items:center; gap:8px;
+  box-shadow: 0 4px 20px rgba(14,159,110,0.45);
+  animation: pulseGreen 2.5s ease-in-out infinite;
+}
+.btn-register-hero:hover { transform:translateY(-3px); box-shadow:0 8px 30px rgba(14,159,110,0.65); animation:none; }
+@keyframes pulseGreen {
+  0%,100% { box-shadow: 0 4px 20px rgba(14,159,110,0.45); }
+  50% { box-shadow: 0 4px 28px rgba(14,159,110,0.8), 0 0 0 6px rgba(14,159,110,0.15); }
+}
 .btn-primary {
   padding:13px 28px; background:linear-gradient(135deg,var(--blue),var(--blue-mid));
   color:#fff; border-radius:10px; font-weight:700; font-size:.95rem;
@@ -1565,10 +1584,20 @@ footer { background:var(--dark); padding:60px 5% 30px; }
 <!-- NAV -->
 <nav id="main-nav">
   <div class="nav-inner">
-    <a href="#hero" class="nav-logo">
-      <div class="nav-logo-icon"><img src="https://www.selimacademy.com/icon-192x192.png" alt="سليم أكاديمية"></div>
-      أكاديمية سليم
-    </a>
+    <!-- الشعار + أزرار التسجيل والواتساب (يمين دائماً) -->
+    <div class="nav-logo-group">
+      <a href="#hero" class="nav-logo">
+        <div class="nav-logo-icon"><img src="https://www.selimacademy.com/icon-192x192.png" alt="سليم أكاديمية"></div>
+        أكاديمية سليم
+      </a>
+      <div class="nav-priority-btns">
+        <a href="https://wa.me/qr/2XDTSZMSXAV7D1" target="_blank" class="btn-wa" title="واتساب">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </a>
+        <a href="login.html" class="btn-register" id="nav-btn-register">تسجيل</a>
+      </div>
+    </div>
+    <!-- روابط الناف (وسط) -->
     <ul class="nav-links">
       <li><a href="#hero">🏠 الرئيسية</a></li>
       <li><a href="vision.html">✨ رؤيتنا</a></li>
@@ -1582,12 +1611,9 @@ footer { background:var(--dark); padding:60px 5% 30px; }
       <li><a href="free.html" style="color:var(--green);font-weight:900;">🎁 مجاني</a></li>
       <li><a href="bylaws.html" style="color:var(--blue);font-weight:900;">📋 اللوائح</a></li>
     </ul>
+    <!-- أزرار يسار (تظهر على الشاشات الكبيرة فقط) -->
     <div class="nav-btns" id="nav-auth-btns">
-      <a href="https://wa.me/qr/2XDTSZMSXAV7D1" target="_blank" class="btn-wa" title="واتساب">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      </a>
       <a href="free.html" class="nav-free-btn" style="padding:8px 16px;background:var(--green);color:#fff;border-radius:8px;font-weight:700;font-size:.85rem;text-decoration:none;white-space:nowrap;">🎁 مجاني</a>
-      <a href="login.html" class="btn-register" id="nav-btn-register">تسجيل</a>
     </div>
     <button class="nav-hamburger" id="nav-hamburger" onclick="toggleNavDrawer()" aria-label="القائمة">☰</button>
   </div>
@@ -1631,6 +1657,7 @@ footer { background:var(--dark); padding:60px 5% 30px; }
         انضم إلى أكاديميتنا التفاعلية حيث تجد نخبة من المدرسين المختصين في مختلف المواد الدراسية. تعلّم بطريقة ممتعة مع محتوى تفاعلي واختبارات تقييمية.
       </p>
       <div class="hero-btns">
+        <a href="login.html" class="btn-register-hero">📝 سجل الآن</a>
         <a href="#booking" class="btn-primary">🎓 ابدأ رحلتك التعليمية</a>
         <a href="vision.html" class="btn-gold">✨ اكتشف رؤيتنا</a>
         <a href="free.html" class="btn-secondary">🎁 محتوى مجاني</a>
