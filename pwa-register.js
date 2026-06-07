@@ -80,6 +80,13 @@
   // ✅ كشف الدالة لزرار الـ Hero في HTML
   window.__pwaInstall = triggerInstall;
 
+  // ✅ إظهار زرار Hero دائماً عند تحميل الصفحة (مفيد للاختبار في Incognito)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', showHeroBtn);
+  } else {
+    showHeroBtn();
+  }
+
   // ── إظهار/إخفاء زرار Hero ──
   function showHeroBtn() {
     var btn = document.getElementById('hero-install-btn');
