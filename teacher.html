@@ -1314,15 +1314,21 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       <div class="section-card">
         <div class="section-head">
           <h3>✅ تسجيل حضور وغياب</h3>
-          <div style="display:flex;gap:10px;align-items:center">
-            <input type="date" id="att-date" style="padding:6px 12px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:Cairo,sans-serif;font-size:.85rem;direction:ltr">
-            <button class="btn-sm btn-edit" onclick="loadAttendanceForDate()">🔄 تحديث</button>
-          </div>
         </div>
         <!-- grade filter for attendance -->
         <div style="padding:14px 22px;border-bottom:1px solid var(--gray-mid)">
           <div class="grade-selector-bar" id="att-grade-bar" style="margin-bottom:0">
             <span style="font-size:.82rem;font-weight:700;color:var(--gray)">الصف:</span>
+          </div>
+        </div>
+        <!-- Calendar Strip — مثل صفحة الحصص -->
+        <div style="padding:14px 22px;border-bottom:1px solid var(--gray-mid)">
+          <div class="cal-strip" id="att-cal-strip" style="margin-bottom:0"></div>
+        </div>
+        <!-- No-session notice -->
+        <div id="att-no-session-notice" style="display:none;padding:14px 22px;background:var(--gray-light);border-bottom:1px solid var(--gray-mid)">
+          <div style="display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--gray);font-weight:700">
+            <span>📭</span> <span id="att-no-session-text">لا توجد حصص لهذا الصف في هذا اليوم</span>
           </div>
         </div>
         <div class="section-body">
@@ -1332,7 +1338,7 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
             <div class="att-sum-item"><span style="color:var(--gray)">⬜</span> <span id="att-none-count">0</span> لم يُسجَّل</div>
           </div>
           <div id="att-list">
-            <div class="empty-box"><div class="ei">📋</div><div class="et">اختر الصف والتاريخ لتسجيل الحضور</div></div>
+            <div class="empty-box"><div class="ei">📋</div><div class="et">اختر الصف أولاً لعرض الطلاب</div></div>
           </div>
           <div style="margin-top:16px;text-align:left">
             <button class="btn-primary" id="save-att-btn" style="display:none" onclick="saveAttendance()">💾 حفظ الحضور</button>
@@ -4186,7 +4192,12 @@ function switchStuTab(tab) {
   } else {
     document.getElementById('stu-list-view').style.display = 'none';
     document.getElementById('stu-attend-view').style.display = 'block';
-    initAttendanceView();
+    // تأكد إن الحصص محملة قبل بناء الشريط
+    if(!sessAllData.length) {
+      loadSessions().then(() => initAttendanceView());
+    } else {
+      initAttendanceView();
+    }
   }
 }
 
@@ -4712,21 +4723,102 @@ function closeStudentDetail() { document.getElementById('mdl-student').classList
 
 // ── Attendance ──
 function initAttendanceView() {
-  const dateEl = document.getElementById('att-date');
-  if(!dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
   buildGradeFilters();
+  // بناء الشريط بعد تحديد الصف
 }
 
 function selectAttGrade(gradeId, gradeName, btn) {
   curGradeForAtt = gradeId;
   document.querySelectorAll('#att-grade-bar .grade-sel-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  loadAttendanceForDate();
+  // بناء شريط التاريخ المرتبط بحصص هذا الصف
+  buildAttCalStrip(gradeId);
 }
 
-async function loadAttendanceForDate() {
+function buildAttCalStrip(gradeId) {
+  const strip = document.getElementById('att-cal-strip');
+  if(!strip) return;
+
+  // حصص هذا الصف فقط (من sessAllData المحملة مسبقاً في صفحة الحصص)
+  const gradeSessions = sessAllData.filter(s => !gradeId || gradeId === 'all' || s.grade_id === gradeId);
+
+  // مجموعة التواريخ التي فيها حصص
+  const sessionDates = new Set(gradeSessions.map(s => s.scheduled_at.slice(0,10)));
+
+  const dayNames   = ['أح','إث','ثل','أر','خم','جم','سب'];
+  const today      = new Date();
+  const todayKey   = today.toISOString().slice(0,10);
+
+  // آخر 30 يوم + 7 أيام قادمة
+  const days = [];
+  for(let i = -29; i <= 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    days.push(d);
+  }
+
+  strip.innerHTML = days.map(d => {
+    const key     = d.toISOString().slice(0,10);
+    const isToday = key === todayKey;
+    const hasSess = sessionDates.has(key);
+    const dot     = hasSess ? '<div class="cal-day-dot"></div>' : '';
+    return `<div class="cal-day ${isToday ? 'active' : ''}"
+               onclick="attSelectDay('${key}',${hasSess})"
+               title="${hasSess ? '' : 'لا توجد حصة في هذا اليوم'}">
+      <div class="cal-day-name">${dayNames[d.getDay()]}</div>
+      <div class="cal-day-num">${d.getDate()}</div>
+      ${dot}
+    </div>`;
+  }).join('');
+
+  // تمرير تلقائي لليوم الحالي
+  setTimeout(() => {
+    const active = strip.querySelector('.cal-day.active');
+    if(active) strip.scrollLeft = active.offsetLeft - strip.offsetWidth/2 + active.offsetWidth/2;
+  }, 50);
+
+  // تحميل اليوم الحالي تلقائياً
+  attSelectDay(todayKey, sessionDates.has(todayKey));
+}
+
+function attSelectDay(dateKey, hasSess) {
+  // تمييز اليوم المختار في الشريط
+  document.querySelectorAll('#att-cal-strip .cal-day').forEach(c => c.classList.remove('active'));
+  const cards = document.querySelectorAll('#att-cal-strip .cal-day');
+  cards.forEach(c => {
+    if(c.getAttribute('onclick') && c.getAttribute('onclick').includes("'" + dateKey + "'")) {
+      c.classList.add('active');
+    }
+  });
+
+  const notice = document.getElementById('att-no-session-notice');
+  const noText = document.getElementById('att-no-session-text');
+
+  if(!hasSess) {
+    // لا يوجد حصة في هذا اليوم
+    notice.style.display = 'block';
+    const d = new Date(dateKey + 'T12:00:00');
+    const dayNamesAr = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    const monthNamesAr = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    noText.textContent = `لا توجد حصص لهذا الصف في ${dayNamesAr[d.getDay()]} ${d.getDate()} ${monthNamesAr[d.getMonth()]}`;
+    document.getElementById('att-list').innerHTML = '<div class="empty-box"><div class="ei">📭</div><div class="et">لا توجد حصة في هذا اليوم</div></div>';
+    document.getElementById('att-summary').style.display = 'none';
+    document.getElementById('save-att-btn').style.display = 'none';
+    return;
+  }
+
+  notice.style.display = 'none';
+  // تحميل الحضور لهذا التاريخ
+  loadAttendanceForDate(dateKey);
+}
+
+// curAttDate: التاريخ المختار حالياً في شريط الحضور
+let curAttDate = new Date().toISOString().slice(0,10);
+
+async function loadAttendanceForDate(dateOverride) {
   if(!curGradeForAtt) { toast('اختر الصف أولاً','err'); return; }
-  const date = document.getElementById('att-date').value;
+  if(dateOverride) curAttDate = dateOverride;
+  const date = curAttDate;
   if(!date) { toast('اختر التاريخ أولاً','err'); return; }
 
   const el = document.getElementById('att-list');
@@ -4818,7 +4910,7 @@ function updateAttSummary(total) {
 }
 
 async function saveAttendance() {
-  const date = document.getElementById('att-date').value;
+  const date = curAttDate;
   if(!date || !curGradeForAtt) return;
 
   const btn = document.getElementById('save-att-btn');
@@ -4920,6 +5012,13 @@ async function saveAttendance() {
     await sb.from('notifications').insert(notifRows).then(() => {});
 
     toast('✅ تم حفظ الحضور وتحديث رصيد الحصص');
+    // تحديث لون الكارت في الشريط ليعكس أن الحضور سُجِّل
+    document.querySelectorAll('#att-cal-strip .cal-day').forEach(c => {
+      if(c.getAttribute('onclick') && c.getAttribute('onclick').includes("'" + curAttDate + "'")) {
+        const dot = c.querySelector('.cal-day-dot');
+        if(dot) dot.style.background = 'var(--green)';
+      }
+    });
   } catch(e) {
     toast('خطأ: '+e.message,'err');
   } finally {
