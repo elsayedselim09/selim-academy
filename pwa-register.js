@@ -93,7 +93,10 @@
 
   function showAllInstallBtns() {
     showHeroBtn();
-    showInstallBanner();
+    // الزرار العائم يظهر فقط في الصفحة الرئيسية
+    var path = window.location.pathname;
+    var isHome = path === '/' || path === '/index.html' || path === '';
+    if (isHome) showInstallBanner();
   }
 
   if (document.readyState === 'loading') {
