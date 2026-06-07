@@ -80,15 +80,21 @@
   // ✅ كشف الدالة لزرار الـ Hero في HTML
   window.__pwaInstall = triggerInstall;
 
-  // ✅ إظهار زرار Hero والزرار العائم دائماً عند تحميل الصفحة
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
+  // ✅ إظهار زرار Hero والزرار العائم دائماً — إلا إذا كان التطبيق مثبتاً بالفعل
+  var _isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+
+  if (!_isStandalone) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        showHeroBtn();
+        showInstallBanner();
+      });
+    } else {
       showHeroBtn();
       showInstallBanner();
-    });
-  } else {
-    showHeroBtn();
-    showInstallBanner();
+    }
   }
 
   // ── إظهار/إخفاء زرار Hero ──
