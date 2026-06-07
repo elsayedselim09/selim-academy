@@ -80,20 +80,47 @@
   // ✅ كشف الدالة لزرار الـ Hero في HTML
   window.__pwaInstall = triggerInstall;
 
-  // ✅ إظهار زرار Hero والزرار العائم دائماً — إلا إذا كان التطبيق مثبتاً بالفعل
+  // ✅ إظهار الأزرار — مع التحقق إن التطبيق مش مثبت
   var _isStandalone =
     window.matchMedia('(display-mode: standalone)').matches ||
     window.navigator.standalone === true;
 
-  if (!_isStandalone) {
+  function showAllInstallBtns() {
+    showHeroBtn();
+    showInstallBanner();
+  }
+
+  if (_isStandalone) {
+    // مفتوح من أيقونة التطبيق — اخفِ كل حاجة
+    console.log('[PWA] Standalone mode — hiding install buttons');
+  } else if (navigator.getInstalledRelatedApps) {
+    // تحقق إذا كان التطبيق مثبتاً فعلاً
+    navigator.getInstalledRelatedApps().then(function(apps) {
+      if (apps && apps.length > 0) {
+        console.log('[PWA] App already installed — hiding install buttons');
+        hideHeroBtn();
+        hideInstallBanner();
+      } else {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', showAllInstallBtns);
+        } else {
+          showAllInstallBtns();
+        }
+      }
+    }).catch(function() {
+      // في حالة فشل الـ API، اعرض الأزرار
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', showAllInstallBtns);
+      } else {
+        showAllInstallBtns();
+      }
+    });
+  } else {
+    // المتصفح مش بيدعم getInstalledRelatedApps — اعرض الأزرار
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() {
-        showHeroBtn();
-        showInstallBanner();
-      });
+      document.addEventListener('DOMContentLoaded', showAllInstallBtns);
     } else {
-      showHeroBtn();
-      showInstallBanner();
+      showAllInstallBtns();
     }
   }
 
