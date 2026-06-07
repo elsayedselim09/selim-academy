@@ -1542,6 +1542,13 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
         <button class="btn-primary" onclick="changePassword()">🔐 تغيير كلمة المرور</button>
       </div>
     </div>
+    <div class="settings-section">
+      <div class="settings-head">📥 بطاقة بيانات الحساب</div>
+      <div class="settings-body">
+        <p style="font-size:.88rem;color:#6B7280;margin-bottom:16px">حمّل بطاقة تحتوي على بيانات حسابك (اسمك، بريدك، رقم معلمك، والرقم السري الاحتياطي) — احفظها في مكان آمن.</p>
+        <button onclick="downloadMyCard()" style="padding:10px 24px;background:#1B2D5B;color:#fff;border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px">📥 تحميل بياناتي</button>
+      </div>
+    </div>
   </div>
 
   <!-- ════ SUPPORT ════ -->
@@ -7624,6 +7631,92 @@ async function deleteOfflineExam(examId, title) {
     });
   } catch(e) {}
 })();
+
+// ══════════════════════════════════
+// ACCOUNT CARD GENERATOR
+// ══════════════════════════════════
+function _cardRoundRect(ctx,x,y,w,h,r,fill,stroke){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill();}
+  if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}
+}
+async function generateAccountCard({fullName,email,idNumber,backupPassword,role}){
+  const W=900,H=1120;
+  const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#EEF2F8';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#C9A84C';
+  ctx.beginPath();ctx.moveTo(W,0);ctx.lineTo(W-130,0);ctx.lineTo(W,130);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(60,0);ctx.lineTo(0,60);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#1B2D5B';
+  [[130,55],[155,55],[180,55],[205,55],[230,55],[130,78],[155,78],[180,78],[205,78],[230,78],[130,101],[155,101],[180,101],[205,101],[230,101]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill();});
+  [[670,55],[695,55],[720,55],[745,55],[770,55],[670,78],[695,78],[720,78],[745,78],[770,78],[670,101],[695,101],[720,101],[745,101],[770,101]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill();});
+  ctx.font='bold 78px Cairo,serif';ctx.fillStyle='#1B2D5B';ctx.textAlign='center';ctx.fillText('سليم',W/2,158);
+  ctx.strokeStyle='#C9A84C';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(W/2-130,176);ctx.lineTo(W/2-22,176);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(W/2+22,176);ctx.lineTo(W/2+130,176);ctx.stroke();
+  ctx.font='700 26px Cairo,Arial';ctx.fillStyle='#1B2D5B';ctx.fillText('أكاديمية',W/2,210);
+  ctx.font='bold 30px Arial';ctx.fillStyle='#C9A84C';
+  ctx.fillText('❯',W/2-255,288);ctx.fillText('❮',W/2+228,288);
+  ctx.font='bold 62px Cairo,Arial';ctx.fillStyle='#1B2D5B';ctx.fillText('بيانات حسابك',W/2,294);
+  _cardRoundRect(ctx,W/2-185,308,370,46,23,'#C9A84C');
+  ctx.font='700 19px Cairo,Arial';ctx.fillStyle='#fff';ctx.fillText('🔒   احتفظ بها في مكان آمن',W/2,337);
+  const cX=50,cY=376,cW=W-100,cH=370;
+  ctx.shadowColor='rgba(0,0,0,0.08)';ctx.shadowBlur=18;_cardRoundRect(ctx,cX,cY,cW,cH,18,'#fff');ctx.shadowBlur=0;
+  const rows=[
+    {emoji:'👤',label:role==='teacher'?'اسم المعلم':'اسم الطالب',value:fullName},
+    {emoji:'✉️',label:'البريد الإلكتروني',value:email},
+    {emoji:'🪪',label:role==='teacher'?'رقم المعلم':'رقم الطالب',value:idNumber},
+    {emoji:'🔐',label:'الرقم السري الاحتياطي',value:backupPassword,mono:true},
+  ];
+  const rowH=82,sY=cY+18;
+  rows.forEach((row,i)=>{
+    const ry=sY+i*rowH;
+    if(i>0){ctx.strokeStyle='#E5E7EB';ctx.lineWidth=1;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(cX+28,ry);ctx.lineTo(cX+cW-28,ry);ctx.stroke();}
+    _cardRoundRect(ctx,cX+28,ry+14,52,52,11,'#1B2D5B');
+    ctx.font='26px Arial';ctx.textAlign='center';ctx.fillStyle='#fff';ctx.fillText(row.emoji,cX+54,ry+48);
+    ctx.font='600 21px Cairo,Arial';ctx.fillStyle='#6B7280';ctx.textAlign='right';ctx.fillText(row.label,cX+cW-108,ry+48);
+    ctx.strokeStyle='#D1D5DB';ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
+    ctx.beginPath();ctx.moveTo(cX+cW-98,ry+18);ctx.lineTo(cX+cW-98,ry+64);ctx.stroke();ctx.setLineDash([]);
+    ctx.font=row.mono?'bold 26px monospace':'700 23px Cairo,Arial';ctx.fillStyle='#111928';ctx.textAlign='left';ctx.fillText(row.value||'—',cX+98,ry+48);
+  });
+  const remY=786;
+  ctx.strokeStyle='#1B2D5B';ctx.lineWidth=1.5;ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(W/2-210,remY-8);ctx.lineTo(W/2-100,remY-8);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(W/2+100,remY-8);ctx.lineTo(W/2+210,remY-8);ctx.stroke();
+  ctx.font='bold 28px Cairo,Arial';ctx.fillStyle='#1B2D5B';ctx.textAlign='center';ctx.fillText('تذكّر دائماً :',W/2,remY);
+  ctx.lineWidth=1.5;_cardRoundRect(ctx,55,remY+12,W-110,142,14,'#FFFBEB','#C9A84C');
+  ctx.font='600 20px Cairo,Arial';ctx.fillStyle='#374151';
+  ctx.fillText('في حال نسيان كلمة المرور، يمكنك استخدام',W/2,remY+50);
+  const goldTxt='الرقم السري الاحتياطي';
+  ctx.font='bold 20px Cairo,Arial';ctx.fillStyle='#C9A84C';
+  const gW=ctx.measureText(goldTxt).width;
+  ctx.fillText(goldTxt,W/2+gW/2-30,remY+83);
+  ctx.font='600 20px Cairo,Arial';ctx.fillStyle='#374151';
+  ctx.fillText('  مع البريد الإلكتروني',W/2-gW/2+30,remY+83);
+  ctx.font='600 20px Cairo,Arial';ctx.fillStyle='#374151';ctx.textAlign='center';
+  ctx.fillText(role==='teacher'?'أو رقم المعلم لتسجيل الدخول.':'أو رقم الطالب لتسجيل الدخول.',W/2,remY+120);
+  _cardRoundRect(ctx,48,H-108,W-96,58,29,'#1B2D5B');
+  ctx.font='700 21px Cairo,Arial';ctx.fillStyle='#fff';ctx.textAlign='center';
+  ctx.fillText('♥  هدفنا أن لا تفقد الوصول إلى حسابك أبداً.  ✅',W/2,H-72);
+  const link=document.createElement('a');
+  link.download=`selim-card-${(fullName||'account').replace(/\s+/g,'-')}.png`;
+  link.href=canvas.toDataURL('image/png');link.click();
+}
+
+async function downloadMyCard(){
+  const p=ST.profile||{};
+  let bp=p.backup_password, em=p.email||ST.user?.email;
+  if(!bp){
+    const {data}=await sb.from('profiles').select('backup_password,email,teacher_number').eq('id',ST.user.id).single();
+    bp=data?.backup_password; if(!em) em=data?.email;
+    if(data) Object.assign(ST.profile, data);
+  }
+  generateAccountCard({fullName:p.full_name||'—',email:em||'—',idNumber:p.teacher_number||'—',backupPassword:bp||'—',role:'teacher'});
+}
 </script>
 </body>
 
