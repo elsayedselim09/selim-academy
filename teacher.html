@@ -697,6 +697,62 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 .sarec-row:last-child { border-bottom:none }
 .sarec-date { font-size:.84rem; color:var(--dark); font-weight:600 }
 
+/* ══ Attendance Date Strip ══ */
+.att-strip-wrap {
+  overflow-x:auto; padding-bottom:8px; margin-bottom:16px;
+  scrollbar-width:thin; scrollbar-color:var(--gray-mid) transparent;
+}
+.att-strip-wrap::-webkit-scrollbar { height:4px }
+.att-strip-wrap::-webkit-scrollbar-thumb { background:var(--gray-mid); border-radius:4px }
+.att-strip { display:flex; gap:8px; padding:4px 2px; width:max-content }
+.att-day-card {
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  width:58px; border-radius:12px; padding:8px 4px; cursor:pointer;
+  border:2px solid var(--gray-mid); background:#fff;
+  transition:all .2s; flex-shrink:0; position:relative;
+}
+.att-day-card:hover { border-color:var(--blue); box-shadow:0 2px 10px rgba(26,86,219,.15) }
+.att-day-card.today { border-color:var(--blue); background:var(--blue-light) }
+.att-day-card.has-session.present  { border-color:var(--green); background:var(--green-light) }
+.att-day-card.has-session.absent   { border-color:var(--red);   background:var(--red-light) }
+.att-day-card.has-session.no-att   { border-color:var(--gold);  background:var(--gold-light) }
+.att-day-card.no-session           { opacity:.45; cursor:default }
+.att-day-card.no-session:hover     { border-color:var(--gray-mid); box-shadow:none }
+.att-day-name  { font-size:.6rem; font-weight:700; color:var(--gray); text-transform:uppercase }
+.att-day-num   { font-size:1.05rem; font-weight:900; color:var(--dark) }
+.att-day-icon  { font-size:.95rem; line-height:1 }
+.att-day-dot   {
+  position:absolute; top:5px; left:5px;
+  width:7px; height:7px; border-radius:50%; background:var(--gold);
+}
+.att-day-card.present .att-day-dot { background:var(--green) }
+.att-day-card.absent  .att-day-dot { background:var(--red) }
+
+/* Attendance Day Detail Panel */
+.att-day-panel {
+  border-radius:14px; padding:16px; margin-bottom:12px;
+  border:1.5px solid var(--gray-mid); background:#fff;
+  animation:fadeIn .25s ease;
+}
+.att-day-panel.present { border-color:var(--green); background:var(--green-light) }
+.att-day-panel.absent  { border-color:var(--red);   background:var(--red-light) }
+.att-day-panel.no-att  { border-color:var(--gold);  background:var(--gold-light) }
+.att-day-panel.no-session { border-color:var(--gray-mid); background:var(--gray-light) }
+.att-panel-header { display:flex; align-items:center; gap:10px; margin-bottom:10px }
+.att-panel-icon   { font-size:1.6rem }
+.att-panel-title  { font-size:.92rem; font-weight:900; color:var(--dark) }
+.att-panel-sub    { font-size:.76rem; color:var(--gray) }
+.att-panel-btns   { display:flex; gap:8px; margin-top:10px }
+.att-mark-btn {
+  flex:1; padding:9px; border-radius:10px; border:2px solid;
+  font-family:'Cairo',sans-serif; font-size:.84rem; font-weight:700;
+  cursor:pointer; transition:all .2s;
+}
+.att-mark-present { background:var(--green-light); color:var(--green); border-color:var(--green) }
+.att-mark-present:hover { background:var(--green); color:#fff }
+.att-mark-absent  { background:var(--red-light);   color:var(--red);   border-color:var(--red) }
+.att-mark-absent:hover  { background:var(--red);   color:#fff }
+
 /* ══════════════════════════════════════════
    PROFILE PAGE
 ══════════════════════════════════════════ */
@@ -1877,8 +1933,25 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
     </div>
     <!-- Tab: Attendance -->
     <div id="tab-att">
-      <div style="font-size:.85rem;font-weight:700;color:var(--dark);margin-bottom:12px">📋 سجل الحضور</div>
-      <div id="stu-att-records"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:.85rem;font-weight:700;color:var(--dark)">📋 سجل الحضور</div>
+        <div style="font-size:.74rem;color:var(--gray)">اضغط على يوم لتسجيل الحضور</div>
+      </div>
+      <!-- Legend -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <span style="display:flex;align-items:center;gap:4px;font-size:.72rem;color:var(--green);font-weight:700">🟢 حضر</span>
+        <span style="display:flex;align-items:center;gap:4px;font-size:.72rem;color:var(--red);font-weight:700">🔴 غاب</span>
+        <span style="display:flex;align-items:center;gap:4px;font-size:.72rem;color:#92400E;font-weight:700">🟡 لم يُسجَّل</span>
+        <span style="display:flex;align-items:center;gap:4px;font-size:.72rem;color:var(--gray);font-weight:700">⚪ لا توجد حصة</span>
+      </div>
+      <!-- Date Strip -->
+      <div class="att-strip-wrap">
+        <div class="att-strip" id="att-date-strip"></div>
+      </div>
+      <!-- Selected Day Panel -->
+      <div id="att-day-panel"></div>
+      <!-- hidden records div kept for compat -->
+      <div id="stu-att-records" style="display:none"></div>
     </div>
     <!-- Tab: Exams -->
     <div id="tab-exam" style="display:none">
@@ -4279,11 +4352,185 @@ function switchDetailTab(tab) {
   document.getElementById('tab-exam-btn').style.borderBottomColor = tab === 'exam' ? 'var(--blue)' : 'transparent';
 }
 
+// ══ دوال شريط الحضور الأفقي ══
+
+const AR_DAYS = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const AR_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+function buildAttDateStrip(studentId, sessionByDate, attByDate) {
+  const strip = document.getElementById('att-date-strip');
+  if (!strip) return;
+
+  // بناء 60 يوم من اليوم للوراء
+  const days = [];
+  const today = new Date();
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    days.push(d);
+  }
+  // ترتيب: الأقدم على اليمين (RTL)
+  days.reverse();
+
+  strip.innerHTML = days.map(d => {
+    const key = d.toISOString().split('T')[0]; // YYYY-MM-DD
+    const isToday = key === today.toISOString().split('T')[0];
+    const hasSess = !!sessionByDate[key];
+    const att = attByDate[key];
+    let statusClass = 'no-session';
+    let icon = '—';
+    let dot = '';
+    if (hasSess) {
+      if (!att) {
+        statusClass = 'has-session no-att';
+        icon = '❓';
+        dot = '<div class="att-day-dot"></div>';
+      } else if (att.status === 'present') {
+        statusClass = 'has-session present';
+        icon = '✅';
+      } else {
+        statusClass = 'has-session absent';
+        icon = '❌';
+      }
+    }
+    const todayClass = isToday ? ' today' : '';
+    const dayName = AR_DAYS[d.getDay()];
+    const dayNum  = d.getDate();
+    const mon     = AR_MONTHS[d.getMonth()].substring(0,3);
+    return `<div class="att-day-card ${statusClass}${todayClass}"
+               onclick="${hasSess ? `selectAttDay('${key}','${studentId}')` : ''}"
+               title="${hasSess ? '' : 'لا توجد حصة في هذا اليوم'}">
+      ${dot}
+      <div class="att-day-name">${dayName.substring(0,3)}</div>
+      <div class="att-day-num">${dayNum}</div>
+      <div style="font-size:.6rem;color:var(--gray)">${mon}</div>
+      <div class="att-day-icon">${icon}</div>
+    </div>`;
+  }).join('');
+
+  // تمرير تلقائي لليوم الأخير (اليمين في RTL = الأحدث)
+  setTimeout(() => { strip.parentElement.scrollLeft = 0; }, 50);
+
+  // عرض اليوم الحالي تلقائياً لو عنده حصة
+  const todayKey = today.toISOString().split('T')[0];
+  if (sessionByDate[todayKey]) {
+    selectAttDay(todayKey, studentId);
+  } else {
+    document.getElementById('att-day-panel').innerHTML = '';
+  }
+}
+
+function selectAttDay(dateKey, studentId) {
+  const sessionByDate = window._attSessionMap || {};
+  const attByDate     = window._attRecordMap  || {};
+  const sessions = sessionByDate[dateKey] || [];
+  const att = attByDate[dateKey];
+
+  // تمييز الكارت المختار
+  document.querySelectorAll('.att-day-card').forEach(c => c.style.outline = '');
+  const cards = document.querySelectorAll('.att-day-card');
+  cards.forEach(c => {
+    if (c.getAttribute('onclick') && c.getAttribute('onclick').includes(`'${dateKey}'`)) {
+      c.style.outline = '3px solid var(--blue)';
+      c.style.outlineOffset = '2px';
+    }
+  });
+
+  const d = new Date(dateKey + 'T12:00:00');
+  const dateLabel = `${AR_DAYS[d.getDay()]} ${d.getDate()} ${AR_MONTHS[d.getMonth()]}`;
+  const sessLabel = sessions.map(s => s.title || s.subject_name || 'حصة').join(' / ');
+
+  let panelClass = 'att-day-panel';
+  let icon, title, sub, btns = '';
+
+  if (!att) {
+    panelClass += ' no-att';
+    icon = '❓';
+    title = 'لم يُسجَّل الحضور بعد';
+    sub = `${dateLabel} — ${sessLabel}`;
+    btns = `
+      <button class="att-mark-btn att-mark-present" onclick="markAttForDay('${dateKey}','${studentId}','present')">✅ حضر</button>
+      <button class="att-mark-btn att-mark-absent"  onclick="markAttForDay('${dateKey}','${studentId}','absent')">❌ غاب</button>`;
+  } else if (att.status === 'present') {
+    panelClass += ' present';
+    icon = '✅'; title = 'حضر في هذا اليوم';
+    sub = `${dateLabel} — ${sessLabel}`;
+    btns = `<button class="att-mark-btn att-mark-absent" onclick="markAttForDay('${dateKey}','${studentId}','absent')">🔄 تعديل → غاب</button>`;
+  } else {
+    panelClass += ' absent';
+    icon = '❌'; title = 'غاب في هذا اليوم';
+    sub = `${dateLabel} — ${sessLabel}`;
+    btns = `<button class="att-mark-btn att-mark-present" onclick="markAttForDay('${dateKey}','${studentId}','present')">🔄 تعديل → حضر</button>`;
+  }
+
+  document.getElementById('att-day-panel').innerHTML = `
+    <div class="${panelClass}">
+      <div class="att-panel-header">
+        <div class="att-panel-icon">${icon}</div>
+        <div>
+          <div class="att-panel-title">${title}</div>
+          <div class="att-panel-sub">${sub}</div>
+        </div>
+      </div>
+      ${btns ? `<div class="att-panel-btns">${btns}</div>` : ''}
+    </div>`;
+}
+
+async function markAttForDay(dateKey, studentId, status) {
+  const sessionByDate = window._attSessionMap || {};
+  const sessions = sessionByDate[dateKey] || [];
+  if (!sessions.length) { toast('لا توجد حصة في هذا اليوم', 'err'); return; }
+
+  // عرض loading في البانيل
+  const panel = document.getElementById('att-day-panel');
+  const origHTML = panel.innerHTML;
+  panel.innerHTML = `<div style="text-align:center;padding:16px;color:var(--gray);font-size:.85rem">⏳ جاري الحفظ...</div>`;
+
+  try {
+    // upsert سجل الحضور
+    const { error } = await sb.from('teacher_attendance').upsert({
+      teacher_id:   ST.user.id,
+      student_id:   studentId,
+      session_date: dateKey,
+      status:       status,
+    }, { onConflict: 'teacher_id,student_id,session_date' });
+    if (error) throw error;
+
+    // تحديث الـ maps المحلية
+    if (!window._attRecordMap) window._attRecordMap = {};
+    window._attRecordMap[dateKey] = { session_date: dateKey, status };
+
+    // إعادة بناء الشريط والإحصائيات بدون reload كامل
+    const attByDate     = window._attRecordMap;
+    const sessMap       = window._attSessionMap;
+    let pC = 0, aC = 0;
+    Object.keys(sessMap).forEach(d => {
+      if (attByDate[d]) {
+        if (attByDate[d].status === 'present') pC++;
+        else if (attByDate[d].status === 'absent') aC++;
+      }
+    });
+    const tot = pC + aC;
+    document.getElementById('det-present').textContent = pC;
+    document.getElementById('det-absent').textContent  = aC;
+    document.getElementById('det-pct').textContent     = (tot ? Math.round(pC/tot*100) : 0) + '%';
+
+    buildAttDateStrip(studentId, sessMap, attByDate);
+    // re-select the same day
+    selectAttDay(dateKey, studentId);
+    toast(status === 'present' ? '✅ تم تسجيل الحضور' : '❌ تم تسجيل الغياب');
+  } catch(e) {
+    panel.innerHTML = origHTML;
+    toast('❌ خطأ: ' + e.message, 'err');
+  }
+}
+
 async function openStudentDetail(studentId, name, gradeName) {
   document.getElementById('stu-detail-av').textContent = ini(name);
   document.getElementById('stu-detail-name').textContent = name;
   document.getElementById('stu-detail-grade').textContent = gradeName || '—';
-  document.getElementById('stu-att-records').innerHTML  = `<div class="skel" style="height:40px;margin-bottom:8px"></div>`.repeat(4);
+  document.getElementById('att-date-strip').innerHTML  = [1,2,3,4,5,6,7].map(()=>`<div class="skel" style="width:58px;height:80px;border-radius:12px;flex-shrink:0"></div>`).join('');
+  document.getElementById('att-day-panel').innerHTML   = '';
   document.getElementById('stu-exam-records').innerHTML = `<div class="skel" style="height:56px;margin-bottom:8px;border-radius:10px"></div>`.repeat(3);
   switchDetailTab('att');
   document.getElementById('mdl-student').classList.add('show');
@@ -4292,7 +4539,7 @@ async function openStudentDetail(studentId, name, gradeName) {
 
   try {
     // جلب كل البيانات دفعة واحدة بما فيها اشتراكات الطالب
-    const [enrRes, attRes, subReqRes] = await Promise.all([
+    const [enrRes, attRes, subReqRes, sessRes] = await Promise.all([
       sb.from('teacher_enrollments')
         .select('subject_name,grade_name,grade_id,enrolled_at')
         .eq('teacher_id', ST.user.id).eq('student_id', studentId).limit(5),
@@ -4304,6 +4551,12 @@ async function openStudentDetail(studentId, name, gradeName) {
         .eq('user_id', studentId)
         .eq('status', 'approved')
         .eq('assigned_teacher_id', ST.user.id),
+      // جلب حصص المعلم في آخر 60 يوم وما قبلها
+      sb.from('teacher_sessions')
+        .select('id,title,scheduled_at,grade_id,grade_name,student_ids,subject_name')
+        .eq('teacher_id', ST.user.id)
+        .order('scheduled_at', { ascending: false })
+        .limit(200),
     ]);
 
     // ── جلب الاختبارات مفلترة بـ grade_id الطالب ──
@@ -4363,26 +4616,54 @@ async function openStudentDetail(studentId, name, gradeName) {
       document.getElementById('stu-detail-grade').textContent = enrInfo || gradeName || '—';
     }
 
-    // ── الحضور ──
+    // ── الحضور — بناء الشريط الأفقي ──
     const records = attRes.data || [];
-    const present = records.filter(r => r.status === 'present').length;
-    const absent  = records.filter(r => r.status === 'absent').length;
-    const total   = present + absent;
-    const pct     = total ? Math.round(present/total*100) : 0;
-    document.getElementById('det-present').textContent = present;
-    document.getElementById('det-absent').textContent  = absent;
+    const allSessions = sessRes.data || [];
+
+    // فلترة الحصص الخاصة بهذا الطالب
+    const studentSessions = allSessions.filter(s => {
+      if (s.student_ids && Array.isArray(s.student_ids) && s.student_ids.length > 0) {
+        if (!s.student_ids.includes(studentId)) return false;
+      }
+      if (s.grade_id && studentGradeIds.length > 0) {
+        return studentGradeIds.includes(s.grade_id);
+      }
+      return true;
+    });
+
+    // map: تاريخ → قائمة الحصص
+    const sessionByDate = {};
+    studentSessions.forEach(s => {
+      const d = s.scheduled_at.split('T')[0];
+      if (!sessionByDate[d]) sessionByDate[d] = [];
+      sessionByDate[d].push(s);
+    });
+
+    // map: تاريخ → سجل الحضور
+    const attByDate = {};
+    records.forEach(r => { attByDate[r.session_date] = r; });
+
+    // إحصائيات مبنية على أيام الحصص فقط
+    let presentCount = 0, absentCount = 0;
+    Object.keys(sessionByDate).forEach(d => {
+      if (attByDate[d]) {
+        if (attByDate[d].status === 'present') presentCount++;
+        else if (attByDate[d].status === 'absent') absentCount++;
+      }
+    });
+    const totalAtt = presentCount + absentCount;
+    const pct = totalAtt ? Math.round(presentCount/totalAtt*100) : 0;
+    document.getElementById('det-present').textContent = presentCount;
+    document.getElementById('det-absent').textContent  = absentCount;
     document.getElementById('det-pct').textContent     = pct + '%';
 
-    document.getElementById('stu-att-records').innerHTML = records.length
-      ? records.map(r => `
-        <div class="sarec-row">
-          <div class="sarec-date">📅 ${fds(r.session_date)}</div>
-          <div>${r.status === 'present'
-            ? `<span class="badge b-green">✅ حضر</span>`
-            : `<span class="badge" style="background:var(--red-light);color:var(--red);border:1px solid #FECACA">❌ غاب</span>`}
-          </div>
-        </div>`).join('')
-      : `<div class="empty-box"><div class="ei">📋</div><div class="et">لا يوجد سجل حضور بعد</div></div>`;
+    // حفظ البيانات للاستخدام عند الضغط على الأيام
+    window._attStudentId   = studentId;
+    window._attSessionMap  = sessionByDate;
+    window._attRecordMap   = attByDate;
+
+    // بناء شريط التاريخ
+    buildAttDateStrip(studentId, sessionByDate, attByDate);
 
     // ── الاختبارات ──
     const allExams = examsRes.data || [];
