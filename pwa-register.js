@@ -80,48 +80,28 @@
   // ✅ كشف الدالة لزرار الـ Hero في HTML
   window.__pwaInstall = triggerInstall;
 
-  // ✅ إظهار الأزرار — مع التحقق إن التطبيق مش مثبت
-  var _isStandalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true;
+  var INSTALLED_KEY = 'pwa-installed';
+
+  function isAppInstalled() {
+    // 1. مفتوح من أيقونة التطبيق (standalone)
+    if (window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true) return true;
+    // 2. تم التثبيت في جلسة سابقة وحفظناه
+    try { return localStorage.getItem(INSTALLED_KEY) === '1'; } catch(e) {}
+    return false;
+  }
 
   function showAllInstallBtns() {
     showHeroBtn();
     showInstallBanner();
   }
 
-  if (_isStandalone) {
-    // مفتوح من أيقونة التطبيق — اخفِ كل حاجة
-    console.log('[PWA] Standalone mode — hiding install buttons');
-  } else if (navigator.getInstalledRelatedApps) {
-    // تحقق إذا كان التطبيق مثبتاً فعلاً
-    navigator.getInstalledRelatedApps().then(function(apps) {
-      if (apps && apps.length > 0) {
-        console.log('[PWA] App already installed — hiding install buttons');
-        hideHeroBtn();
-        hideInstallBanner();
-      } else {
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', showAllInstallBtns);
-        } else {
-          showAllInstallBtns();
-        }
-      }
-    }).catch(function() {
-      // في حالة فشل الـ API، اعرض الأزرار
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', showAllInstallBtns);
-      } else {
-        showAllInstallBtns();
-      }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      if (!isAppInstalled()) showAllInstallBtns();
     });
   } else {
-    // المتصفح مش بيدعم getInstalledRelatedApps — اعرض الأزرار
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', showAllInstallBtns);
-    } else {
-      showAllInstallBtns();
-    }
+    if (!isAppInstalled()) showAllInstallBtns();
   }
 
   // ── إظهار/إخفاء زرار Hero ──
@@ -162,6 +142,8 @@
     hideHeroBtn();
     deferredPrompt = null;
     try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+    // ✅ حفظ حالة التثبيت
+    try { localStorage.setItem(INSTALLED_KEY, '1'); } catch(e) {}
   });
 
   // ── CSS لزرار Hero والزرار العائم ──
