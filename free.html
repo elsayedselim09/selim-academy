@@ -759,7 +759,6 @@ function renderSessions() {
         <div class="sess-card-body">
           <div class="sess-info-row">
             ${s.subject_name ? `<span class="info-chip blue">📚 ${s.subject_name}</span>` : ''}
-            ${s.grade_name   ? `<span class="info-chip purple">🏫 ${s.grade_name}</span>` : ''}
             ${s.duration_minutes ? `<span class="info-chip">⏱️ ${s.duration_minutes} د</span>` : ''}
           </div>
           <div class="sess-teacher">
@@ -832,7 +831,6 @@ function renderMatGrid(gridId, list, icon, label, emptyMsg) {
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
             ${subjName  ? `<span class="info-chip blue">📚 ${subjName}</span>`  : ''}
-            ${gradeName ? `<span class="info-chip purple">🏫 ${gradeName}</span>` : ''}
           </div>
           <div class="mat-teacher">
             <div class="teacher-av">${avHtml}</div>
