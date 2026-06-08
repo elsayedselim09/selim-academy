@@ -6787,6 +6787,46 @@ async function downloadStudentCard(studentId){
 }
 
 
+// ══════════════════════════════════
+// ACCOUNT CARD - SERVER SIDE v4
+// ══════════════════════════════════
+const CARD_FN_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/generate-card';
+
+async function generateAccountCard({fullName, email, idNumber, backupPassword, role}) {
+  try {
+    const res = await fetch(CARD_FN_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({fullName, email, idNumber, backupPassword, role})
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'فشل توليد البطاقة');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `selim-card-${(fullName||'account').replace(/\s+/g,'-')}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('خطأ: ' + e.message);
+  }
+}
+
+async function downloadStudentCard(studentId) {
+  const s = S.students.find(x => x.id === studentId);
+  if (!s) return toast('لم يتم العثور على بيانات الطالب', 'err');
+  let bp = s.backup_password, em = s.email;
+  if (!bp || !em) {
+    const {data} = await sb.from('profiles').select('backup_password,email').eq('id', studentId).single();
+    bp = bp || data?.backup_password;
+    em = em || data?.email;
+  }
+  generateAccountCard({fullName: s.full_name||'—', email: em||'—', idNumber: s.student_number||'—', backupPassword: bp||'—', role:'student'});
+}
+
 </script>
 </body>
 </html>
