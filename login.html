@@ -1111,10 +1111,37 @@ async function handleLogin() {
     email = profileData.email;
   }
 
+  // ── محاولة الدخول الأولى بكلمة المرور كما أدخلها المستخدم ──
   var { data, error } = await _sb.auth.signInWithPassword({
     email: email,
     password: pwd
   });
+
+  // ── لو فشل → نتحقق هل كلمة المرور هي backup_password ──
+  if (error && (error.message.includes('Invalid login') || error.message.includes('invalid_credentials'))) {
+    try {
+      var backupRes = await fetch(
+        'https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/login-with-backup',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: id || email, backup_password: pwd })
+        }
+      );
+      var backupJson = await backupRes.json();
+      if (backupRes.ok && backupJson.email) {
+        // الـ Edge Function غيّرت الـ Auth password → نجرب الدخول مرة ثانية
+        var { data: data2, error: error2 } = await _sb.auth.signInWithPassword({
+          email: backupJson.email,
+          password: pwd
+        });
+        data  = data2;
+        error = error2;
+      }
+    } catch(backupErr) {
+      console.warn('[Login] backup-password check failed:', backupErr);
+    }
+  }
 
   btn.classList.remove('loading');
   btn.disabled = false;
