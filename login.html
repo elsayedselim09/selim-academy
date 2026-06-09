@@ -1052,40 +1052,27 @@ async function handleLogin() {
     var profileData = null;
 
     if (isStudentNum) {
-      // الرقم محفوظ كـ text في الداتابيز
-      // نجيب كل الطلاب مع أرقامهم ونقارن كـ string
-      console.log('[Login] Searching student_number:', id);
-
-      var { data: allStudents, error: stuErr } = await _sb
+      // بحث مباشر برقم الطالب
+      var { data: stuRow, error: stuErr } = await _sb
         .from('profiles')
         .select('id, email, student_number')
         .eq('role', 'student')
-        .not('student_number', 'is', null);
-
-      console.log('[Login] allStudents result:', allStudents, 'error:', stuErr);
+        .eq('student_number', id.trim())
+        .maybeSingle();
 
       if (stuErr) {
-        console.error('[Login] RLS blocking query:', stuErr);
         btn.classList.remove('loading'); btn.disabled = false;
         showAlert('login-alert','login-alert-msg','حدث خطأ في البحث، من فضلك سجّل دخولك بالبريد الإلكتروني');
         return;
       }
 
-      if (allStudents && allStudents.length > 0) {
-        var found = allStudents.find(function(s) {
-          return String(s.student_number).trim() === String(id).trim();
-        });
-        console.log('[Login] found:', found);
-        if (found) profileData = found;
-      } else {
-        console.warn('[Login] allStudents is empty — likely RLS blocking anon access');
-      }
-
-      if (!profileData) {
+      if (!stuRow) {
         btn.classList.remove('loading'); btn.disabled = false;
         showAlert('login-alert','login-alert-msg','رقم الطالب غير موجود، تحقق من الرقم أو سجّل دخولك بالبريد الإلكتروني');
         return;
       }
+
+      profileData = stuRow;
     } else {
       // بحث بالهاتف
       var { data: phoneProfile, error: phoneErr } = await _sb
@@ -1117,7 +1104,7 @@ async function handleLogin() {
     password: pwd
   });
 
-  // ── لو فشل → نتحقق هل كلمة المرور هي backup_password ──
+  // ── لو فشل → نتحقق هل كلمة المرور هي الرقم الاحتياطي ──
   if (error && (error.message.includes('Invalid login') || error.message.includes('invalid_credentials'))) {
     try {
       var backupRes = await fetch(
@@ -1125,18 +1112,31 @@ async function handleLogin() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ identifier: id || email, backup_password: pwd })
+          body: JSON.stringify({ identifier: id, backup_password: pwd })
         }
       );
       var backupJson = await backupRes.json();
-      if (backupRes.ok && backupJson.email) {
-        // الـ Edge Function غيّرت الـ Auth password → نجرب الدخول مرة ثانية
-        var { data: data2, error: error2 } = await _sb.auth.signInWithPassword({
-          email: backupJson.email,
-          password: pwd
-        });
-        data  = data2;
-        error = error2;
+
+      if (backupRes.ok) {
+        if (backupJson.method === 'session') {
+          // session جاهزة — نحطها مباشرة بدون تغيير كلمة المرور الأصلية
+          var { data: sessData, error: sessErr } = await _sb.auth.setSession({
+            access_token:  backupJson.access_token,
+            refresh_token: backupJson.refresh_token,
+          });
+          data  = sessData;
+          error = sessErr;
+
+        } else if (backupJson.method === 'magiclink' && backupJson.token) {
+          // fallback: نستخدم الـ OTP token للدخول
+          var { data: otpData, error: otpErr } = await _sb.auth.verifyOtp({
+            email: backupJson.email,
+            token: backupJson.token,
+            type:  backupJson.type || 'magiclink',
+          });
+          data  = otpData;
+          error = otpErr;
+        }
       }
     } catch(backupErr) {
       console.warn('[Login] backup-password check failed:', backupErr);
