@@ -1117,26 +1117,15 @@ async function handleLogin() {
       );
       var backupJson = await backupRes.json();
 
-      if (backupRes.ok) {
-        if (backupJson.method === 'session') {
-          // session جاهزة — نحطها مباشرة بدون تغيير كلمة المرور الأصلية
-          var { data: sessData, error: sessErr } = await _sb.auth.setSession({
-            access_token:  backupJson.access_token,
-            refresh_token: backupJson.refresh_token,
-          });
-          data  = sessData;
-          error = sessErr;
-
-        } else if (backupJson.method === 'magiclink' && backupJson.token) {
-          // fallback: نستخدم الـ OTP token للدخول
-          var { data: otpData, error: otpErr } = await _sb.auth.verifyOtp({
-            email: backupJson.email,
-            token: backupJson.token,
-            type:  backupJson.type || 'magiclink',
-          });
-          data  = otpData;
-          error = otpErr;
-        }
+      if (backupRes.ok && backupJson.hashed_token && backupJson.email) {
+        // نستخدم hashed_token للدخول بدون تغيير كلمة المرور الأصلية أبداً
+        var { data: otpData, error: otpErr } = await _sb.auth.verifyOtp({
+          email:        backupJson.email,
+          token_hash:   backupJson.hashed_token,
+          type:         'magiclink',
+        });
+        data  = otpData;
+        error = otpErr;
       }
     } catch(backupErr) {
       console.warn('[Login] backup-password check failed:', backupErr);
