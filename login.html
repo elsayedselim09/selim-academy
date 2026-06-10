@@ -1106,6 +1106,31 @@ async function handleLogin() {
 
 
 
+  // ── لو فشل → جرّب الرقم الاحتياطي عبر Edge Function ──
+  if (error && (error.message.includes('Invalid login') || error.message.includes('invalid_credentials'))) {
+    try {
+      var backupRes = await fetch(
+        'https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/login-with-backup',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: id, backup_password: pwd })
+        }
+      );
+      var backupJson = await backupRes.json();
+      if (backupRes.ok && backupJson.access_token) {
+        var { data: sessData, error: sessErr } = await _sb.auth.setSession({
+          access_token:  backupJson.access_token,
+          refresh_token: backupJson.refresh_token,
+        });
+        data  = sessData;
+        error = sessErr;
+      }
+    } catch(e) {
+      console.warn('[Login] backup check failed:', e);
+    }
+  }
+
   btn.classList.remove('loading');
   btn.disabled = false;
 
