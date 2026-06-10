@@ -514,6 +514,42 @@ body {
       <div class="panel-title">أهلاً بعودتك! 👋</div>
       <p class="panel-sub">سجّل دخولك للوصول إلى كورساتك وحصصك</p>
 
+      <!-- إشعار أمني مؤقت -->
+      <div id="security-notice" style="
+        background: linear-gradient(135deg, #fff8e1, #fff3cd);
+        border: 1.5px solid #f0a500;
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+        direction: rtl;
+        text-align: right;
+        font-size: 13.5px;
+        line-height: 1.8;
+        color: #5a3e00;
+      ">
+        <div style="font-weight: 700; font-size: 15px; margin-bottom: 6px; color: #b45309;">
+          🔐 إشعار أمني هام
+        </div>
+        <p style="margin: 0 0 8px 0;">
+          تنبيهاً لجميع المستخدمين — قامت منصة <strong>سليم أكاديمية</strong> بتحديث بيانات الدخول
+          تلقائياً حفاظاً على أمان حساباتكم وخصوصياتكم.
+        </p>
+        <p style="margin: 0 0 8px 0;">
+          📌 <strong>إذا لم تتمكن من الدخول بكلمة المرور الحالية</strong>، يرجى استخدام
+          <strong>الرقم السري الاحتياطي</strong> الذي تم إرساله إليك مسبقاً في خانة كلمة المرور.
+        </p>
+        <p style="margin: 0;">
+          لتغيير كلمة المرور مستقبلاً، استخدم خاصية <strong>نسيت كلمة المرور</strong> أسفل زر الدخول.
+          نعتذر عن أي إزعاج، وشكراً لتفهمكم. 🙏
+        </p>
+        <div style="text-align: left; margin-top: 8px;">
+          <span onclick="document.getElementById('security-notice').style.display='none'"
+            style="font-size: 12px; color: #b45309; cursor: pointer; text-decoration: underline;">
+            إغلاق ✕
+          </span>
+        </div>
+      </div>
+
       <!-- Alert -->
       <div class="alert error" id="login-alert">
         <span>⚠️</span>
