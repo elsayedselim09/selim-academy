@@ -1104,44 +1104,7 @@ async function handleLogin() {
     password: pwd
   });
 
-  // ── لو فشل → نتحقق هل كلمة المرور هي الرقم الاحتياطي ──
-  if (error && (error.message.includes('Invalid login') || error.message.includes('invalid_credentials'))) {
-    try {
-      var backupRes = await fetch(
-        'https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/login-with-backup',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ identifier: id, backup_password: pwd })
-        }
-      );
-      var backupJson = await backupRes.json();
 
-      if (backupRes.ok) {
-        if (backupJson.access_token && backupJson.refresh_token) {
-          // الـ Edge Function أرجعت session جاهزة — نحطها مباشرة
-          var { data: sessData, error: sessErr } = await _sb.auth.setSession({
-            access_token:  backupJson.access_token,
-            refresh_token: backupJson.refresh_token,
-          });
-          data  = sessData;
-          error = sessErr;
-
-        } else if (backupJson.token && backupJson.email) {
-          // fallback: نكمل الـ verify في الـ frontend
-          var { data: otpData, error: otpErr } = await _sb.auth.verifyOtp({
-            email: backupJson.email,
-            token: backupJson.token,
-            type:  backupJson.type || 'magiclink',
-          });
-          data  = otpData;
-          error = otpErr;
-        }
-      }
-    } catch(backupErr) {
-      console.warn('[Login] backup-password check failed:', backupErr);
-    }
-  }
 
   btn.classList.remove('loading');
   btn.disabled = false;
