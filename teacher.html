@@ -4641,7 +4641,13 @@ async function openStudentDetail(studentId, name, gradeName, gradeId) {
     const examsRes = await examsQuery;
 
     // ── عرض الحصص المتبقية (لهذه المادة فقط لو محددة) ──
-    const subs = (subReqRes.data || []).filter(r => !currentEnrollment || r.subject === currentEnrollment.subject_name);
+    // تطبيع اسم المادة: حذف جزء المنهج (" - سعودي"/" - اماراتي") و"ال" التعريف
+    // لأن subscription_requests.subject (مثلاً "رياضيات") لا يطابق
+    // teacher_enrollments.subject_name (مثلاً "رياضيات  - سعودي") حرفيًا
+    const normSubj = s => (s || '').split(/\s*-\s*/)[0].trim().replace(/^ال/, '');
+    const subs = (subReqRes.data || []).filter(r =>
+      !currentEnrollment || normSubj(r.subject) === normSubj(currentEnrollment.subject_name)
+    );
     const withData = subs.filter(r => r.sessions_remaining != null);
     if (withData.length > 0) {
       const totalRem = withData.reduce((s, r) => s + parseInt(r.sessions_remaining), 0);
@@ -5015,11 +5021,27 @@ async function saveAttendance() {
     const allAffected = [...new Set([...newlyPresent, ...newlyAbsent, ...presentToAbsent, ...absentToPresent])];
 
     if(allAffected.length > 0) {
-      const { data: subs } = await sb.from('subscription_requests')
-        .select('id, user_id, sessions_remaining, session_type')
+      // تحديد مادة كل طالب في هذه المجموعة (curGradeForAtt) لتفادي
+      // خصم/استرداد حصص من اشتراك مادة أخرى للطالب مع نفس المعلم
+      const { data: enrForAtt } = await sb.from('teacher_enrollments')
+        .select('student_id, subject_name')
+        .eq('teacher_id', ST.user.id)
+        .eq('grade_id', curGradeForAtt)
+        .in('student_id', allAffected);
+      const subjByStudent = {};
+      (enrForAtt || []).forEach(e => { subjByStudent[e.student_id] = e.subject_name; });
+      const normSubj = s => (s || '').split(/\s*-\s*/)[0].trim().replace(/^ال/, '');
+
+      const { data: subsAll } = await sb.from('subscription_requests')
+        .select('id, user_id, sessions_remaining, session_type, subject')
         .eq('status', 'approved')
         .eq('assigned_teacher_id', ST.user.id)
         .in('user_id', allAffected);
+
+      const subs = (subsAll || []).filter(s => {
+        const expected = subjByStudent[s.user_id];
+        return !expected || normSubj(s.subject) === normSubj(expected);
+      });
 
       if(subs && subs.length > 0) {
         const updatePromises = subs.map(sub => {
