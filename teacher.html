@@ -4263,16 +4263,17 @@ async function loadStudentsList(gradeId) {
       (profs||[]).forEach(p => profilesMap[p.id] = p);
     }
 
-    // Get attendance counts
+    // Get attendance counts (مفصول لكل مادة/grade_id حتى لا يتشارك الحضور بين مادتين)
     const ids = stuData.map(s => s.student_id);
     let attMap = {};
     if(ids.length) {
       const { data: attData } = await sb.from('teacher_attendance')
-        .select('student_id,status').eq('teacher_id', ST.user.id)
+        .select('student_id,grade_id,status').eq('teacher_id', ST.user.id)
         .in('student_id', ids);
       (attData||[]).forEach(r => {
-        if(!attMap[r.student_id]) attMap[r.student_id] = { present:0, absent:0 };
-        attMap[r.student_id][r.status]++;
+        const key = r.student_id + '|' + (r.grade_id||'');
+        if(!attMap[key]) attMap[key] = { present:0, absent:0 };
+        attMap[key][r.status]++;
       });
     }
 
@@ -4284,11 +4285,11 @@ async function loadStudentsList(gradeId) {
     el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">` +
       stuData.map(en => {
         const p = profilesMap[en.student_id] || {};
-        const att = attMap[en.student_id] || { present:0, absent:0 };
+        const att = attMap[en.student_id + '|' + (en.grade_id||'')] || { present:0, absent:0 };
         const total = att.present + att.absent;
         const pct = total ? Math.round(att.present/total*100) : 0;
         return `
-          <div class="stu-card" onclick="openStudentDetail('${en.student_id}','${(p.full_name||'').replace(/'/g,'')}','${en.grade_name||''}')">
+          <div class="stu-card" onclick="openStudentDetail('${en.student_id}','${(p.full_name||'').replace(/'/g,'')}','${en.grade_name||''}','${en.grade_id||''}')">
             <div class="stu-av">${p.avatar_url ? `<img src="${p.avatar_url}">` : ini(p.full_name)}</div>
             <div class="stu-info">
               <div class="stu-name">${p.full_name||'—'}</div>
@@ -4505,13 +4506,14 @@ async function markAttForDay(dateKey, studentId, status) {
   panel.innerHTML = `<div style="text-align:center;padding:16px;color:var(--gray);font-size:.85rem">⏳ جاري الحفظ...</div>`;
 
   try {
-    // upsert سجل الحضور
+    // upsert سجل الحضور (مع grade_id حتى لا يتشارك الحضور بين مادتين مختلفتين)
     const { error } = await sb.from('teacher_attendance').upsert({
       teacher_id:   ST.user.id,
       student_id:   studentId,
+      grade_id:     window._attGradeId || null,
       session_date: dateKey,
       status:       status,
-    }, { onConflict: 'teacher_id,student_id,session_date' });
+    }, { onConflict: 'teacher_id,student_id,grade_id,session_date' });
     if (error) throw error;
 
     // تحديث الـ maps المحلية
@@ -4543,7 +4545,7 @@ async function markAttForDay(dateKey, studentId, status) {
   }
 }
 
-async function openStudentDetail(studentId, name, gradeName) {
+async function openStudentDetail(studentId, name, gradeName, gradeId) {
   document.getElementById('stu-detail-av').textContent = ini(name);
   document.getElementById('stu-detail-name').textContent = name;
   document.getElementById('stu-detail-grade').textContent = gradeName || '—';
@@ -4555,15 +4557,22 @@ async function openStudentDetail(studentId, name, gradeName) {
 
   document.getElementById('det-sessions-wrap').style.display = 'none';
 
+  // حفظ السياق الحالي (الطالب + المادة/الصف) ليُستخدم عند تسجيل الحضور
+  window._attStudentId = studentId;
+  window._attGradeId   = gradeId || null;
+
   try {
     // جلب كل البيانات دفعة واحدة بما فيها اشتراكات الطالب
+    let attQuery = sb.from('teacher_attendance')
+      .select('*').eq('teacher_id', ST.user.id).eq('student_id', studentId)
+      .order('session_date', { ascending: false });
+    if (gradeId) attQuery = attQuery.eq('grade_id', gradeId);
+
     const [enrRes, attRes, subReqRes, sessRes] = await Promise.all([
       sb.from('teacher_enrollments')
         .select('subject_name,grade_name,grade_id,enrolled_at')
         .eq('teacher_id', ST.user.id).eq('student_id', studentId).limit(5),
-      sb.from('teacher_attendance')
-        .select('*').eq('teacher_id', ST.user.id).eq('student_id', studentId)
-        .order('session_date', { ascending: false }),
+      attQuery,
       sb.from('subscription_requests')
         .select('sessions_remaining,subject')
         .eq('user_id', studentId)
@@ -4577,9 +4586,10 @@ async function openStudentDetail(studentId, name, gradeName) {
         .limit(200),
     ]);
 
-    // ── جلب الاختبارات مفلترة بـ grade_id الطالب ──
+    // ── جلب الاختبارات مفلترة بـ grade_id الطالب (هذه المادة فقط لو محددة) ──
     const enrollments = enrRes.data || [];
-    const studentGradeIds = [...new Set(enrollments.map(e => e.grade_id).filter(Boolean))];
+    const currentEnrollment = gradeId ? enrollments.find(e => e.grade_id === gradeId) : null;
+    const studentGradeIds = gradeId ? [gradeId] : [...new Set(enrollments.map(e => e.grade_id).filter(Boolean))];
 
     let examsQuery = sb.from('exams')
       .select('id,title,subject,grade,grade_id,is_published')
@@ -4596,8 +4606,8 @@ async function openStudentDetail(studentId, name, gradeName) {
 
     const examsRes = await examsQuery;
 
-    // ── عرض الحصص المتبقية ──
-    const subs = subReqRes.data || [];
+    // ── عرض الحصص المتبقية (لهذه المادة فقط لو محددة) ──
+    const subs = (subReqRes.data || []).filter(r => !currentEnrollment || r.subject === currentEnrollment.subject_name);
     const withData = subs.filter(r => r.sessions_remaining != null);
     if (withData.length > 0) {
       const totalRem = withData.reduce((s, r) => s + parseInt(r.sessions_remaining), 0);
@@ -4629,7 +4639,10 @@ async function openStudentDetail(studentId, name, gradeName) {
     }
 
     // ── تفاصيل الاشتراك ──
-    if (enrollments.length) {
+    if (currentEnrollment) {
+      const info = [currentEnrollment.subject_name, currentEnrollment.grade_name].filter(Boolean).join(' — ');
+      document.getElementById('stu-detail-grade').textContent = info || gradeName || '—';
+    } else if (enrollments.length) {
       const enrInfo = enrollments.map(e => [e.subject_name, e.grade_name].filter(Boolean).join(' — ')).join(' | ');
       document.getElementById('stu-detail-grade').textContent = enrInfo || gradeName || '—';
     }
@@ -4676,7 +4689,6 @@ async function openStudentDetail(studentId, name, gradeName) {
     document.getElementById('det-pct').textContent     = pct + '%';
 
     // حفظ البيانات للاستخدام عند الضغط على الأيام
-    window._attStudentId   = studentId;
     window._attSessionMap  = sessionByDate;
     window._attRecordMap   = attByDate;
 
@@ -4945,7 +4957,7 @@ async function saveAttendance() {
 
     // ── 2. حفظ الحضور ──
     const { error } = await sb.from('teacher_attendance')
-      .upsert(rows, { onConflict: 'teacher_id,student_id,session_date' });
+      .upsert(rows, { onConflict: 'teacher_id,student_id,grade_id,session_date' });
     if(error) throw error;
 
     // ── 3. تحديد التغييرات بدقة (منع الخصم المزدوج عند إعادة الحفظ) ──
