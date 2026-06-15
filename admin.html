@@ -432,6 +432,17 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   <div class="page" id="page-requests">
     <div class="page-title">📋 طلبات الاشتراك</div>
     <p class="page-sub">مراجعة وإدارة طلبات انضمام الطلاب للكورسات</p>
+
+    <!-- ▸ قسم: طلاب جدد بدون اشتراك -->
+    <div class="section-card" id="new-students-card" style="margin-bottom:18px;display:none">
+      <div class="section-head">
+        <h3>🆕 طلاب جدد بدون اشتراك <span id="new-students-badge" style="background:var(--red);color:#fff;font-size:.72rem;padding:2px 8px;border-radius:20px;margin-right:6px"></span></h3>
+        <button class="btn-refresh" onclick="loadNewStudentsWithoutSub()">🔄 تحديث</button>
+      </div>
+      <p style="font-size:.8rem;color:var(--gray);padding:0 16px 10px">طلاب سجّلوا حسابًا على المنصة لكن لم يرسلوا طلب اشتراك بعد</p>
+      <div id="new-students-body"></div>
+    </div>
+
     <div class="section-card">
       <div class="section-head"><h3>قائمة الطلبات</h3><button class="btn-refresh" onclick="loadRequests()">🔄 تحديث</button></div>
       <div class="filter-bar">
@@ -1739,7 +1750,7 @@ function goTo(name) {
   if (name !== 'sessions' && _sessInterval) { clearInterval(_sessInterval); _sessInterval = null; }
   const loaders = {courses:loadCourses, sessions:initSessions, students:()=>{ switchStudentTab('list'); loadStudents(); }, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit, announcements:annLoad, catalog:loadCatalog, visitors:visLoad};
   if(loaders[name]) loaders[name]();
-  if(name==='requests') renderReqTable();
+  if(name==='requests') { renderReqTable(); loadNewStudentsWithoutSub(); }
 }
 
 async function doLogout() {
@@ -1750,6 +1761,62 @@ async function doLogout() {
 // ══════════════════════════════════
 // REQUESTS
 // ══════════════════════════════════
+async function loadNewStudentsWithoutSub() {
+  const card = document.getElementById('new-students-card');
+  const body = document.getElementById('new-students-body');
+  const badge = document.getElementById('new-students-badge');
+  body.innerHTML = `<div style="padding:16px"><div class="skel" style="height:46px;margin-bottom:8px;border-radius:8px"></div><div class="skel" style="height:46px;border-radius:8px"></div></div>`;
+  card.style.display = 'block';
+
+  try {
+    // 1. كل الطلاب المسجلين
+    const { data: students, error: sErr } = await sb.from('profiles')
+      .select('id,full_name,phone,email,created_at,student_number')
+      .eq('role', 'student')
+      .order('created_at', { ascending: false });
+    if (sErr) throw sErr;
+
+    // 2. كل user_ids اللي عندهم اشتراك (أي status)
+    const sids = (students || []).map(s => s.id);
+    if (!sids.length) { card.style.display = 'none'; return; }
+
+    const { data: reqs } = await sb.from('subscription_requests')
+      .select('user_id')
+      .in('user_id', sids);
+    const hasReq = new Set((reqs || []).map(r => r.user_id));
+
+    // 3. الطلاب بدون أي اشتراك إطلاقاً
+    const noSub = (students || []).filter(s => !hasReq.has(s.id));
+
+    if (!noSub.length) {
+      card.style.display = 'none';
+      return;
+    }
+
+    card.style.display = 'block';
+    badge.textContent = noSub.length;
+
+    body.innerHTML = noSub.map(s => {
+      const daysAgo = Math.floor((Date.now() - new Date(s.created_at)) / 86400000);
+      const when = daysAgo === 0 ? 'اليوم' : daysAgo === 1 ? 'أمس' : `منذ ${daysAgo} يوم`;
+      return `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border)">
+        <div class="u-av" style="flex-shrink:0">${ini(s.full_name)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:.9rem">${s.full_name || '—'}</div>
+          <div style="font-size:.78rem;color:var(--gray)">${s.phone || s.email || '—'} · سجّل ${when}</div>
+        </div>
+        <button class="btn-ed" style="font-size:.78rem;white-space:nowrap"
+          onclick="openStudentMgmt('${s.id}','${(s.full_name||'').replace(/'/g,"\\'")}')">
+          ➕ إضافة اشتراك
+        </button>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    body.innerHTML = `<div class="msg-err" style="margin:12px">❌ ${e.message}</div>`;
+  }
+}
+
 async function loadRequests() {
   try {
     const {data:reqs, error} = await sb.from('subscription_requests')
@@ -1799,6 +1866,10 @@ async function processRequests(reqs) {
       assigned_teacher_name: r.assigned_teacher_id ? (tm[r.assigned_teacher_id]?.full_name||'معين') : null,
     }));
     refreshStats(); updateBadge(); renderOvList(); renderReqTable();
+    // تحديث قسم "طلاب جدد بدون اشتراك" لو الصفحة مفتوحة
+    if (document.getElementById('page-requests').classList.contains('active')) {
+      loadNewStudentsWithoutSub();
+    }
   } catch(e) { console.error(e); toast('فشل تحميل الطلبات: '+e.message,'err'); }
 }
 function openZoomLink(rawUrl) {
