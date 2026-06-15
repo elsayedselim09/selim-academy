@@ -2196,6 +2196,42 @@ async function approveSubject(id) {
 }
 
 async function delCourse(id) {
+  // 0) فحص أمان: هل يوجد طلاب مسجلون في هذه المادة؟
+  //    (لو حذفنا المادة وفيها طلاب، الـ trigger هيمسح حضورهم وغيابهم بالكامل
+  //     في كل مجموعاتها دفعة واحدة — لازم نوقف العملية ونوضح للأدمن)
+  const { data: enrolled, error: enrErr } = await sb.from('teacher_enrollments')
+    .select('student_id, grade_name')
+    .eq('subject_id', id);
+  if (enrErr) throw enrErr;
+
+  if ((enrolled || []).length > 0) {
+    const studentIds = [...new Set(enrolled.map(e => e.student_id).filter(Boolean))];
+    let nameMap = {};
+    if (studentIds.length) {
+      const { data: profs } = await sb.from('profiles').select('id,full_name').in('id', studentIds);
+      (profs || []).forEach(p => nameMap[p.id] = p.full_name);
+    }
+
+    // تجميع الطلاب حسب المجموعة
+    const byGroup = {};
+    enrolled.forEach(e => {
+      const g = e.grade_name || 'غير محدد';
+      if (!byGroup[g]) byGroup[g] = new Set();
+      byGroup[g].add(nameMap[e.student_id] || e.student_id);
+    });
+    const details = Object.entries(byGroup)
+      .map(([g, names]) => `• ${g}: ${[...names].join('، ')}`)
+      .join('\n');
+
+    alert(
+      `⚠️ لا يمكن حذف هذه المادة!\n\n` +
+      `يوجد ${studentIds.length} طالب مسجل في ${Object.keys(byGroup).length} مجموعة تابعة لها:\n\n` +
+      details +
+      `\n\nلحذف المادة، يجب أولاً إزالة هؤلاء الطلاب من مجموعاتهم (صفحة "إدارة الطالب" ← زر "🗑️ إزالة من المجموعة" بجانب كل مجموعة)، أو نقلهم لمادة أخرى. تم إلغاء عملية الحذف ولم يتم تعديل أي شيء.`
+    );
+    throw new Error('تم إلغاء الحذف — يوجد طلاب مسجلون في هذه المادة');
+  }
+
   // 1) جلب كل الصفوف المرتبطة بالمادة
   const { data: grades } = await sb.from('teacher_grades').select('id').eq('subject_id', id);
   const gradeIds = (grades || []).map(g => g.id);
@@ -3419,12 +3455,33 @@ async function confirmRemoveFromSubject() {
     if (_smRemoveCtx.type === 'subscription') {
       const { studentId, teacherId, reqId, subjectName } = _smRemoveCtx;
 
-      // 1. حذف teacher_enrollments (student_id + teacher_id)
-      //    الـ Trigger (SECURITY DEFINER) يتكفل بتحديث subscription_requests تلقائياً
-      let delQ = sb.from('teacher_enrollments').delete().eq('student_id', studentId);
-      if (teacherId) delQ = delQ.eq('teacher_id', teacherId);
-      const { error: e1, count: delCount } = await delQ.select();
-      if (e1) throw new Error('خطأ في حذف التسجيل: ' + e1.message);
+      // 1. حذف teacher_enrollments — بشرط التأكد إنه التسجيل الصحيح بدقة
+      //    (مهم: لو الطالب مسجل مع نفس المعلم في مادة تانية كمان، نصوص
+      //     "subject"/"subject_name" غير متطابقة دايمًا، فمحاولة الحذف
+      //     بالاسم ممكن تحذف الغلط أو تفوّت المطلوب. والـ Trigger
+      //     (SECURITY DEFINER) بيمسح حضور الطالب بالكامل مع هذا المعلم
+      //     عند أي حذف، فلازم نكون متأكدين 100% من التسجيل المطلوب حذفه)
+      let removedEnrollment = false;
+      let ambiguous = false;
+      if (teacherId) {
+        const { data: enrRows, error: eFetch } = await sb.from('teacher_enrollments')
+          .select('id')
+          .eq('student_id', studentId)
+          .eq('teacher_id', teacherId);
+        if (eFetch) throw new Error('خطأ في جلب التسجيلات: ' + eFetch.message);
+
+        if ((enrRows||[]).length === 1) {
+          // تسجيل واحد فقط مع هذا المعلم → حذف آمن ومضمون أنه المطلوب
+          const { error: e1 } = await sb.from('teacher_enrollments').delete().eq('id', enrRows[0].id);
+          if (e1) throw new Error('خطأ في حذف التسجيل: ' + e1.message);
+          removedEnrollment = true;
+        } else if ((enrRows||[]).length > 1) {
+          // الطالب مسجل مع نفس المعلم في أكثر من مادة — لا نحذف تلقائياً
+          // حتى لا نمسح تسجيل/حضور مادة أخرى بالغلط
+          ambiguous = true;
+        }
+        // 0 تسجيلات → مفيش حاجة نحذفها (الاشتراك بدون تسجيل فعلي)
+      }
 
       // 2. تحديث طلب الاشتراك → 'removed' (ضمان إضافي)
       const { error: e2 } = await sb.from('subscription_requests')
@@ -3435,7 +3492,15 @@ async function confirmRemoveFromSubject() {
         .eq('id', reqId);
       if (e2) throw new Error('خطأ في تحديث الاشتراك: ' + e2.message);
 
-      toast(`✅ تم إزالة الطالب من مادة "${subjectName}" — اختفت حصص المعلم من حسابه`);
+      if (ambiguous) {
+        msg.innerHTML = `<div style="background:var(--gold-light);border:1px solid var(--gold);color:#92400E;padding:10px 14px;border-radius:8px;font-size:.83rem;margin-top:10px">
+          ⚠️ تم تحديث حالة الاشتراك إلى "محذوف"، لكن الطالب مسجل مع هذا المعلم في أكثر من مادة فلم يتم حذف أي تسجيل تلقائيًا (لتجنب التأثير على مواده الأخرى).
+          لإزالة التسجيل والحضور الخاص بهذه المادة بدقة، استخدم زر "🗑️ إزالة من المجموعة" بجانب المجموعة الصحيحة في قسم "التسجيلات" أسفل هذه الصفحة.
+        </div>`;
+        toast(`⚠️ تم تحديث حالة الاشتراك — راجع التنبيه لإكمال إزالة التسجيل بدقة`, 'err');
+      } else {
+        toast(`✅ تم إزالة الطالب من مادة "${subjectName}"${removedEnrollment ? ' — اختفت حصص المعلم من حسابه' : ''}`);
+      }
 
     } else if (_smRemoveCtx.type === 'enrollment') {
       const { error: e3 } = await sb.from('teacher_enrollments')
