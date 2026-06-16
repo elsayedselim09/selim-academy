@@ -1351,16 +1351,18 @@ function filterSessionsByActiveSubscriptions(sessions, approvedReqs, teEnr) {
   if (!sessions || !sessions.length) return [];
   if (!approvedReqs || !approvedReqs.length) return [];
 
-  // بناء خريطة grade_id -> req لكل اشتراك مقبول
-  const activeGradeIds = new Set();
+  // جمع teacher_ids النشطة من الاشتراكات المقبولة
+  const activeTeacherIds = new Set();
   for (const req of approvedReqs) {
-    if (!isSubscriptionActive(req)) continue; // تجاهل المنتهية
-    // إيجاد grade_id المرتبط بهذا الاشتراك
-    const matched = (teEnr || []).find(
-      te => te.teacher_id === req.assigned_teacher_id && te.subject_name === req.subject
-    );
-    if (matched && matched.grade_id) {
-      activeGradeIds.add(matched.grade_id);
+    if (!isSubscriptionActive(req)) continue;
+    if (req.assigned_teacher_id) activeTeacherIds.add(req.assigned_teacher_id);
+  }
+
+  // بناء مجموعة grade_ids: كل الصفوف التي الطالب مسجّل فيها عند معلم لديه اشتراك نشط
+  const activeGradeIds = new Set();
+  for (const te of (teEnr || [])) {
+    if (activeTeacherIds.has(te.teacher_id) && te.grade_id) {
+      activeGradeIds.add(te.grade_id);
     }
   }
 
