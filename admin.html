@@ -871,6 +871,13 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
           </div>
         </div>
       </div>
+
+      <!-- Modal شريط الإحصائيات -->
+      <div id="sb-mdl" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
+        <div style="background:var(--white);border-radius:18px;padding:28px;max-width:440px;width:100%;box-shadow:var(--shadow-lg);animation:fadeIn .2s ease;direction:rtl;">
+          <div id="sb-mdl-body"></div>
+        </div>
+      </div>
     </div>
 
   </div><!-- end page-site-content -->
@@ -6712,12 +6719,19 @@ async function sbDelete(id) {
   } catch(e) { toast('خطأ: ' + e.message, 'err'); }
 }
 
+function sbOpenMdl() {
+  const m = document.getElementById('sb-mdl');
+  m.style.display = 'flex';
+  setTimeout(() => m.style.display = 'flex', 0);
+}
+function sbCloseMdl() {
+  document.getElementById('sb-mdl').style.display = 'none';
+}
+
 function sbEdit(id) {
   const row = _sbRows.find(r => r.id === id);
   if (!row) return;
-  const modal = document.getElementById('mdl-box');
-  if (!modal) return;
-  modal.innerHTML = `
+  document.getElementById('sb-mdl-body').innerHTML = `
     <div style="font-size:1.05rem;font-weight:800;margin-bottom:18px;color:var(--dark)">✏️ تعديل الإحصائية</div>
     <div class="fg" style="margin-bottom:12px"><label>القيمة (الرقم)</label><input id="sb-val" type="text" value="${row.value}" placeholder="مثال: 1000" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
     <div class="fg" style="margin-bottom:12px"><label>النص (التسمية)</label><input id="sb-label" type="text" value="${row.label}" placeholder="مثال: طالب مسجل" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
@@ -6727,10 +6741,10 @@ function sbEdit(id) {
     </div>
     <div style="display:flex;gap:10px;">
       <button onclick="sbSaveEdit('${id}')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:'Cairo',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;">💾 حفظ</button>
-      <button onclick="closeMdl()" style="padding:10px 18px;border-radius:10px;border:1.5px solid var(--gray-mid);background:var(--white);font-family:'Cairo',sans-serif;font-size:.95rem;cursor:pointer;">إلغاء</button>
+      <button onclick="sbCloseMdl()" style="padding:10px 18px;border-radius:10px;border:1.5px solid var(--gray-mid);background:var(--white);font-family:'Cairo',sans-serif;font-size:.95rem;cursor:pointer;">إلغاء</button>
     </div>
   `;
-  openMdl();
+  sbOpenMdl();
 }
 
 async function sbSaveEdit(id) {
@@ -6743,15 +6757,13 @@ async function sbSaveEdit(id) {
     const { error } = await sb.from('site_stats').update({ value, label, prefix, suffix, updated_at: new Date().toISOString() }).eq('id', id);
     if (error) throw error;
     toast('تم الحفظ ✅');
-    closeMdl();
+    sbCloseMdl();
     sbLoadStats();
   } catch(e) { toast('خطأ: ' + e.message, 'err'); }
 }
 
 function sbAddStat() {
-  const modal = document.getElementById('mdl-box');
-  if (!modal) return;
-  modal.innerHTML = `
+  document.getElementById('sb-mdl-body').innerHTML = `
     <div style="font-size:1.05rem;font-weight:800;margin-bottom:18px;color:var(--dark)">➕ إضافة إحصائية جديدة</div>
     <div class="fg" style="margin-bottom:12px"><label>معرف فريد (بالإنجليزية)</label><input id="sb-new-id" type="text" placeholder="مثال: teachers" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
     <div class="fg" style="margin-bottom:12px"><label>القيمة (الرقم)</label><input id="sb-new-val" type="text" placeholder="مثال: 50" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
@@ -6762,10 +6774,10 @@ function sbAddStat() {
     </div>
     <div style="display:flex;gap:10px;">
       <button onclick="sbSaveNew()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:'Cairo',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;">💾 إضافة</button>
-      <button onclick="closeMdl()" style="padding:10px 18px;border-radius:10px;border:1.5px solid var(--gray-mid);background:var(--white);font-family:'Cairo',sans-serif;font-size:.95rem;cursor:pointer;">إلغاء</button>
+      <button onclick="sbCloseMdl()" style="padding:10px 18px;border-radius:10px;border:1.5px solid var(--gray-mid);background:var(--white);font-family:'Cairo',sans-serif;font-size:.95rem;cursor:pointer;">إلغاء</button>
     </div>
   `;
-  openMdl();
+  sbOpenMdl();
 }
 
 async function sbSaveNew() {
@@ -6780,7 +6792,7 @@ async function sbSaveNew() {
     const { error } = await sb.from('site_stats').insert({ id, value, label, prefix, suffix, sort_order: sortOrder, is_visible: true });
     if (error) throw error;
     toast('تمت الإضافة ✅');
-    closeMdl();
+    sbCloseMdl();
     sbLoadStats();
   } catch(e) { toast('خطأ: ' + e.message, 'err'); }
 }
