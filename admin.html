@@ -469,7 +469,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       </div>
       <div class="stat-card">
         <div class="stat-icon si-green">📈</div>
-        <div><div class="stat-num" id="vis-total-count">—</div><div class="stat-label">إجمالي الزيارات (30 يوم)</div></div>
+        <div><div class="stat-num" id="vis-total-count">—</div><div class="stat-label">إجمالي الزيارات</div></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon si-purple">🔗</div>
@@ -500,7 +500,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <!-- Date Timeline Bar -->
     <div class="section-card" style="margin-bottom:20px">
       <div class="section-head">
-        <h3>📅 الزيارات حسب التاريخ (آخر 30 يوم)</h3>
+        <h3>📅 الزيارات حسب التاريخ</h3>
         <button class="btn-refresh" onclick="visLoad()">🔄 تحديث</button>
       </div>
       <div style="padding:16px 20px">
@@ -670,6 +670,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       <button class="sc-tab" data-tab="sc-messages" onclick="scSwitchTab(this,'sc-messages')">✉️ رسائل العملاء<span class="nav-badge" id="new-messages-badge" style="display:none;">0</span></button>
       <button class="sc-tab" data-tab="sc-faq"      onclick="scSwitchTab(this,'sc-faq')">❓ الأسئلة الشائعة</button>
       <button class="sc-tab" data-tab="sc-bylaws"   onclick="scSwitchTab(this,'sc-bylaws')">📋 إدارة اللوائح</button>
+      <button class="sc-tab" data-tab="sc-statsbar"  onclick="scSwitchTab(this,'sc-statsbar')">📊 شريط الإحصائيات</button>
     </div>
 
     <!-- ────────── TAB: المدرسين ────────── -->
@@ -851,6 +852,69 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
           </div>
           <div id="sc-bylaws-list" style="display:flex;flex-direction:column;gap:10px;">
             <div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── TAB: شريط الإحصائيات ────────── -->
+    <div class="sc-pane" id="sc-statsbar">
+      <div class="section-card">
+        <div class="section-head">
+          <h3>📊 شريط الإحصائيات</h3>
+          <button class="btn-primary" onclick="sbOpenAdd()">+ إضافة خانة</button>
+        </div>
+        <p style="color:var(--gray);font-size:.83rem;padding:0 20px 8px">ترتيب وتعديل الخانات التي تظهر في شريط الإحصائيات بالصفحة الرئيسية</p>
+        <div class="section-body">
+          <div id="sb-list" style="display:flex;flex-direction:column;gap:10px;">
+            <div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal إضافة / تعديل -->
+      <div id="sb-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
+        <div class="mdl-box" style="max-width:420px;width:100%">
+          <div class="mdl-head">
+            <span id="sb-modal-title">إضافة خانة</span>
+            <button class="mdl-close" onclick="sbCloseModal()">✕</button>
+          </div>
+          <div class="mdl-body" style="display:flex;flex-direction:column;gap:14px;">
+            <input type="hidden" id="sb-edit-id">
+            <div class="fg"><label>الرقم / القيمة</label><input type="text" id="sb-val" placeholder="مثال: 1000"></div>
+            <div class="fg"><label>النص التوضيحي</label><input type="text" id="sb-label" placeholder="مثال: طالب مسجل"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="fg"><label>بادئة (قبل الرقم)</label><input type="text" id="sb-prefix" placeholder="مثال: +"></div>
+              <div class="fg"><label>لاحقة (بعد الرقم)</label><input type="text" id="sb-suffix" placeholder="مثال: %"></div>
+            </div>
+            <div class="fg"><label>الترتيب</label><input type="number" id="sb-order" placeholder="1" min="1"></div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <label class="sc-toggle-label">
+                <input type="checkbox" id="sb-visible" class="sc-toggle-input" checked>
+                <span class="sc-toggle-track"><span class="sc-toggle-thumb"></span></span>
+              </label>
+              <span style="font-weight:700;color:var(--dark);">ظاهر في الموقع</span>
+            </div>
+          </div>
+          <div class="mdl-foot">
+            <button class="btn-secondary" onclick="sbCloseModal()">إلغاء</button>
+            <button class="btn-primary" onclick="sbSave()">💾 حفظ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── TAB: شريط الإحصائيات ────────── -->
+    <div class="sc-pane" id="sc-statsbar">
+      <div class="section-card">
+        <div class="section-head">
+          <h3>📊 شريط الإحصائيات في الموقع الرئيسي</h3>
+          <button class="btn-primary" onclick="sbAddStat()">+ إضافة إحصائية</button>
+        </div>
+        <div class="section-body">
+          <p style="font-size:.83rem;color:var(--gray);margin-bottom:16px">يمكنك تعديل أو حذف أي إحصائية تظهر في الشريط الداكن بالموقع. الخانة الأولى (الزيارات) تُحدَّث تلقائياً.</p>
+          <div id="sc-statsbar-list" style="display:flex;flex-direction:column;gap:12px;">
+            <div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>
           </div>
         </div>
       </div>
@@ -5468,6 +5532,7 @@ function scSwitchTab(btn, paneId) {
   if (paneId === 'sc-messages')       scLoadMessages();
   if (paneId === 'sc-faq')            scLoadFaq();
   if (paneId === 'sc-bylaws')         scLoadBylaws();
+  if (paneId === 'sc-statsbar')       sbLoadStats();
 }
 
 // ── Init ──
@@ -6626,6 +6691,106 @@ async function scDeleteBylaw(id) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// ════════════════════════════
+//  📊  STATS BAR — شريط الإحصائيات
+// ════════════════════════════
+
+async function sbLoad() {
+  const el = document.getElementById('sb-list');
+  if (!el) return;
+  el.innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
+  try {
+    const { data, error } = await sb.from('site_stats').select('*').order('sort_order');
+    if (error) throw error;
+    if (!data || !data.length) {
+      el.innerHTML = '<div class="empty-box"><div class="ei">📊</div><div class="et">لا توجد خانات</div><div class="ed">اضغط "+ إضافة خانة" لإضافة أول خانة</div></div>';
+      return;
+    }
+    el.innerHTML = data.map(item => `
+      <div style="display:flex;align-items:center;gap:12px;background:var(--white);border:1.5px solid var(--gray-mid);border-radius:12px;padding:14px 18px;">
+        <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;">
+          <div style="font-size:1.1rem;font-weight:900;color:var(--blue);">${item.prefix || ''}${item.value}${item.suffix || ''}</div>
+          <div style="font-size:.82rem;color:var(--gray);font-weight:600;">${item.label}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <span style="font-size:.74rem;padding:3px 10px;border-radius:50px;font-weight:700;background:${item.is_visible ? 'var(--green-light)' : 'var(--gray-light)'};color:${item.is_visible ? 'var(--green)' : 'var(--gray)'};">
+            ${item.is_visible ? '👁️ ظاهر' : '🙈 مخفي'}
+          </span>
+          <button onclick="sbOpenEdit(${JSON.stringify(item).replace(/"/g,'&quot;')})" style="background:var(--blue-light);color:var(--blue);border:none;border-radius:8px;padding:6px 14px;font-family:'Cairo',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">✏️ تعديل</button>
+          <button onclick="sbDelete('${item.id}')" style="background:var(--red-light,#FEE2E2);color:var(--red);border:none;border-radius:8px;padding:6px 14px;font-family:'Cairo',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">🗑️</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="padding:20px;color:var(--red)">خطأ: ' + e.message + '</div>';
+  }
+}
+
+function sbOpenAdd() {
+  document.getElementById('sb-edit-id').value = '';
+  document.getElementById('sb-modal-title').textContent = 'إضافة خانة جديدة';
+  document.getElementById('sb-val').value = '';
+  document.getElementById('sb-label').value = '';
+  document.getElementById('sb-prefix').value = '';
+  document.getElementById('sb-suffix').value = '';
+  document.getElementById('sb-order').value = '';
+  document.getElementById('sb-visible').checked = true;
+  const m = document.getElementById('sb-modal');
+  m.style.display = 'flex';
+}
+
+function sbOpenEdit(item) {
+  document.getElementById('sb-edit-id').value = item.id;
+  document.getElementById('sb-modal-title').textContent = 'تعديل الخانة';
+  document.getElementById('sb-val').value = item.value || '';
+  document.getElementById('sb-label').value = item.label || '';
+  document.getElementById('sb-prefix').value = item.prefix || '';
+  document.getElementById('sb-suffix').value = item.suffix || '';
+  document.getElementById('sb-order').value = item.sort_order || 1;
+  document.getElementById('sb-visible').checked = !!item.is_visible;
+  const m = document.getElementById('sb-modal');
+  m.style.display = 'flex';
+}
+
+function sbCloseModal() {
+  document.getElementById('sb-modal').style.display = 'none';
+}
+
+async function sbSave() {
+  const id = document.getElementById('sb-edit-id').value.trim();
+  const value = document.getElementById('sb-val').value.trim();
+  const label = document.getElementById('sb-label').value.trim();
+  const prefix = document.getElementById('sb-prefix').value.trim();
+  const suffix = document.getElementById('sb-suffix').value.trim();
+  const sort_order = parseInt(document.getElementById('sb-order').value) || 1;
+  const is_visible = document.getElementById('sb-visible').checked;
+  if (!value || !label) { toast('أدخل القيمة والنص', 'err'); return; }
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('site_stats').update({ value, label, prefix, suffix, sort_order, is_visible, updated_at: new Date().toISOString() }).eq('id', id));
+    } else {
+      const newId = 'stat_' + Date.now();
+      ({ error } = await sb.from('site_stats').insert({ id: newId, value, label, prefix, suffix, sort_order, is_visible }));
+    }
+    if (error) throw error;
+    toast('✅ تم الحفظ');
+    sbCloseModal();
+    sbLoad();
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
+}
+
+async function sbDelete(id) {
+  if (!confirm('هل تريد حذف هذه الخانة؟')) return;
+  try {
+    const { error } = await sb.from('site_stats').delete().eq('id', id);
+    if (error) throw error;
+    toast('🗑️ تم الحذف');
+    sbLoad();
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
+}
+
+// ══════════════════════════════════════════════════════════════════
 //  📊  VISITORS ANALYTICS — إحصائيات الزوار
 // ══════════════════════════════════════════════════════════════════
 
@@ -6651,14 +6816,9 @@ async function visLoad() {
   document.getElementById('vis-detail-body').innerHTML = '<div style="padding:20px"><div class="skel" style="height:44px;margin-bottom:8px;border-radius:8px"></div><div class="skel" style="height:44px;margin-bottom:8px;border-radius:8px"></div><div class="skel" style="height:44px;border-radius:8px"></div></div>';
 
   try {
-    const from30 = new Date();
-    from30.setDate(from30.getDate() - 29);
-    from30.setHours(0,0,0,0);
-
     const { data, error } = await sb
       .from('page_views')
       .select('id, page, referrer, created_at, session_id, user_id, user_type')
-      .gte('created_at', from30.toISOString())
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -6712,11 +6872,8 @@ function visRenderChart() {
   const chartEl = document.getElementById('vis-chart');
   const byDay = {};
   _visAllRows.forEach(r => { const d = r.created_at.slice(0,10); byDay[d] = (byDay[d]||0)+1; });
-  const days = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate()-i);
-    days.push(d.toISOString().slice(0,10));
-  }
+  const allDays = Object.keys(byDay).sort();
+  const days = allDays.length > 0 ? allDays : [];
   const maxVal = Math.max(...Object.values(byDay), 1);
   const todayStr = new Date().toISOString().slice(0,10);
   chartEl.innerHTML = days.map(d => {
@@ -6732,11 +6889,7 @@ function visRenderChart() {
 function visRenderDatePills() {
   const byDay = {};
   _visAllRows.forEach(r => { const d = r.created_at.slice(0,10); byDay[d] = (byDay[d]||0)+1; });
-  const days = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate()-i);
-    days.push(d.toISOString().slice(0,10));
-  }
+  const days = Object.keys(byDay).sort();
   const todayStr = new Date().toISOString().slice(0,10);
   const pillsEl = document.getElementById('vis-date-pills');
 
@@ -6759,7 +6912,7 @@ function visSelectDate(dateStr) {
   visRenderTable();
   const titleEl = document.getElementById('vis-detail-title');
   if (!dateStr) {
-    titleEl.textContent = 'تفاصيل الزيارات (آخر 30 يوم)';
+    titleEl.textContent = 'تفاصيل الزيارات (كل الوقت)';
   } else {
     const label = new Date(dateStr+'T12:00:00').toLocaleDateString('ar-EG',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
     titleEl.textContent = 'زيارات ' + label;
@@ -6943,6 +7096,146 @@ async function downloadStudentCard(studentId){
   let bp=s.backup_password,em=s.email;
   if(!bp||!em){const{data}=await sb.from('profiles').select('backup_password,email').eq('id',studentId).single();bp=bp||data?.backup_password;em=em||data?.email;}
   generateAccountCard({fullName:s.full_name||'—',email:em||'—',idNumber:s.student_number||'—',backupPassword:bp||'—',role:'student'});
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  📊  STATS BAR MANAGEMENT — إدارة شريط الإحصائيات
+// ══════════════════════════════════════════════════════════════════
+let _sbRows = [];
+
+async function sbLoadStats() {
+  const el = document.getElementById('sc-statsbar-list');
+  if (!el) return;
+  el.innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
+  try {
+    const { data, error } = await sb.from('site_stats').select('*').order('sort_order');
+    if (error) throw error;
+    _sbRows = data || [];
+    sbRender();
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--red);padding:16px">خطأ: ' + e.message + '</div>';
+  }
+}
+
+function sbRender() {
+  const el = document.getElementById('sc-statsbar-list');
+  if (!el) return;
+  if (!_sbRows.length) {
+    el.innerHTML = '<div class="empty-box"><div class="ei">📊</div><div class="et">لا توجد إحصائيات</div></div>';
+    return;
+  }
+  el.innerHTML = _sbRows.map(row => {
+    const isVisits = row.id === 'visits';
+    const visibleIcon = row.is_visible ? '👁️' : '🙈';
+    const visibleLabel = row.is_visible ? 'ظاهر' : 'مخفي';
+    const visibleColor = row.is_visible ? 'var(--green)' : 'var(--gray)';
+    return `<div style="background:var(--white);border:1.5px solid var(--gray-mid);border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:1.3rem;font-weight:900;color:var(--blue)">${row.prefix || ''}${isVisits ? '<span style="color:var(--gold)">يتحدث تلقائياً</span>' : row.value}${row.suffix || ''}</div>
+        <div style="font-size:.85rem;color:var(--gray);margin-top:2px">${row.label}</div>
+        ${isVisits ? '<div style="font-size:.75rem;color:var(--gray);margin-top:4px">⚡ يُحسب من قاعدة البيانات مباشرة</div>' : ''}
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:.75rem;font-weight:700;color:${visibleColor};background:${row.is_visible ? 'var(--green-light)' : 'var(--gray-light)'};padding:3px 10px;border-radius:50px;">${visibleIcon} ${visibleLabel}</span>
+        ${!isVisits ? `<button onclick="sbEdit('${row.id}')" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--blue);background:var(--blue-light);color:var(--blue);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">✏️ تعديل</button>` : ''}
+        <button onclick="sbToggleVisible('${row.id}', ${!row.is_visible})" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--gray-mid);background:var(--gray-light);color:var(--dark);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">${row.is_visible ? '🙈 إخفاء' : '👁️ إظهار'}</button>
+        ${!isVisits ? `<button onclick="sbDelete('${row.id}')" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--red);background:#FEE2E2;color:var(--red);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">🗑️ حذف</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function sbToggleVisible(id, newVal) {
+  try {
+    const { error } = await sb.from('site_stats').update({ is_visible: newVal, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+    toast(newVal ? 'تم الإظهار ✅' : 'تم الإخفاء 🙈');
+    sbLoadStats();
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
+}
+
+async function sbDelete(id) {
+  if (!confirm('هل تريد حذف هذه الإحصائية نهائياً؟')) return;
+  try {
+    const { error } = await sb.from('site_stats').delete().eq('id', id);
+    if (error) throw error;
+    toast('تم الحذف ✅');
+    sbLoadStats();
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
+}
+
+function sbEdit(id) {
+  const row = _sbRows.find(r => r.id === id);
+  if (!row) return;
+  const modal = document.getElementById('mdl-box');
+  if (!modal) return;
+  modal.innerHTML = `
+    <div style="font-size:1.05rem;font-weight:800;margin-bottom:18px;color:var(--dark)">✏️ تعديل الإحصائية</div>
+    <div class="fg" style="margin-bottom:12px"><label>القيمة (الرقم)</label><input id="sb-val" type="text" value="${row.value}" placeholder="مثال: 1000" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+    <div class="fg" style="margin-bottom:12px"><label>النص (التسمية)</label><input id="sb-label" type="text" value="${row.label}" placeholder="مثال: طالب مسجل" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+      <div class="fg"><label>بادئة (قبل الرقم)</label><input id="sb-prefix" type="text" value="${row.prefix || ''}" placeholder="مثال: +" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+      <div class="fg"><label>لاحقة (بعد الرقم)</label><input id="sb-suffix" type="text" value="${row.suffix || ''}" placeholder="مثال: %" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="sbSaveEdit('${id}')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:'Cairo',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;">💾 حفظ</button>
+      <button onclick="closeMdl()" style="padding:10px 18px;border-radius:10px;border:1.5px solid var(--gray-mid);background:var(--white);font-family:'Cairo',sans-serif;font-size:.95rem;cursor:pointer;">إلغاء</button>
+    </div>
+  `;
+  openMdl();
+}
+
+async function sbSaveEdit(id) {
+  const value  = document.getElementById('sb-val')?.value?.trim();
+  const label  = document.getElementById('sb-label')?.value?.trim();
+  const prefix = document.getElementById('sb-prefix')?.value || '';
+  const suffix = document.getElementById('sb-suffix')?.value || '';
+  if (!value || !label) { toast('يرجى ملء القيمة والتسمية', 'err'); return; }
+  try {
+    const { error } = await sb.from('site_stats').update({ value, label, prefix, suffix, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+    toast('تم الحفظ ✅');
+    closeMdl();
+    sbLoadStats();
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
+}
+
+function sbAddStat() {
+  const modal = document.getElementById('mdl-box');
+  if (!modal) return;
+  modal.innerHTML = `
+    <div style="font-size:1.05rem;font-weight:800;margin-bottom:18px;color:var(--dark)">➕ إضافة إحصائية جديدة</div>
+    <div class="fg" style="margin-bottom:12px"><label>معرف فريد (بالإنجليزية)</label><input id="sb-new-id" type="text" placeholder="مثال: teachers" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+    <div class="fg" style="margin-bottom:12px"><label>القيمة (الرقم)</label><input id="sb-new-val" type="text" placeholder="مثال: 50" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+    <div class="fg" style="margin-bottom:12px"><label>النص (التسمية)</label><input id="sb-new-label" type="text" placeholder="مثال: معلم متخصص" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+      <div class="fg"><label>بادئة</label><input id="sb-new-prefix" type="text" placeholder="مثال: +" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+      <div class="fg"><label>لاحقة</label><input id="sb-new-suffix" type="text" placeholder="مثال: %" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="sbSaveNew()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:'Cairo',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;">💾 إضافة</button>
+      <button onclick="closeMdl()" style="padding:10px 18px;border-radius:10px;border:1.5px solid var(--gray-mid);background:var(--white);font-family:'Cairo',sans-serif;font-size:.95rem;cursor:pointer;">إلغاء</button>
+    </div>
+  `;
+  openMdl();
+}
+
+async function sbSaveNew() {
+  const id     = document.getElementById('sb-new-id')?.value?.trim().toLowerCase().replace(/\s+/g,'_');
+  const value  = document.getElementById('sb-new-val')?.value?.trim();
+  const label  = document.getElementById('sb-new-label')?.value?.trim();
+  const prefix = document.getElementById('sb-new-prefix')?.value || '';
+  const suffix = document.getElementById('sb-new-suffix')?.value || '';
+  if (!id || !value || !label) { toast('يرجى ملء كل الحقول المطلوبة', 'err'); return; }
+  const sortOrder = _sbRows.length ? Math.max(..._sbRows.map(r => r.sort_order)) + 1 : 1;
+  try {
+    const { error } = await sb.from('site_stats').insert({ id, value, label, prefix, suffix, sort_order: sortOrder, is_visible: true });
+    if (error) throw error;
+    toast('تمت الإضافة ✅');
+    closeMdl();
+    sbLoadStats();
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
 }
 
 </script>

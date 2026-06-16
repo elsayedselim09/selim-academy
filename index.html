@@ -1436,6 +1436,43 @@ footer { background:var(--dark); padding:60px 5% 30px; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+// ── شريط الإحصائيات الديناميكي ──
+async function loadStatsBar() {
+  var grid = document.getElementById('statsbar-grid');
+  if (!grid) return;
+  try {
+    var db = window._sb;
+    if (!db) return;
+    // جلب إجمالي الزيارات + الخانات معاً
+    var results = await Promise.all([
+      db.from('page_views').select('id', { count: 'exact', head: true }),
+      db.from('site_stats').select('*').eq('is_visible', true).order('sort_order')
+    ]);
+    var totalVisits = results[0].count || 0;
+    var stats = results[1].data || [];
+    if (!stats.length) return;
+    var html = stats.map(function(item) {
+      var val = item.id === 'visits'
+        ? totalVisits.toLocaleString('ar-EG')
+        : item.value;
+      var prefix = item.prefix || '';
+      var suffix = item.suffix || '';
+      return '<div class="stat-item reveal"><div class="stat-num">'
+        + prefix + '<span>' + val + '</span>' + suffix
+        + '</div><div class="stat-label">' + item.label + '</div></div>';
+    }).join('');
+    grid.innerHTML = html;
+    grid.querySelectorAll('.reveal').forEach(function(el) {
+      el.classList.add('visible');
+    });
+  } catch(e) {
+    console.warn('statsbar load error:', e);
+  }
+}
+window.addEventListener('load', function() { setTimeout(loadStatsBar, 400); });
+</script>
 <script>
   var DASHBOARD_APP_URL = window.DASHBOARD_APP_URL || localStorage.getItem('seleem_dashboard_url') || 'dashboard.html';
   window._sb = window.supabase.createClient('https://hjhoudwknwnxfndrgpfe.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s');
@@ -1668,7 +1705,6 @@ footer { background:var(--dark); padding:60px 5% 30px; }
         <a href="vision.html" class="btn-gold">✨ اكتشف رؤيتنا</a>
         <a href="free.html" class="btn-secondary">🎁 محتوى مجاني</a>
         <a href="bylaws.html" class="btn-secondary">📋 اللوائح</a>
-        <button id="hero-install-btn" onclick="window.__pwaInstall && window.__pwaInstall()">📲 تثبيت التطبيق</button>
       </div>
       <div class="hero-stats">
         <div class="hero-stat"><div class="hero-stat-num">95%</div><div class="hero-stat-label">رضا الطلاب</div></div>
@@ -1696,11 +1732,8 @@ footer { background:var(--dark); padding:60px 5% 30px; }
 
 <!-- ══ STATS BAR ══ -->
 <section id="statsbar">
-  <div class="stats-grid">
-    <div class="stat-item reveal"><div class="stat-num">7<span>+</span></div><div class="stat-label">سنوات خبرة تدريسية</div></div>
-    <div class="stat-item reveal"><div class="stat-num">+<span>1000</span></div><div class="stat-label">طالب مسجل</div></div>
-    <div class="stat-item reveal"><div class="stat-num">+<span>3000</span></div><div class="stat-label">حصة تعليمية</div></div>
-    <div class="stat-item reveal"><div class="stat-num">95<span>%</span></div><div class="stat-label">نسبة نجاح الطلاب</div></div>
+  <div class="stats-grid" id="statsbar-grid">
+    <div class="stat-item reveal"><div class="stat-num">—</div><div class="stat-label">جاري التحميل...</div></div>
   </div>
 </section>
 
