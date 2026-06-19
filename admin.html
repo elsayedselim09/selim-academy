@@ -6824,13 +6824,24 @@ async function visLoad() {
   document.getElementById('vis-detail-body').innerHTML = '<div style="padding:20px"><div class="skel" style="height:44px;margin-bottom:8px;border-radius:8px"></div><div class="skel" style="height:44px;margin-bottom:8px;border-radius:8px"></div><div class="skel" style="height:44px;border-radius:8px"></div></div>';
 
   try {
-    const { data, error } = await sb
-      .from('page_views')
-      .select('id, page, referrer, created_at, session_id, user_id, user_type')
-      .order('created_at', { ascending: false });
+    // جلب كل الصفوف على دفعات لتجاوز حد الـ 1000 صف الافتراضي في Supabase
+    let allRows = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data: pageData, error: pageErr } = await sb
+        .from('page_views')
+        .select('id, page, referrer, created_at, session_id, user_id, user_type')
+        .order('created_at', { ascending: false })
+        .range(from, from + pageSize - 1);
 
-    if (error) throw error;
-    _visAllRows = data || [];
+      if (pageErr) throw pageErr;
+      if (!pageData || pageData.length === 0) break;
+      allRows = allRows.concat(pageData);
+      if (pageData.length < pageSize) break;
+      from += pageSize;
+    }
+    _visAllRows = allRows;
 
     const userIds = [...new Set(_visAllRows.filter(r => r.user_id).map(r => r.user_id))];
     if (userIds.length > 0) {
