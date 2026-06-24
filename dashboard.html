@@ -971,7 +971,8 @@ let STATE = {
   user: null, profile: null,
   enrollments: [], sessions: [],
   subscription: null, activity: [],
-  notifications: [], currentPage: 'home'
+  notifications: [], currentPage: 'home',
+  chatUnread: 0
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -1222,6 +1223,9 @@ async function fetchAllData(userId) {
   STATE.profile = p.data;
   const approved = approvedReqs.data || [];
   const teEnr    = teEnrRes.data    || [];
+
+  // ── جلب عدد رسائل الشات غير المقروءة ──
+  loadStudentChatUnread(userId).catch(() => {});
 
   // ── جلب أسماء المعلمين المعينين للطلبات ──
   const assignedTIds = [...new Set(approved.map(r => r.assigned_teacher_id).filter(Boolean))];
@@ -1608,17 +1612,27 @@ const NAV_ITEMS = [
   { id:'sessions',     icon:'🎥', label:'الحصص'      },
   { id:'exams',        icon:'📝', label:'الاختبارات'  },
   { id:'subscription', icon:'💳', label:'الاشتراك'   },
+  { id:'chat',         icon:'💬', label:'الرسائل', external:'chat.html' },
   { id:'settings',     icon:'⚙️', label:'الإعدادات'  },
-  { id:'support',      icon:'💬', label:'الدعم'      },
+  { id:'support',      icon:'🎧', label:'الدعم'      },
 ];
 
 function renderNav() {
-  const unread = STATE.notifications.filter(n => !n.is_read).length;
+  const unread     = STATE.notifications.filter(n => !n.is_read).length;
+  const chatUnread = STATE.chatUnread || 0;
   document.getElementById('sidebar-nav').innerHTML =
     `<div class="nav-label">القائمة الرئيسية</div>` +
     NAV_ITEMS.map(n => {
-      const badge = (n.id === 'sessions' && unread > 0)
+      const notifBadge = (n.id === 'sessions' && unread > 0)
         ? `<span class="nav-badge">${unread}</span>` : '';
+      const chatBadge  = (n.id === 'chat' && chatUnread > 0)
+        ? `<span class="nav-badge" style="background:#EF4444">${chatUnread > 99 ? '99+' : chatUnread}</span>` : '';
+      const badge = notifBadge || chatBadge;
+      if (n.external) {
+        return `<a class="nav-item" href="${n.external}" style="text-decoration:none;display:flex;align-items:center;gap:10px">
+          <span class="nav-icon">${n.icon}</span>${n.label}${badge}
+        </a>`;
+      }
       return `<button class="nav-item ${STATE.currentPage === n.id ? 'active' : ''}" onclick="goTo('${n.id}')">
         <span class="nav-icon">${n.icon}</span>${n.label}${badge}
       </button>`;
@@ -2335,6 +2349,7 @@ function subjectMaterials() {
       <div class="mat-stats-row">
         <div class="mat-stat-pill">🎬 ${videos.length} فيديو</div>
         <div class="mat-stat-pill">📎 ${files.length} ملف</div>
+        ${subj.teacher_id ? `<a href="chat.html?with=${subj.teacher_id}" class="mat-stat-pill" style="background:rgba(255,255,255,.2);cursor:pointer;text-decoration:none;color:#fff;border:1px solid rgba(255,255,255,.3)">💬 راسل المعلم</a>` : ''}
       </div>
     </div>
 
@@ -2716,6 +2731,33 @@ function updateHeaderUI() {
 
   const unread = STATE.notifications.filter(n => !n.is_read).length;
   document.getElementById('notif-dot').style.display = unread > 0 ? 'block' : 'none';
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// CHAT UNREAD — شات الطالب
+// ══════════════════════════════════════════════════════════════════
+async function loadStudentChatUnread(userId) {
+  const { data: parts } = await sb.from('conversation_participants')
+    .select('conversation_id, last_read_at').eq('user_id', userId);
+  if (!parts?.length) return;
+  let total = 0;
+  for (const p of parts) {
+    const { count } = await sb.from('messages').select('*', { count: 'exact', head: true })
+      .eq('conversation_id', p.conversation_id)
+      .neq('sender_id', userId)
+      .gt('created_at', p.last_read_at || '1970-01-01');
+    total += (count || 0);
+  }
+  STATE.chatUnread = total;
+  renderNav(); // تحديث الـ badge فوراً
+
+  // Realtime — تحديث Badge عند وصول رسالة جديدة
+  sb.channel('student-chat-badge')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async () => {
+      await loadStudentChatUnread(userId);
+    })
+    .subscribe();
 }
 
 // ══════════════════════════════════════════════════════════════════

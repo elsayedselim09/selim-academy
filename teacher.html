@@ -1104,6 +1104,11 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
     <button class="nav-item"        id="nav-exams"    onclick="goTo('exams')">
       <span class="nav-icon">📝</span> الاختبارات
     </button>
+    <div class="nav-group-label">التواصل</div>
+    <a class="nav-item" id="nav-chat" href="chat.html" style="text-decoration:none;display:flex;align-items:center;gap:10px">
+      <span class="nav-icon">💬</span> الرسائل
+      <span id="chat-unread-badge" style="margin-right:auto;background:#EF4444;color:#fff;font-size:.62rem;font-weight:900;padding:2px 7px;border-radius:50px;display:none">0</span>
+    </a>
     <div class="nav-group-label">الحساب</div>
     <button class="nav-item"        id="nav-profile"  onclick="goTo('profile')">
       <span class="nav-icon">👤</span> حسابي
@@ -2424,7 +2429,29 @@ async function boot() {
   document.getElementById('main-header').style.display = 'flex';
   document.getElementById('app').style.display = 'block';
 
-  await Promise.all([ loadHomeData(), loadSubjects() ]);
+  await Promise.all([ loadHomeData(), loadSubjects(), loadChatUnread() ]);
+}
+
+// ══════════════════════════════════════════════
+// CHAT UNREAD BADGE
+// ══════════════════════════════════════════════
+async function loadChatUnread() {
+  try {
+    const { data: parts } = await sb.from('conversation_participants')
+      .select('conversation_id, last_read_at').eq('user_id', ST.user.id);
+    if (!parts?.length) return;
+    let total = 0;
+    for (const p of parts) {
+      const { count } = await sb.from('messages').select('*',{count:'exact',head:true})
+        .eq('conversation_id', p.conversation_id)
+        .neq('sender_id', ST.user.id)
+        .gt('created_at', p.last_read_at || '1970-01-01');
+      total += (count || 0);
+    }
+    const badge = document.getElementById('chat-unread-badge');
+    if (badge && total > 0) { badge.textContent = total > 99 ? '99+' : total; badge.style.display = 'inline'; }
+    sb.channel('teacher-chat-badge').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},async()=>{ await loadChatUnread(); }).subscribe();
+  } catch {}
 }
 
 // ══════════════════════════════════════════════
@@ -4334,7 +4361,10 @@ async function loadStudentsList(gradeId) {
               <div class="stu-stat"><div class="stu-stat-num stu-absent-num">${att.absent}</div><div class="stu-stat-lbl">غاب</div></div>
               <div class="stu-stat"><div class="stu-stat-num" style="color:var(--blue)">${pct}%</div><div class="stu-stat-lbl">نسبة</div></div>
             </div>
-            <div onclick="event.stopPropagation()">
+            <div onclick="event.stopPropagation()" style="display:flex;gap:6px;align-items:center">
+              <a href="chat.html?with=${en.student_id}" class="btn-renew" style="background:var(--blue-light);color:var(--blue);border:1px solid #BFDBFE;text-decoration:none;display:inline-flex;align-items:center;gap:4px">
+                💬 راسل
+              </a>
               <button class="btn-renew" id="renew-btn-${en.student_id}" onclick="renewStudentSubscription('${en.student_id}','${(p.full_name||'').replace(/'/g,'')}','${en.grade_id||''}')">
                 🔄 تجديد
               </button>
