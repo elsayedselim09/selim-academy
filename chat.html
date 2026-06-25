@@ -777,10 +777,19 @@ function renderMessages() {
     // Auto message
     if (m.type === 'auto')   { html += `<div class="auto-bub"><div class="auto-label">تنبيه آلي</div><div class="auto-text">${m.content}</div></div>`; return; }
 
-    const isMe   = m.sender_id === C.user.id;
+    // وضع المراقبة: admin/supervisor بيشوف المحادثة من بره
+    // المعلم على اليمين، الطالب على اليسار
+    const isMonitor = (C.role === 'admin' || C.role === 'supervisor') && m.sender_id !== C.user.id;
+    let isMe;
+    if (isMonitor) {
+      const senderRole = m.sender?.role || '';
+      isMe = (senderRole === 'teacher' || senderRole === 'admin' || senderRole === 'staff');
+    } else {
+      isMe = m.sender_id === C.user.id;
+    }
     const name   = m.sender?.full_name || '';
     const letter = name.charAt(0) || '?';
-    const avCls  = isMe ? 'av-n' : roleToAv(m.sender?.role);
+    const avCls  = roleToAv(m.sender?.role);
     const rowCls = isMe ? 'me' : 'them';
 
     // Group: show name above bubble for non-me
