@@ -296,6 +296,15 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <button class="nav-item"        id="nav-site-content" onclick="goTo('site-content')"><span class="nav-icon">🌐</span> إدارة المحتوى</button>
     <button class="nav-item"        id="nav-catalog"      onclick="goTo('catalog')"><span class="nav-icon">🎓</span> إدارة الكورسات</button>
     <button class="nav-item"        id="nav-announcements" onclick="goTo('announcements')"><span class="nav-icon">📢</span> الإعلانات</button>
+    <div class="nav-label">التواصل</div>
+    <button class="nav-item" id="nav-comm-center" onclick="goTo('comm-center')">
+      <span class="nav-icon">💬</span> Communication Center
+      <span class="nav-badge" id="comm-badge" style="display:none">0</span>
+    </button>
+    <button class="nav-item" id="nav-reports-list" onclick="goTo('reports-list')">
+      <span class="nav-icon">🚩</span> البلاغات
+      <span class="nav-badge" id="rep-badge" style="display:none">0</span>
+    </button>
     <div class="nav-label">الحساب</div>
     <button class="nav-item"        id="nav-profile"   onclick="goTo('profile')"><span class="nav-icon">👤</span> حسابي</button>
   </nav>
@@ -1309,6 +1318,115 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     </div>
   </div>
 
+
+  <!-- ══════════════════════════════════════════════════════════
+       COMMUNICATION CENTER
+  ══════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-comm-center">
+    <div class="page-title">💬 Communication Center</div>
+    <p class="page-sub">متابعة كل محادثات المنصة في مكان واحد</p>
+
+    <!-- STATS -->
+    <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:24px" id="comm-stats-grid">
+      <div class="stat-card" style="cursor:pointer" onclick="commFilter('all')">
+        <div class="stat-icon si-blue">💬</div>
+        <div><div class="stat-num" id="cs-total">—</div><div class="stat-label">إجمالي المحادثات</div></div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="commFilter('today')">
+        <div class="stat-icon si-green">📅</div>
+        <div><div class="stat-num" id="cs-today">—</div><div class="stat-label">نشطة اليوم</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-gold">📨</div>
+        <div><div class="stat-num" id="cs-msgs">—</div><div class="stat-label">رسائل اليوم</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-purple">👥</div>
+        <div><div class="stat-num" id="cs-groups">—</div><div class="stat-label">مجموعات</div></div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="goTo('reports-list')">
+        <div class="stat-icon si-red">🚩</div>
+        <div><div class="stat-num" id="cs-reports">—</div><div class="stat-label">بلاغات معلقة</div></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px">
+      <!-- أكثر المعلمين تواصلاً -->
+      <div class="section-card">
+        <div class="section-head">
+          <h3>👨‍🏫 أكثر المعلمين تواصلاً</h3>
+          <button class="btn-refresh" onclick="loadCommCenter()">🔄</button>
+        </div>
+        <div id="comm-teachers-list" style="padding:0 6px"></div>
+      </div>
+      <!-- أكثر الطلاب تفاعلاً -->
+      <div class="section-card">
+        <div class="section-head">
+          <h3>👥 أكثر الطلاب تفاعلاً</h3>
+          <button class="btn-refresh" onclick="loadCommCenter()">🔄</button>
+        </div>
+        <div id="comm-students-list" style="padding:0 6px"></div>
+      </div>
+    </div>
+
+    <!-- كل المحادثات -->
+    <div class="section-card">
+      <div class="section-head">
+        <h3>📋 جميع المحادثات</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="filter-btn active" id="cft-all"    onclick="commFilter('all',this)">الكل</button>
+          <button class="filter-btn"        id="cft-direct" onclick="commFilter('direct',this)">فردية</button>
+          <button class="filter-btn"        id="cft-group"  onclick="commFilter('group',this)">مجموعات</button>
+          <input class="search-input" id="comm-search" type="text" placeholder="🔍 بحث..." style="min-width:160px" oninput="renderCommTable()">
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>المشاركون</th>
+              <th>آخر رسالة</th>
+              <th>النوع</th>
+              <th>آخر نشاط</th>
+              <th>رسائل</th>
+              <th>إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="comm-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       REPORTS LIST
+  ══════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-reports-list">
+    <div class="page-title">🚩 البلاغات</div>
+    <p class="page-sub">بلاغات المستخدمين على المحادثات</p>
+    <div class="section-card">
+      <div class="section-head">
+        <h3>قائمة البلاغات</h3>
+        <button class="btn-refresh" onclick="loadReportsList()">🔄 تحديث</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>المُبلِّغ</th>
+              <th>السبب</th>
+              <th>المحادثة</th>
+              <th>التاريخ</th>
+              <th>الحالة</th>
+              <th>إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="rep-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <!-- CONFIRM MODAL -->
@@ -1772,7 +1890,7 @@ function goTo(name) {
   document.getElementById('nav-'+name).classList.add('active');
   closeSidebar();
   if (name !== 'sessions' && _sessInterval) { clearInterval(_sessInterval); _sessInterval = null; }
-  const loaders = {courses:loadCourses, sessions:initSessions, students:()=>{ switchStudentTab('list'); loadStudents(); }, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit, announcements:annLoad, catalog:loadCatalog, visitors:visLoad};
+  const loaders = {courses:loadCourses, sessions:initSessions, students:()=>{ switchStudentTab('list'); loadStudents(); }, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit, announcements:annLoad, catalog:loadCatalog, visitors:visLoad, 'comm-center':loadCommCenter, 'reports-list':loadReportsList};
   if(loaders[name]) loaders[name]();
   if(name==='requests') { renderReqTable(); loadNewStudentsWithoutSub(); }
 }
@@ -4596,8 +4714,12 @@ async function revokeTeacher(teacherId) {
       loadCourses(),
       loadTeachers(),
       loadStudents(),
-      loadAdminSessions()
+      loadAdminSessions(),
+      loadCommBadge()
     ]);
+
+    // حفظ myId للـ reports
+    window._myId = session.user.id;
 
     document.getElementById('loader').style.display='none';
   } catch(e){
@@ -7017,6 +7139,249 @@ function visRenderTable() {
     + rows
     + (_visFiltered.length > 200 ? '<div style="padding:12px;text-align:center;color:var(--gray);font-size:.8rem">يعرض أول 200 زيارة من إجمالي ' + _visFiltered.length + '</div>' : '');
 }
+
+
+// ══════════════════════════════════════════════════════════════════
+// COMMUNICATION CENTER — الإدارة
+// ══════════════════════════════════════════════════════════════════
+let _allConvs   = [];
+let _commFilter = 'all';
+
+async function loadCommCenter() {
+  // ── stats ──
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    const [
+      { count: total },
+      { count: todayActive },
+      { count: msgsToday },
+      { count: groups },
+      { count: pendingReps }
+    ] = await Promise.all([
+      sb.from('conversations').select('*',{count:'exact',head:true}),
+      sb.from('conversations').select('*',{count:'exact',head:true}).gte('updated_at', today),
+      sb.from('messages').select('*',{count:'exact',head:true}).gte('created_at', today),
+      sb.from('conversations').select('*',{count:'exact',head:true}).eq('type','group'),
+      sb.from('conversation_reports').select('*',{count:'exact',head:true}).eq('status','pending'),
+    ]);
+
+    document.getElementById('cs-total').textContent   = total   || 0;
+    document.getElementById('cs-today').textContent   = todayActive || 0;
+    document.getElementById('cs-msgs').textContent    = msgsToday  || 0;
+    document.getElementById('cs-groups').textContent  = groups  || 0;
+    document.getElementById('cs-reports').textContent = pendingReps || 0;
+
+    // badge في الـ nav
+    if (pendingReps > 0) {
+      document.getElementById('rep-badge').textContent   = pendingReps;
+      document.getElementById('rep-badge').style.display = 'inline';
+    }
+  } catch(e) { console.warn('comm stats:', e.message); }
+
+  // ── جميع المحادثات ──
+  try {
+    const { data, error } = await sb.from('conversations')
+      .select('*, conversation_participants(user_id, profiles(full_name, role))')
+      .order('updated_at', { ascending: false })
+      .limit(200);
+    if (error) throw error;
+    _allConvs = data || [];
+    renderCommTable();
+  } catch(e) {
+    document.getElementById('comm-tbody').innerHTML =
+      `<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:20px">خطأ: ${e.message}</td></tr>`;
+  }
+
+  // ── أكثر المعلمين تواصلاً ──
+  loadCommTopUsers('teacher', 'comm-teachers-list');
+  // ── أكثر الطلاب تفاعلاً ──
+  loadCommTopUsers('student', 'comm-students-list');
+}
+
+async function loadCommTopUsers(role, elId) {
+  const el = document.getElementById(elId);
+  el.innerHTML = `<div style="padding:12px"><div class="skel" style="height:36px;margin-bottom:6px;border-radius:8px"></div><div class="skel" style="height:36px;margin-bottom:6px;border-radius:8px"></div><div class="skel" style="height:36px;border-radius:8px"></div></div>`;
+  try {
+    // جلب المشاركين من نوع معين وعدد رسائلهم
+    const { data: msgs } = await sb.from('messages')
+      .select('sender_id, profiles!sender_id(full_name, role)')
+      .eq('type', 'text');
+    if (!msgs?.length) { el.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:.83rem">لا توجد بيانات</div>`; return; }
+
+    const counts = {};
+    const names  = {};
+    msgs.forEach(m => {
+      if (m.profiles?.role !== role) return;
+      counts[m.sender_id] = (counts[m.sender_id] || 0) + 1;
+      names[m.sender_id]  = m.profiles?.full_name || '—';
+    });
+
+    const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,5);
+    if (!sorted.length) { el.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:.83rem">لا توجد بيانات</div>`; return; }
+
+    el.innerHTML = sorted.map(([uid, cnt], i) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;font-size:.68rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+        <div class="u-av" style="width:30px;height:30px;font-size:.72rem;flex-shrink:0">${(names[uid]||'?').charAt(0)}</div>
+        <div style="flex:1;font-size:.84rem;font-weight:700">${names[uid]}</div>
+        <div style="background:var(--primary-light);color:var(--primary);padding:2px 10px;border-radius:20px;font-size:.75rem;font-weight:700">${cnt} رسالة</div>
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="padding:12px;color:var(--danger);font-size:.8rem">خطأ: ${e.message}</div>`;
+  }
+}
+
+function commFilter(type, el) {
+  _commFilter = type;
+  document.querySelectorAll('[id^="cft-"]').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderCommTable();
+}
+
+function renderCommTable() {
+  const search = (document.getElementById('comm-search')?.value || '').toLowerCase();
+  let list = _allConvs;
+  if (_commFilter !== 'all') list = list.filter(c => c.type === _commFilter);
+  if (search) list = list.filter(c => {
+    const parts = (c.conversation_participants || []).map(p => p.profiles?.full_name || '').join(' ');
+    return parts.toLowerCase().includes(search) || (c.last_message || '').toLowerCase().includes(search);
+  });
+
+  const tb = document.getElementById('comm-tbody');
+  if (!list.length) {
+    tb.innerHTML = `<tr><td colspan="6"><div class="empty-box"><div class="ei">💬</div><div class="et">لا توجد محادثات</div></div></td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = list.map(c => {
+    const parts   = (c.conversation_participants || []);
+    const names   = parts.map(p => p.profiles?.full_name || '—').join(' ↔ ');
+    const roles   = parts.map(p => roleLabel(p.profiles?.role)).join(', ');
+    const typeB   = c.type === 'group'
+      ? '<span class="badge b-blue">👥 مجموعة</span>'
+      : '<span class="badge b-gray">👤 فردية</span>';
+    const lastMsg = c.last_message ? escHtml(c.last_message.substring(0,40)) : '—';
+    const time    = c.updated_at ? fmtDateAdmin(c.updated_at) : '—';
+
+    return `<tr>
+      <td>
+        <div style="font-size:.86rem;font-weight:700">${names || 'محادثة'}</div>
+        <div style="font-size:.73rem;color:var(--text-muted)">${roles}</div>
+      </td>
+      <td style="font-size:.82rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${lastMsg}</td>
+      <td>${typeB}</td>
+      <td style="font-size:.8rem">${time}</td>
+      <td><span class="badge b-blue" id="msg-count-${c.id}">—</span></td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <a href="chat.html?conv=${c.id}" class="btn-view" style="text-decoration:none" target="_blank">👁️ فتح</a>
+          <button class="btn-rm" onclick="deleteConv('${c.id}')">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // جلب عدد رسائل كل محادثة بشكل async خفيف
+  list.forEach(async c => {
+    try {
+      const { count } = await sb.from('messages').select('*',{count:'exact',head:true}).eq('conversation_id', c.id);
+      const el = document.getElementById(`msg-count-${c.id}`);
+      if (el) el.textContent = count || 0;
+    } catch {}
+  });
+}
+
+async function deleteConv(convId) {
+  if (!confirm('هل أنت متأكد من حذف هذه المحادثة وكل رسائلها؟')) return;
+  const { error } = await sb.from('conversations').delete().eq('id', convId);
+  if (error) { toast('خطأ: ' + error.message, 'err'); return; }
+  toast('✅ تم حذف المحادثة', 'ok');
+  loadCommCenter();
+}
+
+// ── REPORTS ──
+async function loadReportsList() {
+  const tb = document.getElementById('rep-tbody');
+  tb.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px"><div class="skel" style="height:40px;border-radius:8px"></div></td></tr>`;
+  try {
+    const { data, error } = await sb.from('conversation_reports')
+      .select('*, reporter:profiles!reported_by(full_name), conversations(last_message)')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const list = data || [];
+    // تحديث badge
+    const pending = list.filter(r => r.status === 'pending').length;
+    document.getElementById('rep-badge').textContent   = pending || 0;
+    document.getElementById('rep-badge').style.display = pending > 0 ? 'inline' : 'none';
+    document.getElementById('cs-reports').textContent  = pending;
+
+    if (!list.length) {
+      tb.innerHTML = `<tr><td colspan="6"><div class="empty-box"><div class="ei">🎉</div><div class="et">لا توجد بلاغات</div></div></td></tr>`;
+      return;
+    }
+    tb.innerHTML = list.map(r => `
+      <tr>
+        <td><div class="u-info"><div class="u-av">${(r.reporter?.full_name||'?').charAt(0)}</div><div class="u-name">${r.reporter?.full_name || '—'}</div></div></td>
+        <td style="font-size:.84rem">${escHtml(r.reason || '—')}</td>
+        <td style="font-size:.78rem;color:var(--text-muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.conversations?.last_message || '—'}</td>
+        <td style="font-size:.8rem">${fmtDateAdmin(r.created_at)}</td>
+        <td>${r.status === 'pending'
+          ? '<span class="badge b-pending">⏳ معلق</span>'
+          : r.status === 'reviewed'
+            ? '<span class="badge b-approved">✅ تمت المراجعة</span>'
+            : '<span class="badge b-gray">🔒 مغلق</span>'}</td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${r.conversations?.id ? `<a href="chat.html?conv=${r.conversation_id}" class="btn-view" style="text-decoration:none" target="_blank">👁️ فتح</a>` : ''}
+            ${r.status === 'pending'
+              ? `<button class="btn-ok" onclick="updateReport('${r.id}','reviewed')">✅ راجعت</button>`
+              : ''}
+            <button class="btn-rm" onclick="updateReport('${r.id}','closed')">🔒 أغلق</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch(e) {
+    tb.innerHTML = `<tr><td colspan="6" style="color:var(--danger);padding:16px">خطأ: ${e.message}</td></tr>`;
+  }
+}
+
+async function updateReport(id, status) {
+  const { error } = await sb.from('conversation_reports')
+    .update({ status, reviewed_by: _myId })
+    .eq('id', id);
+  if (error) { toast('خطأ: ' + error.message, 'err'); return; }
+  toast('✅ تم التحديث', 'ok');
+  loadReportsList();
+}
+
+// ── helpers ──
+function roleLabel(r) {
+  return { teacher:'معلم', student:'طالب', admin:'إدارة' }[r] || r || '—';
+}
+function fmtDateAdmin(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('ar-EG', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+}
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// تحميل comm badge عند فتح الـ admin
+async function loadCommBadge() {
+  try {
+    const { count } = await sb.from('conversation_reports')
+      .select('*',{count:'exact',head:true}).eq('status','pending');
+    if (count > 0) {
+      document.getElementById('comm-badge').textContent   = count;
+      document.getElementById('comm-badge').style.display = 'inline';
+      document.getElementById('rep-badge').textContent    = count;
+      document.getElementById('rep-badge').style.display  = 'inline';
+    }
+  } catch {}
+}
+
 
 </script>
 </body>
