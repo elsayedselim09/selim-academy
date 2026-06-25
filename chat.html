@@ -483,31 +483,55 @@ async function loadConversations() {
   try {
     let convRows = [];
 
+    // ── خطوة 1: جيب conversation_ids ──
+    let ids = [];
     if (C.role === 'admin' || C.role === 'supervisor') {
-      // الإدارة: كل المحادثات مرتبة بـ updated_at
       const { data, error } = await sb.from('conversations')
-        .select('*, conversation_participants(user_id, profiles(full_name, role, avatar_url))')
-        .order('updated_at', { ascending: false });
+        .select('id').order('updated_at', { ascending: false });
       if (error) throw error;
-      convRows = data || [];
+      ids = (data||[]).map(c => c.id);
     } else {
-      // خطوة 1: جيب conversation_ids بتاعت المستخدم
       const { data: parts, error: pErr } = await sb.from('conversation_participants')
-        .select('conversation_id')
-        .eq('user_id', C.user.id);
+        .select('conversation_id').eq('user_id', C.user.id);
       if (pErr) throw pErr;
-
-      const ids = (parts || []).map(p => p.conversation_id).filter(Boolean);
-      if (!ids.length) { C.convs = []; renderConvList(); updateUnreadBadge(); return; }
-
-      // خطوة 2: جيب الـ conversations بـ in() وـ order صح
-      const { data, error } = await sb.from('conversations')
-        .select('*, conversation_participants(user_id, profiles(full_name, role, avatar_url))')
-        .in('id', ids)
-        .order('updated_at', { ascending: false });
-      if (error) throw error;
-      convRows = data || [];
+      ids = (parts||[]).map(p => p.conversation_id).filter(Boolean);
     }
+
+    if (!ids.length) { C.convs = []; renderConvList(); updateUnreadBadge(); return; }
+
+    // ── خطوة 2: جيب conversations بدون nested profiles ──
+    const { data: convData, error: cErr } = await sb.from('conversations')
+      .select('id, type, name, last_message, updated_at, member_count, created_by')
+      .in('id', ids)
+      .order('updated_at', { ascending: false });
+    if (cErr) throw cErr;
+
+    // ── خطوة 3: جيب المشاركين ──
+    const { data: partsData, error: ptErr } = await sb.from('conversation_participants')
+      .select('conversation_id, user_id').in('conversation_id', ids);
+    if (ptErr) throw ptErr;
+
+    // ── خطوة 4: جيب بيانات كل المستخدمين المشاركين من profiles ──
+    const allUserIds = [...new Set((partsData||[]).map(p => p.user_id).filter(Boolean))];
+    let profilesMap = {};
+    if (allUserIds.length) {
+      const { data: profs } = await sb.from('profiles')
+        .select('id, full_name, role, teacher_number, student_number, avatar_url')
+        .in('id', allUserIds);
+      (profs||[]).forEach(p => { profilesMap[p.id] = p; });
+    }
+
+    // ── ربط الكل ──
+    convRows = (convData||[]).map(conv => {
+      const parts = (partsData||[]).filter(p => p.conversation_id === conv.id);
+      return {
+        ...conv,
+        conversation_participants: parts.map(p => ({
+          user_id: p.user_id,
+          profiles: profilesMap[p.user_id] || { full_name: '...', role: '' }
+        }))
+      };
+    });
 
     C.convs = enrichConvs(convRows);
     renderConvList();
@@ -515,7 +539,7 @@ async function loadConversations() {
   } catch (e) {
     console.error('loadConversations:', e);
     document.getElementById('convList').innerHTML =
-      `<div style="padding:16px;color:var(--red);font-size:.83rem">⚠️ خطأ في تحميل المحادثات: ${e.message}</div>`;
+      `<div style="padding:16px;color:var(--red);font-size:.83rem">⚠️ ${e.message}</div>`;
   }
 }
 
@@ -680,16 +704,30 @@ async function loadMessages(convId) {
        </div>`).join('');
 
   try {
-    const { data, error } = await sb.from('messages')
-      .select('*, sender:profiles!sender_id(full_name, role, avatar_url)')
+    // خطوة 1: جيب الرسائل بدون nested join
+    const { data: msgsData, error } = await sb.from('messages')
+      .select('id, conversation_id, sender_id, content, type, file_type, file_url, file_name, file_size, audio_duration, delivered_at, read_at, created_at')
       .eq('conversation_id', convId)
       .order('created_at', { ascending: true })
       .limit(100);
     if (error) throw error;
-    C.messages = data || [];
+
+    // خطوة 2: جيب بيانات المرسلين
+    const senderIds = [...new Set((msgsData||[]).map(m => m.sender_id).filter(Boolean))];
+    let sendersMap = {};
+    if (senderIds.length) {
+      const { data: senders } = await sb.from('profiles')
+        .select('id, full_name, role, avatar_url').in('id', senderIds);
+      (senders||[]).forEach(s => { sendersMap[s.id] = s; });
+    }
+
+    C.messages = (msgsData||[]).map(m => ({
+      ...m,
+      sender: sendersMap[m.sender_id] || { full_name: '...', role: '' }
+    }));
     renderMessages();
   } catch (e) {
-    document.getElementById('msgs').innerHTML = `<div style="padding:20px;color:var(--red);text-align:center">خطأ في التحميل: ${e.message}</div>`;
+    document.getElementById('msgs').innerHTML = `<div style="padding:20px;color:var(--red);text-align:center">خطأ: ${e.message}</div>`;
   }
 }
 
@@ -792,15 +830,20 @@ function subscribeRealtime(convId) {
       filter: `conversation_id=eq.${convId}`
     }, async payload => {
       const newMsg = payload.new;
+      if (!newMsg || newMsg.conversation_id !== convId) return;
       // جلب بيانات المرسل
-      const { data: sender } = await sb.from('profiles').select('full_name,role').eq('id', newMsg.sender_id).single();
+      const { data: sender } = await sb.from('profiles')
+        .select('full_name,role').eq('id', newMsg.sender_id).single();
       newMsg.sender = sender || {};
       C.messages.push(newMsg);
       renderMessages();
       // تحديث آخر رسالة في القائمة
       const conv = C.convs.find(c => c.id === convId);
-      if (conv) { conv.lastMsg = newMsg.content || '📎 مرفق'; conv.lastTime = fmtTime(newMsg.created_at); }
-      renderConvList();
+      if (conv) {
+        conv.lastMsg  = newMsg.content || '📎 مرفق';
+        conv.lastTime = fmtTime(newMsg.created_at);
+        renderConvList();
+      }
     })
     .subscribe();
 }
