@@ -23,9 +23,10 @@
             var newWorker = registration.installing;
             newWorker.addEventListener('statechange', function () {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('[PWA] New version available!');
+                console.log('[PWA] New version available — auto-applying...');
                 _waitingWorker = newWorker;
-                showUpdateBanner();
+                // SW يعمل skipWaiting تلقائياً — لا نحتاج بانر
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
               }
             });
           });
