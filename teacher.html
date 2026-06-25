@@ -2447,6 +2447,9 @@ async function boot() {
   document.getElementById('app').style.display = 'block';
 
   await Promise.all([ loadHomeData(), loadSubjects(), loadChatUnread() ]);
+
+  // تسجيل OneSignal للإشعارات
+  registerOneSignal(ST.user.id);
 }
 
 // ══════════════════════════════════════════════
@@ -7882,10 +7885,16 @@ async function registerOneSignal(userId) {
       const granted = await OneSignal.Notifications.requestPermission();
       if (!granted) return;
       await OneSignal.login(userId);
-      const playerId = OneSignal.User?.PushSubscription?.id;
-      if (!playerId) return;
+      // انتظر حتى يتم تسجيل الـ subscription (max 5 ثواني)
+      let playerId = null;
+      for (let i = 0; i < 10; i++) {
+        playerId = OneSignal.User?.PushSubscription?.id;
+        if (playerId) break;
+        await new Promise(r => setTimeout(r, 500));
+      }
+      if (!playerId) { console.warn('OneSignal: no playerId after wait'); return; }
       await sb.from('profiles').update({ onesignal_id: playerId }).eq('id', userId);
-      console.log('✅ OneSignal registered');
+      console.log('✅ OneSignal registered:', playerId);
     });
   } catch(e) { console.warn('OneSignal:', e.message); }
 }
