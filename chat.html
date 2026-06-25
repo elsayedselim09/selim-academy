@@ -644,45 +644,20 @@ async function openConv(convId) {
 
 async function openOrCreateConv(otherUserId) {
   try {
-    // 1) ابحث في C.convs الموجودة
+    // 1) ابحث في C.convs الموجودة أولاً (أسرع)
     const existing = C.convs.find(c => c.type === 'direct' && c.otherUserId === otherUserId);
     if (existing) { await openConv(existing.id); return; }
 
-    // 2) ابحث في Supabase (ممكن محادثة موجودة بس مش loaded)
-    const { data: myParts } = await sb.from('conversation_participants')
-      .select('conversation_id')
-      .eq('user_id', C.user.id);
-    const myIds = (myParts || []).map(p => p.conversation_id);
-
-    if (myIds.length) {
-      const { data: otherParts } = await sb.from('conversation_participants')
-        .select('conversation_id, conversations(type)')
-        .eq('user_id', otherUserId)
-        .in('conversation_id', myIds);
-      const existingConv = (otherParts || []).find(p => p.conversations?.type === 'direct');
-      if (existingConv) {
-        await loadConversations();
-        await openConv(existingConv.conversation_id);
-        return;
-      }
-    }
-
-    // 3) إنشاء محادثة جديدة
-    const { data: conv, error } = await sb.from('conversations').insert({
-      type: 'direct', created_by: C.user.id, updated_at: new Date().toISOString()
-    }).select().single();
+    // 2) استدعاء SECURITY DEFINER function
+    // تبحث عن محادثة موجودة أو تنشئ جديدة — بدون 403
+    const { data: convId, error } = await sb.rpc('create_direct_conversation', {
+      other_user_id: otherUserId
+    });
     if (error) throw error;
 
-    const { error: pErr } = await sb.from('conversation_participants').insert([
-      { conversation_id: conv.id, user_id: C.user.id },
-      { conversation_id: conv.id, user_id: otherUserId },
-    ]);
-    if (pErr) throw pErr;
-
+    // 3) إعادة تحميل القائمة وفتح المحادثة
     await loadConversations();
-    const newConv = C.convs.find(c => c.id === conv.id);
-    if (newConv) await openConv(conv.id);
-    else toast('تم إنشاء المحادثة، اضغط عليها من القائمة', 'ok');
+    await openConv(convId);
 
   } catch (e) {
     console.error('openOrCreateConv:', e);
