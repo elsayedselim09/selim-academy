@@ -179,7 +179,8 @@ async function staleWhileRevalidate(request) {
 //  رسائل من الصفحة الرئيسية
 // ══════════════════════════════════════
 self.addEventListener('message', (event) => {
-  if (event.data?.action === 'skipWaiting') self.skipWaiting();
+  // دعم كلا الصيغتين
+  if (event.data?.action === 'skipWaiting' || event.data?.type === 'SKIP_WAITING') self.skipWaiting();
   if (event.data?.action === 'clearCache') {
     caches.delete(CACHE_NAME).then(() => event.ports[0]?.postMessage({ success: true }));
   }
