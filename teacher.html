@@ -1054,6 +1054,23 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 .solution-upload-zone:hover { border-color:var(--blue); background:var(--blue-light); color:var(--blue) }
 .solution-upload-zone.has-file { border-color:var(--green); background:var(--green-light); color:var(--green) }
 </style>
+  <!-- OneSignal Push Notifications -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "a648d9bc-609b-43a0-9c8e-587b751c3631",
+        safari_web_id: "web.onesignal.auto.2e77cfdc-f6e8-4572-82d4-363b6713f2bc",
+        notifyButton: { enable: false },
+        promptOptions: {
+          slidedown: { prompts: [{ type:"push", autoPrompt:false,
+            text:{ actionMessage:"فعّل الإشعارات لتصلك الرسائل فوراً 🔔", acceptButton:"تفعيل", cancelButton:"لاحقاً" }
+          }]}
+        }
+      });
+    });
+  </script>
 </head>
 <body>
 
@@ -7852,6 +7869,25 @@ async function downloadMyCard(){
   const p=ST.profile||{};let bp=p.backup_password,em=p.email||ST.user?.email;
   if(!bp){const{data}=await sb.from('profiles').select('backup_password,email,teacher_number').eq('id',ST.user.id).single();bp=data?.backup_password;if(!em)em=data?.email;if(data)Object.assign(ST.profile,data);}
   generateAccountCard({fullName:p.full_name||'—',email:em||'—',idNumber:p.teacher_number||'—',backupPassword:bp||'—',role:'teacher'});
+}
+
+
+/* ══════════════════════════════════════════════════
+   OneSignal — تسجيل المستخدم للإشعارات
+══════════════════════════════════════════════════ */
+async function registerOneSignal(userId) {
+  if (!window.OneSignalDeferred) return;
+  try {
+    OneSignalDeferred.push(async function(OneSignal) {
+      const granted = await OneSignal.Notifications.requestPermission();
+      if (!granted) return;
+      await OneSignal.login(userId);
+      const playerId = OneSignal.User?.PushSubscription?.id;
+      if (!playerId) return;
+      await sb.from('profiles').update({ onesignal_id: playerId }).eq('id', userId);
+      console.log('✅ OneSignal registered');
+    });
+  } catch(e) { console.warn('OneSignal:', e.message); }
 }
 
 </script>
