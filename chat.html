@@ -309,8 +309,8 @@ body{font-family:'Cairo',sans-serif;background:var(--gray-100);color:var(--gray-
       <div class="p-top">
         <div class="p-title">💬 الرسائل <span id="unread-total" style="background:var(--red);color:#fff;font-size:.62rem;padding:2px 6px;border-radius:50px;display:none"></span></div>
         <div class="p-actions">
-          <div class="icon-btn" title="مجموعة جديدة" onclick="toast('قريباً 🔜','warn')">👥</div>
-          <div class="icon-btn" title="رجوع للموقع" onclick="window.location='teacher.html'">🏠</div>
+          <div class="icon-btn" title="محادثة جديدة" onclick="openNewChatModal()">✏️</div>
+          <div class="icon-btn" title="رجوع" onclick="goBack()">🏠</div>
         </div>
       </div>
       <div class="srch" style="margin-bottom:10px">
@@ -458,10 +458,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   await loadConversations();
-  // فتح محادثة من URL params لو موجود
-  const params = new URLSearchParams(location.search);
-  const openWith = params.get('with'); // user ID
-  if (openWith) await openOrCreateConv(openWith);
+
+  // فتح محادثة من URL params
+  const params  = new URLSearchParams(location.search);
+  const openWith = params.get('with');   // user ID لبدء محادثة
+  const openConvId = params.get('conv'); // conversation ID للفتح مباشرة
+  if (openWith)   await openOrCreateConv(openWith);
+  else if (openConvId) await openConv(openConvId);
 });
 
 function detectRole(prof) {
@@ -478,32 +481,45 @@ function detectRole(prof) {
 ══════════════════════════════════════════ */
 async function loadConversations() {
   try {
-    let convRows;
+    let convRows = [];
 
     if (C.role === 'admin' || C.role === 'supervisor') {
-      // الإدارة ترى كل المحادثات
-      const { data } = await sb.from('conversations')
-        .select('*, conversation_participants!inner(user_id, profiles(full_name, role, teacher_number, student_number, avatar_url))')
+      // الإدارة: كل المحادثات مرتبة بـ updated_at
+      const { data, error } = await sb.from('conversations')
+        .select('*, conversation_participants(user_id, profiles(full_name, role, avatar_url))')
         .order('updated_at', { ascending: false });
+      if (error) throw error;
       convRows = data || [];
     } else {
-      // باقي الأدوار يرون محادثاتهم فقط
-      const { data } = await sb.from('conversation_participants')
-        .select('conversation_id, conversations(*, conversation_participants(user_id, profiles(full_name, role, avatar_url)))')
-        .eq('user_id', C.user.id)
-        .order('conversations(updated_at)', { ascending: false });
-      convRows = (data || []).map(r => r.conversations).filter(Boolean);
+      // خطوة 1: جيب conversation_ids بتاعت المستخدم
+      const { data: parts, error: pErr } = await sb.from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', C.user.id);
+      if (pErr) throw pErr;
+
+      const ids = (parts || []).map(p => p.conversation_id).filter(Boolean);
+      if (!ids.length) { C.convs = []; renderConvList(); updateUnreadBadge(); return; }
+
+      // خطوة 2: جيب الـ conversations بـ in() وـ order صح
+      const { data, error } = await sb.from('conversations')
+        .select('*, conversation_participants(user_id, profiles(full_name, role, avatar_url))')
+        .in('id', ids)
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      convRows = data || [];
     }
 
-    C.convs = await enrichConvs(convRows);
+    C.convs = enrichConvs(convRows);
     renderConvList();
     updateUnreadBadge();
   } catch (e) {
-    document.getElementById('convList').innerHTML = `<div style="padding:16px;color:var(--red);font-size:.83rem">خطأ: ${e.message}</div>`;
+    console.error('loadConversations:', e);
+    document.getElementById('convList').innerHTML =
+      `<div style="padding:16px;color:var(--red);font-size:.83rem">⚠️ خطأ في تحميل المحادثات: ${e.message}</div>`;
   }
 }
 
-async function enrichConvs(rows) {
+function enrichConvs(rows) {
   return rows.map(conv => {
     const parts = (conv.conversation_participants || []).filter(p => p.user_id !== C.user.id);
     const other  = parts[0];
@@ -627,23 +643,51 @@ async function openConv(convId) {
 }
 
 async function openOrCreateConv(otherUserId) {
-  // بحث عن محادثة موجودة مع هذا المستخدم
-  const existing = C.convs.find(c => c.type === 'direct' && c.otherUserId === otherUserId);
-  if (existing) { await openConv(existing.id); return; }
-
-  // إنشاء محادثة جديدة
   try {
+    // 1) ابحث في C.convs الموجودة
+    const existing = C.convs.find(c => c.type === 'direct' && c.otherUserId === otherUserId);
+    if (existing) { await openConv(existing.id); return; }
+
+    // 2) ابحث في Supabase (ممكن محادثة موجودة بس مش loaded)
+    const { data: myParts } = await sb.from('conversation_participants')
+      .select('conversation_id')
+      .eq('user_id', C.user.id);
+    const myIds = (myParts || []).map(p => p.conversation_id);
+
+    if (myIds.length) {
+      const { data: otherParts } = await sb.from('conversation_participants')
+        .select('conversation_id, conversations(type)')
+        .eq('user_id', otherUserId)
+        .in('conversation_id', myIds);
+      const existingConv = (otherParts || []).find(p => p.conversations?.type === 'direct');
+      if (existingConv) {
+        await loadConversations();
+        await openConv(existingConv.conversation_id);
+        return;
+      }
+    }
+
+    // 3) إنشاء محادثة جديدة
     const { data: conv, error } = await sb.from('conversations').insert({
       type: 'direct', created_by: C.user.id, updated_at: new Date().toISOString()
     }).select().single();
     if (error) throw error;
-    await sb.from('conversation_participants').insert([
+
+    const { error: pErr } = await sb.from('conversation_participants').insert([
       { conversation_id: conv.id, user_id: C.user.id },
       { conversation_id: conv.id, user_id: otherUserId },
     ]);
+    if (pErr) throw pErr;
+
     await loadConversations();
-    await openConv(conv.id);
-  } catch (e) { toast('خطأ في فتح المحادثة: ' + e.message, 'err'); }
+    const newConv = C.convs.find(c => c.id === conv.id);
+    if (newConv) await openConv(conv.id);
+    else toast('تم إنشاء المحادثة، اضغط عليها من القائمة', 'ok');
+
+  } catch (e) {
+    console.error('openOrCreateConv:', e);
+    toast('خطأ: ' + e.message, 'err');
+  }
 }
 
 /* ══════════════════════════════════════════
@@ -1120,6 +1164,202 @@ function toast(msg, type='ok') {
   w.appendChild(t);
   setTimeout(() => t.remove(), 3000);
 }
+
+/* ══════════════════════════════════════════
+   NEW CHAT MODAL — البحث عن مستخدم
+══════════════════════════════════════════ */
+let _userTab   = 'teachers';  // 'teachers' | 'students'
+let _allUsers  = [];           // cache
+let _searchTimer = null;
+
+function openNewChatModal() {
+  document.getElementById('newChatMdl').classList.add('show');
+  document.getElementById('userSearchInp').value = '';
+  document.getElementById('userSearchResults').innerHTML =
+    '<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:.83rem">ابدأ بكتابة اسم للبحث</div>';
+  _userTab = C.role === 'student' ? 'teachers' : 'students';
+  updateTabs();
+  document.getElementById('userSearchInp').focus();
+
+  // الطالب يشوف المعلمين فقط، المعلم يشوف طلابه فقط، الإدارة تشوف الكل
+  if (C.role === 'teacher') {
+    // المعلم يشوف طلابه المشتركين معه فقط
+    document.getElementById('tab-teachers').style.display = 'none';
+    document.getElementById('tab-students').style.display = 'flex';
+    switchTab('students');
+  } else if (C.role === 'student') {
+    // الطالب يشوف المعلمين بتوعه فقط
+    document.getElementById('tab-teachers').style.display = 'flex';
+    document.getElementById('tab-students').style.display = 'none';
+    switchTab('teachers');
+  } else {
+    // الإدارة تشوف الكل
+    document.getElementById('tab-teachers').style.display = 'flex';
+    document.getElementById('tab-students').style.display = 'flex';
+  }
+}
+
+function closeMdl(id) { document.getElementById(id).classList.remove('show'); }
+
+function switchTab(tab) {
+  _userTab = tab;
+  _allUsers = [];
+  updateTabs();
+  document.getElementById('userSearchInp').value = '';
+  document.getElementById('userSearchResults').innerHTML =
+    '<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:.83rem">ابدأ بكتابة اسم للبحث</div>';
+}
+
+function updateTabs() {
+  const tEl = document.getElementById('tab-teachers');
+  const sEl = document.getElementById('tab-students');
+  const active   = 'background:var(--white);color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.1)';
+  const inactive = 'background:transparent;color:var(--gray-600);box-shadow:none';
+  if (tEl) tEl.style.cssText += _userTab === 'teachers' ? active : inactive;
+  if (sEl) sEl.style.cssText += _userTab === 'students' ? active : inactive;
+}
+
+async function searchUsers() {
+  clearTimeout(_searchTimer);
+  const q = document.getElementById('userSearchInp').value.trim();
+  const el = document.getElementById('userSearchResults');
+
+  if (q.length < 1) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:.83rem">ابدأ بكتابة اسم للبحث</div>';
+    return;
+  }
+
+  el.innerHTML = '<div style="padding:16px;text-align:center"><div class="skel" style="height:44px;margin-bottom:6px;border-radius:8px"></div><div class="skel" style="height:44px;border-radius:8px"></div></div>';
+
+  _searchTimer = setTimeout(async () => {
+    try {
+      let query;
+
+      if (C.role === 'teacher') {
+        // المعلم: يبحث في طلابه المشتركين معه فقط
+        const { data: enrs } = await sb.from('teacher_enrollments')
+          .select('student_id, profiles!student_id(id, full_name, student_number, role)')
+          .eq('teacher_id', C.user.id);
+
+        const students = (enrs || [])
+          .map(e => e.profiles)
+          .filter(p => p && p.full_name?.toLowerCase().includes(q.toLowerCase()));
+
+        renderUserResults(students, el);
+        return;
+
+      } else if (C.role === 'student') {
+        // الطالب: يبحث في معلميه المشتركين معه فقط
+        const { data: enrs } = await sb.from('teacher_enrollments')
+          .select('teacher_id, profiles!teacher_id(id, full_name, teacher_number, role)')
+          .eq('student_id', C.user.id);
+
+        const teachers = (enrs || [])
+          .map(e => e.profiles)
+          .filter(p => p && p.full_name?.toLowerCase().includes(q.toLowerCase()));
+
+        renderUserResults(teachers, el);
+        return;
+
+      } else {
+        // الإدارة: تبحث في كل المستخدمين
+        const roleFilter = _userTab === 'teachers' ? 'teacher' : 'student';
+        const { data, error } = await sb.from('profiles')
+          .select('id, full_name, role, teacher_number, student_number')
+          .eq('role', roleFilter)
+          .ilike('full_name', `%${q}%`)
+          .limit(20);
+        if (error) throw error;
+        renderUserResults(data || [], el);
+        return;
+      }
+
+    } catch (e) {
+      el.innerHTML = `<div style="padding:16px;color:var(--red);font-size:.83rem;text-align:center">❌ خطأ: ${e.message}</div>`;
+    }
+  }, 350);
+}
+
+function renderUserResults(users, el) {
+  if (!users.length) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:.83rem">لا توجد نتائج</div>';
+    return;
+  }
+
+  el.innerHTML = users.map(u => {
+    const isTeacher = u.role === 'teacher';
+    const num = isTeacher ? (u.teacher_number || '') : (u.student_number || '');
+    const avBg = isTeacher ? 'background:linear-gradient(135deg,#C9A84C,#E8C96A)' : 'background:linear-gradient(135deg,#1B2B4B,#2E4A7A)';
+
+    // هل في محادثة موجودة معه؟
+    const exists = C.convs.find(c => c.type === 'direct' && c.otherUserId === u.id);
+
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--gray-200);cursor:pointer;transition:background .15s"
+           onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''"
+           onclick="startChatWith('${u.id}', '${(u.full_name||'').replace(/'/g,"\'")}')">
+        <div style="width:38px;height:38px;border-radius:50%;${avBg};display:flex;align-items:center;justify-content:center;color:#fff;font-size:.88rem;font-weight:900;flex-shrink:0">
+          ${(u.full_name||'?').charAt(0)}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.88rem;font-weight:700;color:var(--navy)">${u.full_name || '—'}</div>
+          <div style="font-size:.73rem;color:var(--gray-600)">${isTeacher ? '👨‍🏫 معلم' : '👥 طالب'} ${num ? '• ' + num : ''}</div>
+        </div>
+        <div style="font-size:.75rem;font-weight:700;color:${exists ? 'var(--green)' : 'var(--blue)'}">
+          ${exists ? '✅ محادثة موجودة' : '💬 ابدأ'}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function startChatWith(userId, userName) {
+  closeMdl('newChatMdl');
+  toast(`جاري فتح محادثة مع ${userName}...`, 'ok');
+  await openOrCreateConv(userId);
+}
+
+function goBack() {
+  const role = C.role;
+  if (role === 'teacher') window.location = 'teacher.html';
+  else if (role === 'admin' || role === 'supervisor') window.location = 'admin.html';
+  else window.location = 'dashboard.html';
+}
+
+// إغلاق الـ modal بالضغط خارجه
+document.addEventListener('click', e => {
+  const mdl = document.getElementById('newChatMdl');
+  if (mdl?.classList.contains('show') && e.target === mdl) closeMdl('newChatMdl');
+});
+
 </script>
+
+<!-- ═══ MODAL: محادثة جديدة / بحث عن مستخدم ═══ -->
+<div class="mdl" id="newChatMdl">
+  <div class="rep-box" style="max-width:480px;width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:1rem;font-weight:900;color:var(--navy)">💬 محادثة جديدة</div>
+      <button onclick="closeMdl('newChatMdl')" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--gray-400)">✕</button>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;background:var(--gray-100);border-radius:9px;padding:3px;margin-bottom:14px">
+      <div id="tab-teachers" style="flex:1;padding:7px;text-align:center;border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;background:var(--white);color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.1)" onclick="switchTab('teachers')">👨‍🏫 المعلمون</div>
+      <div id="tab-students" style="flex:1;padding:7px;text-align:center;border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;color:var(--gray-600)" onclick="switchTab('students')">👥 الطلاب</div>
+    </div>
+
+    <!-- Search -->
+    <div style="position:relative;margin-bottom:12px">
+      <input type="text" id="userSearchInp" placeholder="🔍 ابحث بالاسم..." oninput="searchUsers()"
+        style="width:100%;border:1.5px solid var(--gray-200);border-radius:9px;padding:9px 12px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s"
+        onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--gray-200)'">
+    </div>
+
+    <!-- Results -->
+    <div id="userSearchResults" style="max-height:320px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:10px">
+      <div style="padding:24px;text-align:center;color:var(--gray-400);font-size:.83rem">ابدأ بكتابة اسم للبحث</div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
