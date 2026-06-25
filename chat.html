@@ -1172,42 +1172,81 @@ let _userTab   = 'teachers';  // 'teachers' | 'students'
 let _allUsers  = [];           // cache
 let _searchTimer = null;
 
-function openNewChatModal() {
+async function openNewChatModal() {
   document.getElementById('newChatMdl').classList.add('show');
   document.getElementById('userSearchInp').value = '';
-  document.getElementById('userSearchResults').innerHTML =
-    '<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:.83rem">ابدأ بكتابة اسم للبحث</div>';
-  _userTab = C.role === 'student' ? 'teachers' : 'students';
-  updateTabs();
-  document.getElementById('userSearchInp').focus();
 
-  // الطالب يشوف المعلمين فقط، المعلم يشوف طلابه فقط، الإدارة تشوف الكل
+  const tTab = document.getElementById('tab-teachers');
+  const sTab = document.getElementById('tab-students');
+
   if (C.role === 'teacher') {
-    // المعلم يشوف طلابه المشتركين معه فقط
-    document.getElementById('tab-teachers').style.display = 'none';
-    document.getElementById('tab-students').style.display = 'flex';
-    switchTab('students');
+    tTab.style.display = 'none'; sTab.style.display = 'flex';
+    _userTab = 'students';
   } else if (C.role === 'student') {
-    // الطالب يشوف المعلمين بتوعه فقط
-    document.getElementById('tab-teachers').style.display = 'flex';
-    document.getElementById('tab-students').style.display = 'none';
-    switchTab('teachers');
+    tTab.style.display = 'flex'; sTab.style.display = 'none';
+    _userTab = 'teachers';
   } else {
-    // الإدارة تشوف الكل
-    document.getElementById('tab-teachers').style.display = 'flex';
-    document.getElementById('tab-students').style.display = 'flex';
+    tTab.style.display = 'flex'; sTab.style.display = 'flex';
+    _userTab = 'teachers';
+  }
+  updateTabs();
+
+  // تحميل القائمة الكاملة فوراً بدون انتظار بحث
+  await loadAllUsers();
+  document.getElementById('userSearchInp').focus();
+}
+
+async function loadAllUsers() {
+  const el = document.getElementById('userSearchResults');
+  el.innerHTML = `<div style="padding:12px"><div class="skel" style="height:50px;margin-bottom:6px;border-radius:10px"></div><div class="skel" style="height:50px;margin-bottom:6px;border-radius:10px"></div><div class="skel" style="height:50px;border-radius:10px"></div></div>`;
+
+  try {
+    if (C.role === 'teacher') {
+      const { data: enrs, error } = await sb.from('teacher_enrollments')
+        .select('student_id').eq('teacher_id', C.user.id);
+      if (error) throw error;
+      const ids = [...new Set((enrs||[]).map(e=>e.student_id).filter(Boolean))];
+      if (!ids.length) { renderUserResults([], el); return; }
+      const { data, error: e2 } = await sb.from('profiles')
+        .select('id, full_name, role, student_number, grade')
+        .in('id', ids).order('full_name');
+      if (e2) throw e2;
+      renderUserResults(data||[], el);
+
+    } else if (C.role === 'student') {
+      const { data: enrs, error } = await sb.from('teacher_enrollments')
+        .select('teacher_id').eq('student_id', C.user.id);
+      if (error) throw error;
+      const ids = [...new Set((enrs||[]).map(e=>e.teacher_id).filter(Boolean))];
+      if (!ids.length) { renderUserResults([], el); return; }
+      const { data, error: e2 } = await sb.from('profiles')
+        .select('id, full_name, role, teacher_number, specialization')
+        .in('id', ids).order('full_name');
+      if (e2) throw e2;
+      renderUserResults(data||[], el);
+
+    } else {
+      // إدارة
+      const roleFilter = _userTab === 'teachers' ? 'teacher' : 'student';
+      const { data, error } = await sb.from('profiles')
+        .select('id, full_name, role, teacher_number, student_number, specialization, grade')
+        .eq('role', roleFilter).order('full_name').limit(50);
+      if (error) throw error;
+      renderUserResults(data||[], el);
+    }
+  } catch(e) {
+    el.innerHTML = `<div style="padding:16px;color:var(--red);font-size:.83rem;text-align:center">❌ ${e.message}</div>`;
   }
 }
 
 function closeMdl(id) { document.getElementById(id).classList.remove('show'); }
 
-function switchTab(tab) {
+async function switchTab(tab) {
   _userTab = tab;
   _allUsers = [];
   updateTabs();
   document.getElementById('userSearchInp').value = '';
-  document.getElementById('userSearchResults').innerHTML =
-    '<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:.83rem">ابدأ بكتابة اسم للبحث</div>';
+  await loadAllUsers();
 }
 
 function updateTabs() {
@@ -1225,91 +1264,131 @@ async function searchUsers() {
   const el = document.getElementById('userSearchResults');
 
   if (q.length < 1) {
-    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:.83rem">ابدأ بكتابة اسم للبحث</div>';
+    await loadAllUsers();
     return;
   }
 
-  el.innerHTML = '<div style="padding:16px;text-align:center"><div class="skel" style="height:44px;margin-bottom:6px;border-radius:8px"></div><div class="skel" style="height:44px;border-radius:8px"></div></div>';
+  el.innerHTML = `<div style="padding:16px"><div class="skel" style="height:50px;margin-bottom:6px;border-radius:10px"></div><div class="skel" style="height:50px;margin-bottom:6px;border-radius:10px"></div><div class="skel" style="height:50px;border-radius:10px"></div></div>`;
 
   _searchTimer = setTimeout(async () => {
     try {
-      let query;
 
       if (C.role === 'teacher') {
-        // المعلم: يبحث في طلابه المشتركين معه فقط
-        const { data: enrs } = await sb.from('teacher_enrollments')
-          .select('student_id, profiles!student_id(id, full_name, student_number, role)')
+        // ① جيب student_ids بتاعة المعلم
+        const { data: enrs, error: eErr } = await sb
+          .from('teacher_enrollments')
+          .select('student_id')
           .eq('teacher_id', C.user.id);
+        if (eErr) throw eErr;
 
-        const students = (enrs || [])
-          .map(e => e.profiles)
-          .filter(p => p && p.full_name?.toLowerCase().includes(q.toLowerCase()));
+        const ids = [...new Set((enrs || []).map(e => e.student_id).filter(Boolean))];
+        if (!ids.length) { renderUserResults([], el); return; }
 
-        renderUserResults(students, el);
-        return;
+        // ② جيب بيانات الطلاب مع فلتر الاسم
+        const { data: students, error: sErr } = await sb
+          .from('profiles')
+          .select('id, full_name, role, student_number, grade')
+          .in('id', ids)
+          .ilike('full_name', `%${q}%`)
+          .order('full_name');
+        if (sErr) throw sErr;
+
+        renderUserResults(students || [], el);
 
       } else if (C.role === 'student') {
-        // الطالب: يبحث في معلميه المشتركين معه فقط
-        const { data: enrs } = await sb.from('teacher_enrollments')
-          .select('teacher_id, profiles!teacher_id(id, full_name, teacher_number, role)')
+        // ① جيب teacher_ids بتاعة الطالب
+        const { data: enrs, error: eErr } = await sb
+          .from('teacher_enrollments')
+          .select('teacher_id')
           .eq('student_id', C.user.id);
+        if (eErr) throw eErr;
 
-        const teachers = (enrs || [])
-          .map(e => e.profiles)
-          .filter(p => p && p.full_name?.toLowerCase().includes(q.toLowerCase()));
+        const ids = [...new Set((enrs || []).map(e => e.teacher_id).filter(Boolean))];
+        if (!ids.length) { renderUserResults([], el); return; }
 
-        renderUserResults(teachers, el);
-        return;
+        // ② جيب بيانات المعلمين مع فلتر الاسم
+        const { data: teachers, error: tErr } = await sb
+          .from('profiles')
+          .select('id, full_name, role, teacher_number, specialization')
+          .in('id', ids)
+          .ilike('full_name', `%${q}%`)
+          .order('full_name');
+        if (tErr) throw tErr;
+
+        renderUserResults(teachers || [], el);
 
       } else {
-        // الإدارة: تبحث في كل المستخدمين
+        // الإدارة: كل المستخدمين
         const roleFilter = _userTab === 'teachers' ? 'teacher' : 'student';
         const { data, error } = await sb.from('profiles')
-          .select('id, full_name, role, teacher_number, student_number')
+          .select('id, full_name, role, teacher_number, student_number, specialization, grade')
           .eq('role', roleFilter)
           .ilike('full_name', `%${q}%`)
-          .limit(20);
+          .order('full_name')
+          .limit(30);
         if (error) throw error;
         renderUserResults(data || [], el);
-        return;
       }
 
     } catch (e) {
-      el.innerHTML = `<div style="padding:16px;color:var(--red);font-size:.83rem;text-align:center">❌ خطأ: ${e.message}</div>`;
+      console.error('searchUsers:', e);
+      el.innerHTML = `<div style="padding:16px;color:var(--red);font-size:.83rem;text-align:center">❌ ${e.message}</div>`;
     }
-  }, 350);
+  }, 400);
 }
 
 function renderUserResults(users, el) {
+  _usersCache = users; // حفظ للـ startChatWithId
   if (!users.length) {
-    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:.83rem">لا توجد نتائج</div>';
+    el.innerHTML = `<div style="padding:32px;text-align:center">
+      <div style="font-size:2rem;margin-bottom:8px">😔</div>
+      <div style="font-size:.85rem;font-weight:700;color:var(--gray-600)">لا يوجد نتائج</div>
+      <div style="font-size:.75rem;color:var(--gray-400);margin-top:4px">جرب كلمة بحث مختلفة</div>
+    </div>`;
     return;
   }
 
   el.innerHTML = users.map(u => {
     const isTeacher = u.role === 'teacher';
-    const num = isTeacher ? (u.teacher_number || '') : (u.student_number || '');
-    const avBg = isTeacher ? 'background:linear-gradient(135deg,#C9A84C,#E8C96A)' : 'background:linear-gradient(135deg,#1B2B4B,#2E4A7A)';
-
-    // هل في محادثة موجودة معه؟
+    const num  = isTeacher ? (u.teacher_number || '') : (u.student_number || '');
+    const sub  = isTeacher ? (u.specialization || '') : (u.grade || '');
+    const avBg = isTeacher
+      ? 'background:linear-gradient(135deg,#C9A84C,#E8C96A)'
+      : 'background:linear-gradient(135deg,#1B2B4B,#2E4A7A)';
     const exists = C.convs.find(c => c.type === 'direct' && c.otherUserId === u.id);
+    const safeName = encodeURIComponent(u.full_name||'');
 
-    return `
-      <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--gray-200);cursor:pointer;transition:background .15s"
-           onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''"
-           onclick="startChatWith('${u.id}', '${(u.full_name||'').replace(/'/g,"\'")}')">
-        <div style="width:38px;height:38px;border-radius:50%;${avBg};display:flex;align-items:center;justify-content:center;color:#fff;font-size:.88rem;font-weight:900;flex-shrink:0">
-          ${(u.full_name||'?').charAt(0)}
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--gray-100);cursor:pointer;transition:background .15s"
+         onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background=''"
+         onclick="startChatWithId('${u.id}')">
+      <div style="width:42px;height:42px;border-radius:50%;${avBg};display:flex;align-items:center;justify-content:center;color:#fff;font-size:.95rem;font-weight:900;flex-shrink:0">
+        ${(u.full_name||'?').charAt(0)}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.9rem;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.full_name||'—'}</div>
+        <div style="font-size:.74rem;color:var(--gray-600);margin-top:2px">
+          ${isTeacher ? '👨‍🏫 معلم' : '👥 طالب'}
+          ${num ? ` • ${num}` : ''}
+          ${sub ? ` • ${sub}` : ''}
         </div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:.88rem;font-weight:700;color:var(--navy)">${u.full_name || '—'}</div>
-          <div style="font-size:.73rem;color:var(--gray-600)">${isTeacher ? '👨‍🏫 معلم' : '👥 طالب'} ${num ? '• ' + num : ''}</div>
-        </div>
-        <div style="font-size:.75rem;font-weight:700;color:${exists ? 'var(--green)' : 'var(--blue)'}">
-          ${exists ? '✅ محادثة موجودة' : '💬 ابدأ'}
-        </div>
-      </div>`;
+      </div>
+      <div style="font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;
+        ${exists ? 'background:#ECFDF5;color:#0E9F6E' : 'background:#EBF5FF;color:#1A56DB'}">
+        ${exists ? '✅ موجودة' : '💬 ابدأ'}
+      </div>
+    </div>`;
   }).join('');
+}
+
+// cache للمستخدمين المعروضين في المودال
+let _usersCache = [];
+
+async function startChatWithId(userId) {
+  const user = _usersCache.find(u => u.id === userId);
+  const name = user?.full_name || 'المستخدم';
+  closeMdl('newChatMdl');
+  toast(`جاري فتح محادثة مع ${name}...`, 'ok');
+  await openOrCreateConv(userId);
 }
 
 async function startChatWith(userId, userName) {
