@@ -24,6 +24,7 @@
             newWorker.addEventListener('statechange', function () {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 console.log('[PWA] New version available!');
+                _waitingWorker = newWorker;
                 showUpdateBanner();
               }
             });
@@ -249,11 +250,22 @@
   }
 
   // ── شريط تحديث النسخة ──
+  var _waitingWorker = null;
+
+  function applyUpdate() {
+    if (_waitingWorker) {
+      _waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+      window.location.reload();
+    }
+  }
+
   function showUpdateBanner() {
     var updateBar = document.createElement('div');
+    updateBar.id = 'pwa-update-bar';
     updateBar.innerHTML =
       '🔄 يوجد تحديث جديد للأكاديمية &nbsp;' +
-      '<button onclick="window.location.reload()" style="' +
+      '<button id="pwa-update-btn" style="' +
         'background:#fff;color:#1342B0;border:none;padding:6px 16px;' +
         'border-radius:6px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif;' +
       '">تحديث الآن</button>';
@@ -273,6 +285,10 @@
     });
 
     document.body.prepend(updateBar);
+    document.getElementById('pwa-update-btn').addEventListener('click', function() {
+      document.getElementById('pwa-update-bar').innerHTML = '⏳ جاري التحديث...';
+      applyUpdate();
+    });
   }
 
   // ── تسجيل وضع Standalone ──
