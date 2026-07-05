@@ -263,8 +263,8 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
 
 <!-- ═══ Hero ═══ -->
 <section class="files-hero">
-  <h1>📂 ملفاتي</h1>
-  <p>تصفح وحمّل الملفات والمذكرات المتاحة مجانًا — فلتر حسب المنهج والصف والترم والمادة عشان توصل لملفك بسرعة.</p>
+  <h1 id="filesPageTitle">📂 ملفاتي</h1>
+  <p id="filesPageSubtitle">تصفح وحمّل الملفات والمذكرات المتاحة مجانًا — فلتر حسب المنهج والصف والترم والمادة عشان توصل لملفك بسرعة.</p>
 </section>
 
 <!-- ═══ Content ═══ -->
@@ -534,16 +534,22 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
     grid.innerHTML = html;
   }
 
+  var pageOrderPref = 'sort';
+
   async function loadFiles() {
     showSkeleton();
     document.getElementById('filesCount').textContent = 'جاري التحميل...';
     try {
-      var { data, error } = await window._sb
-        .from('teacher_materials')
-        .select('id,title,type,url,file_name,file_size,note,grade_name,subject_name,curriculum,term,created_at')
-        .eq('is_free', true)
-        .eq('type', 'file')
-        .order('created_at', { ascending: false });
+      var q = window._sb
+        .from('site_files')
+        .select('id,title,url,file_name,file_size,note,grade_name,subject_name,curriculum,term,sort_order,created_at')
+        .eq('is_visible', true);
+
+      q = (pageOrderPref === 'newest')
+        ? q.order('created_at', { ascending: false })
+        : q.order('sort_order', { ascending: true }).order('created_at', { ascending: false });
+
+      var { data, error } = await q;
 
       if (error) throw error;
       allFiles = data || [];
@@ -560,13 +566,26 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
     }
   }
 
+  async function loadPageSettings() {
+    try {
+      var { data } = await window._sb.from('site_settings').select('value').eq('id', 'files_page').single();
+      var v = (data && data.value) || {};
+      if (v.title) document.getElementById('filesPageTitle').textContent = v.title;
+      if (v.subtitle) document.getElementById('filesPageSubtitle').textContent = v.subtitle;
+      if (v.order) pageOrderPref = v.order;
+    } catch (e) { /* الإعدادات الافتراضية تكفي */ }
+  }
+
   document.getElementById('fileSearch').addEventListener('input', renderFiles);
   document.getElementById('filterCurriculum').addEventListener('change', renderFiles);
   document.getElementById('filterGrade').addEventListener('change', renderFiles);
   document.getElementById('filterTerm').addEventListener('change', renderFiles);
   document.getElementById('filterSubject').addEventListener('change', renderFiles);
 
-  loadFiles();
+  (async function init() {
+    await loadPageSettings();
+    loadFiles();
+  })();
 </script>
 
 </body>

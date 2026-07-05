@@ -296,6 +296,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <button class="nav-item"        id="nav-site-content" onclick="goTo('site-content')"><span class="nav-icon">🌐</span> إدارة المحتوى</button>
     <button class="nav-item"        id="nav-catalog"      onclick="goTo('catalog')"><span class="nav-icon">🎓</span> إدارة الكورسات</button>
     <button class="nav-item"        id="nav-announcements" onclick="goTo('announcements')"><span class="nav-icon">📢</span> الإعلانات</button>
+    <button class="nav-item"        id="nav-files"         onclick="goTo('files')"><span class="nav-icon">📂</span> ملفاتي</button>
     <div class="nav-label">التواصل</div>
     <button class="nav-item" id="nav-comm-center" onclick="goTo('comm-center')">
       <span class="nav-icon">💬</span> Communication Center
@@ -1303,6 +1304,55 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════
+       FILES PAGE MANAGEMENT — "ملفاتي"
+  ══════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-files">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:8px;">
+      <div>
+        <div class="page-title">📂 إدارة ملفاتي</div>
+        <p class="page-sub" style="margin-bottom:0;">ارفع وعدّل ملفات صفحة "ملفاتي" العامة، وتحكم في إعدادات الصفحة</p>
+      </div>
+      <button class="btn-primary" onclick="filesOpenAdd()" style="border:none;cursor:pointer;font-family:Cairo,sans-serif;padding:10px 22px;border-radius:10px;display:flex;align-items:center;gap:8px;">➕ إضافة ملف</button>
+    </div>
+
+    <div class="stats-grid" id="files-stats" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:24px;"></div>
+
+    <!-- إعدادات الصفحة العامة -->
+    <div class="section-card" style="margin-bottom:20px;">
+      <div class="section-head">
+        <h3>⚙️ إعدادات الصفحة العامة</h3>
+      </div>
+      <div style="padding:16px;">
+        <div class="fg-row">
+          <div class="fg"><label>عنوان الصفحة</label><input type="text" id="fps-title" placeholder="📂 ملفاتي"></div>
+          <div class="fg"><label>ترتيب العرض الافتراضي</label>
+            <select id="fps-order" style="width:100%;padding:10px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:Cairo,sans-serif;">
+              <option value="newest">الأحدث أولاً</option>
+              <option value="sort">حسب ترتيب العرض اليدوي</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg"><label>وصف الصفحة (تحت العنوان)</label><textarea id="fps-subtitle" rows="2" style="width:100%;padding:10px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:Cairo,sans-serif;font-size:.88rem;resize:vertical;" placeholder="تصفح وحمّل الملفات..."></textarea></div>
+        <div id="fps-msg" style="margin-bottom:10px;"></div>
+        <button class="mdl-confirm mc-save" style="width:auto;padding:10px 24px;" onclick="fpsSave()">💾 حفظ إعدادات الصفحة</button>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <h3>📋 قائمة الملفات</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <input class="search-input" id="files-search" type="text" placeholder="🔍 بحث بالاسم..." style="min-width:160px" oninput="filesRender()">
+          <select id="files-filter-curriculum" onchange="filesRender()" style="padding:8px 12px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:Cairo,sans-serif;font-size:.83rem;"><option value="">كل المناهج</option></select>
+          <select id="files-filter-grade" onchange="filesRender()" style="padding:8px 12px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:Cairo,sans-serif;font-size:.83rem;"><option value="">كل الصفوف</option></select>
+          <select id="files-filter-term" onchange="filesRender()" style="padding:8px 12px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:Cairo,sans-serif;font-size:.83rem;"><option value="">كل الترمات</option></select>
+        </div>
+      </div>
+      <div class="section-body" id="files-list"><div class="skel" style="height:80px;margin-bottom:10px;border-radius:10px;"></div></div>
+    </div>
+  </div>
+
   <!-- ADMIN EXAMS -->
   <div class="page" id="page-admin-exams">
     <div class="page-title">إحصائيات الاختبارات 📝</div>
@@ -1463,6 +1513,82 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <div class="mdl-btns" style="margin-top:16px;">
       <button class="mdl-cancel" onclick="closeMdl('mdl-ann')">إلغاء</button>
       <button class="mdl-confirm mc-save" onclick="annSave()">💾 حفظ الإعلان</button>
+    </div>
+  </div>
+</div>
+
+<!-- FILE MODAL -->
+<div class="mdl" id="mdl-file">
+  <div class="mdl-box" style="max-width:560px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div class="mdl-title" style="margin-bottom:0;" id="mdl-file-title">إضافة ملف</div>
+      <button onclick="closeMdl('mdl-file')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray)">✕</button>
+    </div>
+    <input type="hidden" id="file-id">
+    <input type="hidden" id="file-storage-path">
+    <input type="hidden" id="file-url">
+
+    <div class="fg">
+      <label>الملف *</label>
+      <div id="file-drop" style="border:2px dashed var(--gray-mid);border-radius:12px;padding:18px;text-align:center;cursor:pointer;background:var(--gray-light);" onclick="document.getElementById('file-input').click()">
+        <input type="file" id="file-input" style="display:none" onchange="handleFilePicked(this)" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.jpg,.jpeg,.png">
+        <div id="file-drop-label">📎 اضغط لاختيار ملف (PDF, Word, صورة...)</div>
+      </div>
+      <div id="file-upload-prog" style="display:none;margin-top:8px;color:var(--blue);font-size:.83rem;">⏳ جاري رفع الملف...</div>
+    </div>
+
+    <div class="fg"><label>العنوان *</label><input type="text" id="file-title-inp" placeholder="اسم الملف / المذكرة"></div>
+    <div class="fg"><label>ملاحظات (اختياري)</label><textarea id="file-note" rows="2" style="width:100%;padding:10px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:Cairo,sans-serif;font-size:.88rem;resize:vertical;" placeholder="وصف مختصر عن الملف..."></textarea></div>
+
+    <div class="fg-row">
+      <div class="fg"><label>المنهج</label>
+        <select id="file-curriculum" style="width:100%;padding:10px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:Cairo,sans-serif;">
+          <option value="">— بدون تحديد —</option>
+          <option>المنهج السعودي</option>
+          <option>المنهج الإماراتي</option>
+          <option>المنهج القطري</option>
+          <option>المنهج الكويتي</option>
+          <option>المنهج العماني</option>
+          <option>المنهج المصري</option>
+          <option>مناهج أخرى</option>
+        </select>
+      </div>
+      <div class="fg"><label>الصف</label>
+        <select id="file-grade" style="width:100%;padding:10px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:Cairo,sans-serif;">
+          <option value="">— بدون تحديد —</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="fg-row">
+      <div class="fg"><label>الترم</label>
+        <select id="file-term" style="width:100%;padding:10px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:Cairo,sans-serif;">
+          <option value="">— بدون تحديد —</option>
+          <option>الترم الأول</option>
+          <option>الترم الثاني</option>
+          <option>الترم الثالث</option>
+        </select>
+      </div>
+      <div class="fg"><label>المادة</label>
+        <input type="text" id="file-subject" list="file-subject-list" placeholder="اكتب اسم المادة...">
+        <datalist id="file-subject-list"></datalist>
+      </div>
+    </div>
+
+    <div class="fg-row">
+      <div class="fg"><label>ترتيب العرض</label><input type="number" id="file-sort" placeholder="1" min="1"></div>
+      <div class="fg" style="display:flex;align-items:flex-end;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:700;background:var(--gray-light);padding:12px 14px;border-radius:10px;width:100%;">
+          <input type="checkbox" id="file-visible" checked style="width:16px;height:16px;accent-color:var(--green);cursor:pointer;">
+          ظاهر على الموقع
+        </label>
+      </div>
+    </div>
+
+    <div id="file-mdl-msg" style="margin-top:10px;"></div>
+    <div class="mdl-btns" style="margin-top:16px;">
+      <button class="mdl-cancel" onclick="closeMdl('mdl-file')">إلغاء</button>
+      <button class="mdl-confirm mc-save" onclick="filesSave()">💾 حفظ الملف</button>
     </div>
   </div>
 </div>
@@ -1890,7 +2016,7 @@ function goTo(name) {
   document.getElementById('nav-'+name).classList.add('active');
   closeSidebar();
   if (name !== 'sessions' && _sessInterval) { clearInterval(_sessInterval); _sessInterval = null; }
-  const loaders = {courses:loadCourses, sessions:initSessions, students:()=>{ switchStudentTab('list'); loadStudents(); }, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit, announcements:annLoad, catalog:loadCatalog, visitors:visLoad, 'comm-center':loadCommCenter, 'reports-list':loadReportsList};
+  const loaders = {courses:loadCourses, sessions:initSessions, students:()=>{ switchStudentTab('list'); loadStudents(); }, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit, announcements:annLoad, catalog:loadCatalog, visitors:visLoad, 'comm-center':loadCommCenter, 'reports-list':loadReportsList, files:filesLoad};
   if(loaders[name]) loaders[name]();
   if(name==='requests') { renderReqTable(); loadNewStudentsWithoutSub(); }
 }
@@ -6487,6 +6613,293 @@ async function annDelete(id, title) {
     toast('🗑️ تم حذف الإعلان');
     annLoad();
   } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+// ════════════════════════════════════════════════════
+//  FILES PAGE MANAGEMENT — "ملفاتي"
+// ════════════════════════════════════════════════════
+let _filesList = [];
+let _pickedFile = null;
+const FILE_GRADES = ['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر','الحادي عشر','الثاني عشر'].map(n => 'الصف ' + n);
+
+// تعبئة قائمة الصفوف الثابتة مرة واحدة
+(function fillFileGradeOptions() {
+  const sel = document.getElementById('file-grade');
+  if (!sel) return;
+  FILE_GRADES.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g; opt.textContent = g;
+    sel.appendChild(opt);
+  });
+})();
+
+async function filesLoad() {
+  const list = document.getElementById('files-list');
+  list.innerHTML = '<div class="skel" style="height:80px;margin-bottom:10px;border-radius:10px;"></div><div class="skel" style="height:80px;margin-bottom:10px;border-radius:10px;"></div>';
+  try {
+    const { data, error } = await sb.from('site_files').select('*').order('sort_order',{ascending:true}).order('created_at',{ascending:false});
+    if (error) throw error;
+    _filesList = data || [];
+    filesStats();
+    filesFillFilterOptions();
+    filesRender();
+    fpsLoad();
+  } catch(e) {
+    list.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+  }
+}
+
+function filesStats() {
+  const el = document.getElementById('files-stats');
+  const total   = _filesList.length;
+  const visible = _filesList.filter(f => f.is_visible !== false).length;
+  const hidden  = total - visible;
+  const size    = _filesList.reduce((s,f) => s + (f.file_size || 0), 0);
+  const sizeMb  = (size / (1024*1024)).toFixed(1);
+  el.innerHTML = `
+    <div class="stat-card"><div class="stat-icon si-blue">📂</div><div><div class="stat-num">${total}</div><div class="stat-label">إجمالي الملفات</div></div></div>
+    <div class="stat-card"><div class="stat-icon si-green">👁️</div><div><div class="stat-num">${visible}</div><div class="stat-label">ظاهر على الموقع</div></div></div>
+    <div class="stat-card"><div class="stat-icon si-gold">🙈</div><div><div class="stat-num">${hidden}</div><div class="stat-label">مخفي</div></div></div>
+    <div class="stat-card"><div class="stat-icon si-purple">💾</div><div><div class="stat-num">${sizeMb}</div><div class="stat-label">إجمالي الحجم (MB)</div></div></div>`;
+}
+
+function filesFillFilterOptions() {
+  const curSel = document.getElementById('files-filter-curriculum');
+  const gradeSel = document.getElementById('files-filter-grade');
+  const termSel = document.getElementById('files-filter-term');
+  const curVals = Array.from(new Set(_filesList.map(f => f.curriculum).filter(Boolean)));
+  const gradeVals = Array.from(new Set(_filesList.map(f => f.grade_name).filter(Boolean)));
+  const termVals = Array.from(new Set(_filesList.map(f => f.term).filter(Boolean)));
+  const keepFirst = sel => sel.options[0];
+  [curSel, gradeSel, termSel].forEach(sel => { const first = keepFirst(sel); sel.innerHTML=''; sel.appendChild(first); });
+  curVals.forEach(v => curSel.appendChild(new Option(v, v)));
+  gradeVals.forEach(v => gradeSel.appendChild(new Option(v, v)));
+  termVals.forEach(v => termSel.appendChild(new Option(v, v)));
+
+  // تحديث datalist المواد داخل المودال
+  const subjList = document.getElementById('file-subject-list');
+  const subjVals = Array.from(new Set(_filesList.map(f => f.subject_name).filter(Boolean)));
+  subjList.innerHTML = subjVals.map(v => `<option value="${v.replace(/"/g,'')}">`).join('');
+}
+
+function fmtFileSize(bytes) {
+  if (!bytes) return '';
+  const kb = bytes / 1024;
+  if (kb < 1024) return Math.round(kb) + ' كيلوبايت';
+  return (kb/1024).toFixed(1) + ' ميجابايت';
+}
+
+function filesRender() {
+  const list = document.getElementById('files-list');
+  const q = (document.getElementById('files-search')?.value || '').trim().toLowerCase();
+  const fCur = document.getElementById('files-filter-curriculum')?.value || '';
+  const fGrade = document.getElementById('files-filter-grade')?.value || '';
+  const fTerm = document.getElementById('files-filter-term')?.value || '';
+
+  let data = _filesList;
+  if (fCur) data = data.filter(f => f.curriculum === fCur);
+  if (fGrade) data = data.filter(f => f.grade_name === fGrade);
+  if (fTerm) data = data.filter(f => f.term === fTerm);
+  if (q) data = data.filter(f => (f.title||'').toLowerCase().includes(q) || (f.note||'').toLowerCase().includes(q));
+
+  if (!data.length) {
+    list.innerHTML = '<div class="empty-box"><div class="ei">📭</div><div class="et">لا توجد ملفات</div></div>';
+    return;
+  }
+
+  list.innerHTML = data.map(f => {
+    const tags = [];
+    if (f.curriculum) tags.push(`<span>📘 ${f.curriculum}</span>`);
+    if (f.grade_name) tags.push(`<span>🎓 ${f.grade_name}</span>`);
+    if (f.term) tags.push(`<span>🗓️ ${f.term}</span>`);
+    if (f.subject_name) tags.push(`<span>📚 ${f.subject_name}</span>`);
+    return `
+    <div style="display:flex;align-items:flex-start;gap:14px;padding:16px;border:1px solid var(--gray-mid);border-radius:12px;margin-bottom:10px;background:${f.is_visible===false?'#fffbea':'var(--white)'};transition:box-shadow .2s;" onmouseenter="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseleave="this.style.boxShadow='none'">
+      <div class="stat-icon si-blue" style="flex-shrink:0;">📄</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+          <span style="font-size:.95rem;font-weight:900;color:var(--dark);">${f.title}</span>
+          ${f.is_visible===false ? '<span style="font-size:.7rem;background:#FEF9C3;color:#854D0E;padding:3px 8px;border-radius:50px;font-weight:700;">مخفي</span>' : ''}
+        </div>
+        ${f.note ? `<div style="font-size:.82rem;color:var(--gray);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:500px;">${f.note}</div>` : ''}
+        <div style="display:flex;gap:12px;font-size:.75rem;color:var(--gray);flex-wrap:wrap;">
+          ${tags.join('')}
+          <span>💾 ${fmtFileSize(f.file_size)}</span>
+          <span>📅 ${new Date(f.created_at).toLocaleDateString('ar-EG')}</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px;flex-shrink:0;">
+        <a href="${f.url}" target="_blank" class="btn-ed" style="text-decoration:none;text-align:center;">⬇️ فتح</a>
+        <button class="btn-ed" onclick="filesOpenEdit('${f.id}')">✏️ تعديل</button>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;font-weight:700;color:var(--gray);">
+          <input type="checkbox" ${f.is_visible!==false?'checked':''} onchange="filesToggleVisible('${f.id}',this)" style="accent-color:var(--green);cursor:pointer;">
+          ظاهر
+        </label>
+        <button class="btn-rm" onclick="filesDelete('${f.id}','${(f.title||'').replace(/'/g,'')}','${f.storage_path||''}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filesOpenAdd() {
+  document.getElementById('mdl-file-title').textContent = '➕ إضافة ملف جديد';
+  document.getElementById('file-id').value = '';
+  document.getElementById('file-storage-path').value = '';
+  document.getElementById('file-url').value = '';
+  document.getElementById('file-title-inp').value = '';
+  document.getElementById('file-note').value = '';
+  document.getElementById('file-curriculum').value = '';
+  document.getElementById('file-grade').value = '';
+  document.getElementById('file-term').value = '';
+  document.getElementById('file-subject').value = '';
+  document.getElementById('file-sort').value = (_filesList.length + 1).toString();
+  document.getElementById('file-visible').checked = true;
+  document.getElementById('file-drop-label').textContent = '📎 اضغط لاختيار ملف (PDF, Word, صورة...)';
+  document.getElementById('file-input').value = '';
+  document.getElementById('file-mdl-msg').innerHTML = '';
+  _pickedFile = null;
+  openMdl('mdl-file');
+}
+
+function filesOpenEdit(id) {
+  const f = _filesList.find(x => x.id == id);
+  if (!f) return;
+  document.getElementById('mdl-file-title').textContent = '✏️ تعديل الملف';
+  document.getElementById('file-id').value = f.id;
+  document.getElementById('file-storage-path').value = f.storage_path || '';
+  document.getElementById('file-url').value = f.url || '';
+  document.getElementById('file-title-inp').value = f.title || '';
+  document.getElementById('file-note').value = f.note || '';
+  document.getElementById('file-curriculum').value = f.curriculum || '';
+  document.getElementById('file-grade').value = f.grade_name || '';
+  document.getElementById('file-term').value = f.term || '';
+  document.getElementById('file-subject').value = f.subject_name || '';
+  document.getElementById('file-sort').value = f.sort_order || '';
+  document.getElementById('file-visible').checked = f.is_visible !== false;
+  document.getElementById('file-drop-label').textContent = f.file_name ? ('📎 ' + f.file_name + ' — اضغط لاستبدال الملف') : '📎 اضغط لاختيار ملف';
+  document.getElementById('file-input').value = '';
+  document.getElementById('file-mdl-msg').innerHTML = '';
+  _pickedFile = null;
+  openMdl('mdl-file');
+}
+
+function handleFilePicked(input) {
+  if (!input.files || !input.files[0]) return;
+  _pickedFile = input.files[0];
+  document.getElementById('file-drop-label').textContent = '📎 ' + _pickedFile.name + ' (' + fmtFileSize(_pickedFile.size) + ')';
+}
+
+async function filesSave() {
+  const msg = document.getElementById('file-mdl-msg');
+  const id = document.getElementById('file-id').value;
+  const title = document.getElementById('file-title-inp').value.trim();
+  if (!title) { msg.innerHTML = '<div class="msg-err">❌ أدخل عنوان الملف</div>'; return; }
+  if (!id && !_pickedFile) { msg.innerHTML = '<div class="msg-err">❌ اختر ملفًا للرفع</div>'; return; }
+
+  msg.innerHTML = '<div style="color:var(--blue);font-size:.85rem;">⏳ جاري الحفظ...</div>';
+
+  let storagePath = document.getElementById('file-storage-path').value || null;
+  let url = document.getElementById('file-url').value || null;
+  let fileName = null, fileSize = null;
+
+  try {
+    if (_pickedFile) {
+      document.getElementById('file-upload-prog').style.display = 'block';
+      const safeName = _pickedFile.name.replace(/[^\w.\-\u0600-\u06FF ]/g, '_');
+      const path = `${Date.now()}_${safeName}`;
+      const { error: upErr } = await sb.storage.from('public-files').upload(path, _pickedFile, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: pub } = sb.storage.from('public-files').getPublicUrl(path);
+      // احذف الملف القديم لو بنستبدل ملف في وضع التعديل
+      if (id && storagePath) { sb.storage.from('public-files').remove([storagePath]).catch(()=>{}); }
+      storagePath = path;
+      url = pub.publicUrl;
+      fileName = _pickedFile.name;
+      fileSize = _pickedFile.size;
+    }
+
+    const payload = {
+      title,
+      note:         document.getElementById('file-note').value.trim() || null,
+      curriculum:   document.getElementById('file-curriculum').value || null,
+      grade_name:   document.getElementById('file-grade').value || null,
+      term:         document.getElementById('file-term').value || null,
+      subject_name: document.getElementById('file-subject').value.trim() || null,
+      sort_order:   parseInt(document.getElementById('file-sort').value) || (_filesList.length + 1),
+      is_visible:   document.getElementById('file-visible').checked,
+      storage_path: storagePath,
+      url,
+      updated_at:   new Date().toISOString(),
+    };
+    if (fileName) { payload.file_name = fileName; payload.file_size = fileSize; }
+
+    let error;
+    if (id) {
+      ({ error } = await sb.from('site_files').update(payload).eq('id', id));
+    } else {
+      payload.created_at = new Date().toISOString();
+      ({ error } = await sb.from('site_files').insert(payload));
+    }
+    if (error) throw error;
+    closeMdl('mdl-file');
+    toast('✅ تم حفظ الملف بنجاح');
+    filesLoad();
+  } catch(e) {
+    msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+  } finally {
+    document.getElementById('file-upload-prog').style.display = 'none';
+  }
+}
+
+async function filesToggleVisible(id, chk) {
+  try {
+    await sb.from('site_files').update({ is_visible: chk.checked, updated_at: new Date().toISOString() }).eq('id', id);
+    toast(chk.checked ? '✅ الملف ظاهر الآن' : '🚫 تم إخفاء الملف');
+    filesLoad();
+  } catch(e) { toast('❌ ' + e.message, 'err'); chk.checked = !chk.checked; }
+}
+
+async function filesDelete(id, title, storagePath) {
+  if (!confirm(`هل تريد حذف ملف:\n"${title}"؟`)) return;
+  try {
+    const { error } = await sb.from('site_files').delete().eq('id', id);
+    if (error) throw error;
+    if (storagePath) { sb.storage.from('public-files').remove([storagePath]).catch(()=>{}); }
+    toast('🗑️ تم حذف الملف');
+    filesLoad();
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+// ── إعدادات صفحة "ملفاتي" العامة (العنوان والوصف) ──
+async function fpsLoad() {
+  try {
+    const { data } = await sb.from('site_settings').select('value').eq('id', 'files_page').single();
+    const v = data?.value || {};
+    document.getElementById('fps-title').value = v.title || '📂 ملفاتي';
+    document.getElementById('fps-subtitle').value = v.subtitle || 'تصفح وحمّل الملفات والمذكرات المتاحة مجانًا — فلتر حسب المنهج والصف والترم والمادة عشان توصل لملفك بسرعة.';
+    document.getElementById('fps-order').value = v.order || 'sort';
+  } catch(e) {
+    document.getElementById('fps-title').value = '📂 ملفاتي';
+    document.getElementById('fps-subtitle').value = 'تصفح وحمّل الملفات والمذكرات المتاحة مجانًا — فلتر حسب المنهج والصف والترم والمادة عشان توصل لملفك بسرعة.';
+  }
+}
+
+async function fpsSave() {
+  const msg = document.getElementById('fps-msg');
+  msg.innerHTML = '<div style="color:var(--blue);font-size:.85rem;">⏳ جاري الحفظ...</div>';
+  try {
+    const value = {
+      title: document.getElementById('fps-title').value.trim() || '📂 ملفاتي',
+      subtitle: document.getElementById('fps-subtitle').value.trim(),
+      order: document.getElementById('fps-order').value,
+    };
+    const { error } = await sb.from('site_settings').upsert({ id: 'files_page', value, updated_at: new Date().toISOString() });
+    if (error) throw error;
+    msg.innerHTML = '<div class="msg-ok">✅ تم حفظ إعدادات الصفحة</div>';
+    toast('✅ تم حفظ إعدادات صفحة ملفاتي');
+  } catch(e) {
+    msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
+  }
 }
 
 // ════════════════════════════════════════════════════
