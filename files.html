@@ -413,6 +413,23 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
     return (kb / 1024).toFixed(1) + ' ميجابايت';
   }
 
+  // قوائم ثابتة للمنهج والصف والترم
+  var CURRICULUM_OPTIONS = [
+    'المنهج السعودي',
+    'المنهج الإماراتي',
+    'المنهج القطري',
+    'المنهج الكويتي',
+    'المنهج العماني',
+    'المنهج المصري',
+    'مناهج أخرى'
+  ];
+  var GRADE_NUMS = ['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر','الحادي عشر','الثاني عشر'];
+  var GRADE_OPTIONS = GRADE_NUMS.map(function(n){ return 'الصف ' + n; });
+  var TERM_OPTIONS = ['الترم الأول', 'الترم الثاني', 'الترم الثالث'];
+
+  // قائمة أساسية للمواد + أي مادة جديدة تُضاف تلقائيًا من بيانات الملفات الفعلية
+  var BASE_SUBJECTS = ['اللغة العربية', 'اللغة الإنجليزية', 'الرياضيات', 'العلوم', 'الفيزياء', 'الكيمياء', 'الأحياء', 'الدراسات الاجتماعية', 'التربية الدينية'];
+
   function uniqueSorted(arr) {
     return Array.from(new Set(arr.filter(Boolean))).sort(function(a,b){ return a.localeCompare('ar'); });
   }
@@ -432,15 +449,16 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   }
 
   function populateFilterOptions() {
-    fillSelect('filterCurriculum', uniqueSorted(allFiles.map(function(f){ return f.curriculum; })));
-    fillSelect('filterGrade', uniqueSorted(allFiles.map(function(f){ return f.grade_name; })));
-    fillSelect('filterTerm', uniqueSorted(allFiles.map(function(f){ return f.term; })));
-    fillSelect('filterSubject', uniqueSorted(allFiles.map(function(f){ return f.subject_name; })));
+    fillSelect('filterCurriculum', CURRICULUM_OPTIONS);
+    fillSelect('filterGrade', GRADE_OPTIONS);
+    fillSelect('filterTerm', TERM_OPTIONS);
+    // المواد: القائمة الأساسية + أي مادة جديدة موجودة فعليًا في الملفات المرفوعة (تُضاف تلقائيًا)
+    var subjectsFromData = allFiles.map(function(f){ return f.subject_name; });
+    var allSubjects = uniqueSorted(BASE_SUBJECTS.concat(subjectsFromData));
+    fillSelect('filterSubject', allSubjects);
   }
 
   function fileCard(f) {
-    var icon = f.type === 'video' ? '🎬' : '📄';
-    var iconClass = f.type === 'video' ? 'video' : '';
     var tags = [];
     if (f.curriculum) tags.push('<span class="file-tag curriculum">📘 ' + esc(f.curriculum) + '</span>');
     if (f.grade_name) tags.push('<span class="file-tag">🎓 ' + esc(f.grade_name) + '</span>');
@@ -450,14 +468,14 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
     return '' +
     '<div class="file-card">' +
       '<div class="file-card-top">' +
-        '<div class="file-icon ' + iconClass + '">' + icon + '</div>' +
+        '<div class="file-icon">📄</div>' +
         '<div><div class="file-title">' + esc(f.title || 'ملف بدون عنوان') + '</div></div>' +
       '</div>' +
       (f.note ? '<div class="file-note">' + esc(f.note) + '</div>' : '') +
       '<div class="file-tags">' + tags.join('') + '</div>' +
       '<div class="file-card-bottom">' +
         '<span class="file-size">' + esc(fmtSize(f.file_size)) + '</span>' +
-        '<a href="' + esc(f.url) + '" target="_blank" class="file-btn">' + (f.type === 'video' ? '▶️ مشاهدة' : '⬇️ تحميل') + '</a>' +
+        '<a href="' + esc(f.url) + '" target="_blank" class="file-btn">⬇️ تحميل</a>' +
       '</div>' +
     '</div>';
   }
@@ -524,6 +542,7 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
         .from('teacher_materials')
         .select('id,title,type,url,file_name,file_size,note,grade_name,subject_name,curriculum,term,created_at')
         .eq('is_free', true)
+        .eq('type', 'file')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
