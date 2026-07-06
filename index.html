@@ -1115,8 +1115,8 @@ footer { background:var(--dark); padding:60px 5% 30px; }
   .hero-visual-card img { height:280px; }
   .hero-title { font-size:clamp(1.6rem,5vw,2.2rem); }
   .hero-sub { font-size:.9rem; }
-  .hero-btns { flex-direction:column; gap:10px; }
-  .btn-primary,.btn-secondary,.btn-gold { width:100%; justify-content:center; }
+  .hero-btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .btn-register-hero,.btn-primary,.btn-secondary,.btn-gold { width:100%; justify-content:center; padding:12px 10px; font-size:.85rem; }
   .stats-grid { grid-template-columns:repeat(3,1fr); gap:1px; }
   .stat-item { padding:14px 6px; }
   .stat-item-icon { font-size:1.15rem; margin-bottom:6px; }
@@ -1783,14 +1783,14 @@ window.addEventListener('load', function() { setTimeout(loadStatsBar, 400); });
     <!-- روابط الناف (وسط) -->
     <ul class="nav-links">
       <li><a href="#hero">🏠 الرئيسية</a></li>
-      <li><a href="vision.html">✨ رؤيتنا</a></li>
-      <li><a href="#teachers">👨‍🏫 فريق التدريس</a></li>
-      <li><a href="courses.html" style="color:var(--blue);font-weight:900;">📚 كورساتي</a></li>
-      <li><a href="files.html" style="color:var(--green);font-weight:900;">📂 ملفاتي</a></li>
-      <li><a href="#pricing">💰 الأسعار</a></li>
-      <li><a href="#testimonials">⭐ الآراء</a></li>
-      <li><a href="announcements.html" style="color:var(--gold);font-weight:900;">📢 الإعلانات</a></li>
+      <li><a href="courses.html" style="color:var(--blue);font-weight:900;">📚 الكورسات</a></li>
+      <li><a href="files.html" style="color:var(--green);font-weight:900;">📂 الملفات</a></li>
       <li><a href="free.html" style="color:var(--green);font-weight:900;">🎁 مجاني</a></li>
+      <li><a href="#pricing">💰 الأسعار</a></li>
+      <li><a href="#teachers">👨‍🏫 فريق التدريس</a></li>
+      <li><a href="announcements.html" style="color:var(--gold);font-weight:900;">📢 الإعلانات</a></li>
+      <li><a href="#testimonials">⭐ الآراء</a></li>
+      <li><a href="vision.html">✨ رؤيتنا</a></li>
       <li><a href="bylaws.html" style="color:var(--blue);font-weight:900;">📋 اللوائح</a></li>
     </ul>
     <!-- أزرار يسار (تظهر على الشاشات الكبيرة فقط) -->
@@ -1805,15 +1805,14 @@ window.addEventListener('load', function() { setTimeout(loadStatsBar, 400); });
 <div class="nav-drawer" id="nav-drawer">
   <ul>
     <li><a href="#hero" onclick="closeNavDrawer()">🏠 الرئيسية</a></li>
-    <li><a href="vision.html" onclick="closeNavDrawer()">✨ رؤيتنا</a></li>
-    <li><a href="#teachers" onclick="closeNavDrawer()">👨‍🏫 المدرسين</a></li>
-    <li><a href="courses.html" style="color:var(--blue);font-weight:900;" onclick="closeNavDrawer()">📚 كورساتي</a></li>
-    <li><a href="files.html" style="color:var(--green);font-weight:900;" onclick="closeNavDrawer()">📂 ملفاتي</a></li>
+    <li><a href="courses.html" style="color:var(--blue);font-weight:900;" onclick="closeNavDrawer()">📚 الكورسات</a></li>
+    <li><a href="files.html" style="color:var(--green);font-weight:900;" onclick="closeNavDrawer()">📂 الملفات</a></li>
+    <li><a href="free.html" style="color:var(--green);font-weight:900;">🎁 مجاني</a></li>
     <li><a href="#pricing" onclick="closeNavDrawer()">💰 الأسعار</a></li>
-    <li><a href="#testimonials" onclick="closeNavDrawer()">⭐ الآراء</a></li>
-    <li><a href="#method" onclick="closeNavDrawer()">📖 المنهجية</a></li>
+    <li><a href="#teachers" onclick="closeNavDrawer()">👨‍🏫 فريق التدريس</a></li>
     <li><a href="announcements.html" style="color:var(--gold);font-weight:900;" onclick="closeNavDrawer()">📢 الإعلانات</a></li>
-    <li><a href="free.html" style="color:var(--green);font-weight:900;">🎁 محتوى مجاني</a></li>
+    <li><a href="#testimonials" onclick="closeNavDrawer()">⭐ الآراء</a></li>
+    <li><a href="vision.html" onclick="closeNavDrawer()">✨ رؤيتنا</a></li>
     <li><a href="bylaws.html" style="color:var(--blue);font-weight:900;" onclick="closeNavDrawer()">📋 اللوائح</a></li>
   </ul>
   <div class="nav-drawer-btns">
@@ -1840,9 +1839,11 @@ window.addEventListener('load', function() { setTimeout(loadStatsBar, 400); });
       <div class="hero-btns">
         <a href="login.html" class="btn-register-hero">📝 سجل الآن</a>
         <a href="#booking" class="btn-primary">🎓 ابدأ رحلتك التعليمية</a>
-        <a href="vision.html" class="btn-gold">✨ اكتشف رؤيتنا</a>
+        <a href="courses.html" class="btn-secondary">📚 الكورسات</a>
+        <a href="files.html" class="btn-secondary">📂 الملفات</a>
         <a href="free.html" class="btn-secondary">🎁 محتوى مجاني</a>
         <a href="bylaws.html" class="btn-secondary">📋 اللوائح</a>
+        <a href="vision.html" class="btn-gold">✨ اكتشف رؤيتنا</a>
       </div>
       <div class="hero-stats" id="hero-stats-bar">
         <div class="hero-stat"><div class="hero-stat-num">—</div><div class="hero-stat-label">جاري التحميل...</div></div>
