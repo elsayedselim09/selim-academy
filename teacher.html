@@ -1280,11 +1280,14 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
         </div>
       </div>
       <!-- Status Filter -->
-      <div class="sessions-filter">
-        <button class="sf-btn active" id="sf-all"      onclick="setSessFilter('all')">📋 الكل</button>
-        <button class="sf-btn"        id="sf-upcoming" onclick="setSessFilter('upcoming')">🔵 القادمة</button>
-        <button class="sf-btn"        id="sf-live"     onclick="setSessFilter('live')">🟢 مباشرة</button>
-        <button class="sf-btn"        id="sf-ended"    onclick="setSessFilter('ended')">✅ المنتهية</button>
+      <div class="sessions-filter" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="sf-btn active" id="sf-all"      onclick="setSessFilter('all')">📋 الكل</button>
+          <button class="sf-btn"        id="sf-upcoming" onclick="setSessFilter('upcoming')">🔵 القادمة</button>
+          <button class="sf-btn"        id="sf-live"     onclick="setSessFilter('live')">🟢 مباشرة</button>
+          <button class="sf-btn"        id="sf-ended"    onclick="setSessFilter('ended')">✅ المنتهية</button>
+        </div>
+        <button onclick="deleteEndedSessions()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif;white-space:nowrap">🗑️ حذف كل الحصص المنتهية</button>
       </div>
       <!-- List -->
       <div id="sessions-list">
@@ -3709,6 +3712,23 @@ async function deleteSessionsByGrade() {
     if (error) throw error;
     toast(`✅ تم حذف ${count} حصة من "${gname}" بنجاح`);
     sessGradeFilter = 'all';
+    await loadSessions();
+  } catch(e) { alert('خطأ أثناء الحذف: ' + e.message); }
+}
+
+// ── حذف كل الحصص المنتهية ──
+async function deleteEndedSessions() {
+  const ended = sessAllData.filter(s => sessStatus(s) === 'ended');
+  const count = ended.length;
+  if (!count) { alert('لا توجد حصص منتهية للحذف حالياً.'); return; }
+  if (!confirm(`⚠️ هل أنت متأكد من حذف كل الحصص المنتهية (${count} حصة)؟\nلا يمكن التراجع عن هذا الإجراء!`)) return;
+  try {
+    const ids = ended.map(s => s.id);
+    const { error } = await sb.from('teacher_sessions')
+      .delete()
+      .in('id', ids);
+    if (error) throw error;
+    toast(`✅ تم حذف ${count} حصة منتهية بنجاح`);
     await loadSessions();
   } catch(e) { alert('خطأ أثناء الحذف: ' + e.message); }
 }
