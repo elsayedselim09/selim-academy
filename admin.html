@@ -1789,6 +1789,28 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   </div>
 </div>
 
+<!-- ADD/EDIT GRADE (ADMIN) MODAL -->
+<div class="mdl" id="mdl-grade-admin">
+  <div class="mdl-box" style="position:relative">
+    <div class="mdl-title" id="ga-modal-title">➕ إضافة صف دراسي</div>
+    <input type="hidden" id="ga-subj-id">
+    <input type="hidden" id="ga-grade-id">
+    <div class="fg">
+      <label>اسم الصف *</label>
+      <input type="text" id="ga-name" placeholder="مثال: الصف الأول المتوسط، الصف الثالث الإعدادي...">
+    </div>
+    <div class="fg">
+      <label>وصف مختصر (اختياري)</label>
+      <input type="text" id="ga-desc" placeholder="مثال: مجموعة صباحية — ٢٠ طالب">
+    </div>
+    <div id="ga-msg"></div>
+    <div class="mdl-btns">
+      <button class="mdl-cancel" onclick="closeGradeModalAdmin()">إلغاء</button>
+      <button class="mdl-confirm mc-save" id="ga-save-btn" onclick="saveGradeAdmin()">💾 حفظ الصف</button>
+    </div>
+  </div>
+</div>
+
 <!-- SESSION MODAL -->
 <div class="mdl" id="mdl-session">
   <div class="mdl-box wide">
@@ -2546,9 +2568,12 @@ function openSubjectDetail(id) {
       </div>
     </div>
     <div style="margin-bottom:14px">
-      <div style="font-size:.8rem;font-weight:700;color:var(--dark);margin-bottom:8px">📋 الصفوف الدراسية (${grades.length})</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:.8rem;font-weight:700;color:var(--dark)">📋 الصفوف الدراسية (${grades.length})</div>
+        <button onclick="openAddGradeModalAdmin('${s.id}')" style="padding:5px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:Cairo,sans-serif;font-size:.75rem;font-weight:700">➕ إضافة صف</button>
+      </div>
       ${grades.length
-        ? grades.map(g => `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray-light);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="openAdminSubjectMaterials('${s.teacher_id}', '${g.id}', '${(g.name||g.grade_name||'').replace(/'/g,"\\'").trim()}', '${(s.name||s.subject_name||'').replace(/'/g,"\\'").trim()}')"><span style="margin-right:auto;font-size:.85rem;font-weight:600">🏫 ${g.name||g.grade_name||'—'}</span><button style="padding:4px 8px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:Cairo,sans-serif;font-size:0.75rem">إدارة المحتوى</button></div>`).join('')
+        ? grades.map(g => `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray-light);border-radius:8px;margin-bottom:6px"><span style="margin-right:auto;font-size:.85rem;font-weight:600;cursor:pointer" onclick="openAdminSubjectMaterials('${s.teacher_id}', '${g.id}', '${(g.name||g.grade_name||'').replace(/'/g,"\\'").trim()}', '${(s.name||s.subject_name||'').replace(/'/g,"\\'").trim()}')">🏫 ${g.name||g.grade_name||'—'}</span><button style="padding:4px 8px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:Cairo,sans-serif;font-size:0.75rem" onclick="openAdminSubjectMaterials('${s.teacher_id}', '${g.id}', '${(g.name||g.grade_name||'').replace(/'/g,"\\'").trim()}', '${(s.name||s.subject_name||'').replace(/'/g,"\\'").trim()}')">إدارة المحتوى</button><button style="padding:4px 8px;background:var(--gold);color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:Cairo,sans-serif;font-size:0.75rem" onclick="openEditGradeModalAdmin('${s.id}','${g.id}')">✏️</button><button style="padding:4px 8px;background:var(--red);color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:Cairo,sans-serif;font-size:0.75rem" onclick="deleteGradeAdmin('${s.id}','${g.id}','${(g.name||g.grade_name||'').replace(/'/g,"\\'").trim()}')">🗑️</button></div>`).join('')
         : '<div style="color:var(--gray);font-size:.83rem">لا توجد صفوف مضافة</div>'
       }
     </div>
@@ -2573,6 +2598,88 @@ async function approveSubject(id) {
     if(idx !== -1) S.teacherSubjects[idx].is_approved = true;
     toast('✅ تمت الموافقة على المادة');
     renderCoursesGrid();
+  } catch(e) { toast('خطأ: '+e.message, 'err'); }
+}
+
+// ══════════════════════════════════════════════
+// GRADES (ADMIN) — إضافة/تعديل/حذف صف من صفحة الإدارة
+// ══════════════════════════════════════════════
+function openAddGradeModalAdmin(subjId) {
+  const s = S.teacherSubjects.find(x => x.id === subjId);
+  document.getElementById('ga-modal-title').textContent = `➕ إضافة صف لـ ${s?.name||s?.subject_name||'المادة'}`;
+  document.getElementById('ga-subj-id').value = subjId;
+  document.getElementById('ga-grade-id').value = '';
+  document.getElementById('ga-name').value = '';
+  document.getElementById('ga-desc').value = '';
+  document.getElementById('ga-msg').innerHTML = '';
+  document.getElementById('mdl-grade-admin').classList.add('show');
+  setTimeout(() => document.getElementById('ga-name').focus(), 100);
+}
+
+function openEditGradeModalAdmin(subjId, gradeId) {
+  const s = S.teacherSubjects.find(x => x.id === subjId);
+  const g = (s?.teacher_grades || []).find(x => x.id === gradeId);
+  if(!g) return;
+  document.getElementById('ga-modal-title').textContent = `✏️ تعديل صف في ${s?.name||s?.subject_name||'المادة'}`;
+  document.getElementById('ga-subj-id').value = subjId;
+  document.getElementById('ga-grade-id').value = gradeId;
+  document.getElementById('ga-name').value = g.name || g.grade_name || '';
+  document.getElementById('ga-desc').value = g.description || '';
+  document.getElementById('ga-msg').innerHTML = '';
+  document.getElementById('mdl-grade-admin').classList.add('show');
+  setTimeout(() => document.getElementById('ga-name').focus(), 100);
+}
+
+function closeGradeModalAdmin() { document.getElementById('mdl-grade-admin').classList.remove('show'); }
+
+async function saveGradeAdmin() {
+  const subjId  = document.getElementById('ga-subj-id').value;
+  const gradeId = document.getElementById('ga-grade-id').value;
+  const name    = document.getElementById('ga-name').value.trim();
+  if(!name) { setMsg('ga-msg','اسم الصف مطلوب','err'); return; }
+
+  const s = S.teacherSubjects.find(x => x.id === subjId);
+  if(!s) { setMsg('ga-msg','لم يتم العثور على المادة','err'); return; }
+
+  const btn = document.getElementById('ga-save-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+
+  try {
+    const payload = {
+      name,
+      description: document.getElementById('ga-desc').value.trim() || null,
+    };
+    if(gradeId) {
+      const { error } = await sb.from('teacher_grades').update(payload).eq('id', gradeId);
+      if(error) throw error;
+      toast('✅ تم تعديل الصف بنجاح');
+    } else {
+      const { error } = await sb.from('teacher_grades').insert({
+        ...payload,
+        subject_id: subjId,
+        teacher_id: s.teacher_id,
+      });
+      if(error) throw error;
+      toast('✅ تم إضافة الصف بنجاح');
+    }
+    closeGradeModalAdmin();
+    await loadCourses();
+    openSubjectDetail(subjId); // إعادة فتح نفس نافذة تفاصيل المادة بعد التحديث
+  } catch(e) { setMsg('ga-msg', e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '💾 حفظ الصف'; }
+}
+
+async function deleteGradeAdmin(subjId, gradeId, gradeName) {
+  if(!confirm(`⚠️ هل أنت متأكد من حذف صف "${gradeName}"؟\nسيتم حذف تسجيلات الطلاب المرتبطين بهذا الصف نهائياً ولا يمكن التراجع!`)) return;
+  try {
+    // ننظف تسجيلات الطلاب المرتبطة بهذا الصف أولاً حتى لا تتحول إلى سجلات يتيمة
+    const { error: errEnr } = await sb.from('teacher_enrollments').delete().eq('grade_id', gradeId);
+    if(errEnr) throw errEnr;
+    const { error } = await sb.from('teacher_grades').delete().eq('id', gradeId);
+    if(error) throw error;
+    toast('✅ تم حذف الصف وتسجيلات الطلاب المرتبطة به');
+    await loadCourses();
+    openSubjectDetail(subjId);
   } catch(e) { toast('خطأ: '+e.message, 'err'); }
 }
 
