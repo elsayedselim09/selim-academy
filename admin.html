@@ -574,7 +574,10 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   <div class="page" id="page-sessions">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:10px">
       <div class="page-title">📅 حصص المعلمين</div>
-      <button class="btn-refresh" onclick="loadAdminSessions()">🔄 تحديث</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-primary" onclick="openSessionModalAdmin()">➕ إضافة حصة</button>
+        <button class="btn-refresh" onclick="loadAdminSessions()">🔄 تحديث</button>
+      </div>
     </div>
     <p class="page-sub">متابعة جميع حصص المعلمين — المادة والصف ووقت الحصة</p>
 
@@ -1811,23 +1814,164 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   </div>
 </div>
 
-<!-- SESSION MODAL -->
+<!-- SESSION MODAL (ADMIN) — نسخة كاملة مطابقة لصفحة المعلم + اختيار المعلم -->
 <div class="mdl" id="mdl-session">
-  <div class="mdl-box wide">
-    <div class="mdl-title" id="s-mdl-title">➕ إضافة حصة</div>
-    <div style="margin-bottom:16px"></div>
-    <input type="hidden" id="s-edit-id">
-    <div class="fg"><label>عنوان الحصة *</label><input type="text" id="s-title" placeholder="مثال: المعادلات التربيعية"></div>
+  <div class="mdl-box wide" style="position:relative;max-height:90vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--gray-mid) transparent;padding:0">
+    <div style="position:sticky;top:0;z-index:10;background:#fff;border-radius:20px 20px 0 0;padding:24px 32px 16px;border-bottom:1.5px solid var(--gray-mid);margin-bottom:0">
+      <div class="mdl-title" id="as-mdl-title" style="margin-bottom:0">➕ إضافة حصة</div>
+    </div>
+    <div style="padding:20px 32px 32px">
+    <input type="hidden" id="as-edit-id">
+
+    <!-- اختيار المعلم -->
+    <div class="fg">
+      <label>المعلم *</label>
+      <select id="as-teacher-sel">
+        <option value="">— اختر المعلم —</option>
+      </select>
+    </div>
+
+    <!-- ✅ حصة مجانية — أعلى النافذة -->
+    <div style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border:1.5px solid #6EE7B7;border-radius:12px;padding:14px 18px;margin-bottom:18px">
+      <label style="display:flex;align-items:center;gap:12px;cursor:pointer">
+        <input type="checkbox" id="as-is-free" style="width:22px;height:22px;accent-color:var(--green);cursor:pointer" onchange="toggleFreeSessionAdmin(this.checked)">
+        <div>
+          <div style="font-size:.95rem;font-weight:900;color:#065F46">🎁 حصة مجانية للجميع</div>
+          <div style="font-size:.78rem;color:#047857;margin-top:2px">ستظهر في صفحة المحتوى المجاني وتكون متاحة لجميع الطلاب بدون تسجيل</div>
+        </div>
+      </label>
+    </div>
+
+    <div class="fg">
+      <label>عنوان الحصة *</label>
+      <input type="text" id="as-title" placeholder="مثال: شرح درس المعادلات التربيعية">
+    </div>
+
+    <!-- المادة — تظهر دائماً -->
     <div class="fg-row">
-      <div class="fg"><label>موعد الحصة</label><input type="datetime-local" id="s-date" style="direction:ltr"></div>
-      <div class="fg"><label>رابط Zoom</label><input type="url" id="s-zoom" placeholder="https://zoom.us/..." style="direction:ltr"></div>
+      <div class="fg">
+        <label>المادة</label>
+        <select id="as-subject-sel">
+          <option value="">— اختر المعلم أولاً —</option>
+        </select>
+      </div>
+      <!-- الصف العادي (من مجموعات المعلم) — يظهر عندما المجاني غير مفعّل -->
+      <div class="fg" id="as-grade-normal-wrap">
+        <label>الصف الأساسي</label>
+        <select id="as-grade-sel">
+          <option value="">— اختر الصف —</option>
+        </select>
+      </div>
+
+      <!-- الطلاب المشمولين في الحصة -->
+      <div class="fg" id="as-students-wrap" style="display:none;margin-top:10px;">
+        <label>الطلاب المشمولين (اختياري - افتراضياً كل طلاب الصف)</label>
+        <div id="as-students-list" style="background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:10px;max-height:150px;overflow-y:auto;font-size:.85rem;display:flex;flex-direction:column;gap:6px;">
+        </div>
+      </div>
+      <!-- الصف المجاني (ابتدائي→ثانوي) — يظهر عند تفعيل المجاني -->
+      <div class="fg" id="as-free-grade-wrap" style="display:none">
+        <label>الصف *</label>
+        <select id="as-free-grade-sel">
+          <optgroup label="المرحلة الابتدائية">
+            <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+            <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+            <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+            <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+            <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+            <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+          </optgroup>
+          <optgroup label="المرحلة الإعدادية">
+            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+            <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+          </optgroup>
+          <optgroup label="المرحلة الثانوية">
+            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+            <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+          </optgroup>
+        </select>
+      </div>
     </div>
-    <div class="fg"><label>رابط الفيديو (اختياري)</label><input type="url" id="s-video" placeholder="https://youtube.com/..." style="direction:ltr"></div>
-    <div class="mdl-btns">
-      <button class="mdl-cancel" onclick="closeSessionModal()">إلغاء</button>
-      <button class="mdl-confirm mc-save" id="s-save-btn" onclick="saveSession()">💾 حفظ</button>
+
+    <!-- ✅ صفوف إضافية — تظهر فقط عند عدم تفعيل المجاني -->
+    <div id="as-extra-grades-wrap" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <label style="font-size:.8rem;font-weight:700;color:var(--dark)">📚 صفوف إضافية (اختياري)</label>
+        <button type="button" onclick="addExtraGradeRowAdmin()"
+          style="background:var(--blue-light);color:var(--blue);border:1.5px solid #BFDBFE;border-radius:8px;padding:4px 12px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">
+          ➕ إضافة صف
+        </button>
+      </div>
+      <div id="as-extra-grades-container" style="display:flex;flex-direction:column;gap:8px">
+        <!-- Extra grade rows added dynamically -->
+      </div>
+      <div style="font-size:.74rem;color:var(--gray);margin-top:4px">💡 لو الحصة لأكثر من صف — أضف الصفوف هنا وستُنشأ الحصة لكل صف تلقائياً</div>
     </div>
-    <div id="s-msg"></div>
+
+    <div class="fg-row">
+      <div class="fg">
+        <label>نوع الحصة *</label>
+        <select id="as-type" onchange="toggleSessTypeAdmin()">
+          <option value="single">يوم واحد / لمرة واحدة</option>
+          <option value="multidate">أكثر من يوم (بدون تكرار)</option>
+          <option value="recurring" selected>متكررة طوال الشهر (4 أسابيع)</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>وقت الحصة *</label>
+        <input type="time" id="as-time" style="direction:ltr">
+      </div>
+    </div>
+
+    <!-- يوم واحد -->
+    <div class="fg" id="as-single-date-div" style="display:none">
+      <label>تاريخ الحصة *</label>
+      <input type="date" id="as-date" style="direction:ltr">
+    </div>
+
+    <!-- أكثر من يوم (بدون تكرار) -->
+    <div class="fg" id="as-multidate-div" style="display:none">
+      <label>تواريخ الحصص (أضف كل تاريخ على حدة) *</label>
+      <div id="as-multidate-container" style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+        <!-- dates added dynamically -->
+      </div>
+      <button type="button" onclick="addMultiDateRowAdmin()"
+        style="margin-top:8px;background:var(--blue-light);color:var(--blue);border:1.5px solid #BFDBFE;border-radius:8px;padding:6px 16px;font-family:'Cairo',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;align-self:flex-start">
+        ➕ إضافة تاريخ آخر
+      </button>
+      <div style="font-size:.74rem;color:var(--gray);margin-top:4px">💡 كل تاريخ سيُنشئ حصة مستقلة بدون تكرار</div>
+    </div>
+
+    <!-- متكررة -->
+    <div class="fg" id="as-recurring-days-div">
+      <label>أيام التكرار (اختر يوماً أو أكثر) *</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="as-day-cb" value="0"> الأحد</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="as-day-cb" value="1"> الاثنين</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="as-day-cb" value="2"> الثلاثاء</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="as-day-cb" value="3"> الأربعاء</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="as-day-cb" value="4"> الخميس</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="as-day-cb" value="5"> الجمعة</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="as-day-cb" value="6"> السبت</label>
+      </div>
+    </div>
+    <div class="fg">
+      <label>مدة الحصة (دقيقة)</label>
+      <input type="number" id="as-duration" placeholder="60" min="15" max="300" value="60">
+    </div>
+    <div class="fg">
+      <label>رابط Zoom / Google Meet (اختياري)</label>
+      <input type="url" id="as-zoom" placeholder="https://zoom.us/j/..." style="direction:ltr">
+    </div>
+
+    <div id="as-mdl-msg"></div>
+    </div><!-- end scrollable content -->
+    <div style="position:sticky;bottom:0;background:#fff;border-top:1.5px solid var(--gray-mid);border-radius:0 0 20px 20px;padding:16px 32px" class="mdl-btns">
+      <button class="mdl-cancel" onclick="closeSessionModalAdmin()">إلغاء</button>
+      <button class="mdl-confirm mc-save" id="as-save-btn" onclick="saveSessionAdmin()">💾 حفظ الحصة</button>
+    </div>
   </div>
 </div>
 
@@ -3365,8 +3509,311 @@ function initSessions() {
 function loadSessions() {}
 function renderSessions() {}
 function openSessionForm() { toast('لإضافة حصص جديدة اذهب للجة المعلم وأضفها من هناك', 'ok'); }
-function closeSessionModal() {}
-async function saveSession() {}
+// ══════════════════════════════════════════════
+// SESSION MODAL (ADMIN) — إضافة/تعديل حصة لأي معلم من صفحة الإدارة
+// ══════════════════════════════════════════════
+function openSessionModalAdmin(id) {
+  const s = id ? (S.allSessions||[]).find(x => x.id === id) : null;
+  document.getElementById('as-mdl-title').textContent = s ? '✏️ تعديل الحصة' : '➕ إضافة حصة';
+  document.getElementById('as-edit-id').value = s?.id || '';
+  document.getElementById('as-title').value = s?.title || '';
+
+  // قائمة المعلمين (المعتمدين فقط)
+  const approvedTeachers = (S.teachers || []).filter(t => t.teacher_approved === true);
+  const teacherSel = document.getElementById('as-teacher-sel');
+  teacherSel.innerHTML = '<option value="">— اختر المعلم —</option>' +
+    approvedTeachers.map(t =>
+      `<option value="${t.id}" ${s?.teacher_id===t.id?'selected':''}>${t.full_name || '—'}${t.specialization ? ' (‫'+t.specialization+'‬)' : ''}</option>`
+    ).join('');
+
+  if (s) {
+    const dt = new Date(s.scheduled_at);
+    document.getElementById('as-type').value = 'single';
+    document.getElementById('as-type').disabled = true;
+    document.getElementById('as-date').value = dt.toISOString().slice(0, 10);
+    document.getElementById('as-time').value = dt.toTimeString().slice(0, 5);
+  } else {
+    document.getElementById('as-type').disabled = false;
+    document.getElementById('as-type').value = 'recurring';
+    document.getElementById('as-date').value = '';
+    document.getElementById('as-time').value = '';
+    document.querySelectorAll('.as-day-cb').forEach(cb => cb.checked = false);
+  }
+  document.getElementById('as-extra-grades-container').innerHTML = '';
+  document.getElementById('as-multidate-container').innerHTML = '';
+  toggleSessTypeAdmin();
+
+  document.getElementById('as-duration').value = s?.duration_min || 60;
+  document.getElementById('as-zoom').value = s?.zoom_link || '';
+  const isFreeVal = s?.is_free || false;
+  document.getElementById('as-is-free').checked = isFreeVal;
+  toggleFreeSessionAdmin(isFreeVal);
+  if (isFreeVal && s?.grade_name) {
+    const fsel = document.getElementById('as-free-grade-sel');
+    for (let opt of fsel.options) { if (opt.value === s.grade_name) { opt.selected = true; break; } }
+  }
+  document.getElementById('as-mdl-msg').innerHTML = '';
+
+  // تعبئة المواد بناءً على المعلم المختار
+  const subjSel = document.getElementById('as-subject-sel');
+  function fillSubjects(teacherId, selectedSubjId, selectedGradeId) {
+    const subs = (S.teacherSubjects || []).filter(sub => sub.teacher_id === teacherId);
+    subjSel.innerHTML = subs.length
+      ? '<option value="">— اختر المادة —</option>' + subs.map(sub => `<option value="${sub.id}" ${selectedSubjId===sub.id?'selected':''}>${sub.icon||'📚'} ${sub.name}</option>`).join('')
+      : '<option value="">— لا توجد مواد لهذا المعلم —</option>';
+    if(selectedSubjId) updateSessionGradeDropdownAdmin(selectedSubjId, teacherId, selectedGradeId);
+    else document.getElementById('as-grade-sel').innerHTML = '<option value="">— اختر الصف —</option>';
+  }
+
+  if (s?.teacher_id) fillSubjects(s.teacher_id, s.subject_id, s.grade_id);
+  else subjSel.innerHTML = '<option value="">— اختر المعلم أولاً —</option>';
+
+  teacherSel.onchange = () => fillSubjects(teacherSel.value, null, null);
+  subjSel.onchange = () => updateSessionGradeDropdownAdmin(subjSel.value, teacherSel.value);
+
+  document.getElementById('mdl-session').classList.add('show');
+  setTimeout(() => document.getElementById('as-title').focus(), 100);
+}
+
+function updateSessionGradeDropdownAdmin(subjId, teacherId, selectedGradeId) {
+  const subj   = (S.teacherSubjects || []).find(s => s.id === subjId);
+  const grades = subj?.teacher_grades || [];
+  const sel = document.getElementById('as-grade-sel');
+  sel.innerHTML = '<option value="">— اختر الصف —</option>' +
+    grades.map(g => `<option value="${g.id}" ${g.id===selectedGradeId?'selected':''}>${g.name}</option>`).join('');
+
+  sel.onchange = (e) => loadStudentsForSessionGradeAdmin(e.target.value, teacherId);
+  if (selectedGradeId) loadStudentsForSessionGradeAdmin(selectedGradeId, teacherId);
+  else document.getElementById('as-students-wrap').style.display = 'none';
+}
+
+async function loadStudentsForSessionGradeAdmin(gradeId, teacherId) {
+  const wrap = document.getElementById('as-students-wrap');
+  const list = document.getElementById('as-students-list');
+  if (!gradeId) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = 'block';
+  list.innerHTML = '⏳ جاري جلب الطلاب...';
+
+  const { data: enData } = await sb.from('teacher_enrollments').select('student_id').eq('teacher_id', teacherId).eq('grade_id', gradeId);
+  if (!enData || enData.length === 0) {
+    list.innerHTML = 'لا يوجد طلاب في هذا الصف.';
+    return;
+  }
+  const studentIds = enData.map(e => e.student_id);
+  const { data: profs } = await sb.from('profiles').select('id,full_name').in('id', studentIds);
+
+  let html = `<label style="display:flex;align-items:center;gap:6px;font-weight:700;border-bottom:1px solid var(--gray-mid);padding-bottom:5px;margin-bottom:5px"><input type="checkbox" id="as-all-students" checked onchange="toggleAllSessionStudentsAdmin(this.checked)" style="accent-color:var(--blue)"> جميع طلاب الصف</label>`;
+  (profs||[]).forEach(p => {
+    html += `<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="as-student-cb" value="${p.id}" checked onchange="checkAllStudentsStateAdmin()" style="accent-color:var(--blue)"> ${p.full_name}</label>`;
+  });
+  list.innerHTML = html;
+}
+
+window.toggleAllSessionStudentsAdmin = function(checked) {
+  document.querySelectorAll('.as-student-cb').forEach(cb => cb.checked = checked);
+};
+
+window.checkAllStudentsStateAdmin = function() {
+  const allCb = document.querySelectorAll('.as-student-cb');
+  const checked = document.querySelectorAll('.as-student-cb:checked');
+  document.getElementById('as-all-students').checked = (allCb.length === checked.length);
+};
+
+function closeSessionModalAdmin() { document.getElementById('mdl-session').classList.remove('show'); }
+
+function toggleFreeSessionAdmin(isFree) {
+  document.getElementById('as-grade-normal-wrap').style.display = isFree ? 'none' : '';
+  document.getElementById('as-free-grade-wrap').style.display   = isFree ? ''     : 'none';
+  document.getElementById('as-extra-grades-wrap').style.display = isFree ? 'none' : '';
+  if (!isFree) {
+    const subjSel   = document.getElementById('as-subject-sel');
+    const teacherSel = document.getElementById('as-teacher-sel');
+    subjSel.onchange = () => {
+      updateSessionGradeDropdownAdmin(subjSel.value, teacherSel.value);
+      document.getElementById('as-extra-grades-container').innerHTML = '';
+    };
+  }
+}
+
+function toggleSessTypeAdmin() {
+  const type = document.getElementById('as-type').value;
+  document.getElementById('as-single-date-div').style.display    = type === 'single'    ? 'block' : 'none';
+  document.getElementById('as-multidate-div').style.display      = type === 'multidate' ? 'block' : 'none';
+  document.getElementById('as-recurring-days-div').style.display = type === 'recurring' ? 'block' : 'none';
+  if (type === 'multidate') {
+    const cont = document.getElementById('as-multidate-container');
+    if (!cont.children.length) addMultiDateRowAdmin();
+  }
+}
+
+function addMultiDateRowAdmin() {
+  const cont = document.getElementById('as-multidate-container');
+  const row  = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:8px';
+  row.innerHTML = `
+    <input type="date" class="as-multidate-inp" style="flex:1;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:9px 12px;font-family:'Cairo',sans-serif;font-size:.86rem;direction:ltr;outline:none" />
+    <button type="button" onclick="this.parentElement.remove()"
+      style="background:var(--red-light);color:var(--red);border:1px solid #FECACA;border-radius:8px;padding:7px 12px;font-family:'Cairo',sans-serif;font-size:.8rem;cursor:pointer">✕</button>`;
+  cont.appendChild(row);
+}
+
+function addExtraGradeRowAdmin() {
+  const isFree = document.getElementById('as-is-free').checked;
+  if (isFree) return;
+  const subjId = document.getElementById('as-subject-sel').value;
+  const subj   = (S.teacherSubjects || []).find(s => s.id === subjId);
+  const grades = subj?.teacher_grades || [];
+
+  const cont = document.getElementById('as-extra-grades-container');
+  const row  = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:8px';
+
+  const sel = document.createElement('select');
+  sel.className = 'as-extra-grade-sel';
+  sel.style.cssText = 'flex:1;background:var(--gray-light);border:1.5px solid var(--gray-mid);border-radius:10px;padding:9px 12px;font-family:\'Cairo\',sans-serif;font-size:.86rem;direction:rtl;outline:none';
+  sel.innerHTML = '<option value="">— اختر الصف الإضافي —</option>' +
+    grades.map(g => `<option value="${g.id}" data-name="${g.name}">${g.name}</option>`).join('');
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = '✕';
+  btn.style.cssText = 'background:var(--red-light);color:var(--red);border:1px solid #FECACA;border-radius:8px;padding:7px 12px;font-family:\'Cairo\',sans-serif;font-size:.8rem;cursor:pointer';
+  btn.onclick = () => row.remove();
+
+  row.appendChild(sel);
+  row.appendChild(btn);
+  cont.appendChild(row);
+}
+
+function getExtraGradesAdmin() {
+  const mainGradeId = document.getElementById('as-grade-sel').value;
+  const extras = [];
+  document.querySelectorAll('.as-extra-grade-sel').forEach(sel => {
+    const val = sel.value;
+    if (val && val !== mainGradeId && !extras.find(e => e.id === val)) {
+      const name = sel.options[sel.selectedIndex]?.dataset?.name || val;
+      extras.push({ id: val, name });
+    }
+  });
+  return extras;
+}
+
+async function saveSessionAdmin() {
+  const id        = document.getElementById('as-edit-id').value;
+  const teacherId = document.getElementById('as-teacher-sel').value;
+  const title     = document.getElementById('as-title').value.trim();
+  const time      = document.getElementById('as-time').value;
+  const type      = document.getElementById('as-type').value;
+
+  if(!teacherId) { setMsg('as-mdl-msg','اختر المعلم أولاً','err'); return; }
+  if(!title) { setMsg('as-mdl-msg','عنوان الحصة مطلوب','err'); return; }
+  if(!time)  { setMsg('as-mdl-msg','وقت الحصة مطلوب','err'); return; }
+
+  let targetDates = [];
+
+  if (type === 'single' || id) {
+    let dateVal = document.getElementById('as-date').value;
+    if(!dateVal) { setMsg('as-mdl-msg','التاريخ مطلوب للحصة الفردية','err'); return; }
+    targetDates.push(new Date(dateVal + 'T' + time));
+  } else if (type === 'multidate') {
+    const dateInputs = document.querySelectorAll('.as-multidate-inp');
+    dateInputs.forEach(inp => { if (inp.value) targetDates.push(new Date(inp.value + 'T' + time)); });
+    if (!targetDates.length) { setMsg('as-mdl-msg','أضف تاريخاً واحداً على الأقل','err'); return; }
+    const unique = [...new Set(targetDates.map(d => d.toDateString()))];
+    if (unique.length !== targetDates.length) { setMsg('as-mdl-msg','لا يمكن تكرار نفس التاريخ','err'); return; }
+  } else {
+    const checkedDays = Array.from(document.querySelectorAll('.as-day-cb:checked')).map(cb => parseInt(cb.value));
+    if(checkedDays.length === 0) { setMsg('as-mdl-msg','الرجاء اختيار يوم واحد على الأقل','err'); return; }
+    let today = new Date();
+    today.setHours(0,0,0,0);
+    for (let i = 0; i < 28; i++) {
+       let d = new Date(today);
+       d.setDate(today.getDate() + i);
+       if (checkedDays.includes(d.getDay())) {
+         let timeParts = time.split(':');
+         d.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0, 0);
+         targetDates.push(d);
+       }
+    }
+  }
+
+  const isFree = document.getElementById('as-is-free').checked;
+  const subjId = document.getElementById('as-subject-sel').value;
+  const subj   = (S.teacherSubjects || []).find(s => s.id === subjId);
+
+  let gradeId, gradeName;
+  if (isFree) {
+    gradeId   = null;
+    gradeName = document.getElementById('as-free-grade-sel').value || null;
+  } else {
+    gradeId   = document.getElementById('as-grade-sel').value || null;
+    gradeName = subj?.teacher_grades?.find(g => g.id === gradeId)?.name || null;
+  }
+
+  const extraGrades = isFree ? [] : getExtraGradesAdmin();
+
+  let selectedStudentIds = null;
+  const wrap = document.getElementById('as-students-wrap');
+  if (wrap && wrap.style.display !== 'none' && !isFree) {
+    const allChecked = document.getElementById('as-all-students')?.checked;
+    if (!allChecked) {
+      selectedStudentIds = [];
+      document.querySelectorAll('.as-student-cb:checked').forEach(cb => selectedStudentIds.push(cb.value));
+      if (selectedStudentIds.length === 0) {
+        setMsg('as-mdl-msg','يجب اختيار طالب واحد على الأقل أو جميع الطلاب','err');
+        return;
+      }
+    }
+  }
+
+  const basePayload = {
+    teacher_id:   teacherId,
+    title,
+    duration_min: parseInt(document.getElementById('as-duration').value) || 60,
+    zoom_link:    document.getElementById('as-zoom').value.trim() || null,
+    subject_name: subj?.name || null,
+    grade_id:     gradeId,
+    grade_name:   gradeName,
+    is_free:      isFree,
+    student_ids:  selectedStudentIds,
+  };
+
+  const btn = document.getElementById('as-save-btn');
+  btn.disabled = true; btn.textContent = '⏳ حفظ...';
+
+  try {
+    if(id) {
+      const payload = { ...basePayload, scheduled_at: targetDates[0].toISOString() };
+      const { error } = await sb.from('teacher_sessions').update(payload).eq('id',id);
+      if(error) throw error;
+      toast('✅ تم تعديل الحصة');
+    } else {
+      const allGrades = [{ id: gradeId, name: gradeName }, ...extraGrades];
+      let rowsToInsert = [];
+      targetDates.forEach(d => {
+        allGrades.forEach(g => {
+          rowsToInsert.push({ ...basePayload, scheduled_at: d.toISOString(), grade_id: g.id, grade_name: g.name });
+        });
+      });
+
+      const { error } = await sb.from('teacher_sessions').insert(rowsToInsert);
+      if(error) throw error;
+
+      const totalSessions = rowsToInsert.length;
+      const gradesCount   = allGrades.filter(g => g.id).length;
+      const datesCount    = targetDates.length;
+      if (gradesCount > 1 || datesCount > 1) {
+        toast(`✅ تم إضافة ${totalSessions} حصة (${datesCount} تاريخ × ${gradesCount || 1} صف)`);
+      } else {
+        toast('✅ تم إضافة الحصص بنجاح');
+      }
+    }
+    closeSessionModalAdmin();
+    await loadAdminSessions();
+  } catch(e) { setMsg('as-mdl-msg', e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '💾 حفظ الحصة'; }
+}
 async function delSession(id) {}
 
 // ══════════════════════════════════
