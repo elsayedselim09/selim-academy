@@ -5660,50 +5660,23 @@ window.runConfirm = async function() {
       toast('✅ تم حذف الحصة');
       await loadSessions();
     } else if(type === 'subject') {
-      // فحص أمان: هل يوجد طلاب مسجلون مرتبطون بهذه المادة (حتى لو صفوفها أُعيد ربطها بمادة أخرى)؟
-      // حذف المادة وفيها تسجيلات سيُمسح حضور وغياب هؤلاء الطلاب بالكامل عبر trigger،
-      // ويحوّل اشتراكاتهم لـ "محذوف" — لازم نوقف العملية ونوضح التفاصيل.
-      const { data: enrolled, error: enrErr } = await sb.from('teacher_enrollments')
-        .select('student_id, grade_name')
-        .eq('subject_id', id);
-      if(enrErr) throw enrErr;
-
-      if((enrolled || []).length > 0) {
-        const studentIds = [...new Set(enrolled.map(e => e.student_id).filter(Boolean))];
-        let nameMap = {};
-        if(studentIds.length) {
-          const { data: profs } = await sb.from('profiles').select('id,full_name').in('id', studentIds);
-          (profs || []).forEach(p => nameMap[p.id] = p.full_name);
-        }
-        const byGroup = {};
-        enrolled.forEach(e => {
-          const g = e.grade_name || 'غير محدد';
-          if(!byGroup[g]) byGroup[g] = new Set();
-          byGroup[g].add(nameMap[e.student_id] || e.student_id);
-        });
-        const details = Object.entries(byGroup)
-          .map(([g, names]) => `• ${g}: ${[...names].join('، ')}`)
-          .join('\n');
-
-        alert(
-          `⚠️ لا يمكن حذف هذه المادة!\n\n` +
-          `يوجد ${studentIds.length} طالب مسجل (${Object.keys(byGroup).length} مجموعة) مرتبط بهذه المادة، حتى لو كانت مجموعاتهم تظهر الآن تحت مادة أخرى:\n\n` +
-          details +
-          `\n\nلحذف المادة، انقل/أزل هؤلاء الطلاب من مجموعاتهم أولاً (من صفحة "إدارة الطالب" ← "إزالة من المجموعة"). تم إلغاء الحذف ولم يتم تعديل أي شيء.`
-        );
-        throw new Error('تم إلغاء الحذف — يوجد طلاب مسجلون مرتبطون بهذه المادة');
-      }
-
-      // حذف الصفوف أولاً ثم المادة
+      // حذف المادة يشيل كل طلابها نهائيًا (تسجيلاتهم) ثم صفوفها ثم المادة نفسها.
+      // لا رجوع للطالب إلا لو الإدارة سجّلته تاني يدويًا — هذا سلوك مقصود.
+      const { error: errEnr } = await sb.from('teacher_enrollments').delete().eq('subject_id', id);
+      if(errEnr) throw errEnr;
       await sb.from('teacher_grades').delete().eq('subject_id', id);
       const { error } = await sb.from('teacher_subjects').delete().eq('id',id);
       if(error) throw error;
-      toast('✅ تم حذف المادة');
+      toast('✅ تم حذف المادة وكل الصفوف والطلاب المرتبطين بها');
       await loadSubjects();
     } else if(type === 'grade') {
+      // ننظف تسجيلات الطلاب المرتبطة بهذا الصف أولاً حتى لا تتحول إلى سجلات يتيمة
+      // (تمنع حذف المادة لاحقًا) بعد حذف الصف
+      const { error: errEnr } = await sb.from('teacher_enrollments').delete().eq('grade_id', id);
+      if(errEnr) throw errEnr;
       const { error } = await sb.from('teacher_grades').delete().eq('id',id);
       if(error) throw error;
-      toast('✅ تم حذف الصف');
+      toast('✅ تم حذف الصف وتسجيلات الطلاب المرتبطة به');
       await loadSubjects();
     } else if(type === 'material') {
       const { data } = await sb.from('teacher_materials').select('storage_path,type').eq('id',id).single();
