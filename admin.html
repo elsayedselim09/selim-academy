@@ -549,7 +549,10 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   <div class="page" id="page-courses">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:10px">
       <div class="page-title">📚 كورسات المعلمين</div>
-      <button class="btn-refresh" onclick="loadCourses()">🔄 تحديث</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-primary" onclick="openAddSubjectAdmin()">➕ إضافة مادة</button>
+        <button class="btn-refresh" onclick="loadCourses()">🔄 تحديث</button>
+      </div>
     </div>
     <p class="page-sub">المواد التي أضافها المعلمون — يمكنك الموافقة عليها أو حذفها</p>
     <div class="section-card" style="margin-bottom:20px">
@@ -1744,6 +1747,45 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       <div class="skel" style="height:120px;border-radius:10px"></div>
     </div>
     <div class="mdl-btns" id="subj-mdl-acts" style="margin-top:18px"></div>
+  </div>
+</div>
+
+<!-- ADD SUBJECT (ADMIN, on behalf of a teacher) MODAL -->
+<div class="mdl" id="mdl-add-subject-admin">
+  <div class="mdl-box" style="position:relative">
+    <div class="mdl-title">➕ إضافة مادة جديدة</div>
+    <div class="fg">
+      <label>المعلم *</label>
+      <select id="asa-teacher-sel" style="width:100%;padding:10px;border:1.5px solid var(--gray-mid);border-radius:10px;font-family:'Cairo',sans-serif">
+        <option value="">— اختر المعلم —</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>اسم المادة *</label>
+      <input type="text" id="asa-name" placeholder="مثال: الرياضيات، الفيزياء، اللغة العربية...">
+    </div>
+    <div class="fg-row">
+      <div class="fg">
+        <label>الأيقونة (emoji)</label>
+        <input type="text" id="asa-icon" placeholder="📐" style="text-align:center;font-size:1.3rem">
+      </div>
+      <div class="fg">
+        <label>المرحلة الدراسية</label>
+        <select id="asa-level">
+          <option value="">— اختر —</option>
+          <option>ابتدائي</option>
+          <option>إعدادي</option>
+          <option>ثانوي</option>
+          <option>جامعي</option>
+          <option>جميع المراحل</option>
+        </select>
+      </div>
+    </div>
+    <div id="asa-msg"></div>
+    <div class="mdl-btns">
+      <button class="mdl-cancel" onclick="closeAddSubjectAdmin()">إلغاء</button>
+      <button class="mdl-confirm mc-save" id="asa-save-btn" onclick="saveSubjectAdmin()">💾 حفظ المادة</button>
+    </div>
   </div>
 </div>
 
@@ -3224,6 +3266,54 @@ async function delSession(id) {}
 // ASSIGN TEACHER TO STUDENT
 // ══════════════════════════════════
 let _assignCtx = null;
+
+// ══════════════════════════════════════════════
+// ADD SUBJECT (ADMIN) — إضافة مادة لمعلم من صفحة الإدارة
+// ══════════════════════════════════════════════
+function openAddSubjectAdmin() {
+  const approvedTeachers = (S.teachers || []).filter(t => t.teacher_approved === true);
+  const sel = document.getElementById('asa-teacher-sel');
+  sel.innerHTML = '<option value="">— اختر المعلم —</option>' +
+    approvedTeachers.map(t =>
+      `<option value="${t.id}">${t.full_name || '—'}${t.specialization ? ' (‫'+t.specialization+'‬)' : ''}</option>`
+    ).join('');
+
+  document.getElementById('asa-name').value = '';
+  document.getElementById('asa-icon').value = '';
+  document.getElementById('asa-level').value = '';
+  document.getElementById('asa-msg').innerHTML = '';
+  document.getElementById('mdl-add-subject-admin').classList.add('show');
+  setTimeout(() => sel.focus(), 100);
+}
+
+function closeAddSubjectAdmin() { document.getElementById('mdl-add-subject-admin').classList.remove('show'); }
+
+async function saveSubjectAdmin() {
+  const teacherId = document.getElementById('asa-teacher-sel').value;
+  const name      = document.getElementById('asa-name').value.trim();
+  if(!teacherId) { setMsg('asa-msg','اختر المعلم أولاً','err'); return; }
+  if(!name)      { setMsg('asa-msg','اسم المادة مطلوب','err'); return; }
+
+  const payload = {
+    teacher_id: teacherId,
+    name,
+    icon: document.getElementById('asa-icon').value.trim() || '📚',
+    level: document.getElementById('asa-level').value,
+    is_approved: true, // المادة مُضافة مباشرة من الإدارة فلا تحتاج موافقة لاحقة
+  };
+
+  const btn = document.getElementById('asa-save-btn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+
+  try {
+    const { error } = await sb.from('teacher_subjects').insert(payload);
+    if(error) throw error;
+    toast('✅ تم إضافة المادة بنجاح');
+    closeAddSubjectAdmin();
+    await loadCourses();
+  } catch(e) { setMsg('asa-msg', e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '💾 حفظ المادة'; }
+}
 
 function openAssignTeacher(reqId, studentId, subject) {
   _assignCtx = { reqId, studentId, subject };
