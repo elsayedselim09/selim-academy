@@ -3982,16 +3982,18 @@ async function loadStudents() {
     const sEl = document.getElementById('s-students');
     if (sEl) sEl.textContent = S.students.length;
 
-    // عدد طلبات الاشتراك لكل طالب
+    // عدد طلبات الاشتراك لكل طالب + هل هو مشترك فعليًا مع معلم (من teacher_enrollments)
     const sids = S.students.map(s => s.id);
-    let em = {}, rm = {};
+    let em = {}, rm = {}, realEnrollMap = {};
     if(sids.length) {
-      const [{data:enr}, {data:reqs}] = await Promise.all([
+      const [{data:enr}, {data:reqs}, {data:realEnr}] = await Promise.all([
         sb.from('enrollments').select('user_id').in('user_id', sids),
-        sb.from('subscription_requests').select('user_id,status').in('user_id', sids)
+        sb.from('subscription_requests').select('user_id,status').in('user_id', sids),
+        sb.from('teacher_enrollments').select('student_id').in('student_id', sids)
       ]);
       (enr||[]).forEach(e  => { em[e.user_id] = (em[e.user_id]||0)+1; });
       (reqs||[]).forEach(r => { if(!rm[r.user_id]) rm[r.user_id]=[]; rm[r.user_id].push(r.status); });
+      (realEnr||[]).forEach(e => { realEnrollMap[e.student_id] = (realEnrollMap[e.student_id]||0)+1; });
     }
 
     if(!S.students.length) { el.innerHTML = `<div class="empty-box"><div class="ei">👥</div><div class="et">لا يوجد طلاب بعد</div></div>`; return; }
@@ -4012,12 +4014,13 @@ async function loadStudents() {
     // حفظ بيانات العرض عشان نستخدمها في الفلتر
     S._studentsRm = rm;
     S._studentsApprovedReqMap = approvedReqMap;
+    S._studentsRealEnrollMap = realEnrollMap;
 
-    renderStudentsTable(S.students, rm, approvedReqMap);
+    renderStudentsTable(S.students, rm, approvedReqMap, realEnrollMap);
   } catch(e) { toast('فشل تحميل الطلاب: '+e.message,'err'); }
 }
 
-function renderStudentsTable(students, rm, approvedReqMap) {
+function renderStudentsTable(students, rm, approvedReqMap, realEnrollMap) {
   const el = document.getElementById('stu-body');
   if(!students.length) {
     el.innerHTML = `<div class="empty-box"><div class="ei">🔍</div><div class="et">لا توجد نتائج مطابقة</div></div>`;
@@ -4058,11 +4061,10 @@ function renderStudentsTable(students, rm, approvedReqMap) {
       </td>
       <td style="font-size:.84rem;cursor:pointer" onclick="openStudentDetail('${s.id}')">${s.phone||'—'}</td>
       <td onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
-        ${((rm||{})[s.id]||[]).length === 0
-          ? '<span class="badge b-gray">لا يوجد</span>'
-          : `<span class="badge b-blue">📤 ${((rm||{})[s.id]||[]).length} طلب</span>`
+        ${(realEnrollMap||{})[s.id] > 0
+          ? `<span class="badge b-blue">📤 ${((rm||{})[s.id]||[]).length || 1} طلب</span>`
+          : ''
         }
-        ${((rm||{})[s.id]||[]).includes('approved') ? '<span class="badge b-approved" style="margin-right:4px">✅ مقبول</span>' : ''}
       </td>
       <td style="font-size:.76rem;color:var(--gray);cursor:pointer" onclick="openStudentDetail('${s.id}')">${fds(s.created_at)}</td>
       <td>
@@ -4084,13 +4086,14 @@ function filterStudents(q) {
   const term = (q||'').trim().toLowerCase();
   const rm = S._studentsRm || {};
   const approvedReqMap = S._studentsApprovedReqMap || {};
-  if(!term) { renderStudentsTable(S.students, rm, approvedReqMap); return; }
+  const realEnrollMap = S._studentsRealEnrollMap || {};
+  if(!term) { renderStudentsTable(S.students, rm, approvedReqMap, realEnrollMap); return; }
   const filtered = S.students.filter(s =>
     (s.full_name||'').toLowerCase().includes(term) ||
     String(s.student_number||'').includes(term) ||
     (s.phone||'').replace(/\s/g,'').includes(term.replace(/\s/g,''))
   );
-  renderStudentsTable(filtered, rm, approvedReqMap);
+  renderStudentsTable(filtered, rm, approvedReqMap, realEnrollMap);
 }
 
 async function openStudentDetail(studentId) {
