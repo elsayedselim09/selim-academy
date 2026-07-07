@@ -582,7 +582,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <p class="page-sub">متابعة جميع حصص المعلمين — المادة والصف ووقت الحصة</p>
 
     <!-- Today stats banner -->
-    <div id="sess-stats-bar" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px"></div>
+    <div id="sess-stats-bar" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px"></div>
 
     <div class="section-card">
       <div class="filter-bar">
@@ -3072,6 +3072,10 @@ function renderSessionStats() {
   const upcoming      = S.allSessions.filter(s => getSessionStatus(s) === 'upcoming' && s.session_date >= today);
 
   document.getElementById('sess-stats-bar').innerHTML = `
+    <div style="background:var(--purple-light);border:1px solid #DDD6FE;border-radius:12px;padding:16px;text-align:center">
+      <div style="font-size:1.5rem;font-weight:900;color:var(--purple)" id="sess-total-ever">…</div>
+      <div style="font-size:.76rem;color:var(--gray);margin-top:3px">📊 إجمالي الحصص (كل الأوقات)</div>
+    </div>
     <div style="background:var(--blue-light);border:1px solid #BFDBFE;border-radius:12px;padding:16px;text-align:center">
       <div style="font-size:1.5rem;font-weight:900;color:var(--blue)">${todaySessions.length}</div>
       <div style="font-size:.76rem;color:var(--gray);margin-top:3px">🗓️ حصص اليوم</div>
@@ -3084,6 +3088,19 @@ function renderSessionStats() {
       <div style="font-size:1.5rem;font-weight:900;color:var(--gold)">${upcoming.length}</div>
       <div style="font-size:.76rem;color:var(--gray);margin-top:3px">⏰ قادمة</div>
     </div>`;
+  loadTotalSessionsEver();
+}
+
+async function loadTotalSessionsEver() {
+  try {
+    const { data, error } = await sb.from('session_counters').select('total_ever').eq('id', 1).single();
+    if(error) throw error;
+    const el = document.getElementById('sess-total-ever');
+    if(el) el.textContent = (data?.total_ever ?? 0).toLocaleString('ar-EG');
+  } catch(e) {
+    const el = document.getElementById('sess-total-ever');
+    if(el) el.textContent = '—';
+  }
 }
 
 function setSessionFilter(f) {
@@ -7863,6 +7880,8 @@ function sbRender() {
   }
   el.innerHTML = _sbRows.map(row => {
     const isVisits = row.id === 'visits';
+    const isSessions = row.id === 'sessions';
+    const isAuto = isVisits || isSessions;
     const visibleIcon = row.is_visible ? '👁️' : '🙈';
     const visibleLabel = row.is_visible ? 'ظاهر' : 'مخفي';
     const visibleColor = row.is_visible ? 'var(--green)' : 'var(--gray)';
@@ -7871,15 +7890,51 @@ function sbRender() {
         <div style="font-size:1.3rem;font-weight:900;color:var(--blue)">${row.prefix || ''}${isVisits ? '<span style="color:var(--gold)">يتحدث تلقائياً</span>' : row.value}${row.suffix || ''}</div>
         <div style="font-size:.85rem;color:var(--gray);margin-top:2px">${row.label}</div>
         ${isVisits ? '<div style="font-size:.75rem;color:var(--gray);margin-top:4px">⚡ يُحسب من قاعدة البيانات مباشرة</div>' : ''}
+        ${isSessions ? `<div style="font-size:.75rem;color:var(--gray);margin-top:4px">⚡ يتحدّث تلقائياً = رقم ثابت (${row.base_value ?? 0}) + إجمالي الحصص الحقيقية</div>` : ''}
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:.75rem;font-weight:700;color:${visibleColor};background:${row.is_visible ? 'var(--green-light)' : 'var(--gray-light)'};padding:3px 10px;border-radius:50px;">${visibleIcon} ${visibleLabel}</span>
-        ${!isVisits ? `<button onclick="sbEdit('${row.id}')" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--blue);background:var(--blue-light);color:var(--blue);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">✏️ تعديل</button>` : ''}
+        ${isSessions ? `<button onclick="sbEditSessionsBase()" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--blue);background:var(--blue-light);color:var(--blue);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">✏️ تعديل الرقم الثابت</button>` : ''}
+        ${!isAuto ? `<button onclick="sbEdit('${row.id}')" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--blue);background:var(--blue-light);color:var(--blue);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">✏️ تعديل</button>` : ''}
         <button onclick="sbToggleVisible('${row.id}', ${!row.is_visible})" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--gray-mid);background:var(--gray-light);color:var(--dark);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">${row.is_visible ? '🙈 إخفاء' : '👁️ إظهار'}</button>
-        ${!isVisits ? `<button onclick="sbDelete('${row.id}')" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--red);background:#FEE2E2;color:var(--red);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">🗑️ حذف</button>` : ''}
+        ${!isAuto ? `<button onclick="sbDelete('${row.id}')" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--red);background:#FEE2E2;color:var(--red);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">🗑️ حذف</button>` : ''}
       </div>
     </div>`;
   }).join('');
+}
+
+function sbEditSessionsBase() {
+  const row = _sbRows.find(r => r.id === 'sessions');
+  if (!row) return;
+  document.getElementById('sb-mdl-body').innerHTML = `
+    <div style="font-size:1.05rem;font-weight:800;margin-bottom:18px;color:var(--dark)">✏️ تعديل الرقم الثابت لإحصائية الحصص</div>
+    <div style="font-size:.82rem;color:var(--gray);margin-bottom:14px;background:var(--gray-light);padding:10px 14px;border-radius:10px">الرقم المعروض للزوار = <b>الرقم الثابت</b> اللي هتحدده هنا + <b>إجمالي الحصص الحقيقية</b> المُسجّلة في المنصة (بيتحدّث تلقائيًا مع كل حصة جديدة، ومش بيقل لو المعلم حذف حصص).</div>
+    <div class="fg" style="margin-bottom:12px"><label>الرقم الثابت</label><input id="sb-sessions-base" type="number" value="${row.base_value ?? 0}" placeholder="مثال: 3000" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+    <div class="fg" style="margin-bottom:12px"><label>النص (التسمية)</label><input id="sb-sessions-label" type="text" value="${row.label}" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="sbSaveSessionsBase()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:'Cairo',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;">💾 حفظ</button>
+      <button onclick="sbCloseMdl()" style="padding:10px 18px;border-radius:10px;border:1.5px solid var(--gray-mid);background:var(--white);font-family:'Cairo',sans-serif;font-size:.95rem;cursor:pointer;">إلغاء</button>
+    </div>
+  `;
+  sbOpenMdl();
+}
+
+async function sbSaveSessionsBase() {
+  const baseVal = parseInt(document.getElementById('sb-sessions-base')?.value, 10);
+  const label   = document.getElementById('sb-sessions-label')?.value?.trim();
+  if (isNaN(baseVal) || !label) { toast('يرجى ملء الرقم الثابت والتسمية', 'err'); return; }
+  try {
+    const { data: counter, error: cErr } = await sb.from('session_counters').select('total_ever').eq('id',1).single();
+    if (cErr) throw cErr;
+    const totalValue = baseVal + (counter?.total_ever || 0);
+    const { error } = await sb.from('site_stats')
+      .update({ base_value: baseVal, value: String(totalValue), label, updated_at: new Date().toISOString() })
+      .eq('id', 'sessions');
+    if (error) throw error;
+    toast('تم الحفظ ✅');
+    sbCloseMdl();
+    sbLoadStats();
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
 }
 
 async function sbToggleVisible(id, newVal) {
