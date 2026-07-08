@@ -641,7 +641,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <!-- تبويب 1: قائمة الطلاب -->
     <div id="stab-content-list">
       <div class="section-card">
-        <div class="section-head"><h3>قائمة الطلاب</h3><span id="stu-count" style="font-size:.82rem;color:var(--gray)"></span></div>
+        <div class="section-head"><h3>قائمة الطلاب</h3><span id="stu-count" style="font-size:.82rem;color:var(--gray)"></span><span id="stu-total-ever" style="font-size:.78rem;color:var(--purple);background:var(--purple-light);padding:3px 10px;border-radius:50px;margin-right:8px;font-weight:700"></span></div>
         <div style="padding:12px 16px 0">
           <div style="position:relative;max-width:420px">
             <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:1rem;pointer-events:none">🔍</span>
@@ -3103,6 +3103,18 @@ async function loadTotalSessionsEver() {
   }
 }
 
+async function loadTotalStudentsEver() {
+  try {
+    const { data, error } = await sb.from('student_counters').select('total_ever').eq('id', 1).single();
+    if(error) throw error;
+    const el = document.getElementById('stu-total-ever');
+    if(el) el.textContent = `📈 إجمالي مسجّل منذ البداية: ${(data?.total_ever ?? 0).toLocaleString('ar-EG')}`;
+  } catch(e) {
+    const el = document.getElementById('stu-total-ever');
+    if(el) el.textContent = '';
+  }
+}
+
 function setSessionFilter(f) {
   S.sessionFilter = f;
   document.querySelectorAll('[id^="sf-"]').forEach(b => b.classList.remove('active'));
@@ -3995,6 +4007,7 @@ async function loadStudents() {
     }
 
     document.getElementById('stu-count').textContent = 'إجمالي: ' + S.students.length + ' طالب';
+    loadTotalStudentsEver();
     // تحديث العداد في النظرة العامة بعد اكتمال تحميل الطلاب
     const sEl = document.getElementById('s-students');
     if (sEl) sEl.textContent = S.students.length;
@@ -7881,7 +7894,8 @@ function sbRender() {
   el.innerHTML = _sbRows.map(row => {
     const isVisits = row.id === 'visits';
     const isSessions = row.id === 'sessions';
-    const isAuto = isVisits || isSessions;
+    const isStudents = row.id === 'students';
+    const isAuto = isVisits || isSessions || isStudents;
     const visibleIcon = row.is_visible ? '👁️' : '🙈';
     const visibleLabel = row.is_visible ? 'ظاهر' : 'مخفي';
     const visibleColor = row.is_visible ? 'var(--green)' : 'var(--gray)';
@@ -7891,16 +7905,52 @@ function sbRender() {
         <div style="font-size:.85rem;color:var(--gray);margin-top:2px">${row.label}</div>
         ${isVisits ? '<div style="font-size:.75rem;color:var(--gray);margin-top:4px">⚡ يُحسب من قاعدة البيانات مباشرة</div>' : ''}
         ${isSessions ? `<div style="font-size:.75rem;color:var(--gray);margin-top:4px">⚡ يتحدّث تلقائياً = رقم ثابت (${row.base_value ?? 0}) + إجمالي الحصص الحقيقية</div>` : ''}
+        ${isStudents ? `<div style="font-size:.75rem;color:var(--gray);margin-top:4px">⚡ يتحدّث تلقائياً = رقم ثابت (${row.base_value ?? 0}) + إجمالي الطلاب المسجلين فعلياً</div>` : ''}
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:.75rem;font-weight:700;color:${visibleColor};background:${row.is_visible ? 'var(--green-light)' : 'var(--gray-light)'};padding:3px 10px;border-radius:50px;">${visibleIcon} ${visibleLabel}</span>
         ${isSessions ? `<button onclick="sbEditSessionsBase()" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--blue);background:var(--blue-light);color:var(--blue);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">✏️ تعديل الرقم الثابت</button>` : ''}
+        ${isStudents ? `<button onclick="sbEditStudentsBase()" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--blue);background:var(--blue-light);color:var(--blue);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">✏️ تعديل الرقم الثابت</button>` : ''}
         ${!isAuto ? `<button onclick="sbEdit('${row.id}')" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--blue);background:var(--blue-light);color:var(--blue);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">✏️ تعديل</button>` : ''}
         <button onclick="sbToggleVisible('${row.id}', ${!row.is_visible})" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--gray-mid);background:var(--gray-light);color:var(--dark);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">${row.is_visible ? '🙈 إخفاء' : '👁️ إظهار'}</button>
         ${!isAuto ? `<button onclick="sbDelete('${row.id}')" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--red);background:#FEE2E2;color:var(--red);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">🗑️ حذف</button>` : ''}
       </div>
     </div>`;
   }).join('');
+}
+
+function sbEditStudentsBase() {
+  const row = _sbRows.find(r => r.id === 'students');
+  if (!row) return;
+  document.getElementById('sb-mdl-body').innerHTML = `
+    <div style="font-size:1.05rem;font-weight:800;margin-bottom:18px;color:var(--dark)">✏️ تعديل الرقم الثابت لإحصائية الطلاب</div>
+    <div style="font-size:.82rem;color:var(--gray);margin-bottom:14px;background:var(--gray-light);padding:10px 14px;border-radius:10px">الرقم المعروض للزوار = <b>الرقم الثابت</b> اللي هتحدده هنا + <b>إجمالي الطلاب المسجلين فعليًا</b> (بيتحدّث تلقائيًا مع كل طالب جديد، ومش بيقل لو الإدارة حذفت طالب).</div>
+    <div class="fg" style="margin-bottom:12px"><label>الرقم الثابت</label><input id="sb-students-base" type="number" value="${row.base_value ?? 0}" placeholder="مثال: 275" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+    <div class="fg" style="margin-bottom:12px"><label>النص (التسمية)</label><input id="sb-students-label" type="text" value="${row.label}" style="width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid var(--gray-mid);font-family:'Cairo',sans-serif;font-size:.95rem;"></div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="sbSaveStudentsBase()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:'Cairo',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;">💾 حفظ</button>
+      <button onclick="sbCloseMdl()" style="padding:10px 18px;border-radius:10px;border:1.5px solid var(--gray-mid);background:var(--white);font-family:'Cairo',sans-serif;font-size:.95rem;cursor:pointer;">إلغاء</button>
+    </div>
+  `;
+  sbOpenMdl();
+}
+
+async function sbSaveStudentsBase() {
+  const baseVal = parseInt(document.getElementById('sb-students-base')?.value, 10);
+  const label   = document.getElementById('sb-students-label')?.value?.trim();
+  if (isNaN(baseVal) || !label) { toast('يرجى ملء الرقم الثابت والتسمية', 'err'); return; }
+  try {
+    const { data: counter, error: cErr } = await sb.from('student_counters').select('total_ever').eq('id',1).single();
+    if (cErr) throw cErr;
+    const totalValue = baseVal + (counter?.total_ever || 0);
+    const { error } = await sb.from('site_stats')
+      .update({ base_value: baseVal, value: String(totalValue), label, updated_at: new Date().toISOString() })
+      .eq('id', 'students');
+    if (error) throw error;
+    toast('تم الحفظ ✅');
+    sbCloseMdl();
+    sbLoadStats();
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
 }
 
 function sbEditSessionsBase() {
