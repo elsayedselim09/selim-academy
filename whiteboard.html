@@ -1,0 +1,3469 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>السبورة التفاعلية — أكاديمية سليم</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+<!-- Fabric.js 5.3 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<!-- KaTeX for math rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<style>
+/* ════════════════════════════════════════════════
+   RESET & LIGHT THEME
+════════════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg: #e2e8f0;          /* Outer background (behind A4 page) */
+  --surface: #ffffff;     /* Toolbar and panels */
+  --surface2: #f8fafc;    /* Hover states, secondary panels */
+  --surface3: #f1f5f9;    /* Active states, subtle borders */
+  --border: #cbd5e1;      /* Borders */
+  --accent: #2563eb;      /* Primary blue */
+  --accent2: #3b82f6;     /* Lighter blue */
+  --text: #0f172a;        /* Main text */
+  --text2: #334155;       /* Secondary text */
+  --text3: #64748b;       /* Tertiary text */
+  
+  --red:#ef4444; --blue:#3b82f6; --green:#22c55e;
+  --yellow:#f59e0b; --purple:#8b5cf6; --orange:#f97316;
+  --pink:#ec4899; --teal:#14b8a6; --white:#ffffff; --black:#000000;
+  
+  --topbar-h: 56px;
+  --leftpanel-w: 60px;
+  --rightpanel-w: 240px;
+  --pages-h: 96px;
+  --radius: 8px;
+  --shadow: 0 4px 15px rgba(0,0,0,0.06);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Cairo',sans-serif;color:var(--text)}
+button{font-family:'Cairo',sans-serif;cursor:pointer;border:none;outline:none;background:none}
+input,textarea,select{font-family:'Cairo',sans-serif;outline:none}
+
+/* ════════════════════════════════════════════════
+   LAYOUT
+════════════════════════════════════════════════ */
+#wb-app{display:flex;flex-direction:column;width:100vw;height:100vh}
+#wb-topbar{
+  flex-wrap:wrap;height:auto;min-height:var(--topbar-h);flex-shrink:0;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:6px;
+  padding:0 10px;
+  flex-wrap:wrap;height:auto;min-height:var(--topbar-h);
+  
+  z-index:100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+
+#wb-middle{display:flex;flex:1;overflow:hidden}
+
+#wb-left-panel{
+  width:var(--leftpanel-w);flex-shrink:0;
+  background:var(--surface);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;
+  padding:10px 0;gap:6px;
+  overflow-y:auto;
+  z-index:90;
+  order:2;
+  box-shadow: -2px 0 8px rgba(0,0,0,0.02);
+}
+#wb-left-panel::-webkit-scrollbar{display:none}
+
+#wb-canvas-wrap{
+  flex:1; overflow:auto; position:relative;
+  background:var(--bg);
+  order:1;
+  padding:40px;
+  text-align:center;
+}
+
+#wb-right-panel{
+  width:var(--rightpanel-w);flex-shrink:0;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  order:3;
+  transition:width .2s;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.02);
+}
+#wb-right-panel.collapsed{width:0;border:none}
+
+#wb-pages-strip{
+  height:var(--pages-h);flex-shrink:0;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;
+  padding:12px 16px;
+  
+  scrollbar-width:thin;
+  scrollbar-color:var(--border) transparent;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.02);
+}
+
+/* ════════════════════════════════════════════════
+   TOPBAR COMPONENTS
+════════════════════════════════════════════════ */
+.tb-logo{
+  display:flex;align-items:center;gap:8px;
+  padding:0 10px;border-left:1px solid var(--border);
+  flex-shrink:0;
+}
+.tb-logo img{width:28px;height:28px;border-radius:50%}
+.tb-logo span{font-size:.85rem;font-weight:700;color:var(--text);white-space:nowrap}
+
+.tb-sep{width:1px;height:32px;background:var(--border);flex-shrink:0;margin:0 4px}
+
+.tb-btn{
+  display:flex;align-items:center;justify-content:center;
+  height:36px;border-radius:var(--radius);
+  padding:0 12px;font-size:.8rem;font-weight:700;
+  color:var(--text2);background:transparent;
+  transition:all .15s;white-space:nowrap;flex-shrink:0;gap:6px;
+  border:1px solid transparent;
+}
+.tb-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border)}
+.tb-btn.active{background:var(--accent);color:#fff;border-color:transparent}
+.tb-btn.danger:hover{background:rgba(239,68,68,.1);color:var(--red);border-color:rgba(239,68,68,.2)}
+.tb-btn svg,.tb-btn span.icon{width:18px;height:18px;flex-shrink:0}
+
+/* Dropdown */
+.dropdown { position:relative; }
+.drop-menu {
+  position:absolute; top:110%; right:0;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); box-shadow:var(--shadow);
+  display:none; flex-direction:column; min-width:160px; z-index:1000;
+  overflow:hidden;
+}
+.drop-menu.show { display:flex; }
+.drop-menu a {
+  padding:10px 16px; font-size:.85rem; font-weight:600; color:var(--text);
+  cursor:pointer; transition:background .15s;
+  border-bottom:1px solid var(--surface3); display:flex; align-items:center; gap:8px;
+}
+.drop-menu a:last-child { border-bottom:none; }
+.drop-menu a:hover { background:var(--surface2); color:var(--accent); }
+
+/* Color Swatches */
+.tb-colors{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.tb-swatch{
+  width:24px;height:24px;border-radius:50%;
+  border:2px solid var(--border);cursor:pointer;
+  transition:transform .15s,border-color .15s;
+  flex-shrink:0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.tb-swatch:hover{transform:scale(1.15)}
+.tb-swatch.active{border-color:#fff;box-shadow:0 0 0 2px var(--accent), 0 1px 3px rgba(0,0,0,0.1)}
+.tb-color-input{
+  width:24px;height:24px;border-radius:50%;
+  border:2px solid var(--border);cursor:pointer;
+  padding:0;background:none;flex-shrink:0;
+  overflow:hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.tb-color-input::-webkit-color-swatch-wrapper{padding:0}
+.tb-color-input::-webkit-color-swatch{border:none;border-radius:50%}
+
+/* Color / Size dropdown triggers */
+.tb-current-color{
+  width:18px;height:18px;border-radius:50%;flex-shrink:0;
+  border:2px solid var(--border); box-shadow:0 1px 2px rgba(0,0,0,.15);
+}
+.color-drop-panel{
+  flex-direction:row !important; flex-wrap:wrap; align-items:center;
+  padding:10px; gap:6px; min-width:190px;
+}
+.size-drop-panel a{ display:flex; align-items:center; gap:10px; }
+.size-drop-panel .size-dot{ background:var(--text2); }
+.size-drop-panel a.active{ color:var(--accent); background:var(--surface2); }
+.size-drop-panel a.active .size-dot{ background:var(--accent); }
+
+/* Size buttons */
+.tb-size-btn{
+  display:flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:var(--radius);
+  background:transparent;border:1px solid transparent;
+  color:var(--text2);transition:all .15s;flex-shrink:0;cursor:pointer;
+}
+.tb-size-btn:hover{background:var(--surface2);border-color:var(--border);color:var(--text)}
+.tb-size-btn.active{background:var(--surface3);border-color:var(--border);color:var(--accent)}
+.size-dot{background:currentColor;border-radius:50%;display:block}
+
+/* Zoom select */
+.tb-zoom-select{
+  background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:6px 10px;font-size:.8rem;font-weight:700;cursor:pointer;
+  flex-shrink:0;height:36px; transition:border-color .15s;
+}
+.tb-zoom-select:hover{border-color:var(--accent)}
+
+/* ════════════════════════════════════════════════
+   LEFT TOOL PANEL
+════════════════════════════════════════════════ */
+.lp-btn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  width:44px;height:44px;border-radius:10px;
+  color:var(--tool-color, var(--text2));background:transparent;
+  border:1px solid transparent;
+  transition:all .15s;cursor:pointer;
+  font-size:.6rem;font-weight:700;gap:2px;flex-shrink:0;
+  position:relative;
+}
+.lp-btn:hover{background:var(--surface2);border-color:var(--border)}
+.lp-btn.active{background:var(--tool-color, var(--accent));color:#fff;border-color:transparent;box-shadow:0 4px 10px rgba(0,0,0,.22)}
+.lp-btn svg{width:20px;height:20px}
+.lp-sep{width:32px;height:1px;background:var(--border);flex-shrink:0;margin:2px 0}
+
+/* Tooltip */
+.lp-btn::after{
+  content:attr(data-tip);
+  position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);
+  background:var(--text);color:var(--surface);
+  padding:6px 12px;border-radius:6px;
+  font-size:.75rem;font-weight:700;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .15s;
+  box-shadow:var(--shadow); z-index:999;
+}
+.lp-btn::before{
+  content:''; position:absolute; left:calc(100% + 4px); top:50%; transform:translateY(-50%);
+  border-width:6px; border-style:solid; border-color:transparent var(--text) transparent transparent;
+  opacity:0; pointer-events:none; transition:opacity .15s; z-index:999;
+}
+.lp-btn:hover::after, .lp-btn:hover::before {opacity:1}
+
+/* ════════════════════════════════════════════════
+   RIGHT SHAPES PANEL
+════════════════════════════════════════════════ */
+#wb-right-panel .rp-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  flex-shrink:0; background:var(--surface2);
+}
+#wb-right-panel .rp-header span{font-size:.9rem;font-weight:800;color:var(--text)}
+#wb-right-panel .rp-header button{color:var(--text3);font-size:1rem;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:all .15s;border:1px solid transparent}
+#wb-right-panel .rp-header button:hover{background:var(--surface);color:var(--red);border-color:var(--border)}
+
+.rp-section-title{
+  font-size:.75rem;font-weight:800;color:var(--text3);
+  padding:12px 16px 6px;text-transform:uppercase;letter-spacing:.02em;
+}
+.rp-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:6px 12px;
+}
+.rp-shape{
+  display:flex;align-items:center;justify-content:center;
+  height:42px;border-radius:8px;
+  background:var(--surface);border:1px solid var(--border);
+  cursor:pointer;transition:all .15s;
+  font-size:.7rem;color:var(--text2);flex-direction:column;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.rp-shape:hover{background:var(--surface2);border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.rp-shape svg{width:20px;height:20px}
+#rp-scroll{overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+
+/* Math Tools */
+.rp-math-btn{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;border-radius:8px;margin:4px 12px;
+  background:var(--surface);border:1px solid var(--border);
+  cursor:pointer;transition:all .15s;font-size:.85rem;font-weight:700;color:var(--text2);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.rp-math-btn:hover{background:var(--surface2);border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.math-symbol{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:6px;
+  background:var(--surface);border:1px solid var(--border);
+  cursor:pointer;font-size:1rem;color:var(--text);font-weight:700;
+  transition:all .15s; box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.math-symbol:hover{background:var(--accent);color:#fff;border-color:var(--accent);transform:translateY(-1px)}
+.math-symbols-grid{display:flex;flex-wrap:wrap;gap:6px;padding:6px 12px 12px}
+
+/* ════════════════════════════════════════════════
+   PAGES STRIP
+════════════════════════════════════════════════ */
+.page-thumb{
+  flex-shrink:0;width:120px;height:72px;
+  background:var(--surface);border-radius:8px;
+  border:2px solid var(--border);cursor:pointer;
+  position:relative;overflow:hidden;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.page-thumb:hover{border-color:var(--accent2)}
+.page-thumb.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent), 0 2px 8px rgba(37,99,235,.2)}
+.page-thumb canvas{max-width:100%;max-height:100%;object-fit:contain}
+.page-thumb .page-num{
+  position:absolute;bottom:4px;right:6px;
+  font-size:.65rem;font-weight:800;color:var(--text);background:rgba(255,255,255,.9);
+  padding:2px 6px;border-radius:4px; border:1px solid var(--border);
+}
+.page-thumb .page-del{
+  position:absolute;top:4px;left:4px;display:none;
+  width:22px;height:22px;border-radius:4px;
+  background:rgba(239,68,68,.9);color:#fff;font-size:.8rem;
+  align-items:center;justify-content:center; font-weight:700;
+}
+.page-thumb:hover .page-del{display:flex}
+.page-add-btn{
+  flex-shrink:0;width:72px;height:72px;
+  background:var(--surface2);border:2px dashed var(--border);
+  border-radius:8px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:var(--text3);font-size:.7rem;font-weight:700;gap:6px;transition:all .15s;
+}
+.page-add-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+
+/* ════════════════════════════════════════════════
+   CANVAS AREA
+════════════════════════════════════════════════ */
+#wb-canvas-wrap .canvas-container{
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  background: #ffffff;
+  margin: 0 auto;
+}
+
+/* ════════════════════════════════════════════════
+   FLOATING TOOLBAR (appears on selection)
+════════════════════════════════════════════════ */
+#wb-float-bar{
+  position:fixed;z-index:500;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:8px 12px;
+  display:none;align-items:center;gap:8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+.fb-btn{
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text2);background:transparent;
+  border:1px solid transparent;font-size:.9rem;cursor:pointer;
+  transition:all .15s; font-weight:700;
+}
+.fb-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border)}
+.fb-btn.danger:hover{background:rgba(239,68,68,.1);color:var(--red);border-color:rgba(239,68,68,.2)}
+.fb-sep{width:1px;height:24px;background:var(--border)}
+.fb-color{width:24px;height:24px;border-radius:6px;border:2px solid var(--border);cursor:pointer;padding:0}
+.fb-color::-webkit-color-swatch-wrapper{padding:0}
+.fb-color::-webkit-color-swatch{border:none;border-radius:4px}
+
+/* ════════════════════════════════════════════════
+   TEXT EDITING PANEL
+════════════════════════════════════════════════ */
+#wb-text-panel{
+  position:fixed;top:calc(var(--topbar-h) + 12px);left:50%;
+  transform:translateX(-50%);
+  z-index:500;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:8px 12px;
+  display:none;align-items:center;gap:8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+.tp-btn{
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text2);background:transparent;border:1px solid transparent;
+  font-size:.9rem;font-weight:800;cursor:pointer;transition:all .15s;
+}
+.tp-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border)}
+.tp-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tp-select{
+  background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;
+  padding:4px 8px;font-size:.85rem;font-weight:600;cursor:pointer;height:32px;
+}
+
+/* ════════════════════════════════════════════════
+   MODALS / OVERLAYS
+════════════════════════════════════════════════ */
+.wb-modal-overlay{
+  position:fixed;inset:0;z-index:800;
+  background:rgba(0,0,0,.4);backdrop-filter:blur(2px);
+  display:none;align-items:center;justify-content:center;
+}
+.wb-modal-overlay.open{display:flex}
+.wb-modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:28px;min-width:380px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);color:var(--text);
+}
+.wb-modal h3{font-size:1.15rem;font-weight:800;margin-bottom:20px;color:var(--text)}
+.wb-modal .fg{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.wb-modal label{font-size:.85rem;font-weight:700;color:var(--text2)}
+.wb-modal input,.wb-modal select,.wb-modal textarea{
+  background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;
+  padding:10px 14px;font-size:.9rem;width:100%; transition:border-color .15s;
+}
+.wb-modal input:focus,.wb-modal textarea:focus { border-color:var(--accent); outline:none; }
+.wb-modal .btn-row{display:flex;gap:12px;justify-content:flex-end;margin-top:10px}
+.wb-modal .btn-primary{
+  padding:10px 24px;border-radius:8px;font-size:.9rem;font-weight:800;
+  background:var(--accent);color:#fff;cursor:pointer;border:none; transition:background .15s;
+}
+.wb-modal .btn-primary:hover{background:var(--accent2)}
+.wb-modal .btn-sec{
+  padding:10px 24px;border-radius:8px;font-size:.9rem;font-weight:800;
+  background:var(--surface2);color:var(--text2);cursor:pointer;border:1px solid var(--border); transition:all .15s;
+}
+.wb-modal .btn-sec:hover{background:var(--surface3);color:var(--text)}
+
+/* ════════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════════ */
+#wb-toast{
+  position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+  background:var(--text);color:var(--surface);
+  padding:12px 20px;border-radius:12px;font-size:.9rem;font-weight:700;
+  pointer-events:none;opacity:0;transition:opacity .25s;
+  z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,0.15);
+  max-width:400px;text-align:right;
+  display:flex;align-items:center;gap:10px;
+}
+#wb-toast .toast-icon{display:flex;flex-shrink:0;width:18px;height:18px}
+#wb-toast .toast-icon svg{width:18px;height:18px}
+#wb-toast.t-success .toast-icon{color:#4ade80}
+#wb-toast.t-error .toast-icon{color:#f87171}
+#wb-toast.t-warning .toast-icon{color:#fbbf24}
+#wb-toast.t-info .toast-icon{color:#60a5fa}
+#wb-toast.show{opacity:1}
+
+/* ════════════════════════════════════════════════
+   ERASER CURSOR SIZE INDICATOR
+════════════════════════════════════════════════ */
+#eraser-cursor{
+  position:fixed;pointer-events:none;border-radius:50%;
+  border:2px solid rgba(0,0,0,.4);
+  background:rgba(0,0,0,.05);z-index:999;display:none;
+  transform:translate(-50%,-50%);transition:width .1s,height .1s;
+}
+
+
+/* File Manager CSS */
+.fm-menu { width: 400px; max-height: 80vh; overflow: hidden; display: none; flex-direction: column; padding: 0; background: var(--surface); right: 0; left: auto; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.1); border-radius: 12px; }
+.fm-menu.show { display: flex; }
+.fm-header { padding: 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface2); }
+.fm-toolbar { display: flex; gap: 8px; }
+.fm-btn { padding: 6px 10px; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px; background: #fff; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 500; }
+.fm-btn:hover { background: var(--bg); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.fm-sort { padding: 6px; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px; outline: none; }
+.fm-body { flex: 1; overflow-y: auto; padding: 10px 15px; direction: rtl; text-align: right; }
+.fm-tree { list-style: none; padding: 0; margin: 0; }
+.fm-tree li { padding: 4px 0; }
+.fm-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; cursor: pointer; user-select: none; transition: 0.2s; border: 1px solid transparent; }
+.fm-item:hover { background: var(--bg); border-color: var(--border); }
+.fm-item-main { display: flex; align-items: center; gap: 10px; flex: 1; }
+.fm-item-actions { display: none; gap: 6px; }
+.fm-item:hover .fm-item-actions { display: flex; }
+.fm-icon { font-size: 1.4rem; }
+.fm-title { font-size: 0.95rem; color: #1e293b; font-weight: 500; }
+.fm-date { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+.fm-trash-btn { background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; font-size: 1.1rem; border-radius: 4px; }
+.fm-trash-btn:hover { background: #fee2e2; }
+.fm-subtree { list-style: none; padding-right: 25px; margin: 0; display: none; border-right: 2px solid var(--border); margin-right: 15px; margin-top: 5px; }
+.fm-subtree.open { display: block; }
+.fm-trash-section { border-top: 2px dashed var(--border); margin-top: 15px; padding-top: 15px; }
+.fm-trash-header { font-size: 1rem; color: #64748b; margin-bottom: 5px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+.fm-trash-note { font-size: 0.75rem; color: #ef4444; margin-bottom: 15px; background: #fee2e2; padding: 6px; border-radius: 4px; }
+
+/* 📁 File Manager CSS */
+.fm-menu { width: 380px; max-height: 80vh; overflow: hidden; display: none; flex-direction: column; padding: 0; background: var(--surface); right: 0; left: auto; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.1); border-radius: 12px; z-index: 1000; }
+.fm-menu.show { display: flex; }
+.fm-header { padding: 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface2); }
+.fm-toolbar { display: flex; gap: 8px; }
+.fm-btn { padding: 6px 10px; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px; background: #fff; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 500; }
+.fm-btn:hover { background: var(--bg); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.fm-sort { padding: 6px; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px; outline: none; }
+.fm-body { flex: 1; overflow-y: auto; padding: 10px 15px; direction: rtl; text-align: right; }
+.fm-tree { list-style: none; padding: 0; margin: 0; }
+.fm-tree li { padding: 4px 0; }
+.fm-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; cursor: pointer; user-select: none; transition: 0.2s; border: 1px solid transparent; }
+.fm-item:hover { background: var(--bg); border-color: var(--border); }
+.fm-item-main { display: flex; align-items: center; gap: 10px; flex: 1; }
+.fm-item-actions { display: none; gap: 6px; }
+.fm-item:hover .fm-item-actions { display: flex; }
+.fm-icon { font-size: 1.4rem; }
+.fm-title { font-size: 0.95rem; color: #1e293b; font-weight: 500; }
+.fm-date { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+.fm-trash-btn { background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; font-size: 1.1rem; border-radius: 4px; }
+.fm-trash-btn:hover { background: #fee2e2; }
+.fm-subtree { list-style: none; padding-right: 25px; margin: 0; display: none; border-right: 2px solid var(--border); margin-right: 15px; margin-top: 5px; }
+.fm-subtree.open { display: block; }
+.fm-trash-section { border-top: 2px dashed var(--border); margin-top: 15px; padding-top: 15px; }
+.fm-trash-header { font-size: 1rem; color: #64748b; margin-bottom: 5px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+.fm-trash-note { font-size: 0.75rem; color: #ef4444; margin-bottom: 15px; background: #fee2e2; padding: 6px; border-radius: 4px; }
+
+
+/* ════════════════════════════════════════════════
+   WIDGETS (STOPWATCH & CLOCK)
+════════════════════════════════════════════════ */
+.wb-widget {
+  position: absolute;
+  top: 50px; left: 50px;
+  padding: 24px; /* thick border look */
+  background: transparent;
+  border-radius: 12px;
+  cursor: grab;
+  z-index: 1000;
+  user-select: none;
+  transform-origin: top left;
+  transition: box-shadow 0.2s, background 0.2s;
+  border: 2px solid transparent;
+}
+.wb-widget:hover, .wb-widget.active {
+  background: rgba(180, 180, 180, 0.85); /* The gray OpenBoard frame */
+  border: 2px solid #a0a0a0;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+.wb-widget:active { cursor: grabbing; }
+
+.wb-widget-content {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  pointer-events: auto;
+  background: transparent;
+}
+
+/* OpenBoard style buttons */
+.ob-btn {
+  position: absolute;
+  width: 28px; height: 28px;
+  background: #7a7a7a;
+  border: 2px solid #e0e0e0;
+  border-radius: 50%;
+  color: white;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 20;
+  font-weight: bold;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+.wb-widget:hover .ob-btn, .wb-widget.active .ob-btn { display: flex; }
+.ob-btn:hover { background: #555; transform: scale(1.1); }
+.ob-btn:active { transform: scale(0.9); }
+
+.ob-close { top: -14px; left: -14px; background: #e74c3c; border-color: #fff; }
+.ob-dup { top: -14px; left: 24px; }
+.ob-zup { bottom: -14px; left: -14px; }
+.ob-zdn { bottom: -14px; left: 24px; }
+
+/* OpenBoard style resize handle */
+.ob-resize {
+  position: absolute;
+  bottom: -4px; right: -4px;
+  width: 32px; height: 32px;
+  cursor: nwse-resize;
+  display: none;
+  z-index: 20;
+  border-bottom-right-radius: 12px;
+}
+.wb-widget:hover .ob-resize, .wb-widget.active .ob-resize { display: block; }
+
+/* Side Drag Indicators (aesthetic only, like openboard) */
+.ob-drag-ind {
+  position: absolute;
+  display: none;
+  pointer-events: none;
+}
+.ob-drag-left { left: 4px; top: 50%; transform: translateY(-50%); border-left: 2px solid #888; border-right: 2px solid #888; width: 6px; height: 20px; }
+.ob-drag-right { right: 4px; top: 50%; transform: translateY(-50%); border-left: 2px solid #888; border-right: 2px solid #888; width: 6px; height: 20px; }
+.ob-drag-top { top: 4px; left: 50%; transform: translateX(-50%); border-top: 2px solid #888; border-bottom: 2px solid #888; height: 6px; width: 20px; }
+.ob-drag-bottom { bottom: 4px; left: 50%; transform: translateX(-50%); border-top: 2px solid #888; border-bottom: 2px solid #888; height: 6px; width: 20px; }
+
+.wb-widget:hover .ob-drag-ind, .wb-widget.active .ob-drag-ind { display: block; }
+
+
+
+/* Curtain Widget */
+.widget-curtain {
+  width: 100%;
+  height: 100%;
+  background: #b0b0b0; /* solid gray */
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+}
+
+
+/* Grid Settings */
+.grid-settings {
+  position: absolute;
+  top: 10px; right: 10px;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 8px;
+  display: none;
+  z-index: 50;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  font-family: Arial, sans-serif;
+  direction: rtl;
+}
+.grid-settings.show { display: block; }
+.grid-settings label { display: block; margin-bottom: 5px; font-size: 12px; }
+.grid-settings input { width: 50px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
+.ob-settings { top: -14px; left: 62px; background: #3498db; }
+.widget-grid-wrap { width: 100%; height: 100%; background: #fff; position: relative; }
+.widget-grid-wrap canvas { width: 100%; height: 100%; display: block; }
+
+/* Stopwatch */
+.widget-stopwatch {
+  background: linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%);
+  display: flex;
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+}
+.sw-display {
+  padding: 10px 25px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.time-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.time-btn {
+  font-size: 14px;
+  color: #888;
+  cursor: pointer;
+  padding: 2px 10px;
+}
+.time-btn:hover { color: #fff; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
+.time-val { font-size: 42px; line-height: 1; }
+.sw-unit { font-size: 20px; color: #81ecec; margin-left: 2px; }
+.sw-controls { display: flex; flex-direction: column; border-left: 2px solid #111; }
+.sw-btn { flex: 1; background: linear-gradient(180deg, #3a3a3a 0%, #1a1a1a 100%); border: none; color: #ccc; width: 45px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; outline: none; }
+.sw-btn:hover { background: linear-gradient(180deg, #555 0%, #333 100%); color: #fff; }
+.sw-btn:active { background: #111; }
+.sw-btn:first-child { border-bottom: 2px solid #111; }
+
+/* Analog Clock */
+.widget-clock {
+  width: 180px; height: 180px;
+  background: #fff;
+  border-radius: 50%;
+  border: 10px solid #1a1a1a;
+  position: relative;
+}
+.clock-mark { position: absolute; width: 5px; height: 14px; background: #222; left: 50%; transform-origin: 50% 80px; margin-left: -2.5px; }
+.clock-mark.minor { width: 2px; height: 8px; background: #666; margin-left: -1px; }
+.clock-hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom center; border-radius: 6px; z-index: 5; }
+.clock-hour { width: 8px; height: 50px; background: #111; margin-left: -4px; z-index: 6; }
+.clock-min { width: 6px; height: 70px; background: #111; margin-left: -3px; z-index: 7; }
+.clock-sec { width: 3px; height: 75px; background: #e74c3c; margin-left: -1.5px; z-index: 8; }
+.clock-center { position: absolute; width: 14px; height: 14px; background: #fff; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 4px solid #e74c3c; z-index: 10; }
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+  <linearGradient id="ic-purple" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c4b5fd"/><stop offset="1" stop-color="#6d28d9"/></linearGradient>
+  <linearGradient id="ic-purpleDark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#5b21b6"/></linearGradient>
+  <linearGradient id="ic-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#93c5fd"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient>
+  <linearGradient id="ic-teal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5eead4"/><stop offset="1" stop-color="#0d9488"/></linearGradient>
+  <linearGradient id="ic-paper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dbe1ea"/></linearGradient>
+  <linearGradient id="ic-folderBack" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9821f"/><stop offset="1" stop-color="#a1650f"/></linearGradient>
+  <linearGradient id="ic-folderFront" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8b64c"/><stop offset="0.55" stop-color="#f0a020"/><stop offset="1" stop-color="#d9820f"/></linearGradient>
+  <linearGradient id="ic-cream" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#faf7ee"/><stop offset="1" stop-color="#ede6d2"/></linearGradient>
+  <linearGradient id="ic-amberSun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+  <linearGradient id="ic-amberCase" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde28a"/><stop offset="1" stop-color="#f0a416"/></linearGradient>
+  <linearGradient id="ic-amberCaseDark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eb9d16"/><stop offset="1" stop-color="#c9790a"/></linearGradient>
+  <linearGradient id="ic-bookOrange" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fb923c"/><stop offset="1" stop-color="#c2410c"/></linearGradient>
+  <linearGradient id="ic-bookCream" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fffdf5"/><stop offset="1" stop-color="#fde68a"/></linearGradient>
+  <linearGradient id="ic-bookYellow" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fde047"/><stop offset="1" stop-color="#ca8a04"/></linearGradient>
+  <filter id="ic-soft" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="1" stdDeviation="0.8" flood-color="#4c1d95" flood-opacity="0.25"/></filter>
+  <linearGradient id="ic-eraserBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4fc3f7"/><stop offset="1" stop-color="#1976d2"/></linearGradient>
+  <linearGradient id="ic-eraserPink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6b93"/><stop offset="1" stop-color="#d81b60"/></linearGradient>
+  <clipPath id="ic-eraserClip"><rect x="2" y="8.4" width="20" height="7.2" rx="3.6"/></clipPath>
+</defs>
+</svg>
+
+<div id="wb-app">
+
+  <!-- ══ TOP BAR ══ -->
+  <div id="wb-topbar">
+    <!-- Logo -->
+    <div class="tb-logo">
+      <img src="https://www.selimacademy.com/icon-192x192.png" alt="سليم">
+      <span>أكاديمية سليم</span>
+    </div>
+    <div class="tb-sep"></div>
+
+    <!-- Undo / Redo -->
+    <button class="tb-btn" onclick="wbUndo()" title="تراجع (Ctrl+Z)" style="height:48px">
+      <svg viewBox="0 0 24 24" filter="url(#ic-soft)" fill="none" stroke-linecap="round" style="width:33px;height:33px;flex-shrink:0"><g transform="translate(24,0) scale(-1,1)">
+        <path d="M20 11a8 8 0 1 0-2.3 5.7" stroke="url(#ic-purple)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <path d="M20 5v6h-6" stroke="url(#ic-purple)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="4" y1="4" x2="5.2" y2="5.2" stroke="url(#ic-blue)" stroke-width="1.4" stroke-linecap="round"/>
+        <line x1="3" y1="8" x2="4.6" y2="8" stroke="url(#ic-blue)" stroke-width="1.4" stroke-linecap="round"/>
+      </g></svg>
+      <span style="font-size:.6rem">تراجع</span>
+    </button>
+    <button class="tb-btn" onclick="wbRedo()" title="إعادة (Ctrl+Y)" style="height:48px">
+      <svg viewBox="0 0 24 24" filter="url(#ic-soft)" fill="none" stroke-linecap="round" style="width:33px;height:33px;flex-shrink:0"><path d="M20 11a8 8 0 1 0-2.3 5.7" stroke="url(#ic-blue)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <path d="M20 5v6h-6" stroke="url(#ic-blue)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="4" y1="4" x2="5.2" y2="5.2" stroke="url(#ic-purple)" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="3" y1="8" x2="4.6" y2="8" stroke="url(#ic-purple)" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <span style="font-size:.6rem">إعادة</span>
+    </button>
+    <div class="tb-sep"></div>
+
+    <!-- Colors -->
+    <div class="dropdown">
+      <button class="tb-btn" onclick="toggleDrop('color-drop')" title="اللون">
+        <span class="tb-current-color" id="tb-current-color-dot" style="background:#000000"></span>
+        <span style="font-size:.62rem">اللون</span>
+      </button>
+      <div class="drop-menu color-drop-panel" id="color-drop">
+        <div class="tb-colors" id="tb-colors">
+          <div class="tb-swatch active" style="background:#000" data-color="#000000" onclick="setColor('#000000',this)" title="أسود"></div>
+          <div class="tb-swatch" style="background:#fff;border:1.5px solid #cbd5e1" data-color="#ffffff" onclick="setColor('#ffffff',this)" title="أبيض"></div>
+          <div class="tb-swatch" style="background:#ef4444" data-color="#ef4444" onclick="setColor('#ef4444',this)" title="أحمر"></div>
+          <div class="tb-swatch" style="background:#3b82f6" data-color="#3b82f6" onclick="setColor('#3b82f6',this)" title="أزرق"></div>
+          <div class="tb-swatch" style="background:#22c55e" data-color="#22c55e" onclick="setColor('#22c55e',this)" title="أخضر"></div>
+          <div class="tb-swatch" style="background:#f59e0b" data-color="#f59e0b" onclick="setColor('#f59e0b',this)" title="أصفر"></div>
+          <div class="tb-swatch" style="background:#f97316" data-color="#f97316" onclick="setColor('#f97316',this)" title="برتقالي"></div>
+          <div class="tb-swatch" style="background:#8b5cf6" data-color="#8b5cf6" onclick="setColor('#8b5cf6',this)" title="بنفسجي"></div>
+          <div class="tb-swatch" style="background:#ec4899" data-color="#ec4899" onclick="setColor('#ec4899',this)" title="وردي"></div>
+          <div class="tb-swatch" style="background:#14b8a6" data-color="#14b8a6" onclick="setColor('#14b8a6',this)" title="فيروزي"></div>
+          <input type="color" class="tb-color-input" id="custom-color" value="#000000" title="لون مخصص" oninput="setColor(this.value,null)">
+        </div>
+      </div>
+    </div>
+    <div class="tb-sep"></div>
+
+    <!-- Stroke size -->
+    <div class="dropdown">
+      <button class="tb-btn" onclick="toggleDrop('size-drop')" title="سمك الخط">
+        <span class="size-dot" id="tb-current-size-dot" style="width:8px;height:8px;background:currentColor;border-radius:50%;display:inline-block"></span>
+        <span style="font-size:.62rem">الحجم</span>
+      </button>
+      <div class="drop-menu size-drop-panel" id="size-drop">
+        <a class="active" data-size="2" onclick="setStrokeSize(2,this)" title="رفيع"><span class="size-dot" style="width:5px;height:5px"></span> رفيع</a>
+        <a data-size="4" onclick="setStrokeSize(4,this)" title="متوسط"><span class="size-dot" style="width:8px;height:8px"></span> متوسط</a>
+        <a data-size="8" onclick="setStrokeSize(8,this)" title="سميك"><span class="size-dot" style="width:12px;height:12px"></span> سميك</a>
+        <a data-size="16" onclick="setStrokeSize(16,this)" title="سميك جداً"><span class="size-dot" style="width:18px;height:18px"></span> سميك جداً</a>
+      </div>
+    </div>
+    <div class="tb-sep"></div>
+
+    <!-- Backgrounds -->
+    <button class="tb-btn" onclick="openBgModal()" title="تغيير خلفية الصفحة وتخطيطها" style="height:48px">
+      <span style="display:inline-flex;width:33px;height:33px;flex-shrink:0"><svg viewBox="0 0 24 24" filter="url(#ic-soft)" style="width:33px;height:33px;flex-shrink:0"><rect x="4" y="3.2" width="13.5" height="16.5" rx="1.5" fill="url(#ic-paper)" opacity="0.5" transform="rotate(-7 10.5 11)"/>
+      <path d="M3,4.7 Q3,3.2 4.5,3.2 L15.5,3.2 Q17,3.2 17,4.7 L17,18 L14,21 L4.5,21 Q3,21 3,19.5 Z" fill="url(#ic-cream)"/>
+      <path d="M3,15.5 L7.5,10.5 L11,14 L14,10.8 L17,14.5 L17,18 L14,21 L4.5,21 Q3,21 3,19.5 Z" fill="url(#ic-purple)"/>
+      <path d="M3,17 L8,12.3 L11.5,15.5 L14,13 L17,16.2 L17,18 L14,21 L4.5,21 Q3,21 3,19.5 Z" fill="url(#ic-purpleDark)" opacity="0.85"/>
+      <circle cx="7" cy="7.3" r="1.3" fill="url(#ic-amberSun)"/>
+      <path d="M3,19.5 L6.5,17.8 L4.7,21 Q3,21 3,19.5 Z" fill="#e2dac4"/>
+      <path d="M13 12.3 Q15 10 17.3 9.6" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-linecap="round"/>
+      <g transform="rotate(42 16 12)">
+        <rect x="13.6" y="9.6" width="7.4" height="3.2" rx="1.6" fill="url(#ic-blue)"/>
+        <rect x="13.6" y="9.6" width="7.4" height="1" rx="0.5" fill="#fff" opacity="0.35"/>
+        <circle cx="14.3" cy="11.2" r="1.4" fill="url(#ic-purpleDark)"/>
+        <rect x="19.6" y="10.4" width="2.6" height="5" rx="1" fill="url(#ic-purpleDark)"/>
+      </g></svg></span> <span style="font-size:.6rem">خلفية الصفحة</span>
+    </button>
+    <div class="tb-sep"></div>
+
+    <!-- Zoom -->
+    <select class="tb-zoom-select" id="zoom-select" onchange="setZoomFromSelect(this.value)" title="التكبير">
+      <option value="0.25">25%</option>
+      <option value="0.5">50%</option>
+      <option value="0.75">75%</option>
+      <option value="1" selected>100%</option>
+      <option value="1.25">125%</option>
+      <option value="1.5">150%</option>
+      <option value="2">200%</option>
+    </select>
+    <button class="tb-btn" onclick="fitCanvas()" title="ملاءمة الشاشة" style="height:48px"><svg viewBox="0 0 24 24" filter="url(#ic-soft)" fill="none" stroke-linecap="round" stroke-linejoin="round" style="width:33px;height:33px;flex-shrink:0"><path d="M8 3H5a2 2 0 0 0-2 2v3" stroke="url(#ic-blue)" stroke-width="2.4"/>
+      <path d="M21 8V5a2 2 0 0 0-2-2h-3" stroke="url(#ic-blue)" stroke-width="2.4"/>
+      <path d="M3 16v3a2 2 0 0 0 2 2h3" stroke="url(#ic-blue)" stroke-width="2.4"/>
+      <path d="M16 21h3a2 2 0 0 0 2-2v-3" stroke="url(#ic-blue)" stroke-width="2.4"/>
+      <line x1="12" y1="9" x2="12" y2="15" stroke="url(#ic-purple)" stroke-width="2.4"/>
+      <line x1="9" y1="12" x2="15" y2="12" stroke="url(#ic-purple)" stroke-width="2.4"/></svg> <span style="font-size:.6rem">ملاءمة</span></button>
+    <div class="tb-sep"></div>
+
+      <!-- File Manager Menu -->
+      <div class="dropdown">
+        <button class="tb-btn" onclick="toggleDrop('fm-drop')" style="background: var(--accent); color: white; border: none; padding: 6px 12px; font-weight:bold; height:48px"><svg viewBox="0 0 24 24" filter="url(#ic-soft)" style="width:33px;height:33px;flex-shrink:0"><path d="M3,7 L3,5 Q3,3.5 4.5,3.5 L10,3.5 L12,6 L19.5,6 Q21,6 21,7.5 L21,19.5 Q21,21 19.5,21 L4.5,21 Q3,21 3,19.5 Z" fill="url(#ic-folderBack)"/>
+      <rect x="6.3" y="5.2" width="12" height="10.6" rx="0.7" fill="url(#ic-paper)"/>
+      <line x1="8" y1="7.6" x2="16.5" y2="7.6" stroke="#c3cad6" stroke-width="0.6"/>
+      <line x1="8" y1="9.6" x2="16.5" y2="9.6" stroke="#c3cad6" stroke-width="0.6"/>
+      <rect x="3" y="9.2" width="18" height="11.8" rx="2" fill="url(#ic-folderFront)"/>
+      <path d="M4.5 10.5L14 20.5" stroke="#fff" stroke-width="2.2" opacity="0.16" stroke-linecap="round"/>
+      <circle cx="18" cy="15" r="0.9" fill="#fff" opacity="0.75"/></svg> <span style="font-size:.6rem">الملفات</span></button>
+        <div class="drop-menu fm-menu" id="fm-drop">
+          <div class="fm-header">
+            <div class="fm-toolbar">
+              <button class="fm-btn" onclick="createFmFolder()"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span> مجلد جديد</button>
+              <button class="fm-btn" onclick="createFmFile()"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></span> صفحة جديدة</button>
+            </div>
+            <select class="fm-sort" onchange="changeFmSort(this.value)">
+              <option value="date">تاريخ الإنشاء</option>
+              <option value="alpha">أبجدياً</option>
+              <option value="custom">مخصص</option>
+            </select>
+          </div>
+          <div class="fm-body">
+            <div id="fm-tree-root"></div>
+            
+            <div class="fm-trash-section">
+              <div class="fm-trash-header"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span> المحذوفات</div>
+              <div class="fm-trash-note" style="display:flex;align-items:center;gap:6px"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> سيتم حذف الملفات نهائياً بعد 30 يوماً</div>
+              <div id="fm-trash-root"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Import / Export Menus -->
+      <div class="dropdown">
+      <button class="tb-btn" onclick="toggleDrop('import-drop')" title="استيراد محتوى إلى السبورة" style="height:48px"><span style="display:inline-flex;width:33px;height:33px;flex-shrink:0"><svg viewBox="0 0 24 24" filter="url(#ic-soft)" fill="none" stroke-linecap="round" stroke-linejoin="round" style="width:33px;height:33px;flex-shrink:0"><path d="M6 15H4v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4h-2" stroke="url(#ic-purple)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path d="M12 3v12" stroke="url(#ic-blue)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <path d="M8 11l4 4 4-4" stroke="url(#ic-blue)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span> <span style="font-size:.6rem">استيراد ▼</span></button>
+      <div class="drop-menu" id="import-drop">
+        <a onclick="importImage()"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> صورة (JPG/PNG)</a>
+        <a onclick="importPDF()"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></span> ملف (PDF)</a>
+        <a onclick="importVideo()"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span> فيديو (MP4/WebM)</a>
+      </div>
+    </div>
+    
+    <div class="dropdown">
+      <button class="tb-btn" onclick="toggleDrop('export-drop')" title="تصدير محتوى السبورة" style="height:48px"><span style="display:inline-flex;width:33px;height:33px;flex-shrink:0"><svg viewBox="0 0 24 24" filter="url(#ic-soft)" fill="none" stroke-linecap="round" stroke-linejoin="round" style="width:33px;height:33px;flex-shrink:0"><path d="M6 15H4v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4h-2" stroke="url(#ic-purple)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path d="M12 15V3" stroke="url(#ic-teal)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <path d="M8 7l4-4 4 4" stroke="url(#ic-teal)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span> <span style="font-size:.6rem">تصدير ▼</span></button>
+      <div class="drop-menu" id="export-drop">
+        <a onclick="exportPNG()"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> حفظ صورة (PNG)</a>
+        <a onclick="exportJPG()"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> حفظ صورة (JPG)</a>
+        <a onclick="exportPDF()"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></span> تصدير ملف (PDF)</a>
+      </div>
+    </div>
+    <div class="tb-sep"></div>
+
+    <!-- Clear -->
+    <button class="tb-btn danger" onclick="clearCurrentPage()" title="مسح الصفحة بالكامل" style="height:48px">
+      <svg viewBox="0 0 24 24" filter="url(#ic-soft)" style="width:33px;height:33px;flex-shrink:0"><rect x="9.5" y="3.2" width="5" height="2" rx="1" fill="url(#ic-purpleDark)"/>
+      <rect x="4" y="5.6" width="16" height="2.2" rx="1.1" fill="url(#ic-purple)"/>
+      <path d="M5.2 8.4h13.6l-1.3 11.4a2 2 0 0 1-2 1.8H8.5a2 2 0 0 1-2-1.8z" fill="url(#ic-purpleDark)"/>
+      <line x1="9.5" y1="11" x2="10" y2="18" stroke="#fff" stroke-width="1.1" opacity="0.55" stroke-linecap="round"/>
+      <line x1="14.5" y1="11" x2="14" y2="18" stroke="#fff" stroke-width="1.1" opacity="0.55" stroke-linecap="round"/></svg>
+      <span style="font-size:.6rem">مسح الشاشة</span>
+    </button>
+    <div class="tb-sep"></div>
+
+    <!-- Shapes Panel Toggle -->
+    <button class="tb-btn" onclick="toggleRightPanel()" id="shapes-toggle-btn" title="فتح/إغلاق المكتبة" style="height:48px">
+      <svg viewBox="0 0 24 24" filter="url(#ic-soft)" style="width:33px;height:33px;flex-shrink:0"><rect x="2.2" y="2.8" width="19.6" height="17.4" rx="4" fill="url(#ic-amberCase)"/>
+      <rect x="3.4" y="4" width="17.2" height="13.6" rx="2.6" fill="url(#ic-amberCaseDark)"/>
+      <rect x="11.6" y="4.4" width="1" height="12.8" fill="#a3610a" opacity="0.6"/>
+      <rect x="4.6" y="6" width="2.3" height="11" rx="0.4" fill="url(#ic-bookOrange)"/>
+      <path d="M4.6 6h2.3v2.6l-1.15-0.7-1.15 0.7z" fill="#fff" opacity="0.85"/>
+      <rect x="7.2" y="6.3" width="2.3" height="10.7" rx="0.4" fill="url(#ic-bookCream)"/>
+      <rect x="7.7" y="14" width="1.3" height="0.5" fill="#ca8a04"/>
+      <rect x="9.8" y="7" width="2.1" height="10" rx="0.4" fill="url(#ic-bookYellow)"/>
+      <rect x="10.2" y="13.5" width="1.3" height="0.5" fill="#fff" opacity="0.7"/>
+      <path d="M13.3 6.6h6.4v9.6l-3.2-1-3.2 1z" fill="url(#ic-amberCase)" opacity="0.6"/>
+      <rect x="13.9" y="7.4" width="5.4" height="8.2" rx="0.5" fill="url(#ic-bookCream)"/>
+      <circle cx="16" cy="9.6" r="0.9" fill="url(#ic-amberSun)"/>
+      <path d="M14.4 12.7l1.4-1.7 1.1 1.1 1.4-1.6 1.1 1.4v1.9h-5z" fill="url(#ic-bookOrange)"/>
+      <line x1="14.4" y1="14.4" x2="18.9" y2="14.4" stroke="#e2c98a" stroke-width="0.5"/>
+      <rect x="9" y="18.6" width="6" height="2.3" rx="1.1" fill="url(#ic-bookCream)"/>
+      <circle cx="9.9" cy="19.75" r="0.35" fill="#c9790a"/>
+      <circle cx="14.1" cy="19.75" r="0.35" fill="#c9790a"/>
+      <path d="M11 18.9v1.7l1-0.5 1 0.5v-1.7z" fill="#f0a416"/></svg> <span style="font-size:.6rem">المكتبة</span>
+    </button>
+
+    <!-- Fullscreen -->
+    <button class="tb-btn" onclick="toggleFullscreen()" id="fs-btn" title="ملء الشاشة (F11)"><span style="display:inline-flex;width:18px;height:18px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span></button>
+  </div>
+
+  <!-- ══ MIDDLE ROW ══ -->
+  <div id="wb-middle">
+
+    <!-- LEFT TOOL PANEL -->
+            <div id="wb-left-panel">
+      <!-- Select/Pointer -->
+      <button class="lp-btn active" id="tool-select" data-tip="تحديد الأجسام (V)" onclick="setTool('select')">
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><path d="m4 4 7.07 17 2.51-7.39L21 11.07Z"/></svg>
+      </button>
+      
+      <!-- Pen (Red with scribble) -->
+      <button class="lp-btn" id="tool-pen" data-tip="قلم الرسم (P)" onclick="setTool('pen')">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <g transform="rotate(-45 12 12)">
+            <polygon points="1,12 4,9.6 4,14.4" fill="#374151"/>
+            <polygon points="4,9.6 7,9 7,15 4,14.4" fill="#e8b984"/>
+            <rect x="7" y="9" width="10" height="6" fill="#fde047" stroke="#eab308" stroke-width="0.6"/>
+            <rect x="17" y="9" width="2.4" height="6" fill="#cbd5e1" stroke="#94a3b8" stroke-width="0.4"/>
+            <rect x="19.4" y="9" width="3.4" height="6" rx="1.6" fill="#f9a8d4" stroke="#ec4899" stroke-width="0.6"/>
+          </g>
+        </svg>
+      </button>
+
+      <!-- Highlighter (Yellow with scribble) -->
+      <button class="lp-btn" id="tool-highlighter" data-tip="قلم التمييز/هايلايتر (H)" onclick="setTool('highlighter')" style="--tool-color:var(--yellow)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
+      </button>
+
+      <!-- Eraser (Pink/Blue 3D block) -->
+      <button class="lp-btn" id="tool-eraser" data-tip="ممحاة ذكية (E)" onclick="setTool('eraser')">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" filter="url(#ic-soft)">
+          <g transform="rotate(-45 12 12)">
+            <g clip-path="url(#ic-eraserClip)">
+              <rect x="2" y="8.4" width="20" height="7.2" fill="url(#ic-eraserPink)"/>
+              <rect x="11" y="8.4" width="11" height="7.2" fill="url(#ic-eraserBlue)"/>
+              <rect x="10.6" y="8.4" width="0.9" height="7.2" fill="#fff" opacity="0.65"/>
+              <rect x="2" y="14" width="20" height="1.6" fill="#000" opacity="0.12"/>
+            </g>
+            <rect x="2" y="8.4" width="20" height="7.2" rx="3.6" fill="none" stroke="#00000022" stroke-width="0.35"/>
+          </g>
+        </svg>
+      </button>
+      
+      <div class="lp-sep"></div>
+
+      <!-- Line (with dots) -->
+      <button class="lp-btn" id="tool-line" data-tip="خط مستقيم (L)" onclick="setTool('line')" style="--tool-color:var(--blue)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="5" cy="19" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="5" r="1.5" fill="currentColor" stroke="none"/></svg>
+      </button>
+
+      <!-- Arrow -->
+      <button class="lp-btn" id="tool-arrow" data-tip="سهم (A)" onclick="setTool('arrow')" style="--tool-color:var(--blue)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="17" y2="7"/><polyline points="8 7 17 7 17 16"/></svg>
+      </button>
+
+      <!-- Rect -->
+      <button class="lp-btn" id="tool-rect" data-tip="مستطيل (R)" onclick="setTool('rect')" style="--tool-color:var(--blue)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/></svg>
+      </button>
+
+      <!-- Ellipse -->
+      <button class="lp-btn" id="tool-ellipse" data-tip="دائرة / بيضاوي (C)" onclick="setTool('ellipse')" style="--tool-color:var(--blue)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="9" ry="7"/></svg>
+      </button>
+
+      <!-- Triangle -->
+      <button class="lp-btn" id="tool-triangle" data-tip="مثلث" onclick="setTool('triangle')" style="--tool-color:var(--blue)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 4 21 20 3 20"/></svg>
+      </button>
+
+      <div class="lp-sep"></div>
+
+      <!-- Text -->
+      <button class="lp-btn" id="tool-text" data-tip="كتابة نص (T)" onclick="setTool('text')" style="--tool-color:var(--teal)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      </button>
+
+      <!-- Pan (Open Hand) -->
+      <button class="lp-btn" id="tool-pan" data-tip="تحريك الشاشة (Space)" onclick="setTool('pan')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-4.53a1.9 1.9 0 0 1 2.6-2.7L6 13"/></svg>
+      </button>
+
+      <div class="lp-sep"></div>
+
+      <!-- Zoom In -->
+      <button class="lp-btn" id="tool-zoomin" data-tip="تكبير (+)" onclick="zoomIn()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10" cy="10" r="7"/><line x1="10" y1="7" x2="10" y2="13"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+      </button>
+
+      <!-- Zoom Out -->
+      <button class="lp-btn" id="tool-zoomout" data-tip="تصغير (-)" onclick="zoomOut()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10" cy="10" r="7"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+      </button>
+    </div>
+
+    <!-- CANVAS AREA -->
+    <div id="wb-canvas-wrap">
+      <canvas id="wb-canvas"></canvas>
+    </div>
+
+    <!-- RIGHT SHAPES PANEL -->
+    <div id="wb-right-panel">
+      <div class="rp-header">
+        <span style="display:inline-flex;align-items:center;gap:8px"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M3 12h18"/><path d="M12 3v9"/></svg></span> المكتبة والأدوات</span>
+        <button onclick="toggleRightPanel()" title="إغلاق"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></button>
+      </div>
+      <div id="rp-scroll">
+        <!-- Tools -->
+        <div class="rp-section-title">أدوات (Widgets)</div>
+        <div style="padding:6px 12px;display:flex;flex-direction:column;gap:6px">
+          <div class="rp-math-btn" onclick="spawnWidget('stopwatch')">أداة الستوب وتش</div>
+          <div class="rp-math-btn" onclick="spawnWidget('clock')">أداة ساعة الحائط</div>
+          <div class="rp-math-btn" onclick="spawnWidget('curtain')">أداة ستارة الإخفاء</div>
+        </div>
+
+                <!-- Basic Shapes -->
+        <div class="rp-section-title">أشكال أساسية</div>
+        <div class="rp-grid">
+          <div class="rp-shape" onclick="insertShape('rect')" title="مستطيل"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="1"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('roundRect')" title="مستطيل دائري"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="5"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('square')" title="مربع"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="1"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('circle')" title="دائرة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('ellipse')" title="بيضاوي"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="10" ry="6"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('triangle')" title="مثلث"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 3 22 21 2 21"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('rtriangle')" title="مثلث قائم"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="4 20 4 4 20 20"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('diamond')" title="معين"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 12 12 22 2 12"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('pentagon')" title="خماسي"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 9 18 21 6 21 2 9"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('hexagon')" title="سداسي"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('octagon')" title="مثمن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7 2 17 2 22 7 22 17 17 22 7 22 2 17 2 7"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('parallelogram')" title="متوازي أضلاع"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 4 22 4 18 20 2 20"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('star5')" title="نجمة 5"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15 9 22 9.5 16.5 14 18.5 21 12 17 5.5 21 7.5 14 2 9.5 9 9"/></svg></div>
+
+          <div class="rp-shape" onclick="insertShape('arrowRight')" title="سهم يمين"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="12" x2="20" y2="12"/><polyline points="13 5 20 12 13 19"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('arrowLeft')" title="سهم يسار"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="20" y1="12" x2="4" y2="12"/><polyline points="11 5 4 12 11 19"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('arrowUp')" title="سهم فوق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="4"/><polyline points="5 11 12 4 19 11"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('arrowDown')" title="سهم تحت"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="4" x2="12" y2="20"/><polyline points="5 13 12 20 19 13"/></svg></div>
+
+          <div class="rp-shape" onclick="insertShape('speech')" title="فقاعة حديث"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5H5l-2 2V11.5A8.38 8.38 0 0 1 11.5 3h1A8.38 8.38 0 0 1 21 11.5z"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('speechLeft')" title="فقاعة يسار"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11.5a8.38 8.38 0 0 1 8.5-8.5h1A8.38 8.38 0 0 1 21 11.5a8.38 8.38 0 0 1-8.5 8.5H8l-5 3v-5.02A8.4 8.4 0 0 1 3 11.5z"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('callout')" title="نداء"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="12" rx="2"/><path d="M9 15l-2 5 5-3"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('cloud')" title="سحابة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.7-9h.8a4.5 4.5 0 1 1 0 9z"/></svg></div>
+        </div>
+
+        <!-- Misc -->
+        <div class="rp-section-title">متنوع</div>
+        <div class="rp-grid">
+          <div class="rp-shape" onclick="insertShape('heart')" title="قلب"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('cylinder')" title="أسطوانة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('checkmark')" title="صح"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('cross')" title="خطأ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+          <div class="rp-shape" onclick="insertShape('bracket')" title="قوس">⟨⟩</div>
+          <div class="rp-shape" onclick="insertShape('brace')" title="قوس مجعد">{ }</div>
+          <div class="rp-shape" onclick="insertShape('line')" title="خط">—</div>
+          <div class="rp-shape" onclick="insertShape('dline')" title="خط مزدوج">=</div>
+        </div>
+
+        <!-- Math Tools -->
+        <div class="rp-section-title">أدوات هندسية</div>
+        <div style="padding:6px 12px;display:flex;flex-direction:column;gap:6px">
+          <div class="rp-math-btn" onclick="toggleRuler()" id="ruler-btn"><span style="display:inline-flex;width:18px;height:18px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="8" width="20" height="8" rx="1"/><line x1="6" y1="8" x2="6" y2="11"/><line x1="10" y1="8" x2="10" y2="11"/><line x1="14" y1="8" x2="14" y2="11"/><line x1="18" y1="8" x2="18" y2="11"/></svg></span> مسطرة القياس</div>
+          <div class="rp-math-btn" onclick="toggleProtractor()" id="protractor-btn"><span style="display:inline-flex;width:18px;height:18px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M3 12h18"/><path d="M12 3v9"/></svg></span> منقلة الزوايا</div>
+          <div class="rp-math-btn" onclick="openCompassModal()" id="compass-btn"><span style="display:inline-flex;width:18px;height:18px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></span> رسم بالفرجار</div>
+          <div class="rp-math-btn" onclick="spawnWidget('grid')" id="grid-btn"><span style="display:inline-flex;width:18px;height:18px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg></span> إدراج شبكة إحداثية</div>
+        </div>
+
+        <!-- Math Symbols -->
+        <div class="rp-section-title">رموز رياضية جاهزة</div>
+        <div class="math-symbols-grid">
+          <span class="math-symbol" onclick="insertMathSymbol('√')" title="جذر">√</span>
+          <span class="math-symbol" onclick="insertMathSymbol('π')" title="باي">π</span>
+          <span class="math-symbol" onclick="insertMathSymbol('∑')" title="مجموع">∑</span>
+          <span class="math-symbol" onclick="insertMathSymbol('∫')" title="تكامل">∫</span>
+          <span class="math-symbol" onclick="insertMathSymbol('∂')" title="مشتقة">∂</span>
+          <span class="math-symbol" onclick="insertMathSymbol('∞')" title="لانهاية">∞</span>
+          <span class="math-symbol" onclick="insertMathSymbol('θ')" title="ثيتا">θ</span>
+          <span class="math-symbol" onclick="insertMathSymbol('α')" title="ألفا">α</span>
+          <span class="math-symbol" onclick="insertMathSymbol('β')" title="بيتا">β</span>
+          <span class="math-symbol" onclick="insertMathSymbol('Δ')" title="دلتا">Δ</span>
+          <span class="math-symbol" onclick="insertMathSymbol('λ')" title="لامبدا">λ</span>
+          <span class="math-symbol" onclick="insertMathSymbol('μ')" title="ميو">μ</span>
+          <span class="math-symbol" onclick="insertMathSymbol('σ')" title="سيجما">σ</span>
+          <span class="math-symbol" onclick="insertMathSymbol('ω')" title="أوميجا">ω</span>
+          <span class="math-symbol" onclick="insertMathSymbol('±')" title="±">±</span>
+          <span class="math-symbol" onclick="insertMathSymbol('≠')" title="لا يساوي">≠</span>
+          <span class="math-symbol" onclick="insertMathSymbol('≤')" title="أصغر أو يساوي">≤</span>
+          <span class="math-symbol" onclick="insertMathSymbol('≥')" title="أكبر أو يساوي">≥</span>
+          <span class="math-symbol" onclick="insertMathSymbol('∝')" title="يتناسب مع">∝</span>
+          <span class="math-symbol" onclick="insertMathSymbol('∈')" title="ينتمي">∈</span>
+          <span class="math-symbol" onclick="insertMathSymbol('∉')" title="لا ينتمي">∉</span>
+          <span class="math-symbol" onclick="insertMathSymbol('∩')" title="تقاطع">∩</span>
+          <span class="math-symbol" onclick="insertMathSymbol('∪')" title="اتحاد">∪</span>
+          <span class="math-symbol" onclick="insertMathSymbol('⊂')" title="مجموعة جزئية">⊂</span>
+          <span class="math-symbol" onclick="insertMathSymbol('°')" title="درجة">°</span>
+          <span class="math-symbol" onclick="insertMathSymbol('²')" title="مربع">²</span>
+          <span class="math-symbol" onclick="insertMathSymbol('³')" title="مكعب">³</span>
+          <span class="math-symbol" onclick="insertMathSymbol('½')" title="نصف">½</span>
+          <span class="math-symbol" onclick="insertMathSymbol('⅓')" title="ثلث">⅓</span>
+          <span class="math-symbol" onclick="insertMathSymbol('¼')" title="ربع">¼</span>
+        </div>
+
+        <!-- LaTeX -->
+        <div class="rp-section-title">معادلات معقدة LaTeX</div>
+        <div style="padding:6px 12px 20px">
+          <div class="rp-math-btn" onclick="openLatexModal()" style="justify-content:center;background:var(--accent);color:var(--white);border-color:var(--accent)">
+            ∫ كتابة معادلة متقدمة
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end #wb-middle -->
+
+  <!-- ══ PAGES STRIP ══ -->
+  <div id="wb-pages-strip">
+    <button class="page-add-btn" onclick="addPage()" title="إضافة صفحة جديدة (فارغة)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:24px;height:24px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      صفحة جديدة
+    </button>
+    <div style="width:1px;height:60%;background:var(--border);margin:0 4px"></div>
+    <div id="pages-list" style="display:flex;gap:12px;align-items:center"></div>
+  </div>
+
+</div><!-- end #wb-app -->
+
+<!-- ══ FLOATING SELECTION BAR ══ -->
+<div id="wb-float-bar">
+  <input type="color" class="fb-color" id="fb-fill-color" title="لون التعبئة" oninput="setSelectedFill(this.value)">
+  <input type="color" class="fb-color" id="fb-stroke-color" value="#000000" title="لون الحدود" oninput="setSelectedStroke(this.value)">
+  <div class="fb-sep"></div>
+  <button class="fb-btn" onclick="duplicateSelected()" title="نسخ العنصر المحدد">⧉</button>
+  <button class="fb-btn" onclick="sendBackward()" title="إرسال للخلف"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10"/></svg></span></button>
+  <button class="fb-btn" onclick="bringForward()" title="إحضار للأمام"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M20 8v10a2 2 0 0 1-2 2H8"/></svg></span></button>
+  <div class="fb-sep"></div>
+  <button class="fb-btn" onclick="lockSelected()" title="تثبيت/إلغاء التثبيت"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></button>
+  <button class="fb-btn danger" onclick="deleteSelected()" title="حذف المحدد"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
+</div>
+
+<!-- ══ TEXT TOOL BAR ══ -->
+<div id="wb-text-panel">
+  <select class="tp-select" id="font-family" onchange="setFontFamily(this.value)">
+    <option value="Cairo">Cairo</option>
+    <option value="Arial">Arial</option>
+    <option value="Georgia">Georgia</option>
+    <option value="Times New Roman">Times New Roman</option>
+    <option value="Courier New">Courier New</option>
+    <option value="Verdana">Verdana</option>
+    <option value="Tahoma">Tahoma</option>
+  </select>
+  <select class="tp-select" id="font-size" onchange="setFontSize(this.value)">
+    <option value="16">16</option>
+    <option value="20">20</option>
+    <option value="24">24</option>
+    <option value="28">28</option>
+    <option value="32" selected>32</option>
+    <option value="40">40</option>
+    <option value="48">48</option>
+    <option value="60">60</option>
+    <option value="72">72</option>
+    <option value="96">96</option>
+    <option value="120">120</option>
+  </select>
+  <div class="fb-sep"></div>
+  <button class="tp-btn" id="tp-bold"      onclick="toggleTextFormat('bold')" title="عريض"><b>B</b></button>
+  <button class="tp-btn" id="tp-italic"    onclick="toggleTextFormat('italic')" title="مائل"><i>I</i></button>
+  <button class="tp-btn" id="tp-underline" onclick="toggleTextFormat('underline')" title="تسطير"><u>U</u></button>
+  <div class="fb-sep"></div>
+  <button class="tp-btn" onclick="setTextAlign('right')" title="محاذاة لليمين"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="12" x2="9" y2="12"/><line x1="21" y1="18" x2="6" y2="18"/></svg></span></button>
+  <button class="tp-btn" onclick="setTextAlign('center')" title="محاذاة للوسط">≡</button>
+  <button class="tp-btn" onclick="setTextAlign('left')" title="محاذاة لليسار"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="21" y1="6" x2="3" y2="6"/><line x1="15" y1="12" x2="3" y2="12"/><line x1="18" y1="18" x2="3" y2="18"/></svg></span></button>
+  <div class="fb-sep"></div>
+  <input type="color" class="fb-color" id="text-color" value="#000000" title="لون النص" oninput="setTextColor(this.value)">
+</div>
+
+<!-- ══ ERASER CURSOR ══ -->
+<div id="eraser-cursor"></div>
+
+<!-- ══ MODALS ══ -->
+<!-- Background Modal -->
+<div class="wb-modal-overlay" id="bg-modal">
+  <div class="wb-modal" style="min-width:440px">
+    <h3 style="display:flex;align-items:center;gap:8px"><span style="display:inline-flex;width:18px;height:18px;flex-shrink:0"><svg viewBox="0 0 24 24" filter="url(#ic-soft)" style="width:22px;height:22px;flex-shrink:0"><rect x="4" y="3.2" width="13.5" height="16.5" rx="1.5" fill="url(#ic-paper)" opacity="0.5" transform="rotate(-7 10.5 11)"/>
+      <path d="M3,4.7 Q3,3.2 4.5,3.2 L15.5,3.2 Q17,3.2 17,4.7 L17,18 L14,21 L4.5,21 Q3,21 3,19.5 Z" fill="url(#ic-cream)"/>
+      <path d="M3,15.5 L7.5,10.5 L11,14 L14,10.8 L17,14.5 L17,18 L14,21 L4.5,21 Q3,21 3,19.5 Z" fill="url(#ic-purple)"/>
+      <path d="M3,17 L8,12.3 L11.5,15.5 L14,13 L17,16.2 L17,18 L14,21 L4.5,21 Q3,21 3,19.5 Z" fill="url(#ic-purpleDark)" opacity="0.85"/>
+      <circle cx="7" cy="7.3" r="1.3" fill="url(#ic-amberSun)"/>
+      <path d="M3,19.5 L6.5,17.8 L4.7,21 Q3,21 3,19.5 Z" fill="#e2dac4"/>
+      <path d="M13 12.3 Q15 10 17.3 9.6" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-linecap="round"/>
+      <g transform="rotate(42 16 12)">
+        <rect x="13.6" y="9.6" width="7.4" height="3.2" rx="1.6" fill="url(#ic-blue)"/>
+        <rect x="13.6" y="9.6" width="7.4" height="1" rx="0.5" fill="#fff" opacity="0.35"/>
+        <circle cx="14.3" cy="11.2" r="1.4" fill="url(#ic-purpleDark)"/>
+        <rect x="19.6" y="10.4" width="2.6" height="5" rx="1" fill="url(#ic-purpleDark)"/>
+      </g></svg></span> خلفية وتخطيط الصفحة</h3>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+      <div onclick="setBackground('white')" style="height:70px;background:#fff;border-radius:8px;border:2px solid #e5e7eb;cursor:pointer;display:flex;align-items:flex-end;padding:6px 10px;font-size:.8rem;font-weight:700;color:#555;transition:border-color .15s;box-shadow:0 2px 5px rgba(0,0,0,0.05)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='#e5e7eb'">أبيض سادة</div>
+      <div onclick="setBackground('blackboard')" style="height:70px;background:#1a4a1a;border-radius:8px;border:2px solid #333;cursor:pointer;display:flex;align-items:flex-end;padding:6px 10px;font-size:.8rem;font-weight:700;color:#aed;transition:border-color .15s;box-shadow:0 2px 5px rgba(0,0,0,0.05)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='#333'">سبورة خضراء</div>
+      <div onclick="setBackground('lines')" style="height:70px;background:repeating-linear-gradient(transparent,transparent 14px,#93c5fd 14px,#93c5fd 15px),#fff;border-radius:8px;border:2px solid #e5e7eb;cursor:pointer;display:flex;align-items:flex-end;padding:6px 10px;font-size:.8rem;font-weight:700;color:#555;transition:border-color .15s;box-shadow:0 2px 5px rgba(0,0,0,0.05)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='#e5e7eb'">خطوط مسطرة</div>
+      <div onclick="setBackground('grid')" style="height:70px;background:linear-gradient(rgba(0,0,0,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.08) 1px,transparent 1px),#fff;background-size:20px 20px;border-radius:8px;border:2px solid #e5e7eb;cursor:pointer;display:flex;align-items:flex-end;padding:6px 10px;font-size:.8rem;font-weight:700;color:#555;transition:border-color .15s;box-shadow:0 2px 5px rgba(0,0,0,0.05)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='#e5e7eb'">مربعات (شبكة)</div>
+      <div onclick="setBackground('dots')" style="height:70px;background:radial-gradient(circle,rgba(0,0,0,.2) 1px,transparent 1px),#fff;background-size:15px 15px;border-radius:8px;border:2px solid #e5e7eb;cursor:pointer;display:flex;align-items:flex-end;padding:6px 10px;font-size:.8rem;font-weight:700;color:#555;transition:border-color .15s;box-shadow:0 2px 5px rgba(0,0,0,0.05)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='#e5e7eb'">نقاط</div>
+      <div onclick="setBackground('graph')" style="height:70px;background:linear-gradient(rgba(74,144,226,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(74,144,226,.3) 1px,transparent 1px),linear-gradient(rgba(74,144,226,.7) 1px,transparent 1px),linear-gradient(90deg,rgba(74,144,226,.7) 1px,transparent 1px),#fff;background-size:8px 8px,8px 8px,80px 80px,80px 80px;border-radius:8px;border:2px solid #e5e7eb;cursor:pointer;display:flex;align-items:flex-end;padding:6px 10px;font-size:.8rem;font-weight:700;color:#555;transition:border-color .15s;box-shadow:0 2px 5px rgba(0,0,0,0.05)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='#e5e7eb'">رسم بياني</div>
+    </div>
+    <div class="fg" style="margin-top:15px; padding-top:15px; border-top:1px solid var(--border)">
+      <label style="display:flex;align-items:center;gap:6px"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="8" width="20" height="8" rx="1"/><line x1="6" y1="8" x2="6" y2="11"/><line x1="10" y1="8" x2="10" y2="11"/><line x1="14" y1="8" x2="14" y2="11"/><line x1="18" y1="8" x2="18" y2="11"/></svg></span> حجم التخطيط (حجم المربعات / الخطوط)</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="range" id="bg-size-slider" min="0.5" max="3" step="0.1" value="1" oninput="updateBgSize(this.value)" style="flex:1; accent-color:var(--accent)">
+        <span id="bg-size-val" style="font-size:0.85rem;font-weight:bold;width:30px">1x</span>
+      </div>
+    </div>
+    <button class="btn-sec" onclick="importBgImage()" style="width:100%; margin-top:10px; border-style:dashed; display:flex; align-items:center; justify-content:center; gap:8px"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> إدراج صورة كخلفية للصفحة</button>
+    <div class="btn-row" style="margin-top:15px">
+      <button class="btn-sec" onclick="closeBgModal()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- LaTeX Modal -->
+<div class="wb-modal-overlay" id="latex-modal">
+  <div class="wb-modal" style="min-width:460px">
+    <h3>∫ كتابة معادلة رياضية</h3>
+    <div class="fg">
+      <label>أدخل المعادلة بصيغة LaTeX</label>
+      <input type="text" id="latex-input" placeholder="مثال: E = mc^2  أو  \frac{a}{b}  أو  \sqrt{x^2+y^2}" style="direction:ltr; font-family:monospace">
+    </div>
+    <div id="latex-preview" style="min-height:80px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;font-size:1.4rem;margin-bottom:18px;overflow-x:auto;box-shadow:inset 0 2px 4px rgba(0,0,0,0.02)"></div>
+    <div class="fg">
+      <label>حجم المعادلة المدرجة</label>
+      <input type="range" id="latex-size" min="16" max="100" value="48" oninput="previewLatex()">
+    </div>
+    <div class="btn-row" style="margin-top:15px">
+      <button class="btn-sec" onclick="closeLatexModal()">إلغاء</button>
+      <button class="btn-primary" onclick="insertLatex()">إدراج المعادلة في السبورة</button>
+    </div>
+  </div>
+</div>
+
+<!-- Compass Modal -->
+<div class="wb-modal-overlay" id="compass-modal">
+  <div class="wb-modal" style="min-width:320px">
+    <h3 style="display:flex;align-items:center;gap:8px"><span style="display:inline-flex;width:18px;height:18px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></span> الفرجار</h3>
+    <div class="fg">
+      <label>نصف القطر (بالبكسل)</label>
+      <input type="number" id="compass-radius" value="100" min="10" max="600">
+    </div>
+    <div class="btn-row" style="margin-top:15px">
+      <button class="btn-sec" onclick="closeCompassModal()">إلغاء</button>
+      <button class="btn-primary" onclick="insertCompass()">رسم الدائرة</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="wb-toast"></div>
+
+<!-- ══════════════════════════════════════════════════════
+  MAIN SCRIPT
+══════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════
+const WB = {
+  canvas: null,
+  tool: 'select',
+  color: '#000000',
+  strokeSize: 2,
+  currentBg: 'white',
+  zoom: 1,
+  isPanning: false,
+  panStartX: 0, panStartY: 0,
+  isDrawingShape: false,
+  shapeStartX: 0, shapeStartY: 0,
+  activeShape: null,
+  isDrawingLine: false,
+  isErasing: false,
+  eraserLastPt: null,
+  eraserErasedThisStroke: null,
+  rulerActive: false,
+  protractorActive: false,
+  // Pages
+  pages: [],           // Array<{json, bg, thumbnail}>
+  pageIndex: 0,
+  // History per page
+  histories: [],       // Array<Array<string>> (JSON snapshots)
+  histPtr: [],         // Array<number>
+  LS_KEY: 'wb_pro_v4',
+  
+  // A4 Portrait Size (150 DPI)
+  CANVAS_W: 1120,
+  CANVAS_H: 1584,
+};
+
+// ════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  // 🌟 FORCE HIGH QUALITY RENDERING (1080p+)
+  fabric.devicePixelRatio = Math.max(window.devicePixelRatio || 1, 2.5);
+
+  WB.canvas = new fabric.Canvas('wb-canvas', {
+    width: WB.CANVAS_W,
+    height: WB.CANVAS_H,
+    backgroundColor: '#ffffff',
+    selection: true,
+    preserveObjectStacking: true,
+    renderOnAddRemove: false,
+    enableRetinaScaling: true,
+  });
+
+  // Init first page
+  WB.pages = [{ json: null, bg: 'white', thumbnail: null }];
+  WB.histories = [[]];
+  WB.histPtr   = [-1];
+
+  // Save initial blank state
+  saveHistory();
+  renderThumbnail(0);
+
+  // Canvas events
+  WB.canvas.on('mouse:down', onMouseDown);
+  WB.canvas.on('mouse:move', onMouseMove);
+  WB.canvas.on('mouse:up',   onMouseUp);
+  WB.canvas.on('object:modified', saveHistory);
+  WB.canvas.on('object:added',    saveHistory);
+  WB.canvas.on('object:removed',  saveHistory);
+  WB.canvas.on('selection:created',  showFloatBar);
+  WB.canvas.on('selection:updated',  showFloatBar);
+  WB.canvas.on('selection:cleared',  hideFloatBar);
+
+  // Fit canvas on load & resize
+  fitCanvas();
+  window.addEventListener('resize', fitCanvas);
+
+  // Keyboard
+  document.addEventListener('keydown', onKeyDown);
+
+  // Eraser cursor
+  document.addEventListener('mousemove', updateEraserCursor);
+
+  // Render pages bar
+  renderPagesBar();
+
+  // Load from storage
+  loadFromStorage();
+
+  // Auto-save every 30s
+  setInterval(saveToStorage, 30000);
+
+  WB.canvas.requestRenderAll();
+  toast('السبورة جاهزة — مرحباً بك!', 'info', 2000);
+});
+
+// ════════════════════════════════════════════════
+// FIT CANVAS TO VIEWPORT
+// ════════════════════════════════════════════════
+function fitCanvas() {
+  const wrap = document.getElementById('wb-canvas-wrap');
+  // Leave some padding around the A4 paper
+  const pad = 40;
+  const aw = wrap.clientWidth - pad;
+  const ah = wrap.clientHeight - pad;
+  
+  const ratio = WB.CANVAS_W / WB.CANVAS_H;
+  let w = aw, h = aw / ratio;
+  
+  // If height exceeds available space, scale based on height
+  if (h > ah) {
+    h = ah;
+    w = ah * ratio;
+  }
+  
+  const scale = w / WB.CANVAS_W;
+  WB.zoom = scale;
+  WB.canvas.setZoom(scale);
+  WB.canvas.setWidth(WB.CANVAS_W * scale);
+  WB.canvas.setHeight(WB.CANVAS_H * scale);
+  WB.canvas.calcOffset();
+  WB.canvas.requestRenderAll();
+  updateZoomSelect();
+}
+
+function setZoomFromSelect(val) {
+  const z = parseFloat(val);
+  if (isNaN(z)) return;
+  WB.zoom = z;
+  WB.canvas.setZoom(z);
+  WB.canvas.setWidth(WB.CANVAS_W * z);
+  WB.canvas.setHeight(WB.CANVAS_H * z);
+}
+
+function zoomIn()  { WB.zoom = Math.min(3, WB.zoom + 0.15); applyZoom(); }
+function zoomOut() { WB.zoom = Math.max(0.15, WB.zoom - 0.15); applyZoom(); }
+function applyZoom() {
+  WB.canvas.setZoom(WB.zoom);
+  WB.canvas.setWidth(WB.CANVAS_W * WB.zoom);
+  WB.canvas.setHeight(WB.CANVAS_H * WB.zoom);
+  updateZoomSelect();
+}
+function updateZoomSelect() {
+  const sel = document.getElementById('zoom-select');
+  let closestOpt = sel.options[0];
+  let minDiff = 999;
+  for (const opt of sel.options) {
+    const diff = Math.abs(parseFloat(opt.value) - WB.zoom);
+    if (diff < minDiff) { minDiff = diff; closestOpt = opt; }
+  }
+  sel.value = closestOpt.value;
+}
+
+// ════════════════════════════════════════════════
+// DROPDOWN MENUS
+// ════════════════════════════════════════════════
+function toggleDrop(id) {
+  document.querySelectorAll('.drop-menu').forEach(m => { if(m.id !== id) m.classList.remove('show'); });
+  document.getElementById(id).classList.toggle('show');
+}
+// Close dropdowns on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.dropdown')) {
+    document.querySelectorAll('.drop-menu').forEach(m => m.classList.remove('show'));
+  }
+});
+
+// ════════════════════════════════════════════════
+// IMPORT MEDIA
+// ════════════════════════════════════════════════
+function importImage() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const url = URL.createObjectURL(file);
+    fabric.Image.fromURL(url, (img) => {
+      img.set({ left: WB.CANVAS_W/2, top: WB.CANVAS_H/2, originX: 'center', originY: 'center' });
+      if (img.width > WB.CANVAS_W - 100) img.scaleToWidth(WB.CANVAS_W - 100);
+      WB.canvas.add(img);
+      WB.canvas.setActiveObject(img);
+      WB.canvas.requestRenderAll();
+      saveHistory();
+      toast('تم استيراد الصورة', 'success');
+    });
+  };
+  input.click();
+}
+
+async function importPDF() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'application/pdf';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    toast('جاري استيراد ومعالجة الـ PDF...', 'info', 3000);
+    const url = URL.createObjectURL(file);
+    
+    try {
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+      
+      const pdf = await pdfjsLib.getDocument(url).promise;
+      for(let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 3.0 }); // 🌟 Ultra High res
+        const c = document.createElement('canvas');
+        const ctx = c.getContext('2d');
+        c.width = viewport.width; c.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        
+        // Convert to fabric image
+        fabric.Image.fromURL(c.toDataURL('image/jpeg', 0.95), (img) => {
+          if(i === 1 && !isCanvasEmpty()) {
+            addPage();
+          } else if(i > 1) {
+            addPage();
+          }
+          
+          // 🌟 Make PDF the BACKGROUND of the page
+          const scale = Math.min(WB.CANVAS_W / img.width, WB.CANVAS_H / img.height);
+          img.set({ originX: 'center', originY: 'center', left: WB.CANVAS_W/2, top: WB.CANVAS_H/2, scaleX: scale, scaleY: scale });
+          WB.canvas.setBackgroundImage(img, WB.canvas.renderAll.bind(WB.canvas));
+          WB.currentBg = 'pdf';
+          saveHistory();
+        });
+      }
+      toast('تم استيراد ملف الـ PDF بنجاح', 'success');
+    } catch(err) {
+      toast('حدث خطأ أثناء قراءة الـ PDF', 'error');
+      console.error(err);
+    }
+  };
+  input.click();
+}
+
+function importVideo() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'video/mp4,video/webm';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.src = url; video.crossOrigin = 'anonymous';
+    video.loop = true; video.muted = true; // Auto play requires muted on most browsers
+    
+    video.addEventListener('loadeddata', () => {
+      video.width = video.videoWidth; video.height = video.videoHeight;
+      const fabVid = new fabric.Image(video, { 
+        left: WB.CANVAS_W/2, top: WB.CANVAS_H/2, 
+        originX: 'center', originY: 'center', selectable: true 
+      });
+      if (fabVid.width > WB.CANVAS_W - 100) fabVid.scaleToWidth(WB.CANVAS_W - 100);
+      
+      WB.canvas.add(fabVid);
+      WB.canvas.setActiveObject(fabVid);
+      video.play();
+      
+      // Render loop for video
+      fabric.util.requestAnimFrame(function render() {
+        WB.canvas.renderAll();
+        fabric.util.requestAnimFrame(render);
+      });
+      
+      saveHistory();
+      toast('تم إدراج الفيديو (سيتم تشغيله بدون صوت)', 'success');
+    });
+  };
+  input.click();
+}
+
+function isCanvasEmpty() {
+  return WB.canvas.getObjects().length === 0;
+}
+
+// ════════════════════════════════════════════════
+// TOOLS
+// ════════════════════════════════════════════════
+function setTool(tool) {
+  WB.tool = tool;
+
+  // Update left panel active state
+  document.querySelectorAll('.lp-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tool-' + tool);
+  if (btn) btn.classList.add('active');
+
+  // Reset Fabric modes
+  WB.canvas.isDrawingMode = false;
+  WB.canvas.selection     = false;
+  WB.canvas.defaultCursor = 'crosshair';
+  document.getElementById('eraser-cursor').style.display = 'none';
+  document.getElementById('wb-text-panel').style.display = 'none';
+
+  if (tool === 'select') {
+    WB.canvas.selection = true;
+    WB.canvas.defaultCursor = 'default';
+    WB.canvas.forEachObject(o => { o.selectable = true; o.evented = true; });
+    
+  } else if (tool === 'pan') {
+    WB.canvas.defaultCursor = 'grab';
+    
+  } else if (tool === 'pen') {
+    WB.canvas.isDrawingMode = true;
+    WB.canvas.freeDrawingBrush = new fabric.PencilBrush(WB.canvas);
+    WB.canvas.freeDrawingBrush.color = WB.color;
+    WB.canvas.freeDrawingBrush.width = WB.strokeSize;
+    WB.canvas.freeDrawingBrush.shadow = null;
+    WB.canvas.defaultCursor = 'crosshair';
+    
+  } else if (tool === 'highlighter') {
+    WB.canvas.isDrawingMode = true;
+    WB.canvas.freeDrawingBrush = new fabric.PencilBrush(WB.canvas);
+    WB.canvas.freeDrawingBrush.color = hexToRgba(WB.color, 0.35);
+    WB.canvas.freeDrawingBrush.width = WB.strokeSize * 6;
+    WB.canvas.defaultCursor = 'crosshair';
+    
+  } else if (tool === 'eraser') {
+    document.getElementById('eraser-cursor').style.display = 'block';
+    WB.canvas.defaultCursor = 'none';
+    // Objects must not be selectable/evented while erasing, otherwise Fabric's
+    // native mouse handling grabs/selects the object under the cursor before
+    // our custom erase logic runs (this was the cause of "selects the whole
+    // shape" behavior).
+    WB.canvas.selection = false;
+    WB.canvas.forEachObject(o => { o.selectable = false; o.evented = false; });
+    
+  } else if (tool === 'text') {
+    WB.canvas.defaultCursor = 'text';
+    document.getElementById('wb-text-panel').style.display = 'flex';
+    
+  } else if (['line','arrow','rect','ellipse','triangle'].includes(tool)) {
+    WB.canvas.selection = false;
+    WB.canvas.forEachObject(o => { o.selectable = false; o.evented = false; });
+  }
+
+  // Deselect
+  WB.canvas.discardActiveObject();
+  WB.canvas.requestRenderAll();
+}
+
+// ════════════════════════════════════════════════
+// COLOR & SIZE
+// ════════════════════════════════════════════════
+function setColor(color, swatchEl) {
+  WB.color = color;
+  document.querySelectorAll('.tb-swatch').forEach(s => s.classList.remove('active'));
+  if (swatchEl) swatchEl.classList.add('active');
+  document.getElementById('custom-color').value = color;
+  document.getElementById('tb-current-color-dot').style.background = color;
+  const drop = document.getElementById('color-drop');
+  if (drop) drop.classList.remove('show');
+
+  if (WB.canvas.isDrawingMode && WB.canvas.freeDrawingBrush) {
+    if (WB.tool === 'pen') {
+      WB.canvas.freeDrawingBrush.color = color;
+    } else if (WB.tool === 'highlighter') {
+      WB.canvas.freeDrawingBrush.color = hexToRgba(color, 0.35);
+    }
+  }
+}
+
+function setStrokeSize(size, btn) {
+  WB.strokeSize = size;
+  document.querySelectorAll('.size-drop-panel a').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const previewDot = document.getElementById('tb-current-size-dot');
+  if (previewDot) {
+    const d = Math.min(18, Math.max(5, size));
+    previewDot.style.width = d + 'px';
+    previewDot.style.height = d + 'px';
+  }
+  const drop = document.getElementById('size-drop');
+  if (drop) drop.classList.remove('show');
+  
+  if (WB.canvas.isDrawingMode && WB.canvas.freeDrawingBrush) {
+    if (WB.tool === 'highlighter') {
+      WB.canvas.freeDrawingBrush.width = size * 6;
+    } else {
+      WB.canvas.freeDrawingBrush.width = size;
+    }
+  }
+}
+
+// ════════════════════════════════════════════════
+// MOUSE EVENTS
+// ════════════════════════════════════════════════
+function getCanvasPoint(e) {
+  const pt = WB.canvas.getPointer(e.e);
+  return { x: pt.x, y: pt.y };
+}
+
+function onMouseDown(e) {
+  const pt = getCanvasPoint(e);
+
+  if (WB.tool === 'pan') {
+    WB.isPanning = true;
+    WB.canvas.defaultCursor = 'grabbing';
+    WB.panStartX = e.e.clientX;
+    WB.panStartY = e.e.clientY;
+    return;
+  }
+
+  // Real partial eraser
+  if (WB.tool === 'eraser') {
+    WB.isErasing = true;
+    WB.eraserErasedThisStroke = [];
+    eraseAt(pt.x, pt.y);
+    WB.eraserLastPt = pt;
+    return;
+  }
+
+  if (WB.tool === 'text') {
+    addText(pt.x, pt.y);
+    return;
+  }
+
+  if (['line','arrow','rect','ellipse','triangle'].includes(WB.tool)) {
+    WB.isDrawingShape = true;
+    WB.shapeStartX = pt.x;
+    WB.shapeStartY = pt.y;
+    return;
+  }
+}
+
+function onMouseMove(e) {
+  const pt = getCanvasPoint(e);
+
+  if (WB.tool === 'pan' && WB.isPanning) {
+    const dx = e.e.clientX - WB.panStartX;
+    const dy = e.e.clientY - WB.panStartY;
+    WB.canvas.relativePan({ x: dx, y: dy });
+    WB.panStartX = e.e.clientX;
+    WB.panStartY = e.e.clientY;
+    return;
+  }
+
+  // Real partial eraser
+  if (WB.tool === 'eraser' && WB.isErasing && e.e.buttons === 1) {
+    eraseAlong(WB.eraserLastPt.x, WB.eraserLastPt.y, pt.x, pt.y);
+    WB.eraserLastPt = pt;
+    return;
+  }
+
+  if (WB.isDrawingShape) {
+    if (WB.activeShape) WB.canvas.remove(WB.activeShape);
+    WB.activeShape = buildShapePreview(WB.tool, WB.shapeStartX, WB.shapeStartY, pt.x, pt.y);
+    WB.canvas.add(WB.activeShape);
+    WB.canvas.requestRenderAll();
+  }
+}
+
+function onMouseUp(e) {
+  if (WB.isPanning) {
+    WB.isPanning = false;
+    WB.canvas.defaultCursor = 'grab';
+    return;
+  }
+  if (WB.isErasing) {
+    WB.isErasing = false;
+    WB.eraserLastPt = null;
+    if (WB.eraserErasedThisStroke && WB.eraserErasedThisStroke.length) {
+      saveHistory();
+    }
+    WB.eraserErasedThisStroke = [];
+    return;
+  }
+  if (WB.isDrawingShape && WB.activeShape) {
+    WB.isDrawingShape = false;
+    WB.activeShape.set({ selectable: true, evented: true });
+    WB.activeShape = null;
+    saveHistory();
+    WB.canvas.requestRenderAll();
+  }
+}
+
+// ════════════════════════════════════════════════
+// SHAPE PREVIEW BUILDER
+// ════════════════════════════════════════════════
+function buildShapePreview(type, x1, y1, x2, y2) {
+  const opts = {
+    stroke: WB.color,
+    strokeWidth: WB.strokeSize,
+    fill: 'transparent',
+    selectable: false,
+    evented: false,
+    originX: 'left',
+    originY: 'top',
+  };
+
+  let shape;
+  if (type === 'rect') {
+    shape = new fabric.Rect({
+      ...opts,
+      left: Math.min(x1,x2), top: Math.min(y1,y2),
+      width: Math.abs(x2-x1), height: Math.abs(y2-y1),
+    });
+  } else if (type === 'ellipse') {
+    shape = new fabric.Ellipse({
+      ...opts,
+      left: Math.min(x1,x2), top: Math.min(y1,y2),
+      rx: Math.abs(x2-x1)/2, ry: Math.abs(y2-y1)/2,
+    });
+  } else if (type === 'triangle') {
+    shape = new fabric.Triangle({
+      ...opts,
+      left: Math.min(x1,x2), top: Math.min(y1,y2),
+      width: Math.abs(x2-x1), height: Math.abs(y2-y1),
+    });
+  } else if (type === 'line') {
+    shape = new fabric.Line([x1,y1,x2,y2], {
+      ...opts, fill: WB.color,
+    });
+  } else if (type === 'arrow') {
+    shape = buildArrowLine(x1, y1, x2, y2, opts);
+  }
+  return shape;
+}
+
+function buildArrowLine(x1, y1, x2, y2, opts) {
+  const dx = x2-x1, dy = y2-y1;
+  const len = Math.sqrt(dx*dx+dy*dy);
+  if (len < 2) return new fabric.Line([x1,y1,x2,y2], opts);
+  const ux = dx/len, uy = dy/len;
+  const hl = Math.min(40, len*0.35) + WB.strokeSize*2;
+  const path = `M ${x1} ${y1} L ${x2} ${y2} M ${x2} ${y2} L ${x2-ux*hl+uy*hl*0.5} ${y2-uy*hl-ux*hl*0.5} M ${x2} ${y2} L ${x2-ux*hl-uy*hl*0.5} ${y2-uy*hl+ux*hl*0.5}`;
+  return new fabric.Path(path, {
+    ...opts, fill: '', stroke: WB.color, strokeLineJoin: 'round', strokeLineCap: 'round'
+  });
+}
+
+// ════════════════════════════════════════════════
+// REAL PARTIAL ERASER (clipPath-based, works with plain Fabric.js —
+// no external eraser plugin needed)
+// ════════════════════════════════════════════════
+function eraserRadius() {
+  return Math.max(6, (WB.strokeSize * 10) / 2);
+}
+
+function getEraseClip(obj) {
+  // Don't erase guides/rulers/protractor or objects explicitly excluded
+  if (obj._isGuide || obj.excludeFromErase) return null;
+  if (!obj._eraseClip) {
+    // If the object already has a real clipPath used for something else,
+    // skip it rather than risk clobbering intended behavior.
+    if (obj.clipPath && !obj._eraseClip) return null;
+    const clip = new fabric.Group([], {
+      absolutePositioned: true,
+      inverted: true
+    });
+    obj._eraseClip = clip;
+    obj.clipPath = clip;
+  }
+  return obj._eraseClip;
+}
+
+function eraseAt(x, y) {
+  const r = eraserRadius();
+  let erasedAny = false;
+  WB.canvas.forEachObject(obj => {
+    if (obj === WB.activeShape) return;
+    if (obj.lockMovementX) return; // locked objects are protected from erasing too
+    const b = obj.getBoundingRect(true, true);
+    if (x + r < b.left || x - r > b.left + b.width ||
+        y + r < b.top  || y - r > b.top + b.height) return;
+    const clip = getEraseClip(obj);
+    if (!clip) return;
+    clip.addWithUpdate(new fabric.Circle({
+      left: x, top: y, radius: r, originX: 'center', originY: 'center'
+    }));
+    obj.dirty = true;
+    if (!WB.eraserErasedThisStroke.includes(obj)) WB.eraserErasedThisStroke.push(obj);
+    erasedAny = true;
+  });
+  if (erasedAny) WB.canvas.requestRenderAll();
+}
+
+function eraseAlong(x1, y1, x2, y2) {
+  const dist = Math.hypot(x2 - x1, y2 - y1);
+  const step = Math.max(4, eraserRadius() * 0.5);
+  const steps = Math.max(1, Math.ceil(dist / step));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    eraseAt(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t);
+  }
+}
+
+function updateEraserCursor(e) {
+  const cur = document.getElementById('eraser-cursor');
+  if (WB.tool !== 'eraser') { cur.style.display = 'none'; return; }
+  const size = eraserRadius() * 2;
+  cur.style.display = 'block';
+  cur.style.width  = size + 'px';
+  cur.style.height = size + 'px';
+  cur.style.left   = e.clientX + 'px';
+  cur.style.top    = e.clientY + 'px';
+}
+
+// ════════════════════════════════════════════════
+// TEXT TOOL
+// ════════════════════════════════════════════════
+function addText(x, y) {
+  const fontSel = document.getElementById('font-size');
+  const fontSize = parseInt(fontSel?.value || 32);
+  const fontFam  = document.getElementById('font-family')?.value || 'Cairo';
+  const itext = new fabric.IText('اكتب هنا', {
+    left: x, top: y,
+    fontSize: fontSize,
+    fontFamily: fontFam,
+    fill: WB.color,
+    textAlign: 'right',
+    direction: 'rtl',
+    selectable: true,
+    editable: true,
+  });
+  WB.canvas.add(itext);
+  WB.canvas.setActiveObject(itext);
+  itext.enterEditing();
+  itext.selectAll();
+  WB.canvas.requestRenderAll();
+  saveHistory();
+}
+
+function setFontFamily(val) {
+  const obj = WB.canvas.getActiveObject();
+  if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
+    obj.set('fontFamily', val);
+    WB.canvas.requestRenderAll();
+    saveHistory();
+  }
+}
+function setFontSize(val) {
+  const obj = WB.canvas.getActiveObject();
+  if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
+    obj.set('fontSize', parseInt(val));
+    WB.canvas.requestRenderAll();
+    saveHistory();
+  }
+}
+function toggleTextFormat(prop) {
+  const obj = WB.canvas.getActiveObject();
+  if (!obj || !['i-text','text'].includes(obj.type)) return;
+  const btn = document.getElementById('tp-' + prop);
+  if (prop === 'bold') {
+    const nv = obj.fontWeight === 'bold' ? 'normal' : 'bold';
+    obj.set('fontWeight', nv);
+    btn?.classList.toggle('active', nv === 'bold');
+  } else if (prop === 'italic') {
+    const nv = obj.fontStyle === 'italic' ? 'normal' : 'italic';
+    obj.set('fontStyle', nv);
+    btn?.classList.toggle('active', nv === 'italic');
+  } else if (prop === 'underline') {
+    const nv = !obj.underline;
+    obj.set('underline', nv);
+    btn?.classList.toggle('active', nv);
+  }
+  WB.canvas.requestRenderAll();
+  saveHistory();
+}
+function setTextAlign(align) {
+  const obj = WB.canvas.getActiveObject();
+  if (obj && ['i-text','text'].includes(obj.type)) {
+    obj.set('textAlign', align);
+    WB.canvas.requestRenderAll();
+    saveHistory();
+  }
+}
+function setTextColor(color) {
+  const obj = WB.canvas.getActiveObject();
+  if (obj && ['i-text','text'].includes(obj.type)) {
+    obj.set('fill', color);
+    WB.canvas.requestRenderAll();
+    saveHistory();
+  }
+}
+
+// ════════════════════════════════════════════════
+// SHAPES LIBRARY
+// ════════════════════════════════════════════════
+function insertShape(type) {
+  // Center of view
+  const vpt = WB.canvas.viewportTransform;
+  const cx = (WB.canvas.getWidth() / 2 - vpt[4]) / WB.zoom;
+  const cy = (WB.canvas.getHeight() / 2 - vpt[5]) / WB.zoom;
+  
+  const common = {
+    stroke: WB.color, strokeWidth: WB.strokeSize,
+    fill: 'transparent', selectable: true,
+    left: cx, top: cy,
+  };
+
+  const shapes = {
+    rect:          () => new fabric.Rect({ ...common, width:160, height:100 }),
+    roundRect:     () => new fabric.Rect({ ...common, width:160, height:100, rx:20, ry:20 }),
+    square:        () => new fabric.Rect({ ...common, width:120, height:120 }),
+    circle:        () => new fabric.Circle({ ...common, radius:70 }),
+    ellipse:       () => new fabric.Ellipse({ ...common, rx:90, ry:55 }),
+    triangle:      () => new fabric.Triangle({ ...common, width:140, height:120 }),
+    rtriangle:     () => new fabric.Polygon([{x:0,y:0},{x:0,y:120},{x:140,y:120}], common),
+    diamond:       () => new fabric.Polygon([{x:70,y:0},{x:140,y:70},{x:70,y:140},{x:0,y:70}], common),
+    pentagon:      () => makeStar(5, 70, 70, 70, 0, common),
+    hexagon:       () => makeStar(6, 70, 70, 70, 0, common),
+    octagon:       () => makeStar(8, 70, 70, 70, 0, common),
+    parallelogram: () => new fabric.Polygon([{x:30,y:0},{x:180,y:0},{x:150,y:80},{x:0,y:80}], common),
+    star4:         () => makeStar(4, 60, 60, 25, Math.PI/4, common),
+    star5:         () => makeStar(5, 70, 70, 28, -Math.PI/2, common, true),
+    star6:         () => makeStar(6, 70, 70, 32, 0, common, true),
+    star8:         () => makeStar(8, 70, 70, 32, 0, common, true),
+    arrowRight:    () => makeArrowPoly('right', common),
+    arrowLeft:     () => makeArrowPoly('left', common),
+    arrowUp:       () => makeArrowPoly('up', common),
+    arrowDown:     () => makeArrowPoly('down', common),
+    arrowDouble:   () => makeArrowPoly('double', common),
+    arrowCorner:   () => new fabric.Path('M10 90 L10 10 L90 10 M70 0 L90 10 L70 20', { ...common, fill:'' }),
+    chevron:       () => new fabric.Polygon([{x:0,y:0},{x:80,y:0},{x:110,y:40},{x:80,y:80},{x:0,y:80},{x:30,y:40}], common),
+    lineArrow:     () => new fabric.Path(`M 0 40 L 120 40 M 100 20 L 120 40 L 100 60`, { ...common, fill:'' }),
+    speech:        () => new fabric.Path('M10 10 Q10 0 20 0 L120 0 Q130 0 130 10 L130 70 Q130 80 120 80 L60 80 L40 100 L45 80 L20 80 Q10 80 10 70 Z', common),
+    speechLeft:    () => new fabric.Path('M10 10 Q10 0 20 0 L120 0 Q130 0 130 10 L130 70 Q130 80 120 80 L50 80 L55 100 L40 80 L20 80 Q10 80 10 70 Z', common),
+    callout:       () => new fabric.Path('M10 10 Q10 0 20 0 L140 0 Q150 0 150 10 L150 60 Q150 70 140 70 L90 70 L70 95 L80 70 L20 70 Q10 70 10 60 Z', common),
+    cloud:         () => new fabric.Path('M25 80 Q5 80 5 60 Q5 40 25 40 Q25 20 45 20 Q55 10 70 20 Q85 10 95 25 Q115 25 115 45 Q125 45 125 60 Q125 80 105 80 Z', common),
+    heart:         () => new fabric.Path('M60 80 Q10 50 10 25 Q10 0 35 0 Q50 0 60 15 Q70 0 85 0 Q110 0 110 25 Q110 50 60 80 Z', { ...common, fill:WB.color }),
+    cylinder:      () => new fabric.Path('M10 20 Q10 0 60 0 Q110 0 110 20 L110 80 Q110 100 60 100 Q10 100 10 80 Z M10 20 Q10 40 60 40 Q110 40 110 20', common),
+    checkmark:     () => new fabric.Path('M5 40 L35 70 L95 10', { ...common, fill:'', strokeLinecap:'round', strokeLineJoin:'round' }),
+    cross:         () => new fabric.Path('M10 10 L90 90 M90 10 L10 90', { ...common, fill:'', strokeLinecap:'round' }),
+    bracket:       () => new fabric.Path('M30 0 L10 0 L10 100 L30 100 M70 0 L90 0 L90 100 L70 100', { ...common, fill:'' }),
+    brace:         () => new fabric.Path('M40 0 Q20 0 20 20 L20 40 Q20 60 0 60 Q20 60 20 80 L20 100 Q20 120 40 120', { ...common, fill:'' }),
+    line:          () => new fabric.Line([0,40,160,40], { ...common }),
+    dline:         () => new fabric.Path('M0 30 L160 30 M0 50 L160 50', { ...common, fill:'' }),
+    coordGrid:     () => makeCoordGrid(common),
+  };
+
+  const fn = shapes[type];
+  if (!fn) return;
+  const obj = fn();
+  obj.set({ originX: 'center', originY: 'center' });
+  WB.canvas.add(obj);
+  WB.canvas.setActiveObject(obj);
+  WB.canvas.requestRenderAll();
+  setTool('select');
+  saveHistory();
+  toast('تم إدراج الشكل', 'success');
+}
+
+function makeStar(points, cx, cy, r, startAngle, common, doubleStar) {
+  const pts = [];
+  for (let i = 0; i < points * (doubleStar ? 2 : 1); i++) {
+    const angle = (i * Math.PI * 2) / (points * (doubleStar ? 2 : 1)) + startAngle;
+    const radius = doubleStar ? (i % 2 === 0 ? r : r * 0.45) : r;
+    pts.push({ x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) });
+  }
+  return new fabric.Polygon(pts, { ...common, fill: doubleStar ? WB.color : 'transparent', strokeLineJoin:'round' });
+}
+
+function makeArrowPoly(dir, common) {
+  let pts;
+  if (dir === 'right') pts = [{x:0,y:30},{x:80,y:30},{x:80,y:10},{x:120,y:50},{x:80,y:90},{x:80,y:70},{x:0,y:70}];
+  else if (dir === 'left') pts = [{x:120,y:30},{x:40,y:30},{x:40,y:10},{x:0,y:50},{x:40,y:90},{x:40,y:70},{x:120,y:70}];
+  else if (dir === 'up') pts = [{x:50,y:120},{x:50,y:40},{x:20,y:40},{x:60,y:0},{x:100,y:40},{x:70,y:40},{x:70,y:120}];
+  else if (dir === 'down') pts = [{x:50,y:0},{x:50,y:80},{x:20,y:80},{x:60,y:120},{x:100,y:80},{x:70,y:80},{x:70,y:0}];
+  else pts = [{x:0,y:20},{x:0,y:80},{x:40,y:80},{x:40,y:100},{x:80,y:50},{x:40,y:0},{x:40,y:20}];
+  return new fabric.Polygon(pts, { ...common, strokeLineJoin:'round' });
+}
+
+function makeCoordGrid(common) {
+  const w = 400, h = 400, step = 40;
+  let path = '';
+  // grid lines
+  for (let x = 0; x <= w; x += step) path += `M${x} 0 L${x} ${h} `;
+  for (let y = 0; y <= h; y += step) path += `M0 ${y} L${w} ${y} `;
+  // axes
+  path += `M0 ${h/2} L${w} ${h/2} M${w/2} 0 L${w/2} ${h} `;
+  // arrows
+  path += `M${w-8} ${h/2-5} L${w} ${h/2} L${w-8} ${h/2+5} `;
+  path += `M${w/2-5} 8 L${w/2} 0 L${w/2+5} 8 `;
+  return new fabric.Path(path, {
+    ...common,
+    fill: '',
+    stroke: WB.color,
+    opacity: 0.7,
+  });
+}
+
+// ════════════════════════════════════════════════
+// MATH SYMBOLS & LATEX
+// ════════════════════════════════════════════════
+function insertMathSymbol(sym) {
+  const vpt = WB.canvas.viewportTransform;
+  const cx = (WB.canvas.getWidth() / 2 - vpt[4]) / WB.zoom;
+  const cy = (WB.canvas.getHeight() / 2 - vpt[5]) / WB.zoom;
+  
+  const t = new fabric.IText(sym, {
+    left: cx, top: cy,
+    fontSize: 64, fontFamily: 'Cairo, Arial',
+    fill: WB.color, selectable: true,
+    originX: 'center', originY: 'center',
+  });
+  WB.canvas.add(t);
+  WB.canvas.setActiveObject(t);
+  WB.canvas.requestRenderAll();
+  setTool('select');
+  saveHistory();
+}
+
+function openLatexModal() {
+  document.getElementById('latex-modal').classList.add('open');
+  setTimeout(() => document.getElementById('latex-input').focus(), 100);
+}
+function closeLatexModal() {
+  document.getElementById('latex-modal').classList.remove('open');
+  document.getElementById('latex-preview').innerHTML = '';
+}
+
+function previewLatex() {
+  const input = document.getElementById('latex-input').value.trim();
+  const preview = document.getElementById('latex-preview');
+  if (!input) { preview.innerHTML = ''; return; }
+  try {
+    katex.render(input, preview, { throwOnError: false, displayMode: true });
+  } catch(e) {
+    preview.innerHTML = `<span style="color:#ef4444;font-size:.85rem">${e.message}</span>`;
+  }
+}
+
+function insertLatex() {
+  const input = document.getElementById('latex-input').value.trim();
+  if (!input) return;
+  const size = parseInt(document.getElementById('latex-size').value) || 48;
+
+  // Render to a temp element, then convert to image via SVG
+  const tmpDiv = document.createElement('div');
+  tmpDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px;background:transparent;padding:10px;font-size:'+size+'px';
+  document.body.appendChild(tmpDiv);
+  try {
+    katex.render(input, tmpDiv, { throwOnError: false, displayMode: true });
+    const svgEl = tmpDiv.querySelector('svg');
+    if (svgEl) {
+      // Must set explicit width/height for fabric to parse correctly, or just use xml
+      const svgData = new XMLSerializer().serializeToString(svgEl);
+      const img = new Image();
+      img.onload = () => {
+        const vpt = WB.canvas.viewportTransform;
+        const cx = (WB.canvas.getWidth() / 2 - vpt[4]) / WB.zoom;
+        const cy = (WB.canvas.getHeight() / 2 - vpt[5]) / WB.zoom;
+        
+        const imgObj = new fabric.Image(img, {
+          left: cx, top: cy,
+          originX: 'center', originY: 'center',
+          selectable: true,
+        });
+        WB.canvas.add(imgObj);
+        WB.canvas.setActiveObject(imgObj);
+        WB.canvas.requestRenderAll();
+        document.body.removeChild(tmpDiv);
+        closeLatexModal();
+        setTool('select');
+        saveHistory();
+        toast('تم إدراج المعادلة', 'success');
+      };
+      // Important to encode
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
+    } else {
+      throw new Error("No SVG rendered");
+    }
+  } catch(e) {
+    document.body.removeChild(tmpDiv);
+    toast('خطأ في الإدراج: حاول كتابة المعادلة بشكل أبسط', 'error', 3000);
+  }
+}
+
+// ════════════════════════════════════════════════
+// MATH TOOLS — RULER & PROTRACTOR
+// ════════════════════════════════════════════════
+function toggleRuler() {
+  WB.rulerActive = !WB.rulerActive;
+  document.getElementById('ruler-btn').style.background = WB.rulerActive ? 'var(--accent)' : '';
+  document.getElementById('ruler-btn').style.color = WB.rulerActive ? '#fff' : '';
+
+  if (WB.rulerActive) {
+    const ruler = buildRulerSVG();
+    document.getElementById('wb-canvas-wrap').appendChild(ruler);
+  } else {
+    const r = document.getElementById('math-ruler');
+    if (r) r.remove();
+  }
+}
+
+function buildRulerSVG() {
+  const w = 600, h = 60;
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.id = 'math-ruler';
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+  svg.style.cssText = `position:absolute;left:150px;top:100px;cursor:move;z-index:200;filter:drop-shadow(0 4px 15px rgba(0,0,0,.15))`;
+
+  const bg = document.createElementNS(svgNS, 'rect');
+  bg.setAttribute('width', w); bg.setAttribute('height', h);
+  bg.setAttribute('fill', 'rgba(250, 245, 230, 0.85)'); bg.setAttribute('rx', '6');
+  bg.setAttribute('stroke', '#d4c798'); bg.setAttribute('stroke-width', '2');
+  svg.appendChild(bg);
+
+  for (let i = 0; i <= 40; i++) {
+    const x = i * (w / 40);
+    const tick = document.createElementNS(svgNS, 'line');
+    tick.setAttribute('x1', x); tick.setAttribute('y1', 0);
+    tick.setAttribute('x2', x);
+    tick.setAttribute('y2', i % 5 === 0 ? 25 : 15);
+    tick.setAttribute('stroke', '#8a7a3a'); tick.setAttribute('stroke-width', i % 5 === 0 ? 2 : 1);
+    svg.appendChild(tick);
+    if (i % 5 === 0 && i > 0) {
+      const txt = document.createElementNS(svgNS, 'text');
+      txt.setAttribute('x', x); txt.setAttribute('y', 42);
+      txt.setAttribute('text-anchor', 'middle');
+      txt.setAttribute('font-size', '14');
+      txt.setAttribute('font-weight', 'bold');
+      txt.setAttribute('fill', '#5a4a1a');
+      txt.textContent = i;
+      svg.appendChild(txt);
+    }
+  }
+  makeDraggable(svg);
+  return svg;
+}
+
+function toggleProtractor() {
+  WB.protractorActive = !WB.protractorActive;
+  document.getElementById('protractor-btn').style.background = WB.protractorActive ? 'var(--accent)' : '';
+  document.getElementById('protractor-btn').style.color = WB.protractorActive ? '#fff' : '';
+
+  if (WB.protractorActive) {
+    const p = buildProtractorSVG();
+    document.getElementById('wb-canvas-wrap').appendChild(p);
+  } else {
+    const p = document.getElementById('math-protractor');
+    if (p) p.remove();
+  }
+}
+
+function buildProtractorSVG() {
+  const r = 150, cx = 160, cy = 160;
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.id = 'math-protractor';
+  svg.setAttribute('width', 320); svg.setAttribute('height', 180);
+  svg.style.cssText = 'position:absolute;left:200px;top:200px;cursor:move;z-index:200;filter:drop-shadow(0 4px 15px rgba(0,0,0,.15))';
+
+  const path = document.createElementNS(svgNS, 'path');
+  path.setAttribute('d', `M 10 160 A 150 150 0 0 1 310 160 Z`);
+  path.setAttribute('fill', 'rgba(180, 230, 255, 0.5)');
+  path.setAttribute('stroke', '#3b82f6'); path.setAttribute('stroke-width', '2');
+  svg.appendChild(path);
+
+  for (let deg = 0; deg <= 180; deg += 10) {
+    const rad = (deg * Math.PI) / 180;
+    const x1 = cx + r * Math.cos(Math.PI - rad);
+    const y1 = cy - r * Math.sin(Math.PI - rad);
+    const tickLen = deg % 30 === 0 ? 20 : 10;
+    const x2 = cx + (r - tickLen) * Math.cos(Math.PI - rad);
+    const y2 = cy - (r - tickLen) * Math.sin(Math.PI - rad);
+    const tick = document.createElementNS(svgNS, 'line');
+    tick.setAttribute('x1', x1.toFixed(1)); tick.setAttribute('y1', y1.toFixed(1));
+    tick.setAttribute('x2', x2.toFixed(1)); tick.setAttribute('y2', y2.toFixed(1));
+    tick.setAttribute('stroke', '#1e40af'); tick.setAttribute('stroke-width', deg % 30 === 0 ? 2 : 1.5);
+    svg.appendChild(tick);
+    if (deg % 30 === 0) {
+      const lx = cx + (r - 35) * Math.cos(Math.PI - rad);
+      const ly = cy - (r - 35) * Math.sin(Math.PI - rad);
+      const txt = document.createElementNS(svgNS, 'text');
+      txt.setAttribute('x', lx.toFixed(1)); txt.setAttribute('y', ly.toFixed(1));
+      txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('dominant-baseline', 'middle');
+      txt.setAttribute('font-size', '14'); txt.setAttribute('font-weight', 'bold'); txt.setAttribute('fill', '#1e3a8a');
+      txt.textContent = deg;
+      svg.appendChild(txt);
+    }
+  }
+  const base = document.createElementNS(svgNS, 'line');
+  base.setAttribute('x1', '10'); base.setAttribute('y1', '160');
+  base.setAttribute('x2', '310'); base.setAttribute('y2', '160');
+  base.setAttribute('stroke', '#3b82f6'); base.setAttribute('stroke-width', '2');
+  svg.appendChild(base);
+
+  makeDraggable(svg);
+  return svg;
+}
+
+function openCompassModal() {
+  document.getElementById('compass-modal').classList.add('open');
+}
+function closeCompassModal() {
+  document.getElementById('compass-modal').classList.remove('open');
+}
+function insertCompass() {
+  const r = parseInt(document.getElementById('compass-radius').value) || 100;
+  const vpt = WB.canvas.viewportTransform;
+  const cx = (WB.canvas.getWidth() / 2 - vpt[4]) / WB.zoom;
+  const cy = (WB.canvas.getHeight() / 2 - vpt[5]) / WB.zoom;
+  
+  const circle = new fabric.Circle({
+    left: cx, top: cy,
+    radius: r, fill: 'transparent',
+    stroke: WB.color, strokeWidth: WB.strokeSize,
+    originX: 'center', originY: 'center',
+    selectable: true,
+  });
+  WB.canvas.add(circle);
+  WB.canvas.setActiveObject(circle);
+  WB.canvas.requestRenderAll();
+  closeCompassModal();
+  setTool('select');
+  saveHistory();
+  toast(`تم رسم دائرة نصف قطرها ${r}px`, 'success');
+}
+
+function makeDraggable(el) {
+  let ox = 0, oy = 0;
+  el.addEventListener('mousedown', e => {
+    e.stopPropagation();
+    ox = e.clientX - parseInt(el.style.left||0);
+    oy = e.clientY - parseInt(el.style.top||0);
+    const move = ev => {
+      el.style.left = (ev.clientX - ox) + 'px';
+      el.style.top  = (ev.clientY - oy) + 'px';
+    };
+    const up = () => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  });
+}
+
+// ════════════════════════════════════════════════
+// FLOATING BAR (Selection)
+// ════════════════════════════════════════════════
+function showFloatBar(e) {
+  const obj = WB.canvas.getActiveObject();
+  if (!obj) return;
+  const bar = document.getElementById('wb-float-bar');
+  bar.style.display = 'flex';
+  
+  const br = WB.canvas.getElement().getBoundingClientRect();
+  const bnd = obj.getBoundingRect();
+  bar.style.left = (br.left + bnd.left) + 'px';
+  bar.style.top  = Math.max(10, br.top + bnd.top - 60) + 'px';
+
+  if (obj.type === 'i-text' || obj.type === 'text') {
+    document.getElementById('wb-text-panel').style.display = 'flex';
+  }
+}
+function hideFloatBar() {
+  document.getElementById('wb-float-bar').style.display = 'none';
+}
+
+function setSelectedFill(color) {
+  const objs = WB.canvas.getActiveObjects();
+  if (objs && objs.length) { 
+    objs.forEach(o => { if(o.set) o.set('fill', color) }); 
+    WB.canvas.requestRenderAll(); 
+    saveHistory();
+  }
+}
+function setSelectedStroke(color) {
+  const objs = WB.canvas.getActiveObjects();
+  if (objs && objs.length) { 
+    objs.forEach(o => { if(o.set) o.set('stroke', color) }); 
+    WB.canvas.requestRenderAll(); 
+    saveHistory();
+  }
+}
+function duplicateSelected() {
+  const obj = WB.canvas.getActiveObject();
+  if (!obj) return;
+  obj.clone(clone => {
+    clone.set({ left: obj.left + 30, top: obj.top + 30, evented: true });
+    // If it's an active selection (multiple), add them individually
+    if (clone.type === 'activeSelection') {
+      clone.canvas = WB.canvas;
+      clone.forEachObject(o => WB.canvas.add(o));
+      clone.setCoords();
+    } else {
+      WB.canvas.add(clone);
+    }
+    WB.canvas.discardActiveObject();
+    WB.canvas.setActiveObject(clone);
+    WB.canvas.requestRenderAll();
+    saveHistory();
+    toast('تم نسخ العنصر', 'success');
+  });
+}
+function deleteSelected() {
+  const activeObjects = WB.canvas.getActiveObjects();
+  if (activeObjects && activeObjects.length) {
+    activeObjects.forEach(obj => WB.canvas.remove(obj));
+    WB.canvas.discardActiveObject();
+    WB.canvas.requestRenderAll();
+    saveHistory();
+    toast('تم الحذف', 'warning');
+  }
+}
+function bringForward()  { 
+  const objs = WB.canvas.getActiveObjects();
+  objs.forEach(o => WB.canvas.bringForward(o)); 
+  WB.canvas.requestRenderAll(); saveHistory();
+}
+function sendBackward()  { 
+  const objs = WB.canvas.getActiveObjects();
+  objs.forEach(o => WB.canvas.sendBackwards(o)); 
+  WB.canvas.requestRenderAll(); saveHistory();
+}
+function lockSelected() {
+  const obj = WB.canvas.getActiveObject();
+  if (!obj) return;
+  const locked = !obj.lockMovementX;
+  if(obj.type === 'activeSelection') {
+    obj.forEachObject(o => { o.set({ lockMovementX: locked, lockMovementY: locked, lockRotation: locked, lockScalingX: locked, lockScalingY: locked }); });
+  } else {
+    obj.set({ lockMovementX: locked, lockMovementY: locked, lockRotation: locked, lockScalingX: locked, lockScalingY: locked });
+  }
+  toast(locked ? 'تم تثبيت العنصر' : 'تم إلغاء التثبيت', 'info');
+  WB.canvas.discardActiveObject(); WB.canvas.requestRenderAll();
+}
+
+// ════════════════════════════════════════════════
+// UNDO / REDO
+// ════════════════════════════════════════════════
+function saveHistory() {
+  const idx = WB.pageIndex;
+  // Use includeDefaultValues false to save space, but ensure we keep custom data
+  const json = JSON.stringify(WB.canvas.toJSON(['selectable','evented','data','eraser']));
+  WB.histories[idx] = WB.histories[idx].slice(0, WB.histPtr[idx] + 1);
+  WB.histories[idx].push(json);
+  if (WB.histories[idx].length > 50) WB.histories[idx].shift();
+  WB.histPtr[idx] = WB.histories[idx].length - 1;
+}
+
+function wbUndo() {
+  const idx = WB.pageIndex;
+  if (WB.histPtr[idx] <= 0) return;
+  WB.histPtr[idx]--;
+  loadCanvasFromHistory(idx);
+}
+function wbRedo() {
+  const idx = WB.pageIndex;
+  if (WB.histPtr[idx] >= WB.histories[idx].length - 1) return;
+  WB.histPtr[idx]++;
+  loadCanvasFromHistory(idx);
+}
+function loadCanvasFromHistory(idx) {
+  const json = WB.histories[idx][WB.histPtr[idx]];
+  if (!json) return;
+  WB.canvas.loadFromJSON(json, () => {
+    WB.canvas.requestRenderAll();
+    restoreTool();
+  });
+}
+function restoreTool() {
+  if (WB.tool === 'pen' || WB.tool === 'highlighter' || WB.tool === 'eraser') {
+    WB.canvas.isDrawingMode = true;
+  } else {
+    WB.canvas.isDrawingMode = false;
+  }
+  if (WB.tool !== 'select') {
+    WB.canvas.forEachObject(o => { o.selectable = false; o.evented = false; });
+  }
+}
+
+// ════════════════════════════════════════════════
+// PAGES
+// ════════════════════════════════════════════════
+function addPage() {
+  saveCurrentPageState();
+  
+  let targetBg = WB.currentBg;
+  if (targetBg === 'pdf' || targetBg === 'image') targetBg = 'white';
+  
+  WB.pages.push({ json: null, bg: targetBg, thumbnail: null });
+  WB.histories.push([]);
+  WB.histPtr.push(-1);
+  WB.pageIndex = WB.pages.length - 1;
+  
+  WB.canvas.clear();
+  WB.currentBg = targetBg;
+  applyBgColor(targetBg);
+  
+  saveHistory();
+  renderPagesBar();
+  renderThumbnail(WB.pageIndex);
+  toast(`صفحة ${WB.pageIndex + 1} جديدة`, 'info');
+}
+
+function switchPage(idx) {
+  if (idx === WB.pageIndex) return;
+  saveCurrentPageState();
+  WB.pageIndex = idx;
+  loadPage(idx);
+  renderPagesBar();
+}
+
+function deletePage(idx, e) {
+  e.stopPropagation();
+  if (WB.pages.length <= 1) { toast('لا يمكن حذف الصفحة الوحيدة', 2000); return; }
+  if (!confirm('هل أنت متأكد من حذف هذه الصفحة بالكامل؟')) return;
+  
+  if (idx === WB.pageIndex) saveCurrentPageState();
+  
+  WB.pages.splice(idx, 1);
+  WB.histories.splice(idx, 1);
+  WB.histPtr.splice(idx, 1);
+  
+  if(WB.pageIndex >= idx) {
+    WB.pageIndex = Math.max(0, WB.pageIndex - 1);
+  }
+  
+  loadPage(WB.pageIndex);
+  renderPagesBar();
+  toast('تم حذف الصفحة', 'warning');
+}
+
+function saveCurrentPageState() {
+  const json = JSON.stringify(WB.canvas.toJSON(['selectable','evented','data','eraser']));
+  WB.pages[WB.pageIndex] = {
+    json, bg: WB.currentBg, thumbnail: null,
+  };
+  renderThumbnail(WB.pageIndex);
+}
+
+function loadPage(idx) {
+  const page = WB.pages[idx];
+  WB.currentBg = page.bg || 'white';
+  
+  if (page.json) {
+    WB.canvas.loadFromJSON(page.json, () => {
+      applyBgColor(WB.currentBg);
+      WB.canvas.requestRenderAll();
+    });
+  } else {
+    WB.canvas.clear();
+    applyBgColor(WB.currentBg);
+    WB.canvas.requestRenderAll();
+  }
+}
+
+function renderThumbnail(idx) {
+  const dataUrl = WB.canvas.toDataURL({ format: 'jpeg', quality: 0.6, multiplier: 0.15 });
+  WB.pages[idx] = WB.pages[idx] || {};
+  WB.pages[idx].thumbnail = dataUrl;
+  const thumb = document.getElementById('page-thumb-img-' + idx);
+  if (thumb) thumb.src = dataUrl;
+}
+
+function renderPagesBar() {
+  const list = document.getElementById('pages-list');
+  list.innerHTML = WB.pages.map((page, i) => `
+    <div class="page-thumb ${i === WB.pageIndex ? 'active' : ''}" id="page-thumb-${i}" onclick="switchPage(${i})" title="انتقال للصفحة ${i+1}">
+      ${page.thumbnail ? `<img id="page-thumb-img-${i}" src="${page.thumbnail}" style="width:100%;height:100%;object-fit:contain;border-radius:4px">` : `<span id="page-thumb-img-${i}" style="font-size:1rem;color:var(--text3);font-weight:800;display:inline-flex;align-items:center;gap:4px"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></span> ${i+1}</span>`}
+      <span class="page-num">${i + 1}</span>
+      <button class="page-del" onclick="deletePage(${i}, event)" title="حذف الصفحة"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></button>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════════════
+// BACKGROUND
+// ════════════════════════════════════════════════
+const BG_COLORS = {
+  white:      '#ffffff',
+  blackboard: '#1a4a1a',
+  lines:      '#ffffff',
+  grid:       '#ffffff',
+  dots:       '#ffffff',
+  graph:      '#ffffff',
+};
+
+function openBgModal()  { document.getElementById('bg-modal').classList.add('open'); }
+function closeBgModal() { document.getElementById('bg-modal').classList.remove('open'); }
+
+function setBackground(type) {
+  WB.currentBg = type;
+  WB.pages[WB.pageIndex].bg = type;
+  applyBgColor(type);
+  closeBgModal();
+  saveHistory();
+  toast('تم تغيير تخطيط الصفحة', 'info');
+}
+
+let currentBgScale = 1;
+function updateBgSize(val) {
+  currentBgScale = parseFloat(val);
+  document.getElementById('bg-size-val').textContent = val + 'x';
+  applyBgColor(WB.currentBg);
+}
+
+function importBgImage() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const url = URL.createObjectURL(file);
+    fabric.Image.fromURL(url, (img) => {
+      const scale = Math.min(WB.CANVAS_W / img.width, WB.CANVAS_H / img.height);
+      img.set({ originX: 'center', originY: 'center', left: WB.CANVAS_W/2, top: WB.CANVAS_H/2, scaleX: scale, scaleY: scale });
+      WB.canvas.setBackgroundImage(img, WB.canvas.renderAll.bind(WB.canvas));
+      WB.currentBg = 'image';
+      closeBgModal();
+      saveHistory();
+      toast('تم تعيين الصورة كخلفية', 'success');
+    });
+  };
+  input.click();
+}
+
+function applyBgColor(type) {
+  if(type === 'pdf' || type === 'image') return; // Handled separately
+  WB.canvas.setBackgroundImage(null, () => {}); // Clear image bg
+
+  let svg = '';
+  const sc = currentBgScale;
+  
+  if (type === 'lines') {
+    const s = 40 * sc;
+    svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}"><rect width="${s}" height="${s}" fill="#fff"/><line x1="0" y1="${s-1}" x2="${s}" y2="${s-1}" stroke="#93c5fd" stroke-width="${1.5*sc}"/></svg>`;
+  } else if (type === 'grid') {
+    const s = 40 * sc;
+    svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}"><rect width="${s}" height="${s}" fill="#fff"/><path d="M ${s} 0 L ${s} ${s} L 0 ${s}" fill="none" stroke="#cbd5e1" stroke-width="${1*sc}"/></svg>`;
+  } else if (type === 'dots') {
+    const s = 20 * sc;
+    svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}"><rect width="${s}" height="${s}" fill="#fff"/><circle cx="${s/2}" cy="${s/2}" r="${1.5*sc}" fill="#cbd5e1"/></svg>`;
+  } else if (type === 'graph') {
+    const s = 100 * sc;
+    let inner = '';
+    for(let i=10; i<100; i+=10) { 
+      const p = i * sc;
+      inner += `<path d="M ${p} 0 L ${p} ${s} M 0 ${p} L ${s} ${p}" stroke="rgba(74,144,226,0.2)" stroke-width="${1*sc}"/>`; 
+    }
+    svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}"><rect width="${s}" height="${s}" fill="#fff"/>${inner}<path d="M ${s} 0 L ${s} ${s} L 0 ${s}" fill="none" stroke="rgba(74,144,226,0.6)" stroke-width="${1.5*sc}"/></svg>`;
+  }
+
+  if (svg) {
+    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    fabric.util.loadImage(url, (img) => {
+      const pattern = new fabric.Pattern({ source: img, repeat: 'repeat' });
+      WB.canvas.setBackgroundColor(pattern, WB.canvas.renderAll.bind(WB.canvas));
+    });
+  } else {
+    WB.canvas.setBackgroundColor(BG_COLORS[type] || '#ffffff', WB.canvas.renderAll.bind(WB.canvas));
+  }
+}
+
+// ════════════════════════════════════════════════
+// CLEAR
+// ════════════════════════════════════════════════
+function clearCurrentPage() {
+  if (!confirm('هل أنت متأكد من مسح كافة محتويات الشاشة الحالية؟')) return;
+  const bg = WB.currentBg;
+  WB.canvas.clear();
+  WB.currentBg = bg;
+  applyBgColor(bg);
+  saveHistory();
+  WB.canvas.requestRenderAll();
+  toast('تم مسح الشاشة بالكامل', 'info');
+}
+
+// ════════════════════════════════════════════════
+// EXPORT
+// ════════════════════════════════════════════════
+function exportPNG() {
+  saveCurrentPageState();
+  const link = document.createElement('a');
+  link.download = `سبورة-سليم-${Date.now()}.png`;
+  link.href = WB.canvas.toDataURL({ format: 'png', multiplier: 1.5 }); // High res export
+  link.click();
+  toast('تم حفظ الصورة PNG', 'success');
+}
+
+function exportJPG() {
+  saveCurrentPageState();
+  const link = document.createElement('a');
+  link.download = `سبورة-سليم-${Date.now()}.jpg`;
+  link.href = WB.canvas.toDataURL({ format: 'jpeg', quality: 0.95, multiplier: 1.5 });
+  link.click();
+  toast('تم حفظ الصورة JPG', 'success');
+}
+
+async function exportPDF() {
+  saveCurrentPageState();
+  toast('جاري تجهيز ملف الـ PDF...', 'info', 3000);
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [WB.CANVAS_W, WB.CANVAS_H] });
+
+  const currentIdx = WB.pageIndex;
+  for (let i = 0; i < WB.pages.length; i++) {
+    if (i > 0) pdf.addPage([WB.CANVAS_W, WB.CANVAS_H], 'portrait');
+    let imgData;
+    if (i === currentIdx) {
+      imgData = WB.canvas.toDataURL({ format: 'jpeg', quality: 0.95, multiplier: 2.5 }); // 🌟 High quality export
+    } else if (WB.pages[i].thumbnail) {
+      // Create temporary canvas to render high-res image if needed, but for speed we use existing thumbnail or re-render
+      // For best quality we should load to a temp canvas, but thumbnail is okay for now
+      imgData = WB.pages[i].thumbnail; 
+    }
+    if (imgData) pdf.addImage(imgData, 'JPEG', 0, 0, WB.CANVAS_W, WB.CANVAS_H);
+  }
+  pdf.save(`سبورة-أكاديمية-سليم-${Date.now()}.pdf`);
+  toast(`تم تصدير ملف PDF بنجاح (${WB.pages.length} صفحات)`, 'success');
+}
+
+// ════════════════════════════════════════════════
+// LOCAL STORAGE & FILE MANAGER INTEGRATION
+// ════════════════════════════════════════════════
+function initNewBlankFile() {
+  const newFile = { 
+    id: Date.now().toString(), 
+    type: 'file', 
+    title: 'سبورة جديدة', 
+    date: new Date().toISOString().split('T')[0],
+    wbData: { pages: [{ json: null, bg: 'white' }], pageIndex: 0 }
+  };
+  fmFiles.unshift(newFile);
+  activeFmFileId = newFile.id;
+  loadActiveFileToCanvas();
+  renderFileManager();
+}
+
+function loadActiveFileToCanvas() {
+  if (!activeFmFileId) return;
+  const file = findFmItem(fmFiles, activeFmFileId);
+  if (!file || file.type !== 'file') {
+    WB.pages = [{ json: null, bg: 'white', thumbnail: null }];
+    WB.pageIndex = 0;
+  } else {
+    if (!file.wbData) file.wbData = { pages: [{ json: null, bg: 'white' }], pageIndex: 0 };
+    WB.pages = file.wbData.pages.map(p => ({ json: p.json || null, bg: p.bg || 'white', thumbnail: null }));
+    WB.pageIndex = Math.min(file.wbData.pageIndex || 0, WB.pages.length - 1);
+  }
+  
+  WB.histories = WB.pages.map(() => []);
+  WB.histPtr   = WB.pages.map(() => -1);
+  
+  loadPage(WB.pageIndex);
+  renderPagesBar();
+  saveHistory();
+}
+
+function openFmFile(id) {
+  saveToStorage(); // save current before switching
+  const file = findFmItem(fmFiles, id);
+  if (file && file.type === 'file') {
+    activeFmFileId = id;
+    loadActiveFileToCanvas();
+    renderFileManager();
+    toast('تم فتح السبورة: ' + file.title, 'success');
+  }
+}
+
+function saveToStorage() {
+  try {
+    saveCurrentPageState();
+    
+    // Update active file's data
+    if (activeFmFileId) {
+      const file = findFmItem(fmFiles, activeFmFileId);
+      if (file && file.type === 'file') {
+        file.wbData = {
+          pages: WB.pages.map(p => ({ json: p.json, bg: p.bg })),
+          pageIndex: WB.pageIndex,
+        };
+      }
+    }
+
+    const data = {
+      fmFiles,
+      fmTrash,
+      openFmFolders: Array.from(openFmFolders),
+      activeFmFileId
+    };
+    
+    const str = JSON.stringify(data);
+    localStorage.setItem('wb_pro_v5', str);
+  } catch(e) { console.warn('Storage quota exceeded', e); }
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem('wb_pro_v5');
+    if (raw) {
+      const data = JSON.parse(raw);
+      fmFiles = data.fmFiles || [];
+      fmTrash = data.fmTrash || [];
+      openFmFolders = new Set(data.openFmFolders || []);
+      activeFmFileId = data.activeFmFileId || null;
+    } else {
+      // Try to migrate from v4 if it's the very first time
+      const oldRaw = localStorage.getItem(WB.LS_KEY);
+      if (oldRaw) {
+        const oldData = JSON.parse(oldRaw);
+        if (oldData && oldData.pages) {
+          const migratedFile = {
+            id: Date.now().toString(),
+            type: 'file', title: 'السبورة السابقة',
+            date: new Date().toISOString().split('T')[0],
+            wbData: oldData
+          };
+          fmFiles.push(migratedFile);
+        }
+      }
+    }
+
+    // Smart new blank file logic
+    let shouldCreateNew = true;
+    if (fmFiles.length > 0) {
+      const firstItem = fmFiles[0];
+      if (firstItem.type === 'file' && firstItem.wbData) {
+         const p0 = firstItem.wbData.pages[0];
+         if (firstItem.wbData.pages.length === 1 && !p0.json && p0.bg === 'white') {
+           shouldCreateNew = false;
+           activeFmFileId = firstItem.id;
+         }
+      }
+    }
+    
+    if (shouldCreateNew) {
+      initNewBlankFile();
+    } else {
+      loadActiveFileToCanvas();
+      renderFileManager();
+    }
+    
+    // Generate thumbnails asynchronously
+    setTimeout(() => {
+      for (let i = 0; i < WB.pages.length; i++) {
+        if (i !== WB.pageIndex && WB.pages[i].json) {
+           // Can generate if needed
+        }
+      }
+    }, 1000);
+    
+    toast('تم تهيئة مساحة العمل', 'info', 2000);
+  } catch(e) {
+    console.warn('WB load error:', e);
+    initNewBlankFile();
+  }
+}
+
+
+// ════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ════════════════════════════════════════════════
+function onKeyDown(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  if (e.ctrlKey && e.key === 'z') { e.preventDefault(); wbUndo(); return; }
+  if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); wbRedo(); return; }
+  if (e.ctrlKey && e.key === 'd') { e.preventDefault(); duplicateSelected(); return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { if (WB.canvas.getActiveObjects().length) deleteSelected(); return; }
+  if (e.key === 'Escape') { WB.canvas.discardActiveObject(); WB.canvas.requestRenderAll(); return; }
+  if (e.key === '+' || e.key === '=') { zoomIn(); return; }
+  if (e.key === '-') { zoomOut(); return; }
+
+  const km = { v:'select', p:'pen', h:'highlighter', e:'eraser', l:'line', a:'arrow', r:'rect', c:'ellipse', t:'text' };
+  if (km[e.key.toLowerCase()] && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    setTool(km[e.key.toLowerCase()]);
+  }
+  if (e.code === 'Space') {
+    e.preventDefault();
+    setTool('pan');
+  }
+}
+
+// ════════════════════════════════════════════════
+// UI HELPERS
+// ════════════════════════════════════════════════
+function toggleRightPanel() {
+  const panel = document.getElementById('wb-right-panel');
+  panel.classList.toggle('collapsed');
+  const btn = document.getElementById('shapes-toggle-btn');
+  btn.classList.toggle('active', !panel.classList.contains('collapsed'));
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().then(() => {
+      document.getElementById('fs-btn').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>`;
+      setTimeout(fitCanvas, 300);
+    });
+  } else {
+    document.exitFullscreen().then(() => {
+      document.getElementById('fs-btn').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>`;
+      setTimeout(fitCanvas, 300);
+    });
+  }
+}
+
+// ════════════════════════════════════════════════
+// LATEX PREVIEW ON INPUT
+// ════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('latex-input');
+  if (inp) inp.addEventListener('input', previewLatex);
+});
+
+// ════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════
+function hexToRgba(hex, alpha) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c+c).join('');
+  const r = parseInt(hex.substring(0,2),16);
+  const g = parseInt(hex.substring(2,4),16);
+  const b = parseInt(hex.substring(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+let _toastTimer;
+function toast(msg, type = 'success', duration = 2500) {
+  const t = document.getElementById('wb-toast');
+  const icons = {
+    success: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+    error: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+    warning: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
+  };
+  t.className = 'toast t-' + type;
+  t.innerHTML = `<span class="toast-icon">${icons[type] || icons.success}</span><span>${msg}</span>`;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// ════════════════════════════════════════════════
+// WINDOW UNLOAD — SAVE
+// ════════════════════════════════════════════════
+window.addEventListener('beforeunload', saveToStorage);
+
+// -----------------------------------------------------
+// -----------------------------------------------------
+// -----------------------------------------------------
+// File Manager Mock Logic
+// -----------------------------------------------------
+let fmFiles = [];
+let fmTrash = [];
+let fmSortBy = 'date';
+let activeFmFolderId = null;
+let activeFmFileId = null;
+let openFmFolders = new Set();
+
+function renderFileManager() {
+  const tree = document.getElementById('fm-tree-root');
+  const trashTree = document.getElementById('fm-trash-root');
+  if(!tree) return;
+  
+  const sorter = (a, b) => {
+    if (fmSortBy === 'date') return new Date(b.date) - new Date(a.date);
+    if (fmSortBy === 'alpha') return a.title.localeCompare(b.title);
+    return 0;
+  };
+  
+  if (fmSortBy !== 'custom') {
+    fmFiles.sort(sorter);
+    fmFiles.forEach(f => { if(f.children) f.children.sort(sorter); });
+  }
+  
+  tree.innerHTML = generateTreeHTML(fmFiles, false);
+  trashTree.innerHTML = generateTreeHTML(fmTrash, true);
+}
+
+function generateTreeHTML(items, isTrash) {
+  if(!items || items.length === 0) return '<div style="font-size:0.85rem;color:#94a3b8;padding:10px;text-align:center">لا يوجد ملفات</div>';
+  let html = '<ul class="fm-tree">';
+  items.forEach(item => {
+    const isFolder = item.type === 'folder';
+    const icon = isFolder ? (openFmFolders.has(item.id) ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8V6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H7a2 2 0 0 0-2 2l-2 9V8z"/><path d="M3.5 11h16l-2 9H5.5l-2-9z"/></svg>` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>`) : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>`;
+    let activeStyle = '';
+    if (!isTrash) {
+      if (isFolder && item.id === activeFmFolderId) activeStyle = 'background: #f1f5f9; border-right: 4px solid var(--accent);';
+      if (!isFolder && item.id === activeFmFileId) activeStyle = 'background: #e0f2fe; border-right: 4px solid #0284c7; font-weight: bold;';
+    }
+    
+    html += `<li data-id="${item.id}" ${!isTrash ? `draggable="true" ondragstart="fmDragStart(event, '${item.id}')" ondragover="fmDragOver(event, ${isFolder})" ondragleave="fmDragLeave(event)" ondrop="fmDrop(event, '${item.id}', ${isFolder})"` : ''}>
+      <div class="fm-item" style="${activeStyle}" onclick="if(event.target.closest('.fm-item-actions')) return; if('${isFolder}'==='true') toggleFolder(event, this, '${item.id}')" ondblclick="if(!'${isFolder}' || '${isFolder}'==='false') openFmFile('${item.id}')">
+        <div class="fm-item-main">
+          <span class="fm-icon">${icon}</span>
+          <div>
+            <div class="fm-title">${item.title}</div>
+            <div class="fm-date">${item.date}</div>
+          </div>
+        </div>
+        <div class="fm-item-actions">
+          ${!isTrash ? `<button class="fm-trash-btn" onclick="event.stopPropagation(); deleteFmItem('${item.id}')" title="نقل للمهملات"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>` : 
+                       `<button class="fm-btn" onclick="event.stopPropagation(); restoreFmItem('${item.id}')"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16"/><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8"/><polyline points="3 21 3 16 8 16"/><polyline points="21 3 21 8 16 8"/></svg></span> استعادة</button>
+                        <button class="fm-trash-btn" onclick="event.stopPropagation(); permDeleteFmItem('${item.id}')" title="حذف نهائي"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span></button>`}
+        </div>
+      </div>
+      ${isFolder ? `<div class="fm-subtree ${openFmFolders.has(item.id) ? 'open' : ''}">${generateTreeHTML(item.children, isTrash)}</div>` : ''}
+    </li>`;
+  });
+  html += '</ul>';
+  return html;
+}
+
+function toggleFolder(e, el, id) {
+  e.stopPropagation(); // prevent closing dropdown
+  
+  if (activeFmFolderId === id) {
+    activeFmFolderId = null; // deselect if clicked again
+  } else {
+    activeFmFolderId = id; // select it
+  }
+  
+  if (openFmFolders.has(id)) {
+    openFmFolders.delete(id);
+  } else {
+    openFmFolders.add(id);
+  }
+  
+  renderFileManager();
+}
+
+function createFmFolder() {
+  const name = prompt("اسم المجلد الجديد:");
+  if(!name) return;
+  const newFolder = { id: Date.now().toString(), type: 'folder', title: name, date: new Date().toISOString().split('T')[0], children: [] };
+  
+  if (activeFmFolderId) {
+    const folder = findFmItem(fmFiles, activeFmFolderId);
+    if (folder && folder.type === 'folder') {
+      folder.children.unshift(newFolder);
+      openFmFolders.add(activeFmFolderId); // expand to show
+    } else {
+      fmFiles.unshift(newFolder);
+    }
+  } else {
+    fmFiles.unshift(newFolder);
+  }
+  renderFileManager();
+}
+
+function createFmFile() {
+  const name = prompt("اسم الصفحة/السبورة:");
+  if(!name) return;
+  const newFile = { id: Date.now().toString(), type: 'file', title: name, date: new Date().toISOString().split('T')[0], wbData: { pages: [{ json: null, bg: 'white' }], pageIndex: 0 } };
+  
+  if (activeFmFolderId) {
+    const folder = findFmItem(fmFiles, activeFmFolderId);
+    if (folder && folder.type === 'folder') {
+      folder.children.unshift(newFile);
+      openFmFolders.add(activeFmFolderId); // expand to show
+    } else {
+      fmFiles.unshift(newFile);
+    }
+  } else {
+    fmFiles.unshift(newFile);
+  }
+  openFmFile(newFile.id);
+}
+
+function findFmItem(list, id) {
+  for (let item of list) {
+    if (item.id === id) return item;
+    if (item.type === 'folder') {
+      const found = findFmItem(item.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function removeFmItem(list, id) {
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].id === id) {
+      return list.splice(i, 1)[0];
+    }
+    if (list[i].type === 'folder') {
+      const removed = removeFmItem(list[i].children, id);
+      if (removed) return removed;
+    }
+  }
+  return null;
+}
+
+function deleteFmItem(id) {
+  let found = removeFmItem(fmFiles, id);
+  if(found) {
+    if(activeFmFolderId === id) activeFmFolderId = null;
+    fmTrash.unshift(found);
+    renderFileManager();
+    toast('تم النقل للمهملات', 'warning');
+  }
+}
+
+function restoreFmItem(id) {
+  let found = null;
+  fmTrash = fmTrash.filter(f => {
+    if(f.id === id) { found = f; return false; }
+    return true;
+  });
+  if(found) {
+    fmFiles.unshift(found);
+    renderFileManager();
+    toast('تم استعادة الملف بنجاح', 'success');
+  }
+}
+
+function permDeleteFmItem(id) {
+  if(!confirm("سيتم حذف الملف نهائياً ولا يمكن استعادته! هل أنت متأكد؟")) return;
+  fmTrash = fmTrash.filter(f => f.id !== id);
+  renderFileManager();
+  toast('تم الحذف نهائياً', 'error');
+}
+
+function changeFmSort(val) {
+  fmSortBy = val;
+  renderFileManager();
+}
+
+// Drag & Drop Handlers
+function fmDragStart(e, id) {
+  e.dataTransfer.setData('text/plain', id);
+  e.stopPropagation();
+}
+
+function fmDragOver(e, isFolder) {
+  e.preventDefault();
+  if (isFolder) {
+    e.currentTarget.children[0].style.border = '2px dashed var(--accent)';
+    e.currentTarget.children[0].style.background = '#e0e7ff';
+  }
+  e.stopPropagation();
+}
+
+function fmDragLeave(e) {
+  e.currentTarget.children[0].style.border = '';
+  e.currentTarget.children[0].style.background = '';
+  e.stopPropagation();
+}
+
+function isDescendant(list, parentId, childId) {
+  const parent = findFmItem(list, parentId);
+  if (!parent || parent.type !== 'folder') return false;
+  return !!findFmItem(parent.children, childId);
+}
+
+function fmDrop(e, targetId, isFolder) {
+  e.preventDefault();
+  e.currentTarget.children[0].style.border = '';
+  e.currentTarget.children[0].style.background = '';
+  e.stopPropagation();
+  
+  const draggedId = e.dataTransfer.getData('text/plain');
+  if (!draggedId || draggedId === targetId) return;
+  
+  if (isFolder) {
+    if (isDescendant(fmFiles, draggedId, targetId)) {
+      toast('لا يمكن نقل مجلد إلى داخله', 'error');
+      return;
+    }
+    
+    const item = removeFmItem(fmFiles, draggedId);
+    if (item) {
+      const targetFolder = findFmItem(fmFiles, targetId);
+      if (targetFolder && targetFolder.type === 'folder') {
+        targetFolder.children.unshift(item);
+        openFmFolders.add(targetId); // expand target folder automatically
+        renderFileManager();
+        toast('تم نقل الملف', 'success');
+      }
+    }
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  renderFileManager();
+});
+
+
+
+
+
+
+
+// ════════════════════════════════════════════════
+// WIDGETS LOGIC (STOPWATCH & CLOCK)
+// ════════════════════════════════════════════════
+let widgetZIndex = 1000;
+
+function spawnWidget(type) {
+  const container = document.getElementById('wb-canvas-wrap');
+  const w = document.createElement('div');
+  w.className = 'wb-widget active';
+  w.dataset.scale = "1";
+  
+  if (type === 'curtain') {
+    w.style.width = '600px'; w.style.height = '400px';
+  } else if (type === 'grid') {
+    w.style.width = '500px'; w.style.height = '400px';
+  }
+  
+  w.style.left = (container.offsetWidth / 2 - 100) + 'px';
+  w.style.top = (container.scrollTop + 100) + 'px';
+  
+  container.appendChild(w);
+  document.querySelectorAll('.wb-widget').forEach(el => el.classList.remove('active'));
+  
+  w.innerHTML = `
+    <div class="ob-btn ob-close" title="إغلاق"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></div>
+    <div class="ob-btn ob-dup" title="تكرار"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span></div>
+    ${type === 'grid' ? '<div class="ob-btn ob-settings" title="إعدادات المحاور"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span></div>' : ''}
+    
+    <div class="ob-btn ob-zup" title="إحضار للأمام"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M20 8v10a2 2 0 0 1-2 2H8"/></svg></span></div>
+    <div class="ob-btn ob-zdn" title="إرسال للخلف"><span style="display:inline-flex;width:14px;height:14px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10"/></svg></span></div>
+    
+    <div class="ob-drag-ind ob-drag-left"></div>
+    <div class="ob-drag-ind ob-drag-right"></div>
+    <div class="ob-drag-ind ob-drag-top"></div>
+    <div class="ob-drag-ind ob-drag-bottom"></div>
+    
+    <div class="ob-resize" title="تكبير/تصغير">
+       <svg viewBox="0 0 24 24" stroke="#666" stroke-width="2" style="width:100%;height:100%;padding:4px">
+         <line x1="16" y1="8" x2="8" y2="16" />
+         <line x1="20" y1="8" x2="8" y2="20" />
+         <line x1="20" y1="12" x2="12" y2="20" />
+       </svg>
+    </div>
+    
+    <div class="wb-widget-content" ${ (type === 'curtain' || type === 'grid') ? 'style="width:100%; height:100%;"' : '' }></div>
+  `;
+  
+  const content = w.querySelector('.wb-widget-content');
+  
+  w.querySelector('.ob-close').onclick = (e) => {
+    e.stopPropagation();
+    if(w.dataset.timerId) clearInterval(parseInt(w.dataset.timerId));
+    w.isClosed = true;
+    if(w.resizeObserver) w.resizeObserver.disconnect();
+    w.remove();
+  };
+  w.querySelector('.ob-dup').onclick = (e) => { e.stopPropagation(); spawnWidget(type); };
+  w.querySelector('.ob-zup').onclick = (e) => { e.stopPropagation(); w.style.zIndex = ++widgetZIndex; };
+  w.querySelector('.ob-zdn').onclick = (e) => { e.stopPropagation(); w.style.zIndex = Math.max(0, parseInt(w.style.zIndex || 1000) - 1); };
+  
+  if (type === 'grid') {
+    w.querySelector('.ob-settings').onclick = (e) => {
+      e.stopPropagation();
+      let box = w.querySelector('.grid-settings');
+      if(box) box.classList.toggle('show');
+    };
+  }
+  
+  const resizer = w.querySelector('.ob-resize');
+  resizer.onmousedown = (e) => {
+    e.stopPropagation();
+    let startMouseX = e.clientX, startMouseY = e.clientY;
+    let startScale = parseFloat(w.dataset.scale || 1);
+    let startW = w.offsetWidth, startH = w.offsetHeight;
+    function onMouseMove(moveEvent) {
+      let dx = moveEvent.clientX - startMouseX;
+      let dy = moveEvent.clientY - startMouseY;
+      if (type === 'curtain' || type === 'grid') {
+          w.style.width = Math.max(100, startW + dx) + 'px';
+          w.style.height = Math.max(100, startH + dy) + 'px';
+          if (type === 'grid' && w.gridState) w.gridState.draw();
+      } else {
+          let scale = Math.max(0.3, Math.min(4, startScale + (dx / 150)));
+          w.dataset.scale = scale;
+          w.style.transform = `scale(${scale})`;
+      }
+    }
+    function onMouseUp() {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    }
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+  
+  const edges = ['left', 'right', 'top', 'bottom'];
+  edges.forEach(side => {
+    const edge = w.querySelector('.ob-drag-' + side);
+    if(edge) {
+      edge.style.pointerEvents = 'auto';
+      edge.style.cursor = (side === 'left' || side === 'right') ? 'ew-resize' : 'ns-resize';
+      
+      edge.onmousedown = (e) => {
+        e.stopPropagation();
+        let startMouseX = e.clientX, startMouseY = e.clientY;
+        let startScale = parseFloat(w.dataset.scale || 1);
+        let startLeft = parseFloat(w.style.left || 0);
+        let startTop = parseFloat(w.style.top || 0);
+        let baseW = w.offsetWidth / startScale, baseH = w.offsetHeight / startScale;
+        let unscaledW = w.offsetWidth, unscaledH = w.offsetHeight;
+        let startOriginX = w.gridState ? w.gridState.originX : 0;
+        let startOriginY = w.gridState ? w.gridState.originY : 0;
+        
+        function onMouseMove(me) {
+          let dx = me.clientX - startMouseX;
+          let dy = me.clientY - startMouseY;
+          if (type === 'curtain' || type === 'grid') {
+              let dw = 0, dh = 0;
+              if (side === 'right') { w.style.width = Math.max(100, unscaledW + dx) + 'px'; }
+              else if (side === 'bottom') { w.style.height = Math.max(100, unscaledH + dy) + 'px'; }
+              else if (side === 'left') {
+                 let newW = Math.max(100, unscaledW - dx);
+                 if (newW > 100) { dw = newW - unscaledW; w.style.width = newW + 'px'; w.style.left = (startLeft + dx) + 'px'; }
+              } else if (side === 'top') {
+                 let newH = Math.max(100, unscaledH - dy);
+                 if (newH > 100) { dh = newH - unscaledH; w.style.height = newH + 'px'; w.style.top = (startTop + dy) + 'px'; }
+              }
+              if (type === 'grid' && w.gridState) {
+                  w.gridState.originX = startOriginX + (side === 'left' ? dw : 0);
+                  w.gridState.originY = startOriginY + (side === 'top' ? dh : 0);
+                  w.gridState.draw();
+              }
+          } else {
+              let newScale = startScale;
+              if (side === 'right') newScale = Math.max(0.3, Math.min(4, startScale + (dx / baseW)));
+              else if (side === 'bottom') newScale = Math.max(0.3, Math.min(4, startScale + (dy / baseH)));
+              else if (side === 'left') { newScale = Math.max(0.3, Math.min(4, startScale - (dx / baseW))); w.style.left = (startLeft - (baseW * (newScale - startScale))) + 'px'; }
+              else if (side === 'top') { newScale = Math.max(0.3, Math.min(4, startScale - (dy / baseH))); w.style.top = (startTop - (baseH * (newScale - startScale))) + 'px'; }
+              w.dataset.scale = newScale; w.style.transform = `scale(${newScale})`;
+          }
+        }
+        function onMouseUp() {
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mouseup', onMouseUp);
+        }
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+      };
+    }
+  });
+  
+  let isDown = false, startX, startY, startLeft, startTop;
+  w.onmousedown = function(e) {
+    if(e.target.closest('.ob-btn') || e.target.closest('.ob-resize') || e.target.closest('.grid-settings') || e.target.closest('.sw-btn') || e.target.closest('.time-btn')) {
+        document.querySelectorAll('.wb-widget').forEach(el => el.classList.remove('active')); w.classList.add('active'); return;
+    }
+    document.querySelectorAll('.wb-widget').forEach(el => el.classList.remove('active')); w.classList.add('active');
+    isDown = true; startX = e.clientX; startY = e.clientY;
+    startLeft = parseInt(w.style.left || 0, 10); startTop = parseInt(w.style.top || 0, 10);
+    w.style.zIndex = ++widgetZIndex; e.preventDefault();
+  };
+  window.addEventListener('mousemove', function(e) {
+    if(!isDown) return;
+    w.style.left = (startLeft + (e.clientX - startX)) + 'px';
+    w.style.top = (startTop + (e.clientY - startY)) + 'px';
+  });
+  window.addEventListener('mouseup', function() { isDown = false; });
+  
+  if (type === 'curtain') {
+    content.classList.add('widget-curtain');
+  } else if (type === 'grid') {
+    content.classList.add('widget-grid-wrap');
+    
+    let canvas = document.createElement('canvas');
+    let settingsUI = document.createElement('div');
+    settingsUI.className = 'grid-settings';
+    settingsUI.innerHTML = `
+      <label>قفزة المحور (س): <input type="number" class="grid-step-x" value="1" min="1"></label>
+      <label>قفزة المحور (ص): <input type="number" class="grid-step-y" value="1" min="1"></label>
+      <label>حجم المربع: <input type="number" class="grid-unit" value="40" min="10" max="200"></label>
+    `;
+    
+    content.appendChild(canvas);
+    content.appendChild(settingsUI);
+    
+    const ctx = canvas.getContext('2d');
+    
+    w.gridState = {
+      originX: 250, originY: 200, stepX: 1, stepY: 1, unitSize: 40,
+      draw: function() {
+        let cw = content.clientWidth || 500, ch = content.clientHeight || 400;
+        canvas.width = cw; canvas.height = ch;
+        ctx.clearRect(0, 0, cw, ch);
+        
+        ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1;
+        let startX = this.originX % this.unitSize;
+        for(let x = startX; x < cw; x += this.unitSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ch); ctx.stroke(); }
+        let startY = this.originY % this.unitSize;
+        for(let y = startY; y < ch; y += this.unitSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke(); }
+        
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, this.originY); ctx.lineTo(cw, this.originY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(this.originX, 0); ctx.lineTo(this.originX, ch); ctx.stroke();
+        
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.moveTo(cw, this.originY); ctx.lineTo(cw-10, this.originY-5); ctx.lineTo(cw-10, this.originY+5); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(this.originX, 0); ctx.lineTo(this.originX-5, 10); ctx.lineTo(this.originX+5, 10); ctx.fill();
+        
+        ctx.font = '14px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        for (let x = startX; x < cw; x += this.unitSize) {
+          let val = Math.round((x - this.originX) / this.unitSize);
+          if (val !== 0) {
+            ctx.beginPath(); ctx.moveTo(x, this.originY-5); ctx.lineTo(x, this.originY+5); ctx.stroke();
+            ctx.fillText((val * this.stepX).toString(), x, this.originY+16);
+          }
+        }
+        ctx.textAlign = 'right';
+        for (let y = startY; y < ch; y += this.unitSize) {
+          let val = Math.round((this.originY - y) / this.unitSize);
+          if (val !== 0) {
+            ctx.beginPath(); ctx.moveTo(this.originX-5, y); ctx.lineTo(this.originX+5, y); ctx.stroke();
+            ctx.fillText((val * this.stepY).toString(), this.originX-8, y);
+          }
+        }
+      }
+    };
+    
+    settingsUI.querySelector('.grid-step-x').onchange = (e) => { w.gridState.stepX = parseInt(e.target.value) || 1; w.gridState.draw(); };
+    settingsUI.querySelector('.grid-step-y').onchange = (e) => { w.gridState.stepY = parseInt(e.target.value) || 1; w.gridState.draw(); };
+    settingsUI.querySelector('.grid-unit').onchange = (e) => { w.gridState.unitSize = parseInt(e.target.value) || 40; w.gridState.draw(); };
+    
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(() => w.gridState.draw());
+      ro.observe(content);
+      w.resizeObserver = ro;
+    }
+    setTimeout(() => w.gridState.draw(), 50);
+    setTimeout(() => w.gridState.draw(), 200);
+    
+  } else if (type === 'stopwatch') {
+    // ... Stopwatch implementation remains ...
+    content.classList.add('widget-stopwatch');
+    content.innerHTML = `
+      <div class="sw-display">
+        <div class="time-col">
+          <div class="time-btn time-up" data-unit="h">▲</div>
+          <div><span class="time-val hh">00</span><span class="sw-unit">h</span></div>
+          <div class="time-btn time-dn" data-unit="h">▼</div>
+        </div>
+        <div class="time-col">
+          <div class="time-btn time-up" data-unit="m">▲</div>
+          <div><span class="time-val mm">00</span><span class="sw-unit">m</span></div>
+          <div class="time-btn time-dn" data-unit="m">▼</div>
+        </div>
+        <div class="time-col">
+          <div class="time-btn time-up" data-unit="s">▲</div>
+          <div><span class="time-val ss">00</span><span class="sw-unit">s</span></div>
+          <div class="time-btn time-dn" data-unit="s">▼</div>
+        </div>
+      </div>
+      <div class="sw-controls">
+        <button class="sw-btn sw-play" title="تشغيل/إيقاف">▶</button>
+        <button class="sw-btn sw-reset" title="إعادة ضبط"><span style="display:inline-flex;width:16px;height:16px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.5 15a9 9 0 1 0 2-9.5L1 10"/></svg></span></button>
+      </div>
+    `;
+    let totalSeconds = 0, timer = null, isPlaying = false, isCountdown = false;
+    const hh = w.querySelector('.hh'), mm = w.querySelector('.mm'), ss = w.querySelector('.ss');
+    const playBtn = w.querySelector('.sw-play');
+    function updateDisplay() {
+      let h = Math.floor(totalSeconds / 3600); let m = Math.floor((totalSeconds % 3600) / 60); let s = totalSeconds % 60;
+      hh.innerText = h.toString().padStart(2, '0'); mm.innerText = m.toString().padStart(2, '0'); ss.innerText = s.toString().padStart(2, '0');
+    }
+    w.querySelectorAll('.time-up').forEach(btn => { btn.onclick = (e) => { if (isPlaying) return; let unit = e.target.dataset.unit; if (unit === 'h') totalSeconds += 3600; if (unit === 'm') totalSeconds += 60; if (unit === 's') totalSeconds += 1; updateDisplay(); }; });
+    w.querySelectorAll('.time-dn').forEach(btn => { btn.onclick = (e) => { if (isPlaying) return; let unit = e.target.dataset.unit; if (unit === 'h' && totalSeconds >= 3600) totalSeconds -= 3600; if (unit === 'm' && totalSeconds >= 60) totalSeconds -= 60; if (unit === 's' && totalSeconds >= 1) totalSeconds -= 1; updateDisplay(); }; });
+    playBtn.onclick = () => { if(isPlaying) { clearInterval(timer); playBtn.innerText = '▶'; isPlaying = false; } else { isCountdown = totalSeconds > 0; timer = setInterval(() => { if (isCountdown) { if (totalSeconds > 0) { totalSeconds--; updateDisplay(); } if (totalSeconds === 0) { clearInterval(timer); playBtn.innerText = '▶'; isPlaying = false; } } else { totalSeconds++; updateDisplay(); } }, 1000); w.dataset.timerId = timer; playBtn.innerText = '⏸'; isPlaying = true; } };
+    w.querySelector('.sw-reset').onclick = () => { if(isPlaying) { clearInterval(timer); isPlaying = false; playBtn.innerText = '▶'; } totalSeconds = 0; updateDisplay(); };
+  } else if (type === 'clock') {
+    content.classList.add('widget-clock');
+    let marksHTML = ''; for(let i=0; i<60; i++) { let klass = i % 5 === 0 ? 'clock-mark' : 'clock-mark minor'; marksHTML += `<div class="${klass}" style="transform: rotate(${i*6}deg) translateY(2px)"></div>`; }
+    content.innerHTML = `${marksHTML}<div class="clock-hand clock-hour"></div><div class="clock-hand clock-min"></div><div class="clock-hand clock-sec"></div><div class="clock-center"></div>`;
+    const hHand = w.querySelector('.clock-hour'), mHand = w.querySelector('.clock-min'), sHand = w.querySelector('.clock-sec');
+    function updateClock() { if(w.isClosed) return; let d = new Date(); let hr = d.getHours() % 12, min = d.getMinutes(), sec = d.getSeconds(), ms = d.getMilliseconds(); let secDeg = (sec + ms/1000) * 6, minDeg = (min + sec/60) * 6, hrDeg = (hr + min/60) * 30; if (hHand && mHand && sHand) { hHand.style.transform = `rotate(${hrDeg}deg)`; mHand.style.transform = `rotate(${minDeg}deg)`; sHand.style.transform = `rotate(${secDeg}deg)`; } requestAnimationFrame(updateClock); }
+    updateClock();
+  }
+}
+
+
+
+
+</script>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  const titles = document.querySelectorAll('#wb-right-panel .rp-section-title');
+  titles.forEach((title, index) => {
+    let contentContainer = document.createElement('div');
+    contentContainer.className = 'accordion-content';
+    // Keep first 2 open, collapse the rest
+    let isCollapsed = index >= 2;
+    contentContainer.style.display = isCollapsed ? 'none' : 'block';
+    
+    let next = title.nextElementSibling;
+    while(next && !next.classList.contains('rp-section-title') && next.tagName !== 'SCRIPT' && next.id !== 'resize-handle') {
+      let toMove = next;
+      next = next.nextElementSibling;
+      contentContainer.appendChild(toMove);
+    }
+    title.parentNode.insertBefore(contentContainer, title.nextSibling);
+    
+    title.style.cursor = 'pointer';
+    title.style.userSelect = 'none';
+    title.style.display = 'flex';
+    title.style.justifyContent = 'space-between';
+    title.style.alignItems = 'center';
+    title.innerHTML += `<span class="acc-icon" style="transition: transform 0.3s; transform: ${isCollapsed ? 'rotate(90deg)' : 'rotate(0deg)'}">▼</span>`;
+    
+    title.onclick = () => {
+      const currentlyCollapsed = contentContainer.style.display === 'none';
+      contentContainer.style.display = currentlyCollapsed ? 'block' : 'none';
+      title.querySelector('.acc-icon').style.transform = currentlyCollapsed ? 'rotate(0deg)' : 'rotate(90deg)';
+    };
+    
+    // Hover effect
+    title.onmouseover = () => title.style.color = 'var(--accent)';
+    title.onmouseout = () => title.style.color = 'var(--text3)';
+  });
+});
+</script>
+
+</body>
+</html>
