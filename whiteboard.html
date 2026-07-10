@@ -8,6 +8,8 @@
 
 <!-- Fabric.js 5.3 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<!-- Supabase (cloud sync for teacher files) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <!-- PDF.js -->
@@ -1257,6 +1259,14 @@ input,textarea,select{font-family:'Cairo',sans-serif;outline:none}
 'use strict';
 
 // ════════════════════════════════════════════════
+// SUPABASE (cloud sync — one row per teacher in teacher_whiteboards)
+// ════════════════════════════════════════════════
+const sb = supabase.createClient(
+  'https://hjhoudwknwnxfndrgpfe.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s'
+);
+
+// ════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════
 const WB = {
@@ -1264,6 +1274,8 @@ const WB = {
   tool: 'select',
   color: '#000000',
   strokeSize: 2,
+  cloudTeacherId: null,   // set once we confirm a logged-in teacher session
+  cloudSyncing: false,
   currentBg: 'white',
   zoom: 1,
   isPanning: false,
@@ -1293,7 +1305,7 @@ const WB = {
 // ════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   // 🌟 FORCE HIGH QUALITY RENDERING (1080p+)
   fabric.devicePixelRatio = Math.max(window.devicePixelRatio || 1, 2.5);
 
@@ -1340,14 +1352,17 @@ window.addEventListener('DOMContentLoaded', () => {
   // Render pages bar
   renderPagesBar();
 
-  // Load from storage
+  // Load from storage — first try the cloud (if the teacher is logged in),
+  // which primes localStorage with their latest cloud copy before the
+  // normal local-storage load logic runs.
+  await initCloudSync();
   loadFromStorage();
 
   // Auto-save every 30s
   setInterval(saveToStorage, 30000);
 
   WB.canvas.requestRenderAll();
-  toast('السبورة جاهزة — مرحباً بك!', 'info', 2000);
+  toast(WB.cloudTeacherId ? 'السبورة جاهزة — ملفاتك متزامنة مع حسابك' : 'السبورة جاهزة (وضع محلي — سجّل دخولك من لوحة المعلم للمزامنة)', 'info', 3000);
 });
 
 // ════════════════════════════════════════════════
@@ -2711,6 +2726,50 @@ function openFmFile(id) {
   }
 }
 
+// ════════════════════════════════════════════════
+// CLOUD SYNC (Supabase — teacher_whiteboards table)
+// ════════════════════════════════════════════════
+async function initCloudSync() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session || !session.user) {
+      // Not logged in (e.g. whiteboard opened directly, outside the
+      // teacher dashboard) — work in local-only mode.
+      return;
+    }
+    WB.cloudTeacherId = session.user.id;
+
+    const { data: row, error } = await sb
+      .from('teacher_whiteboards')
+      .select('data')
+      .eq('teacher_id', WB.cloudTeacherId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('Cloud sync: could not fetch teacher_whiteboards', error);
+      return;
+    }
+    if (row && row.data && row.data.fmFiles) {
+      // Prime localStorage with the cloud copy so the existing
+      // loadFromStorage() logic picks it up transparently.
+      localStorage.setItem('wb_pro_v5', JSON.stringify(row.data));
+    }
+  } catch (e) {
+    console.warn('Cloud sync init failed', e);
+  }
+}
+
+function syncToCloud(data) {
+  if (!WB.cloudTeacherId || WB.cloudSyncing) return;
+  WB.cloudSyncing = true;
+  sb.from('teacher_whiteboards')
+    .upsert({ teacher_id: WB.cloudTeacherId, data, updated_at: new Date().toISOString() })
+    .then(({ error }) => {
+      WB.cloudSyncing = false;
+      if (error) console.warn('Cloud sync: save failed', error);
+    });
+}
+
 function saveToStorage() {
   try {
     saveCurrentPageState();
@@ -2735,6 +2794,7 @@ function saveToStorage() {
     
     const str = JSON.stringify(data);
     localStorage.setItem('wb_pro_v5', str);
+    syncToCloud(data);
   } catch(e) { console.warn('Storage quota exceeded', e); }
 }
 
