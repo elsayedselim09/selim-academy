@@ -1439,22 +1439,87 @@ document.addEventListener('click', (e) => {
 // ════════════════════════════════════════════════
 // IMPORT MEDIA
 // ════════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// GOOGLE DRIVE IMAGE STORAGE
+// Images are uploaded to Drive (never stored as base64 in the saved JSON).
+// They're loaded back through drive-image-proxy so the canvas stays
+// CORS-clean and exportable (toDataURL/toBlob keep working normally).
+// ════════════════════════════════════════════════
+const DRIVE_UPLOAD_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/upload-to-drive';
+const DRIVE_PROXY_URL  = 'https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/drive-image-proxy';
+
+function driveProxyUrl(fileId) {
+  return `${DRIVE_PROXY_URL}?id=${encodeURIComponent(fileId)}`;
+}
+
+// Uploads a Blob/File to Google Drive (via the existing upload-to-drive
+// function) and returns { fileId, url } where url is already the
+// CORS-safe proxy URL ready to use as a fabric.Image source.
+// Requires the teacher to be logged in (WB.cloudTeacherId set); returns
+// null otherwise so callers can fall back to local-only handling.
+async function uploadImageToDrive(blob, fileName) {
+  if (!WB.cloudTeacherId) return null;
+  const { data: { session } } = await sb.auth.getSession();
+  const token = session?.access_token;
+  if (!token) return null;
+
+  const formData = new FormData();
+  formData.append('file', blob, fileName);
+  formData.append('type', 'file');
+
+  const res = await fetch(DRIVE_UPLOAD_URL, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token },
+    body: formData,
+  });
+  const result = await res.json();
+  if (!result.success) throw new Error(result.error || 'فشل الرفع على Drive');
+  return { fileId: result.fileId, url: driveProxyUrl(result.fileId) };
+}
+
+// Loads a fabric.Image from a Drive-hosted URL with crossOrigin set, so the
+// canvas never gets tainted (keeps PNG/JPG/PDF export working).
+function fabricImageFromDrive(url, callback) {
+  fabric.Image.fromURL(url, callback, { crossOrigin: 'anonymous' });
+}
+
+function canvasToBlob(canvasEl, mime, quality) {
+  return new Promise(resolve => canvasEl.toBlob(resolve, mime, quality));
+}
+
 function importImage() {
   const input = document.createElement('input');
   input.type = 'file'; input.accept = 'image/*';
-  input.onchange = (e) => {
+  input.onchange = async (e) => {
     const file = e.target.files[0];
     if(!file) return;
-    const url = URL.createObjectURL(file);
-    fabric.Image.fromURL(url, (img) => {
-      img.set({ left: WB.CANVAS_W/2, top: WB.CANVAS_H/2, originX: 'center', originY: 'center' });
-      if (img.width > WB.CANVAS_W - 100) img.scaleToWidth(WB.CANVAS_W - 100);
-      WB.canvas.add(img);
-      WB.canvas.setActiveObject(img);
-      WB.canvas.requestRenderAll();
-      saveHistory();
-      toast('تم استيراد الصورة', 'success');
-    });
+
+    const placeImage = (url) => {
+      fabricImageFromDrive(url, (img) => {
+        img.set({ left: WB.CANVAS_W/2, top: WB.CANVAS_H/2, originX: 'center', originY: 'center' });
+        if (img.width > WB.CANVAS_W - 100) img.scaleToWidth(WB.CANVAS_W - 100);
+        WB.canvas.add(img);
+        WB.canvas.setActiveObject(img);
+        WB.canvas.requestRenderAll();
+        saveHistory();
+      });
+    };
+
+    if (WB.cloudTeacherId) {
+      toast('جاري رفع الصورة...', 'info', 2500);
+      try {
+        const uploaded = await uploadImageToDrive(file, file.name);
+        placeImage(uploaded.url);
+        toast('تم استيراد الصورة', 'success');
+      } catch (err) {
+        console.warn('Drive upload failed, falling back to local image', err);
+        placeImage(URL.createObjectURL(file));
+        toast('تم الاستيراد محليًا فقط (فشل الرفع على Drive)', 'warning');
+      }
+    } else {
+      placeImage(URL.createObjectURL(file));
+      toast('تم استيراد الصورة (محليًا — سجّل دخولك للمزامنة)', 'success');
+    }
   };
   input.click();
 }
@@ -1480,9 +1545,26 @@ async function importPDF() {
         const ctx = c.getContext('2d');
         c.width = viewport.width; c.height = viewport.height;
         await page.render({ canvasContext: ctx, viewport }).promise;
-        
+
+        // Get the rendered page as an image source — uploaded to Drive
+        // when possible (small proxy URL, exportable canvas), otherwise
+        // falls back to an in-memory data URL for offline/local use.
+        let imgSrc;
+        if (WB.cloudTeacherId) {
+          try {
+            const blob = await canvasToBlob(c, 'image/jpeg', 0.9);
+            const uploaded = await uploadImageToDrive(blob, `${file.name.replace(/\.pdf$/i,'')}-p${i}.jpg`);
+            imgSrc = uploaded.url;
+          } catch (err) {
+            console.warn('Drive upload failed for PDF page, falling back to local image', err);
+            imgSrc = c.toDataURL('image/jpeg', 0.9);
+          }
+        } else {
+          imgSrc = c.toDataURL('image/jpeg', 0.9);
+        }
+
         // Convert to fabric image
-        fabric.Image.fromURL(c.toDataURL('image/jpeg', 0.95), (img) => {
+        fabricImageFromDrive(imgSrc, (img) => {
           if(i === 1 && !isCanvasEmpty()) {
             addPage();
           } else if(i > 1) {
@@ -2566,19 +2648,36 @@ function updateBgSize(val) {
 function importBgImage() {
   const input = document.createElement('input');
   input.type = 'file'; input.accept = 'image/*';
-  input.onchange = (e) => {
+  input.onchange = async (e) => {
     const file = e.target.files[0];
     if(!file) return;
-    const url = URL.createObjectURL(file);
-    fabric.Image.fromURL(url, (img) => {
-      const scale = Math.min(WB.CANVAS_W / img.width, WB.CANVAS_H / img.height);
-      img.set({ originX: 'center', originY: 'center', left: WB.CANVAS_W/2, top: WB.CANVAS_H/2, scaleX: scale, scaleY: scale });
-      WB.canvas.setBackgroundImage(img, WB.canvas.renderAll.bind(WB.canvas));
-      WB.currentBg = 'image';
-      closeBgModal();
-      saveHistory();
-      toast('تم تعيين الصورة كخلفية', 'success');
-    });
+
+    const placeBg = (url) => {
+      fabricImageFromDrive(url, (img) => {
+        const scale = Math.min(WB.CANVAS_W / img.width, WB.CANVAS_H / img.height);
+        img.set({ originX: 'center', originY: 'center', left: WB.CANVAS_W/2, top: WB.CANVAS_H/2, scaleX: scale, scaleY: scale });
+        WB.canvas.setBackgroundImage(img, WB.canvas.renderAll.bind(WB.canvas));
+        WB.currentBg = 'image';
+        closeBgModal();
+        saveHistory();
+      });
+    };
+
+    if (WB.cloudTeacherId) {
+      toast('جاري رفع الصورة...', 'info', 2500);
+      try {
+        const uploaded = await uploadImageToDrive(file, file.name);
+        placeBg(uploaded.url);
+        toast('تم تعيين الصورة كخلفية', 'success');
+      } catch (err) {
+        console.warn('Drive upload failed, falling back to local image', err);
+        placeBg(URL.createObjectURL(file));
+        toast('تم التعيين محليًا فقط (فشل الرفع على Drive)', 'warning');
+      }
+    } else {
+      placeBg(URL.createObjectURL(file));
+      toast('تم تعيين الصورة كخلفية (محليًا)', 'success');
+    }
   };
   input.click();
 }
