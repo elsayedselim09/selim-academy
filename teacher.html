@@ -2264,6 +2264,36 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
 // ══════════════════════════════════════════════
 // SUPABASE
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+// GOOGLE DRIVE UPLOAD (shared helper — replaces all Supabase Storage uploads)
+// ══════════════════════════════════════════════
+async function uploadToDrive(file, uploadType = 'file') {
+  const { data: { session } } = await sb.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error('يجب تسجيل الدخول أولاً');
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('type', uploadType);
+
+  const res = await fetch('https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/upload-to-drive', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token },
+    body: formData,
+  });
+  const result = await res.json();
+  if (!result.success) throw new Error(result.error || 'فشل الرفع على Google Drive');
+
+  return {
+    fileId: result.fileId,
+    // Reliable CORS-safe direct image URL (goes through our own proxy —
+    // works for <img src> everywhere, unlike Drive's raw hotlink URLs).
+    imgUrl: `https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/drive-image-proxy?id=${result.fileId}`,
+    viewUrl: result.viewUrl,     // Drive viewer page — for "open file" links
+    embedUrl: result.embedUrl,   // Drive preview/embed page — for iframes
+  };
+}
+
 const sb = supabase.createClient(
   'https://hjhoudwknwnxfndrgpfe.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s'
@@ -5360,14 +5390,8 @@ async function applyCrop() {
     // Show uploading state on avatar
     wrap.classList.add('uploading');
 
-    const path = `${ST.user.id}/avatar.jpg`;
-    const { error: e1 } = await sb.storage.from('avatars').upload(path, blob, {
-      upsert: true, contentType: 'image/jpeg',
-    });
-    if (e1) throw e1;
-
-    const { data } = sb.storage.from('avatars').getPublicUrl(path);
-    const url = data.publicUrl + '?t=' + Date.now();
+    const uploaded = await uploadToDrive(blob, 'file');
+    const url = uploaded.imgUrl;
 
     const { error: e2 } = await sb.from('profiles').update({ avatar_url: url }).eq('id', ST.user.id);
     if (e2) throw e2;
@@ -5409,7 +5433,6 @@ async function removeAvatar(e) {
   const wrap = document.getElementById('prof-av-wrap');
   wrap.classList.add('uploading');
   try {
-    await sb.storage.from('avatars').remove([`${ST.user.id}/avatar.jpg`]);
     const { error } = await sb.from('profiles').update({ avatar_url: null }).eq('id', ST.user.id);
     if (error) throw error;
     ST.profile = { ...ST.profile, avatar_url: null };
@@ -5702,8 +5725,6 @@ window.runConfirm = async function() {
       toast('✅ تم حذف الصف وتسجيلات الطلاب المرتبطة به');
       await loadSubjects();
     } else if(type === 'material') {
-      const { data } = await sb.from('teacher_materials').select('storage_path,type').eq('id',id).single();
-      if(data?.storage_path) await sb.storage.from('teacher-content').remove([data.storage_path]);
       const { error } = await sb.from('teacher_materials').delete().eq('id',id);
       if(error) throw error;
       toast('✅ تم الحذف بنجاح');
@@ -6042,14 +6063,9 @@ async function getSupabaseSignedUrl(bucket, path, expiresIn = 86400) {
 }
 
 async function uploadImageToSupabase(file, folder) {
-  const ext = file.name.split('.').pop();
-  const safeName = Date.now() + '_' + Math.random().toString(36).substring(2,8) + '.' + ext;
-  const path = folder + '/' + safeName;
-  const { error } = await sb.storage.from('teacher-content').upload(path, file, { upsert: false });
-  if (error) throw error;
-  // صور الاختبارات تبقى public (مفيش محتوى تعليمي حساس)
-  const { data } = sb.storage.from('teacher-content').getPublicUrl(path);
-  return data.publicUrl;
+  // (الاسم اتسيب زي ما هو تجنبًا لتغيير كل نقاط الاستدعاء — لكنه دلوقتي بيرفع على Google Drive)
+  const uploaded = await uploadToDrive(file, 'file');
+  return uploaded.imgUrl;
 }
 
 async function saveExam() {
@@ -6078,13 +6094,8 @@ async function saveExam() {
       if (!pdfFile) { setMsg('exam-modal-msg','الرجاء اختيار ملف PDF','err'); btn.disabled=false; btn.textContent='💾 حفظ الاختبار'; return; }
       
       btn.textContent = '⏳ جاري رفع الملف...';
-      const ext = pdfFile.name.split('.').pop();
-      const safeName = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '.' + ext;
-      const path = `exam_pdfs/${ST.user.id}/${safeName}`;
-      const { error: upErr } = await sb.storage.from('teacher-content').upload(path, pdfFile, { upsert: false });
-      if (upErr) throw upErr;
-      // استخدم signed URL (صالح 7 أيام) بدل public URL
-      mediaUrl = await getSupabaseSignedUrl('teacher-content', path, 604800);
+      const uploadedPdf = await uploadToDrive(pdfFile, 'file');
+      mediaUrl = uploadedPdf.viewUrl;
 
       const count = parseInt(document.getElementById('exam-pdf-qcount').value) || 10;
       for(let i=1; i<=count; i++) {
@@ -6726,11 +6737,8 @@ async function saveHomework() {
         const pdfFile = document.getElementById('hw-pdf-file-input').files[0];
         if (!pdfFile) { setMsg('hw-modal-msg','الرجاء اختيار ملف PDF','err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
         btn.textContent = '⏳ رفع الملف...';
-        const ext  = pdfFile.name.split('.').pop();
-        const path = `homework_pdfs/${ST.user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: upErr } = await sb.storage.from('teacher-content').upload(path, pdfFile, { upsert: false });
-        if (upErr) throw upErr;
-        mediaUrl = await getSupabaseSignedUrl('teacher-content', path, 604800);
+        const uploadedHwPdf = await uploadToDrive(pdfFile, 'file');
+        mediaUrl = uploadedHwPdf.viewUrl;
 
         const count = parseInt(document.getElementById('hw-pdf-qcount').value) || 10;
         for (let i = 1; i <= count; i++) {
@@ -6750,11 +6758,8 @@ async function saveHomework() {
         const essayFile = document.getElementById('hw-essay-pdf-file-input').files[0];
         if (!essayFile) { setMsg('hw-modal-msg','الرجاء اختيار ملف PDF الواجب','err'); btn.disabled=false; btn.textContent='💾 حفظ الواجب'; return; }
         btn.textContent = '⏳ رفع الملف...';
-        const ext  = essayFile.name.split('.').pop();
-        const path = `homework_pdfs/${ST.user.id}/essay_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: upErr } = await sb.storage.from('teacher-content').upload(path, essayFile, { upsert: false });
-        if (upErr) throw upErr;
-        mediaUrl = await getSupabaseSignedUrl('teacher-content', path, 604800);
+        const uploadedEssayPdf = await uploadToDrive(essayFile, 'file');
+        mediaUrl = uploadedEssayPdf.viewUrl;
         // لا أسئلة في المقالي — questions تبقى []
       }
 
@@ -7438,12 +7443,8 @@ async function uploadStudentSolution(input, examId, studentId) {
   const zone = document.getElementById('sol-zone-' + studentId);
   zone.textContent = '⏳ جاري الرفع...';
   try {
-    const ext  = file.name.split('.').pop();
-    const path = `offline-solutions/${examId}/${studentId}.${ext}`;
-    const { error: upErr } = await sb.storage.from('solutions').upload(path, file, { upsert: true });
-    if (upErr) throw upErr;
-    const { data: urlData } = sb.storage.from('solutions').getPublicUrl(path);
-    const publicUrl = urlData.publicUrl;
+    const uploaded = await uploadToDrive(file, 'file');
+    const publicUrl = uploaded.viewUrl;
     // save to grade record
     await sb.from('offline_exam_grades').upsert({ exam_id: examId, student_id: studentId, student_solution_url: publicUrl }, { onConflict: 'exam_id,student_id' });
     zone.innerHTML = '✅ مرفوع';
@@ -7463,12 +7464,8 @@ async function uploadOfficialSolution(input, examId) {
   const label = document.getElementById('official-sol-label');
   label.textContent = '⏳ جاري الرفع...';
   try {
-    const ext  = file.name.split('.').pop();
-    const path = `offline-solutions/official/${examId}.${ext}`;
-    const { error: upErr } = await sb.storage.from('solutions').upload(path, file, { upsert: true });
-    if (upErr) throw upErr;
-    const { data: urlData } = sb.storage.from('solutions').getPublicUrl(path);
-    const publicUrl = urlData.publicUrl;
+    const uploaded = await uploadToDrive(file, 'file');
+    const publicUrl = uploaded.viewUrl;
     const { error } = await sb.from('offline_exams').update({ solution_url: publicUrl }).eq('id', examId);
     if (error) throw error;
     label.textContent = 'تم رفع الحل — انقر للتغيير';
