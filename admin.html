@@ -5424,7 +5424,29 @@ function openTeacherAppDetail(id) {
 
   acts.innerHTML = `
     ${waLink ? `<a href="${waLink}" target="_blank" class="mdl-confirm mc-approve" style="text-decoration:none;display:inline-block">💬 تواصل واتساب</a>` : ''}
+    <button class="mdl-confirm mc-reject" onclick="deleteTeacherApp('${a.id}')">🗑️ حذف الطلب</button>
     <button class="mdl-cancel" onclick="document.getElementById('mdl-teacher-app-detail').classList.remove('show')">إغلاق</button>`;
+}
+
+async function deleteTeacherApp(id) {
+  const a = S.teacherApps.find(x => x.id === id);
+  if (!a) return;
+  if (!confirm(`متأكد إنك عايز تحذف طلب "${a.full_name || 'المعلم'}"؟ الإجراء ده مش هيتراجع.`)) return;
+
+  try {
+    const { error } = await sb.from('teacher_applications').delete().eq('id', id);
+    if (error) throw error;
+
+    S.teacherApps = S.teacherApps.filter(x => x.id !== id);
+    document.getElementById('mdl-teacher-app-detail').classList.remove('show');
+    renderTeacherAppsList();
+    const badge = document.getElementById('teacher-apps-badge');
+    if (S.teacherApps.length > 0) { badge.textContent = S.teacherApps.length; badge.style.display = 'inline-flex'; }
+    else badge.style.display = 'none';
+    toast('تم حذف الطلب بنجاح');
+  } catch (e) {
+    toast('فشل الحذف: ' + e.message, 'err');
+  }
 }
 
 function adminSwitchTeacherTab(tab) {
