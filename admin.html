@@ -288,6 +288,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     <button class="nav-item"        id="nav-sessions"  onclick="goTo('sessions')"><span class="nav-icon">🎥</span> الحصص</button>
     <div class="nav-label">المستخدمون</div>
     <button class="nav-item"        id="nav-teachers"  onclick="goTo('teachers')"><span class="nav-icon">👨‍🏫</span> المعلمون<span class="nav-badge" id="teacher-badge" style="display:none">0</span></button>
+    <button class="nav-item"        id="nav-teacher-apps" onclick="goTo('teacher-apps')"><span class="nav-icon">📥</span> طلبات انضمام المعلمين<span class="nav-badge" id="teacher-apps-badge" style="display:none;background:var(--blue)">0</span></button>
     <button class="nav-item"        id="nav-students"  onclick="goTo('students')"><span class="nav-icon">👥</span> الطلاب</button>
     <div class="nav-label">الاختبارات</div>
     <button class="nav-item"        id="nav-admin-exams" onclick="goTo('admin-exams')"><span class="nav-icon">📝</span> إحصائيات الاختبارات</button>
@@ -613,6 +614,27 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
         <input class="search-input" id="teacher-search" type="text" placeholder="🔍 بحث بالاسم أو رقم المعلم أو الهاتف..." oninput="renderTeachersTable()">
       </div>
       <div id="teachers-body"></div>
+    </div>
+  </div>
+
+  <!-- TEACHER APPLICATIONS (طلبات الانضمام - View فقط) -->
+  <div class="page" id="page-teacher-apps">
+    <div class="page-title">📥 طلبات انضمام المعلمين</div>
+    <p class="page-sub">استمارات التقديم اللي بعتها معلمين محتملين — للاطلاع فقط. لو حابب تقبل حد، تواصل معاه بنفسك واتساب وقوله يعمل حساب من صفحة التسجيل العادية.</p>
+    <div class="section-card">
+      <div class="filter-bar">
+        <input class="search-input" id="teacher-apps-search" type="text" placeholder="🔍 بحث بالاسم أو الهاتف أو المادة..." oninput="renderTeacherAppsList()">
+      </div>
+      <div id="teacher-apps-body"></div>
+    </div>
+  </div>
+
+  <!-- Modal: تفاصيل طلب الانضمام -->
+  <div class="mdl" id="mdl-teacher-app-detail">
+    <div class="mdl-box wide">
+      <div class="mdl-title">📄 تفاصيل طلب الانضمام</div>
+      <div id="teacher-app-detail-body" style="max-height:65vh;overflow-y:auto;padding:6px 2px"></div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:18px" id="teacher-app-detail-acts"></div>
     </div>
   </div>
 
@@ -2160,7 +2182,7 @@ const sb = supabase.createClient(
 const S = {
   user:null, profile:null,
   requests:[], courses:[], sessions:[], students:[],
-  teachers:[], teacherFilter:'pending',
+  teachers:[], teacherFilter:'pending', teacherApps:[],
   filter:'pending', pendingAction:null, curCourseId:null
 };
 
@@ -2224,7 +2246,7 @@ function goTo(name) {
   document.getElementById('nav-'+name).classList.add('active');
   closeSidebar();
   if (name !== 'sessions' && _sessInterval) { clearInterval(_sessInterval); _sessInterval = null; }
-  const loaders = {courses:loadCourses, sessions:initSessions, students:()=>{ switchStudentTab('list'); loadStudents(); }, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit, announcements:annLoad, catalog:loadCatalog, visitors:visLoad, 'comm-center':loadCommCenter, 'reports-list':loadReportsList, files:filesLoad};
+  const loaders = {courses:loadCourses, sessions:initSessions, students:()=>{ switchStudentTab('list'); loadStudents(); }, profile:loadProfile, teachers:loadTeachers, 'admin-exams':loadAdminExams, 'site-content':scInit, announcements:annLoad, catalog:loadCatalog, visitors:visLoad, 'comm-center':loadCommCenter, 'reports-list':loadReportsList, files:filesLoad, 'teacher-apps':loadTeacherApps};
   if(loaders[name]) loaders[name]();
   if(name==='requests') { renderReqTable(); loadNewStudentsWithoutSub(); }
 }
@@ -5262,6 +5284,147 @@ async function openTeacherDetail(teacherId) {
     ${st === 'approved' ? `<button class="mdl-confirm" style="background:var(--gold);color:#fff" onclick="revokeTeacher('${t.id}');document.getElementById('mdl-teacher-detail').classList.remove('show')">🔄 سحب الاعتماد</button>` : ''}
     ${st === 'rejected' ? `<button class="mdl-confirm mc-approve" onclick="approveTeacher('${t.id}');document.getElementById('mdl-teacher-detail').classList.remove('show')">✅ إعادة قبول</button>` : ''}
     <button class="mdl-cancel" onclick="document.getElementById('mdl-teacher-detail').classList.remove('show')">إغلاق</button>`;
+}
+
+// ══════════════════════════════════
+// TEACHER APPLICATIONS (طلبات انضمام المعلمين — View فقط)
+// ══════════════════════════════════
+async function loadTeacherApps() {
+  const el = document.getElementById('teacher-apps-body');
+  el.innerHTML = `<div style="padding:20px">${[1,2,3].map(()=>`<div class="skel" style="height:72px;margin-bottom:10px;border-radius:10px"></div>`).join('')}</div>`;
+
+  try {
+    const { data, error } = await sb
+      .from('teacher_applications')
+      .select('*')
+      .order('created_at', { ascending:false });
+    if (error) throw error;
+
+    S.teacherApps = data || [];
+
+    const badge = document.getElementById('teacher-apps-badge');
+    if (S.teacherApps.length > 0) { badge.textContent = S.teacherApps.length; badge.style.display = 'inline-flex'; }
+    else badge.style.display = 'none';
+
+    renderTeacherAppsList();
+  } catch (e) {
+    el.innerHTML = `<div class="empty-box"><div class="ei">⚠️</div><div class="et">خطأ: ${e.message}</div></div>`;
+  }
+}
+
+function renderTeacherAppsList() {
+  const el = document.getElementById('teacher-apps-body');
+  const search = (document.getElementById('teacher-apps-search')?.value || '').toLowerCase();
+
+  let data = S.teacherApps;
+  if (search) {
+    data = data.filter(a =>
+      (a.full_name||'').toLowerCase().includes(search) ||
+      (a.phone||'').replace(/\s/g,'').includes(search.replace(/\s/g,'')) ||
+      (a.city||'').toLowerCase().includes(search) ||
+      (a.subjects||[]).join(' ').toLowerCase().includes(search)
+    );
+  }
+
+  if (!data.length) {
+    el.innerHTML = `<div class="empty-box"><div class="ei">📥</div><div class="et">لا توجد طلبات انضمام${search ? ' مطابقة للبحث' : ''}</div></div>`;
+    return;
+  }
+
+  el.innerHTML = `<div>` + data.map(a => `
+    <div class="teacher-row" onclick="openTeacherAppDetail('${a.id}')" style="cursor:pointer">
+      <div class="t-av">${ini(a.full_name)}</div>
+      <div class="t-info">
+        <div class="t-name">${a.full_name || '—'}</div>
+        <div class="t-sub">
+          ${(a.subjects||[]).slice(0,3).join(' · ') || 'بدون مادة محددة'}
+          ${a.phone ? ` · 📱 ${a.phone}` : ''}
+          ${a.city ? ` · 📍 ${a.city}` : ''}
+          · 📅 ${fds(a.created_at)}
+        </div>
+      </div>
+    </div>`).join('') + `</div>`;
+}
+
+function openTeacherAppDetail(id) {
+  const a = S.teacherApps.find(x => x.id === id);
+  if (!a) return;
+
+  const modal = document.getElementById('mdl-teacher-app-detail');
+  const body  = document.getElementById('teacher-app-detail-body');
+  const acts  = document.getElementById('teacher-app-detail-acts');
+  modal.classList.add('show');
+
+  const waLink = a.phone ? `https://wa.me/${a.phone.replace(/[^0-9]/g,'').replace(/^0/,'20')}` : null;
+  const row = (lbl, val) => `<div class="t-info-item"><div class="t-info-lbl">${lbl}</div><div class="t-info-val">${val || '—'}</div></div>`;
+  const chips = arr => (arr && arr.length) ? arr.map(v=>`<span style="display:inline-block;background:var(--blue-light);color:var(--blue-dark,var(--blue));font-size:.74rem;font-weight:700;padding:4px 11px;border-radius:50px;margin:0 4px 6px 0">${v}</span>`).join('') : '<span style="color:var(--gray);font-size:.83rem">لا يوجد</span>';
+
+  body.innerHTML = `
+    <div style="text-align:center;padding:8px 0 14px">
+      <div class="t-mdl-av">${ini(a.full_name)}</div>
+      <div class="t-mdl-name">${a.full_name || '—'}</div>
+      <div class="t-mdl-spec">${a.qualification || ''}</div>
+    </div>
+
+    <div style="font-size:.8rem;font-weight:800;color:var(--dark);margin:14px 0 8px">👤 البيانات الشخصية</div>
+    <div class="t-info-grid">
+      ${row('🎂 تاريخ الميلاد', fds(a.birth_date))}
+      ${row('⚧ الجنس', a.gender)}
+      ${row('🌍 الدولة', a.country)}
+      ${row('📍 المدينة', a.city)}
+      ${row('📱 الهاتف', a.phone)}
+      ${row('📅 تاريخ التقديم', fdt(a.created_at))}
+    </div>
+
+    <div style="font-size:.8rem;font-weight:800;color:var(--dark);margin:14px 0 8px">🎓 البيانات التعليمية</div>
+    <div class="t-info-grid">
+      ${row('المؤهل', a.qualification)}
+      ${row('الجامعة', a.university)}
+      ${row('الكلية', a.college)}
+      ${row('سنة التخرج', a.graduation_year)}
+      ${row('التقدير', a.grade_avg)}
+    </div>
+
+    <div style="font-size:.8rem;font-weight:800;color:var(--dark);margin:14px 0 8px">📚 المواد المرغوبة</div>
+    <div style="margin-bottom:6px">${chips(a.subjects)}</div>
+    ${a.subject_other ? `<div style="font-size:.78rem;color:var(--gray);margin-bottom:10px">مادة أخرى: ${a.subject_other}</div>` : ''}
+
+    <div style="font-size:.8rem;font-weight:800;color:var(--dark);margin:14px 0 8px">🏫 الصفوف الدراسية</div>
+    <div style="margin-bottom:6px">${chips(a.grades)}</div>
+
+    <div style="font-size:.8rem;font-weight:800;color:var(--dark);margin:14px 0 8px">📖 المناهج</div>
+    <div style="margin-bottom:6px">${chips(a.curricula)}</div>
+    ${a.curriculum_other ? `<div style="font-size:.78rem;color:var(--gray);margin-bottom:10px">منهج آخر: ${a.curriculum_other}</div>` : ''}
+
+    <div style="font-size:.8rem;font-weight:800;color:var(--dark);margin:14px 0 8px">💼 الخبرة</div>
+    <div class="t-info-grid">
+      ${row('لديه خبرة؟', a.has_experience ? 'نعم' : 'لا')}
+      ${row('سنوات الخبرة', a.years_experience)}
+    </div>
+    ${a.previous_workplaces ? `<div style="background:var(--gray-light);border-radius:9px;padding:11px 13px;margin-bottom:10px;font-size:.83rem;color:var(--dark)">${a.previous_workplaces}</div>` : ''}
+
+    <div style="font-size:.8rem;font-weight:800;color:var(--dark);margin:14px 0 8px">💻 التدريس أونلاين والتوفر</div>
+    <div class="t-info-grid">
+      ${row('خبرة أونلاين؟', a.has_online_experience ? 'نعم' : 'لا')}
+      ${row('ساعات التدريس أسبوعيًا', a.weekly_hours)}
+    </div>
+    <div style="margin-bottom:6px">${chips(a.online_platforms)}</div>
+    <div style="font-size:.78rem;color:var(--gray);margin-bottom:4px">الأيام المتاحة:</div>
+    <div style="margin-bottom:6px">${chips(a.available_days)}</div>
+    <div style="font-size:.78rem;color:var(--gray);margin-bottom:4px">الفترات المتاحة:</div>
+    <div style="margin-bottom:10px">${chips(a.available_periods)}</div>
+
+    <div style="font-size:.8rem;font-weight:800;color:var(--dark);margin:14px 0 8px">🖥️ الأجهزة المتاحة</div>
+    <div style="margin-bottom:10px">${chips(a.equipment)}</div>
+
+    ${a.video_url ? `
+    <div style="font-size:.8rem;font-weight:800;color:var(--dark);margin:14px 0 8px">🎥 الفيديو التعريفي</div>
+    <a href="${a.video_url}" target="_blank" style="display:inline-block;background:var(--blue-light);color:var(--blue);padding:9px 16px;border-radius:9px;font-size:.83rem;font-weight:700;margin-bottom:10px">▶️ مشاهدة الفيديو</a>` : ''}
+  `;
+
+  acts.innerHTML = `
+    ${waLink ? `<a href="${waLink}" target="_blank" class="mdl-confirm mc-approve" style="text-decoration:none;display:inline-block">💬 تواصل واتساب</a>` : ''}
+    <button class="mdl-cancel" onclick="document.getElementById('mdl-teacher-app-detail').classList.remove('show')">إغلاق</button>`;
 }
 
 function adminSwitchTeacherTab(tab) {
