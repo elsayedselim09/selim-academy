@@ -618,7 +618,28 @@ form.addEventListener('submit', async function (e) {
   submitBtn.disabled = true;
   submitBtn.textContent = 'جارٍ الإرسال...';
 
-  const { error } = await _sb.from('teacher_applications').insert(payload);
+  const SUPABASE_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s';
+
+  let error = null;
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/teacher_applications', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      error = { message: errBody.message || ('HTTP ' + res.status) };
+    }
+  } catch (e) {
+    error = { message: e.message };
+  }
 
   if (error) {
     formError.textContent = 'حدث خطأ أثناء إرسال الطلب، حاول مرة أخرى. (' + error.message + ')';
