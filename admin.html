@@ -4016,7 +4016,8 @@ async function loadStudents() {
     if(withoutNum.length) {
       // نجيب آخر رقم موجود ونرتب حسب الطول ثم القيمة لضمان الترتيب الصحيح
       const {data: allNums} = await sb.from('profiles').select('student_number').eq('role','student').not('student_number','is',null);
-      const nums = (allNums||[]).map(r => String(r.student_number)).filter(n => n.startsWith(STU_PFX));
+      const STU_RX = /^20260[1-9][0-9]*$/; // يقبل بس الأرقام المطابقة تمامًا للنظام (20260 + رقم بدون صفر بادئ)
+      const nums = (allNums||[]).map(r => String(r.student_number)).filter(n => STU_RX.test(n));
       let lastSeq = nums.length > 0
         ? Math.max(...nums.map(n => parseInt(n.slice(STU_PFX.length)) || 0))
         : 0;
@@ -6577,7 +6578,8 @@ async function generateStudentNumber(userId, createdAt) {
   try {
     const STU_PFX = '20260';
     const {data: allNums} = await sb.from('profiles').select('student_number').eq('role','student').not('student_number','is',null);
-    const nums = (allNums||[]).map(r => String(r.student_number)).filter(n => n.startsWith(STU_PFX));
+    const STU_RX = /^20260[1-9][0-9]*$/; // يقبل بس الأرقام المطابقة تمامًا للنظام (20260 + رقم بدون صفر بادئ)
+    const nums = (allNums||[]).map(r => String(r.student_number)).filter(n => STU_RX.test(n));
     const lastSeq = nums.length > 0
       ? Math.max(...nums.map(n => parseInt(n.slice(STU_PFX.length)) || 0))
       : 0;
@@ -6636,6 +6638,7 @@ async function scLoadTeachers() {
     const { data, error } = await sb.from('profiles')
       .select('id, full_name, specialization, avatar_url, teacher_sort_order, teacher_is_pinned')
       .eq('role', 'teacher')
+      .eq('teacher_approved', true)
       .order('teacher_sort_order', { ascending: true });
     if (error) throw error;
     _scTeachers = data || [];
