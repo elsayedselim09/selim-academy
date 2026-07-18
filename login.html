@@ -995,10 +995,14 @@ async function redirectByRole(userId) {
   try {
     var { data: prof } = await _sb
       .from('profiles')
-      .select('role, teacher_approved')
+      .select('role, teacher_approved, staff_role')
       .eq('id', userId)
       .single();
-    if (prof && prof.role === 'teacher') {
+    // ✅ staff_role بيدّي صلاحية أدمن إضافية فوق الدور الأساسي (مثلاً معلم بقى أدمن كمان)
+    // بيدخل لوحة الأدمن افتراضياً، ولسه محتفظ بدوره الأصلي (role) عشان يقدر يوصل لصفحة المعلم برضه
+    if (prof && prof.staff_role === 'admin') {
+      dest = 'admin.html';
+    } else if (prof && prof.role === 'teacher') {
       dest = 'teacher.html';   // ← تصحيح: كان admin.html
     } else if (prof && prof.role === 'admin') {
       dest = 'admin.html';

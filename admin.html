@@ -315,6 +315,7 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       <div class="user-av" id="sidebar-av">م</div>
       <div><div class="user-mini-name" id="sidebar-name">...</div><div class="user-mini-role">👨‍🏫 مدرس</div></div>
     </div>
+    <button class="btn-logout" id="btn-switch-teacher" onclick="window.location.href='teacher.html'" style="display:none;background:rgba(26,86,219,.12);color:#1A56DB;margin-bottom:8px">👨‍🏫 التبديل لصفحة المعلم</button>
     <button class="btn-logout" onclick="doLogout()">🚪 تسجيل الخروج</button>
   </div>
 </aside>
@@ -4964,6 +4965,9 @@ function updateHdr() {
   av.innerHTML = S.profile?.avatar_url
     ? `<img src="${S.profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
     : ini(name);
+  // ✅ يظهر زرار "التبديل لصفحة المعلم" لو الدور الأساسي بتاعه لسه معلم (وعنده صلاحية أدمن إضافية)
+  const switchBtn = document.getElementById('btn-switch-teacher');
+  if (switchBtn) switchBtn.style.display = (S.profile?.role === 'teacher') ? 'block' : 'none';
 }
 
 // ══════════════════════════════════════════════════
@@ -5692,7 +5696,8 @@ async function revokeTeacher(teacherId) {
     const {data:prof,error:pe}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
     if(pe||!prof){ window.location.href='login.html'; return; }
     S.profile=prof;
-    if(prof.role!=='admin'){ window.location.href='dashboard.html'; return; }
+    // ✅ يسمح بالدخول لو الدور الأساسي admin، أو لو عنده staff_role='admin' (مثلاً معلم اتضاف كأدمن إضافي)
+    if(prof.role!=='admin' && prof.staff_role!=='admin'){ window.location.href='dashboard.html'; return; }
 
     updateHdr();
 

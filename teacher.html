@@ -1152,6 +1152,7 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
         <div class="user-mini-role">👨‍🏫 معلم</div>
       </div>
     </div>
+    <button class="btn-logout" id="btn-switch-admin" onclick="window.location.href='admin.html'" style="display:none;background:rgba(26,86,219,.12);color:#1A56DB;border-color:transparent;margin-bottom:8px">🛠️ التبديل للوحة الأدمن</button>
     <button class="btn-logout" onclick="doLogout()">🚪 تسجيل الخروج</button>
   </div>
 </aside>
@@ -2433,6 +2434,10 @@ async function boot() {
     }
     return;
   }
+
+  // ✅ يظهر زرار "التبديل للوحة الأدمن" لو عنده صلاحية أدمن إضافية (staff_role)
+  const switchBtn = document.getElementById('btn-switch-admin');
+  if (switchBtn) switchBtn.style.display = (profile?.staff_role === 'admin') ? 'block' : 'none';
 
   // Check approval status
   // If admin explicitly approved this teacher
