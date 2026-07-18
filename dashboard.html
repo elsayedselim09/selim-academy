@@ -2076,7 +2076,7 @@ function renderStudentSchedule() {
 function requestScheduleChange() {
   const name = STATE.profile?.full_name || 'الطالب';
   const msg  = encodeURIComponent(`طلب تعديل موعد من الطالب: ${name}\n\nأود تعديل موعد حصصي. يرجى التواصل معي.`);
-  window.open(`https://wa.me/201012142749?text=${msg}`, '_blank');
+  window.open(`https://wa.me/201039750395?text=${msg}`, '_blank');
 }
 
 // ── SUBSCRIPTION ─────────────────────────────────────────────────
@@ -2278,7 +2278,7 @@ function subscription() {
         <button style="padding:12px;border:none;border-radius:10px;background:var(--dark);color:#fff;font-family:'Cairo',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s"
           onmouseover="this.style.opacity='.85'"
           onmouseout="this.style.opacity='1'"
-          onclick="window.open('https://wa.me/201012142749?text=${encodeURIComponent('أريد تجديد اشتراكي في مادة ' + req.subject + (hasSessRem ? ' — تبقّى لي ' + sessRem + ' حصة' : ''))}','_blank')">
+          onclick="window.open('https://wa.me/201039750395?text=${encodeURIComponent('أريد تجديد اشتراكي في مادة ' + req.subject + (hasSessRem ? ' — تبقّى لي ' + sessRem + ' حصة' : ''))}','_blank')">
           🔄 طلب تجديد
         </button>
       </div>
@@ -2483,7 +2483,7 @@ function support() {
     <div class="page-title">الدعم الفني 💬</div>
     <p class="page-sub">نحن هنا لمساعدتك في أي وقت</p>
     <div class="support-grid">
-      <div class="support-card" onclick="window.open('https://wa.me/201012142749','_blank')">
+      <div class="support-card" onclick="window.open('https://wa.me/201039750395','_blank')">
         <div class="support-icon">💬</div><div style="font-size:.95rem;font-weight:700;color:var(--dark);margin-bottom:4px">واتساب</div>
         <div style="font-size:.8rem;color:var(--gray)">تواصل معنا مباشرة</div>
       </div>
@@ -2493,7 +2493,7 @@ function support() {
       </div>
       <div class="support-card">
         <div class="support-icon">📞</div><div style="font-size:.95rem;font-weight:700;color:var(--dark);margin-bottom:4px">الهاتف</div>
-        <div style="font-size:.8rem;color:var(--gray)">+201012142749 · متاح طوال اليوم</div>
+        <div style="font-size:.8rem;color:var(--gray)">+201039750395 · متاح طوال اليوم</div>
       </div>
     </div>
     <div class="section-card">
@@ -2518,7 +2518,7 @@ function bindSupport() {
     const s = document.getElementById('sup-subject').value.trim();
     const m = document.getElementById('sup-msg').value.trim();
     if (!s || !m) return;
-    window.open(`https://wa.me/201012142749?text=${encodeURIComponent(`الموضوع: ${s}\n\n${m}`)}`, '_blank');
+    window.open(`https://wa.me/201039750395?text=${encodeURIComponent(`الموضوع: ${s}\n\n${m}`)}`, '_blank');
     document.getElementById('sup-subject').value = '';
     document.getElementById('sup-msg').value = '';
     document.getElementById('sup-feedback').innerHTML = '<div class="toast-ok">✅ تم فتح واتساب لإرسال رسالتك</div>';
