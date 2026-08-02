@@ -7675,8 +7675,13 @@ async function filesSave() {
   try {
     if (_pickedFile) {
       document.getElementById('file-upload-prog').style.display = 'block';
-      const safeName = _pickedFile.name.replace(/[^\w.\-\u0600-\u06FF ]/g, '_');
-      const path = `${Date.now()}_${safeName}`;
+      // Supabase Storage بيرفض أي حروف مش ASCII (زي العربي) في مسار الملف (key)
+      // فبنولّد اسم آمن بالإنجليزي بس، والاسم الأصلي (العربي) بيتخزن منفصل في file_name للعرض
+      const origName = _pickedFile.name;
+      const dotIdx   = origName.lastIndexOf('.');
+      const ext      = dotIdx > -1 ? origName.slice(dotIdx + 1).replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : '';
+      const randPart = Math.random().toString(36).slice(2, 8);
+      const path     = `${Date.now()}_${randPart}${ext ? '.' + ext : ''}`;
       const { error: upErr } = await sb.storage.from('public-files').upload(path, _pickedFile, { upsert: true });
       if (upErr) throw upErr;
       const { data: pub } = sb.storage.from('public-files').getPublicUrl(path);
