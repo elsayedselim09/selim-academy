@@ -54,11 +54,12 @@ img.avatar-img { display:block }
 .btn-logout:hover{background:var(--red);color:#fff;border-color:var(--red)}
 
 /* HEADER */
-.main-header{position:fixed;top:0;left:0;width:calc(100% - var(--sidebar-w));height:var(--header-h);background:var(--white);border-bottom:1px solid var(--gray-mid);display:flex;align-items:center;justify-content:space-between;padding:0 28px;z-index:99;box-shadow:var(--shadow)}
-.header-welcome{font-size:.95rem;font-weight:700;color:var(--dark)}
+.main-header{position:fixed;top:0;left:0;width:calc(100% - var(--sidebar-w));height:var(--header-h);background:var(--white);border-bottom:1px solid var(--gray-mid);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 28px;z-index:99;box-shadow:var(--shadow)}
+.header-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.header-welcome{font-size:.95rem;font-weight:700;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .header-welcome span{color:var(--blue)}
-.header-badge{display:inline-flex;align-items:center;gap:6px;background:var(--purple-light);color:var(--purple);border:1px solid #DDD6FE;border-radius:50px;padding:4px 14px;font-size:.78rem;font-weight:700}
-.hamburger{display:none;background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--dark)}
+.header-badge{display:inline-flex;align-items:center;gap:6px;background:var(--purple-light);color:var(--purple);border:1px solid #DDD6FE;border-radius:50px;padding:4px 14px;font-size:.78rem;font-weight:700;white-space:nowrap;flex-shrink:0}
+.hamburger{display:none;flex-shrink:0;width:36px;height:36px;align-items:center;justify-content:center;background:none;border:none;font-size:1.4rem;line-height:1;cursor:pointer;color:var(--dark);padding:0}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
 .overlay.show{display:block}
 
@@ -238,13 +239,22 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
 @media(max-width:1024px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){
   .sidebar{transform:translateX(100%)}.sidebar.open{transform:translateX(0)}
-  .main-header{width:100%}.hamburger{display:flex}
+  .main-header{width:100%;left:0}.hamburger{display:flex}
   #app{margin-right:0}.stats-grid{grid-template-columns:1fr 1fr}
 }
 @media(max-width:600px){
-  #app{padding:16px}.main-header{padding:0 16px}
+  #app{padding:16px}.main-header{padding:0 14px;gap:8px}
+  .header-left{gap:8px}
+  .header-welcome{font-size:.85rem}
+  .header-badge{padding:4px 10px;font-size:.7rem;gap:4px}
   .stats-grid{grid-template-columns:1fr}.fg-row{grid-template-columns:1fr}
   .courses-grid{grid-template-columns:1fr}
+}
+@media(max-width:380px){
+  .main-header{padding:0 10px}
+  .header-welcome{font-size:.78rem;max-width:120px}
+  .header-badge .hb-text{display:none}
+  .header-badge{padding:6px;border-radius:50%}
 }
 /* WEEKLY SCHEDULE TABLE */
 .admin-page-tabs { display:flex; gap:0; border:1.5px solid var(--gray-mid); border-radius:11px; overflow:hidden; margin-bottom:16px }
@@ -325,11 +335,11 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
 
 <!-- HEADER -->
 <header class="main-header">
-  <div style="display:flex;align-items:center;gap:12px">
+  <div class="header-left">
     <button class="hamburger" onclick="openSidebar()">☰</button>
     <div class="header-welcome">مرحباً، <span id="hdr-name">...</span> 👋</div>
   </div>
-  <div class="header-badge">⚙️ لوحة الإدارة</div>
+  <div class="header-badge"><span class="hb-icon">⚙️</span><span class="hb-text">لوحة الإدارة</span></div>
 </header>
 
 <!-- APP -->
