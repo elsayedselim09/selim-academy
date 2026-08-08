@@ -181,10 +181,10 @@ nav {
 .file-tag.curriculum { background:var(--blue-light); color:var(--blue); border-color:transparent; }
 .file-tag.term { background:#FEF3C7; color:#92400E; border-color:transparent; }
 .file-card-bottom { display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:6px; border-top:1px dashed var(--gray-mid); }
-.file-size { font-size:.78rem; color:var(--gray); }
+.file-size { font-size:.7rem; color:var(--gray); }
 .file-btn {
   padding:8px 16px; background:var(--blue); color:#fff; border-radius:8px; font-size:.82rem; font-weight:700;
-  display:flex; align-items:center; gap:6px; transition:background .2s;
+  display:flex; align-items:center; justify-content:center; gap:6px; transition:background .2s;
 }
 .file-btn:hover { background:var(--blue-dark); }
 
@@ -222,8 +222,10 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
 @media (max-width:840px) { .footer-top { grid-template-columns:1fr 1fr; } }
 @media (max-width:520px) { .footer-top { grid-template-columns:1fr; } }
 
-/* ═══ File card actions (معاينة + تحميل) ═══ */
+/* ═══ File card actions (مشاهدة + تحميل) ═══ */
 .file-card-actions { display:flex; align-items:center; gap:8px; }
+.file-card-actions .file-btn-view,
+.file-card-actions .file-btn { flex:1 1 0; justify-content:center; }
 .file-btn-view {
   padding:8px 16px; background:#fff; color:var(--blue); border:1.5px solid var(--blue); border-radius:8px;
   font-size:.82rem; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer;
@@ -242,16 +244,19 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   background:#fff; border-radius:16px; width:100%; max-width:880px; height:88vh;
   display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,.35);
 }
+.preview-modal:fullscreen { max-width:100%; width:100%; height:100vh; border-radius:0; }
+.preview-modal:-webkit-full-screen { max-width:100%; width:100%; height:100vh; border-radius:0; }
 .preview-header {
   display:flex; align-items:center; justify-content:space-between; gap:12px;
   padding:14px 18px; border-bottom:1px solid var(--gray-mid); flex-shrink:0;
 }
 .preview-title { font-size:.95rem; font-weight:800; color:var(--dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.preview-close {
+.preview-header-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.preview-close, .preview-icon-btn {
   background:var(--gray-light); border:none; width:32px; height:32px; border-radius:50%;
   font-size:1rem; cursor:pointer; color:var(--dark); flex-shrink:0; transition:background .2s;
 }
-.preview-close:hover { background:var(--gray-mid); }
+.preview-close:hover, .preview-icon-btn:hover { background:var(--gray-mid); }
 .preview-toolbar {
   display:flex; align-items:center; justify-content:center; gap:22px; padding:10px 14px;
   border-bottom:1px solid var(--gray-mid); background:var(--gray-light); flex-wrap:wrap; flex-shrink:0;
@@ -273,7 +278,10 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   flex:1; overflow:auto; display:flex; align-items:flex-start; justify-content:center;
   background:#525659; padding:22px;
 }
-#pdfCanvas { box-shadow:0 4px 18px rgba(0,0,0,.35); background:#fff; max-width:none; }
+/* حاوية كل صفحات الملف بشكل رأسي مع سكرول واحد متصل */
+.pdf-pages-container { display:flex; flex-direction:column; align-items:center; gap:16px; margin:0 auto; }
+.pdf-page-wrap { position:relative; box-shadow:0 4px 18px rgba(0,0,0,.35); background:#fff; }
+.pdf-page-canvas { display:block; width:100%; height:100%; }
 #previewImage { max-width:100%; border-radius:8px; margin:auto; }
 .preview-state {
   display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -399,7 +407,10 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   <div class="preview-modal">
     <div class="preview-header">
       <div class="preview-title" id="previewTitle">مشاهدة الملف</div>
-      <button class="preview-close" id="previewClose" aria-label="إغلاق">✕</button>
+      <div class="preview-header-actions">
+        <button class="preview-icon-btn" id="previewFullscreenBtn" title="ملء الشاشة">⛶</button>
+        <button class="preview-close" id="previewClose" aria-label="إغلاق">✕</button>
+      </div>
     </div>
     <div class="preview-toolbar" id="previewToolbar" style="display:none;">
       <div class="preview-zoom-group">
@@ -419,7 +430,7 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
         <div class="spinner"></div>
         <span>جاري تحميل المعاينة...</span>
       </div>
-      <canvas id="pdfCanvas" style="display:none;"></canvas>
+      <div id="pdfPagesContainer" class="pdf-pages-container" style="display:none;"></div>
       <img id="previewImage" style="display:none;">
       <div class="preview-state" id="previewUnsupported" style="display:none;">
         <div class="emo">📄</div>
@@ -540,8 +551,8 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   function fmtSize(bytes) {
     if (!bytes) return '';
     var kb = bytes / 1024;
-    if (kb < 1024) return Math.round(kb) + ' كيلوبايت';
-    return (kb / 1024).toFixed(1) + ' ميجابايت';
+    if (kb < 1024) return Math.round(kb) + ' KB';
+    return (kb / 1024).toFixed(1) + ' MB';
   }
 
   // قوائم ثابتة للمنهج والصف والترم
@@ -781,21 +792,24 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   // ── حالة عارض الـ PDF ──
   var pv = {
     pdfDoc: null,
+    numPages: 0,
     pageNum: 1,
     scale: 1.5,
     minScale: 0.6,
     maxScale: 4,
-    rendering: false,
-    pendingPage: null
+    pageEls: [],
+    renderedAtScale: {},
+    pageObserver: null
   };
 
   var previewOverlay   = document.getElementById('previewOverlay');
+  var previewModal     = document.querySelector('.preview-modal');
   var previewTitle     = document.getElementById('previewTitle');
   var previewToolbar   = document.getElementById('previewToolbar');
   var previewLoading   = document.getElementById('previewLoading');
   var previewUnsupported = document.getElementById('previewUnsupported');
   var previewError     = document.getElementById('previewError');
-  var pdfCanvas         = document.getElementById('pdfCanvas');
+  var pdfPagesContainer  = document.getElementById('pdfPagesContainer');
   var previewImage      = document.getElementById('previewImage');
   var pageInput          = document.getElementById('pageInput');
   var pageCountEl        = document.getElementById('pageCount');
@@ -805,7 +819,7 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
     previewLoading.style.display = state === 'loading' ? 'flex' : 'none';
     previewUnsupported.style.display = state === 'unsupported' ? 'flex' : 'none';
     previewError.style.display = state === 'error' ? 'flex' : 'none';
-    pdfCanvas.style.display = state === 'pdf' ? 'block' : 'none';
+    pdfPagesContainer.style.display = state === 'pdf' ? 'flex' : 'none';
     previewImage.style.display = state === 'image' ? 'block' : 'none';
     previewToolbar.style.display = state === 'pdf' ? 'flex' : 'none';
   }
@@ -828,9 +842,14 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   }
 
   function closePreviewModal() {
+    if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
     previewOverlay.classList.remove('open');
     document.body.style.overflow = '';
+    if (pv.pageObserver) { pv.pageObserver.disconnect(); pv.pageObserver = null; }
     pv.pdfDoc = null;
+    pv.pageEls = [];
+    pv.renderedAtScale = {};
+    pdfPagesContainer.innerHTML = '';
     previewImage.src = '';
   }
 
@@ -840,6 +859,7 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
       var loadingTask = pdfjsLib.getDocument({ url: getFetchableUrl(f), rangeChunkSize: 1 << 20 });
       var doc = await loadingTask.promise;
       pv.pdfDoc = doc;
+      pv.numPages = doc.numPages;
       pv.pageNum = 1;
       pv.scale = 1.5;
       pageCountEl.textContent = doc.numPages;
@@ -847,49 +867,109 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
       pageInput.value = 1;
       updateZoomLabel();
       showPreviewState('pdf');
-      renderPdfPage(1);
+      await buildPdfPages();
     } catch (e) {
       console.error('خطأ في معاينة PDF:', e);
       showPreviewState('error');
     }
   }
 
-  function renderPdfPage(num) {
+  // يبني حاوية بها كل صفحات الملف (سكرول رأسي واحد متصل) ويرسم الصفحات
+  // اللي في الشاشة أو قريبة منها بس (Lazy) عشان الأداء يفضل كويس حتى مع ملفات كبيرة
+  async function buildPdfPages() {
+    pdfPagesContainer.innerHTML = '';
+    pv.pageEls = [];
+    pv.renderedAtScale = {};
+
+    var firstPage = await pv.pdfDoc.getPage(1);
+    var baseViewport = firstPage.getViewport({ scale: pv.scale });
+
+    for (var i = 1; i <= pv.numPages; i++) {
+      var wrap = document.createElement('div');
+      wrap.className = 'pdf-page-wrap';
+      wrap.setAttribute('data-page-num', i);
+      wrap.style.width = Math.floor(baseViewport.width) + 'px';
+      wrap.style.height = Math.floor(baseViewport.height) + 'px';
+      var canvas = document.createElement('canvas');
+      canvas.className = 'pdf-page-canvas';
+      wrap.appendChild(canvas);
+      pdfPagesContainer.appendChild(wrap);
+      pv.pageEls.push(wrap);
+    }
+
+    setupPageObserver();
+    renderPageInto(1);
+  }
+
+  function setupPageObserver() {
+    if (pv.pageObserver) pv.pageObserver.disconnect();
+    pv.pageObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var num = parseInt(entry.target.getAttribute('data-page-num'), 10);
+        if (entry.isIntersecting) {
+          renderPageInto(num);
+          if (entry.intersectionRatio > 0.5) {
+            pv.pageNum = num;
+            pageInput.value = num;
+          }
+        }
+      });
+    }, { root: document.getElementById('previewBody'), rootMargin: '400px 0px', threshold: [0, 0.5, 1] });
+
+    pv.pageEls.forEach(function (el) { pv.pageObserver.observe(el); });
+  }
+
+  function renderPageInto(num) {
     if (!pv.pdfDoc) return;
-    if (pv.rendering) { pv.pendingPage = num; return; }
-    pv.rendering = true;
+    if (pv.renderedAtScale[num] === pv.scale) return; // متعمولاش رندر تاني لنفس مستوى الزوم
+    var wrap = pv.pageEls[num - 1];
+    if (!wrap) return;
+    var canvas = wrap.querySelector('canvas');
 
     pv.pdfDoc.getPage(num).then(function (page) {
       var outputScale = Math.min(window.devicePixelRatio || 1, 3);
       var viewport = page.getViewport({ scale: pv.scale });
-      pdfCanvas.width = Math.floor(viewport.width * outputScale);
-      pdfCanvas.height = Math.floor(viewport.height * outputScale);
-      pdfCanvas.style.width = Math.floor(viewport.width) + 'px';
-      pdfCanvas.style.height = Math.floor(viewport.height) + 'px';
-      var ctx = pdfCanvas.getContext('2d');
+      canvas.width = Math.floor(viewport.width * outputScale);
+      canvas.height = Math.floor(viewport.height * outputScale);
+      canvas.style.width = Math.floor(viewport.width) + 'px';
+      canvas.style.height = Math.floor(viewport.height) + 'px';
+      wrap.style.width = Math.floor(viewport.width) + 'px';
+      wrap.style.height = Math.floor(viewport.height) + 'px';
+      var ctx = canvas.getContext('2d');
       var transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
-      var renderTask = page.render({ canvasContext: ctx, viewport: viewport, transform: transform });
-      return renderTask.promise;
+      return page.render({ canvasContext: ctx, viewport: viewport, transform: transform }).promise;
     }).then(function () {
-      pv.rendering = false;
-      if (pv.pendingPage !== null) {
-        var next = pv.pendingPage;
-        pv.pendingPage = null;
-        renderPdfPage(next);
-      }
+      pv.renderedAtScale[num] = pv.scale;
     }).catch(function (e) {
-      console.error('خطأ في عرض الصفحة:', e);
-      pv.rendering = false;
+      console.error('خطأ في عرض الصفحة ' + num + ':', e);
     });
-
-    pv.pageNum = num;
-    pageInput.value = num;
   }
 
+  // إعادة حساب مقاسات كل الصفحات بعد تغيير الزوم، وإعادة رسم الصفحة الحالية فورًا
+  function rescaleAllPages() {
+    if (!pv.pdfDoc) return;
+    pv.pdfDoc.getPage(1).then(function (page) {
+      var vp = page.getViewport({ scale: pv.scale });
+      pv.pageEls.forEach(function (wrap) {
+        wrap.style.width = Math.floor(vp.width) + 'px';
+        wrap.style.height = Math.floor(vp.height) + 'px';
+      });
+      pv.renderedAtScale = {};
+      renderPageInto(pv.pageNum);
+    });
+  }
+
+  // ينتقل لصفحة معيّنة عن طريق السكرول لمكانها (مع بقاء أزرار السابق/التالي وخانة الرقم شغالة)
   function goToPage(num) {
     if (!pv.pdfDoc) return;
     num = Math.max(1, Math.min(pv.pdfDoc.numPages, num));
-    renderPdfPage(num);
+    var wrap = pv.pageEls[num - 1];
+    if (wrap) {
+      renderPageInto(num);
+      wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    pv.pageNum = num;
+    pageInput.value = num;
   }
 
   function updateZoomLabel() {
@@ -901,18 +981,35 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
     if (e.target === previewOverlay) closePreviewModal();
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && previewOverlay.classList.contains('open')) closePreviewModal();
+    if (e.key === 'Escape' && previewOverlay.classList.contains('open') && !document.fullscreenElement) closePreviewModal();
+  });
+
+  // ── ملء الشاشة ──
+  var fullscreenBtn = document.getElementById('previewFullscreenBtn');
+  fullscreenBtn.addEventListener('click', function () {
+    if (!document.fullscreenElement) {
+      var req = previewModal.requestFullscreen || previewModal.webkitRequestFullscreen;
+      if (req) req.call(previewModal);
+    } else {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) exit.call(document);
+    }
+  });
+  document.addEventListener('fullscreenchange', function () {
+    var active = !!document.fullscreenElement;
+    fullscreenBtn.textContent = active ? '⤢' : '⛶';
+    fullscreenBtn.title = active ? 'الخروج من ملء الشاشة' : 'ملء الشاشة';
   });
 
   document.getElementById('zoomInBtn').addEventListener('click', function () {
-    pv.scale = Math.min(pv.maxScale, pv.scale + 0.2);
+    pv.scale = Math.min(pv.maxScale, pv.scale + 0.25);
     updateZoomLabel();
-    renderPdfPage(pv.pageNum);
+    rescaleAllPages();
   });
   document.getElementById('zoomOutBtn').addEventListener('click', function () {
-    pv.scale = Math.max(pv.minScale, pv.scale - 0.2);
+    pv.scale = Math.max(pv.minScale, pv.scale - 0.25);
     updateZoomLabel();
-    renderPdfPage(pv.pageNum);
+    rescaleAllPages();
   });
   document.getElementById('prevPageBtn').addEventListener('click', function () { goToPage(pv.pageNum - 1); });
   document.getElementById('nextPageBtn').addEventListener('click', function () { goToPage(pv.pageNum + 1); });
