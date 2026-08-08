@@ -145,10 +145,25 @@ nav {
 @media (max-width:640px) { .files-grid { grid-template-columns:1fr; } }
 
 .file-card {
-  background:#fff; border:1px solid var(--gray-mid); border-radius:16px; padding:20px;
-  display:flex; flex-direction:column; gap:12px; transition:all .25s;
+  background:#fff; border:1px solid var(--gray-mid); border-radius:16px; overflow:hidden;
+  display:flex; flex-direction:row; align-items:stretch; min-height:190px; transition:all .25s;
 }
 .file-card:hover { transform:translateY(-4px); box-shadow:0 15px 35px rgba(17,25,40,.1); border-color:var(--blue); }
+
+/* غلاف الملف — أول صفحة، ياخد 40% من الكارت وعلى اليمين (أول عنصر في RTL) */
+.file-card-cover {
+  flex:0 0 40%; max-width:40%; position:relative; overflow:hidden;
+  background:var(--blue-light); display:flex; align-items:center; justify-content:center;
+}
+.cover-img { width:100%; height:100%; object-fit:cover; object-position:top center; display:block; }
+.cover-skeleton {
+  position:absolute; inset:0;
+  background:linear-gradient(90deg, var(--gray-mid) 25%, #f0f1f3 37%, var(--gray-mid) 63%);
+  background-size:400% 100%; animation:skel-shine 1.4s ease infinite;
+}
+.cover-fallback { font-size:2.4rem; opacity:.45; }
+
+.file-card-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:12px; padding:20px; }
 .file-card-top { display:flex; align-items:flex-start; gap:12px; }
 .file-icon {
   width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center;
@@ -583,17 +598,23 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
 
     return '' +
     '<div class="file-card">' +
-      '<div class="file-card-top">' +
-        '<div class="file-icon">📄</div>' +
-        '<div><div class="file-title">' + esc(f.title || 'ملف بدون عنوان') + '</div></div>' +
+      '<div class="file-card-cover" data-file-id="' + esc(f.id) + '">' +
+        '<div class="cover-skeleton"></div>' +
+        '<img class="cover-img" style="display:none;" alt="' + esc(f.title || '') + '">' +
+        '<div class="cover-fallback" style="display:none;">📄</div>' +
       '</div>' +
-      (f.note ? '<div class="file-note">' + esc(f.note) + '</div>' : '') +
-      '<div class="file-tags">' + tags.join('') + '</div>' +
-      '<div class="file-card-bottom">' +
-        '<span class="file-size">' + esc(fmtSize(f.file_size)) + '</span>' +
-        '<div class="file-card-actions">' +
-          '<button type="button" class="file-btn-view" data-file-id="' + esc(f.id) + '" data-action="preview">👁️ مشاهدة</button>' +
-          '<button type="button" class="file-btn" data-file-id="' + esc(f.id) + '" data-action="download">⬇️ تحميل</button>' +
+      '<div class="file-card-body">' +
+        '<div class="file-card-top">' +
+          '<div><div class="file-title">' + esc(f.title || 'ملف بدون عنوان') + '</div></div>' +
+        '</div>' +
+        (f.note ? '<div class="file-note">' + esc(f.note) + '</div>' : '') +
+        '<div class="file-tags">' + tags.join('') + '</div>' +
+        '<div class="file-card-bottom">' +
+          '<span class="file-size">' + esc(fmtSize(f.file_size)) + '</span>' +
+          '<div class="file-card-actions">' +
+            '<button type="button" class="file-btn-view" data-file-id="' + esc(f.id) + '" data-action="preview">👁️ مشاهدة</button>' +
+            '<button type="button" class="file-btn" data-file-id="' + esc(f.id) + '" data-action="download">⬇️ تحميل</button>' +
+          '</div>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -628,6 +649,7 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
     }
     empty.style.display = 'none';
     grid.innerHTML = filtered.map(fileCard).join('');
+    setupThumbObservers();
   }
 
   function clearFilters() {
@@ -760,9 +782,9 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   var pv = {
     pdfDoc: null,
     pageNum: 1,
-    scale: 1.2,
-    minScale: 0.5,
-    maxScale: 3,
+    scale: 1.5,
+    minScale: 0.6,
+    maxScale: 4,
     rendering: false,
     pendingPage: null
   };
@@ -815,13 +837,11 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   async function loadPdf(f) {
     try {
       if (!window.pdfjsLib) throw new Error('pdf.js لم يتم تحميله');
-      var res = await fetch(getFetchableUrl(f));
-      if (!res.ok) throw new Error('فشل جلب الملف');
-      var buf = await res.arrayBuffer();
-      var doc = await pdfjsLib.getDocument({ data: buf }).promise;
+      var loadingTask = pdfjsLib.getDocument({ url: getFetchableUrl(f), rangeChunkSize: 1 << 20 });
+      var doc = await loadingTask.promise;
       pv.pdfDoc = doc;
       pv.pageNum = 1;
-      pv.scale = 1.2;
+      pv.scale = 1.5;
       pageCountEl.textContent = doc.numPages;
       pageInput.max = doc.numPages;
       pageInput.value = 1;
@@ -840,11 +860,15 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
     pv.rendering = true;
 
     pv.pdfDoc.getPage(num).then(function (page) {
+      var outputScale = Math.min(window.devicePixelRatio || 1, 3);
       var viewport = page.getViewport({ scale: pv.scale });
-      pdfCanvas.width = viewport.width;
-      pdfCanvas.height = viewport.height;
+      pdfCanvas.width = Math.floor(viewport.width * outputScale);
+      pdfCanvas.height = Math.floor(viewport.height * outputScale);
+      pdfCanvas.style.width = Math.floor(viewport.width) + 'px';
+      pdfCanvas.style.height = Math.floor(viewport.height) + 'px';
       var ctx = pdfCanvas.getContext('2d');
-      var renderTask = page.render({ canvasContext: ctx, viewport: viewport });
+      var transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+      var renderTask = page.render({ canvasContext: ctx, viewport: viewport, transform: transform });
       return renderTask.promise;
     }).then(function () {
       pv.rendering = false;
@@ -869,7 +893,7 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   }
 
   function updateZoomLabel() {
-    zoomLevelEl.textContent = Math.round((pv.scale / 1.2) * 100) + '%';
+    zoomLevelEl.textContent = Math.round((pv.scale / 1.5) * 100) + '%';
   }
 
   document.getElementById('previewClose').addEventListener('click', closePreviewModal);
@@ -909,6 +933,91 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
       forceDownload(f);
     }
   });
+
+  // ══════════════════════════════════════════════
+  // أغلفة الملفات — أول صفحة من الـ PDF كصورة غلاف
+  // ══════════════════════════════════════════════
+  var thumbCache = {}; // fileId -> dataURL جاهزة | 'pending' | 'error'
+  var thumbObserver = null;
+
+  function ensureThumbObserver() {
+    if (thumbObserver) return thumbObserver;
+    thumbObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          thumbObserver.unobserve(entry.target);
+          generateThumbnail(entry.target);
+        }
+      });
+    }, { root: null, rootMargin: '250px', threshold: 0.01 });
+    return thumbObserver;
+  }
+
+  function applyThumb(coverEl, dataUrl) {
+    if (!coverEl) return;
+    var img = coverEl.querySelector('.cover-img');
+    var skel = coverEl.querySelector('.cover-skeleton');
+    if (img) { img.src = dataUrl; img.style.display = 'block'; }
+    if (skel) skel.style.display = 'none';
+  }
+
+  function showCoverFallback(coverEl) {
+    if (!coverEl) return;
+    var skel = coverEl.querySelector('.cover-skeleton');
+    var fb = coverEl.querySelector('.cover-fallback');
+    if (skel) skel.style.display = 'none';
+    if (fb) fb.style.display = 'flex';
+  }
+
+  function generateThumbnail(coverEl) {
+    var fileId = coverEl.getAttribute('data-file-id');
+    var f = allFiles.find(function (x) { return String(x.id) === fileId; });
+    if (!f) return;
+
+    thumbCache[fileId] = 'pending';
+    var loadingTask = pdfjsLib.getDocument({ url: getFetchableUrl(f), rangeChunkSize: 1 << 18 });
+    loadingTask.promise
+      .then(function (doc) { return doc.getPage(1); })
+      .then(function (page) {
+        var outputScale = Math.min(window.devicePixelRatio || 1, 2);
+        var targetWidth = 260;
+        var unscaled = page.getViewport({ scale: 1 });
+        var scale = (targetWidth / unscaled.width) * outputScale;
+        var viewport = page.getViewport({ scale: scale });
+        var canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        var ctx = canvas.getContext('2d');
+        return page.render({ canvasContext: ctx, viewport: viewport }).promise.then(function () {
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          thumbCache[fileId] = dataUrl;
+          applyThumb(coverEl, dataUrl);
+        });
+      })
+      .catch(function (e) {
+        console.error('تعذّر توليد غلاف الملف:', e);
+        thumbCache[fileId] = 'error';
+        showCoverFallback(coverEl);
+      });
+  }
+
+  function setupThumbObservers() {
+    var covers = document.querySelectorAll('.file-card-cover[data-file-id]');
+    var obs = ensureThumbObserver();
+    covers.forEach(function (el) {
+      var fileId = el.getAttribute('data-file-id');
+      var f = allFiles.find(function (x) { return String(x.id) === fileId; });
+      if (!f || !guessIsPdf(f)) { showCoverFallback(el); return; }
+      var cached = thumbCache[fileId];
+      if (cached && cached !== 'pending' && cached !== 'error') {
+        applyThumb(el, cached);
+      } else if (cached === 'error') {
+        showCoverFallback(el);
+      } else if (cached !== 'pending') {
+        obs.observe(el);
+      }
+    });
+  }
 
   (async function init() {
     await loadPageSettings();
