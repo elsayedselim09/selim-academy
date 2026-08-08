@@ -1380,6 +1380,18 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       </div>
     </div>
 
+    <!-- إظهار/إخفاء إحصائيات المشاهدات والتحميلات للزوار -->
+    <div class="section-card" style="margin-bottom:20px;">
+      <div class="section-head"><h3>👁️ إظهار إحصائيات المشاهدات والتحميلات في الموقع</h3></div>
+      <div class="section-body" style="display:flex;align-items:center;gap:16px;">
+        <label class="sc-toggle-label">
+          <input type="checkbox" id="files-stats-visible-chk" onchange="filesToggleStatsVisible(this)" class="sc-toggle-input">
+          <span class="sc-toggle-track"><span class="sc-toggle-thumb"></span></span>
+        </label>
+        <span id="files-stats-visible-txt" style="font-weight:700;color:var(--gray);">جاري التحميل...</span>
+      </div>
+    </div>
+
     <div class="section-card">
       <div class="section-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <h3>📋 قائمة الملفات</h3>
@@ -7526,9 +7538,33 @@ async function filesLoad() {
     filesFillFilterOptions();
     filesRender();
     fpsLoad();
+    filesLoadStatsVisibility();
   } catch(e) {
     list.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`;
   }
+}
+
+// ── إظهار/إخفاء إحصائيات المشاهدات والتحميلات في الموقع العام ──
+async function filesLoadStatsVisibility() {
+  const chk = document.getElementById('files-stats-visible-chk');
+  const txt = document.getElementById('files-stats-visible-txt');
+  try {
+    const { data } = await sb.from('site_settings').select('value').eq('id', 'files_stats_visible').single();
+    const visible = !!(data && data.value && data.value.visible);
+    chk.checked = visible;
+    txt.textContent = visible ? '✅ الإحصائيات ظاهرة للزوار في الموقع' : '🚫 الإحصائيات مخفية عن الزوار في الموقع';
+  } catch(e) {
+    txt.textContent = '🚫 الإحصائيات مخفية عن الزوار في الموقع';
+  }
+}
+
+async function filesToggleStatsVisible(chk) {
+  const txt = document.getElementById('files-stats-visible-txt');
+  try {
+    await sb.from('site_settings').upsert({ id: 'files_stats_visible', value: { visible: chk.checked }, updated_at: new Date().toISOString() });
+    txt.textContent = chk.checked ? '✅ الإحصائيات ظاهرة للزوار في الموقع' : '🚫 الإحصائيات مخفية عن الزوار في الموقع';
+    toast(chk.checked ? '✅ تم إظهار الإحصائيات للزوار' : '🚫 تم إخفاء الإحصائيات عن الزوار');
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
 }
 
 function filesStats() {
@@ -7608,6 +7644,10 @@ function filesRender() {
           ${tags.join('')}
           <span>💾 ${fmtFileSize(f.file_size)}</span>
           <span>📅 ${new Date(f.created_at).toLocaleDateString('ar-EG')}</span>
+        </div>
+        <div style="display:flex;gap:12px;font-size:.75rem;color:var(--blue);flex-wrap:wrap;margin-top:6px;font-weight:800;">
+          <span>👁️ ${f.views_count || 0} مشاهدة</span>
+          <span>⬇️ ${f.downloads_count || 0} تحميل</span>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:7px;flex-shrink:0;">

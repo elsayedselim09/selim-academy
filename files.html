@@ -181,6 +181,7 @@ nav {
 .file-tag.curriculum { background:var(--blue-light); color:var(--blue); border-color:transparent; }
 .file-tag.term { background:#FEF3C7; color:#92400E; border-color:transparent; }
 .file-card-bottom { display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:6px; border-top:1px dashed var(--gray-mid); }
+.file-stats { display:flex; gap:12px; font-size:.7rem; color:var(--gray); font-weight:700; }
 .file-size { font-size:.7rem; color:var(--gray); }
 .file-btn {
   padding:8px 16px; background:var(--blue); color:#fff; border-radius:8px; font-size:.82rem; font-weight:700;
@@ -541,6 +542,7 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   // ملفاتي — منطق الفلترة والبحث
   // ══════════════════════════════════════════════
   var allFiles = [];
+  var statsVisible = false;
 
   function esc(s) {
     return (s || '').toString().replace(/[&<>"']/g, function(c) {
@@ -620,6 +622,7 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
         '</div>' +
         (f.note ? '<div class="file-note">' + esc(f.note) + '</div>' : '') +
         '<div class="file-tags">' + tags.join('') + '</div>' +
+        (statsVisible ? '<div class="file-stats"><span>👁️ ' + (f.views_count || 0) + '</span><span>⬇️ ' + (f.downloads_count || 0) + '</span></div>' : '') +
         '<div class="file-card-bottom">' +
           '<span class="file-size">' + esc(fmtSize(f.file_size)) + '</span>' +
           '<div class="file-card-actions">' +
@@ -694,7 +697,7 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
     try {
       var q = window._sb
         .from('site_files')
-        .select('id,title,url,file_name,file_size,note,grade_name,subject_name,curriculum,term,sort_order,created_at')
+        .select('id,title,url,file_name,file_size,note,grade_name,subject_name,curriculum,term,sort_order,created_at,views_count,downloads_count')
         .eq('is_visible', true);
 
       q = (pageOrderPref === 'newest')
@@ -726,6 +729,13 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
       if (v.subtitle) document.getElementById('filesPageSubtitle').textContent = v.subtitle;
       if (v.order) pageOrderPref = v.order;
     } catch (e) { /* الإعدادات الافتراضية تكفي */ }
+  }
+
+  async function loadStatsVisibility() {
+    try {
+      var { data } = await window._sb.from('site_settings').select('value').eq('id', 'files_stats_visible').single();
+      statsVisible = !!(data && data.value && data.value.visible);
+    } catch (e) { statsVisible = false; }
   }
 
   document.getElementById('fileSearch').addEventListener('input', renderFiles);
@@ -768,6 +778,13 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
     return /\.(png|jpe?g|gif|webp)$/.test(name);
   }
 
+  // يزوّد عداد المشاهدات/التحميلات في الخلفية من غير ما يعطّل تجربة المستخدم
+  function bumpFileStat(fnName, fileId) {
+    try {
+      window._sb.rpc(fnName, { file_id: fileId }).then(function () {}, function () {});
+    } catch (e) { /* تجاهل أي خطأ عشان ميأثرش على تجربة المستخدم */ }
+  }
+
   async function forceDownload(f) {
     var url = getDownloadUrl(f);
     var filename = f.file_name || f.title || 'ملف';
@@ -787,6 +804,7 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
       console.error('فشل التحميل المباشر، هفتح الرابط كبديل:', e);
       window.open(url, '_blank');
     }
+    bumpFileStat('increment_file_download', f.id);
   }
 
   // ── حالة عارض الـ PDF ──
@@ -829,6 +847,7 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
     previewOverlay.classList.add('open');
     document.body.style.overflow = 'hidden';
     showPreviewState('loading');
+    bumpFileStat('increment_file_view', f.id);
 
     if (guessIsPdf(f)) {
       loadPdf(f);
@@ -1117,7 +1136,7 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   }
 
   (async function init() {
-    await loadPageSettings();
+    await Promise.all([loadPageSettings(), loadStatsVisibility()]);
     loadFiles();
   })();
 </script>
