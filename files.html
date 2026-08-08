@@ -206,6 +206,75 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
 .footer-links-bottom a:hover { color:#fff; }
 @media (max-width:840px) { .footer-top { grid-template-columns:1fr 1fr; } }
 @media (max-width:520px) { .footer-top { grid-template-columns:1fr; } }
+
+/* ═══ File card actions (معاينة + تحميل) ═══ */
+.file-card-actions { display:flex; align-items:center; gap:8px; }
+.file-btn-view {
+  padding:8px 16px; background:#fff; color:var(--blue); border:1.5px solid var(--blue); border-radius:8px;
+  font-size:.82rem; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer;
+  transition:all .2s; font-family:'Cairo',sans-serif;
+}
+.file-btn-view:hover { background:var(--blue-light); }
+.file-btn { border:none; cursor:pointer; }
+
+/* ═══ Preview modal ═══ */
+.preview-overlay {
+  display:none; position:fixed; inset:0; background:rgba(17,25,40,.75); z-index:2000;
+  align-items:center; justify-content:center; padding:18px;
+}
+.preview-overlay.open { display:flex; }
+.preview-modal {
+  background:#fff; border-radius:16px; width:100%; max-width:880px; height:88vh;
+  display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,.35);
+}
+.preview-header {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:14px 18px; border-bottom:1px solid var(--gray-mid); flex-shrink:0;
+}
+.preview-title { font-size:.95rem; font-weight:800; color:var(--dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.preview-close {
+  background:var(--gray-light); border:none; width:32px; height:32px; border-radius:50%;
+  font-size:1rem; cursor:pointer; color:var(--dark); flex-shrink:0; transition:background .2s;
+}
+.preview-close:hover { background:var(--gray-mid); }
+.preview-toolbar {
+  display:flex; align-items:center; justify-content:center; gap:22px; padding:10px 14px;
+  border-bottom:1px solid var(--gray-mid); background:var(--gray-light); flex-wrap:wrap; flex-shrink:0;
+}
+.preview-zoom-group, .preview-page-group { display:flex; align-items:center; gap:8px; }
+.preview-toolbar button {
+  width:32px; height:32px; border-radius:8px; border:1px solid var(--gray-mid); background:#fff;
+  font-size:1rem; cursor:pointer; color:var(--dark); font-weight:700; transition:all .2s; font-family:'Cairo',sans-serif;
+}
+.preview-toolbar button:hover:not(:disabled) { background:var(--blue-light); border-color:var(--blue); color:var(--blue); }
+.preview-toolbar button:disabled { opacity:.4; cursor:not-allowed; }
+#zoomLevel { font-size:.8rem; font-weight:700; color:var(--gray); min-width:42px; text-align:center; }
+#pageInput {
+  width:50px; padding:5px; text-align:center; border:1px solid var(--gray-mid); border-radius:6px;
+  font-family:'Cairo',sans-serif; font-size:.85rem;
+}
+.preview-page-group span { font-size:.83rem; color:var(--gray); font-weight:600; }
+.preview-body {
+  flex:1; overflow:auto; display:flex; align-items:flex-start; justify-content:center;
+  background:#525659; padding:22px;
+}
+#pdfCanvas { box-shadow:0 4px 18px rgba(0,0,0,.35); background:#fff; max-width:none; }
+#previewImage { max-width:100%; border-radius:8px; margin:auto; }
+.preview-state {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:10px; color:#fff; margin:auto; text-align:center; padding:40px;
+}
+.preview-state .emo { font-size:2.6rem; }
+.preview-state h3 { color:#fff; font-size:1rem; }
+.preview-state p { color:#d1d5db; font-size:.85rem; }
+.spinner { width:34px; height:34px; border:4px solid rgba(255,255,255,.25); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+@media (max-width:640px) {
+  .preview-modal { height:92vh; border-radius:12px; }
+  .preview-toolbar { gap:12px; }
+  .preview-title { font-size:.85rem; }
+}
 </style>
 </head>
 <body>
@@ -310,6 +379,47 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   </div>
 </div>
 
+<!-- ═══ Preview Modal ═══ -->
+<div class="preview-overlay" id="previewOverlay">
+  <div class="preview-modal">
+    <div class="preview-header">
+      <div class="preview-title" id="previewTitle">مشاهدة الملف</div>
+      <button class="preview-close" id="previewClose" aria-label="إغلاق">✕</button>
+    </div>
+    <div class="preview-toolbar" id="previewToolbar" style="display:none;">
+      <div class="preview-zoom-group">
+        <button type="button" id="zoomOutBtn" title="تصغير">－</button>
+        <span id="zoomLevel">100%</span>
+        <button type="button" id="zoomInBtn" title="تكبير">＋</button>
+      </div>
+      <div class="preview-page-group">
+        <button type="button" id="prevPageBtn" title="الصفحة السابقة">‹</button>
+        <input type="number" id="pageInput" min="1" value="1">
+        <span>من <span id="pageCount">-</span></span>
+        <button type="button" id="nextPageBtn" title="الصفحة التالية">›</button>
+      </div>
+    </div>
+    <div class="preview-body" id="previewBody">
+      <div class="preview-state" id="previewLoading">
+        <div class="spinner"></div>
+        <span>جاري تحميل المعاينة...</span>
+      </div>
+      <canvas id="pdfCanvas" style="display:none;"></canvas>
+      <img id="previewImage" style="display:none;">
+      <div class="preview-state" id="previewUnsupported" style="display:none;">
+        <div class="emo">📄</div>
+        <h3>معاينة هذا النوع من الملفات غير متاحة</h3>
+        <p>تقدر تحمّل الملف مباشرة من زر التحميل</p>
+      </div>
+      <div class="preview-state" id="previewError" style="display:none;">
+        <div class="emo">⚠️</div>
+        <h3>حصل خطأ أثناء تحميل المعاينة</h3>
+        <p>جرّب تاني بعد شوية أو حمّل الملف مباشرة</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ Footer ═══ -->
 <footer>
   <div class="footer-top">
@@ -359,6 +469,12 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
 <script>
   var DASHBOARD_APP_URL = window.DASHBOARD_APP_URL || localStorage.getItem('seleem_dashboard_url') || 'dashboard.html';
   window._sb = window.supabase.createClient('https://hjhoudwknwnxfndrgpfe.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqaG91ZHdrbndueGZuZHJncGZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODQ5MTksImV4cCI6MjA5MDM2MDkxOX0.QBRbZ0EewBc2FDX1D5v_bdwm_j0hGZ7s6jEgrCyJl2s');
@@ -475,7 +591,10 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
       '<div class="file-tags">' + tags.join('') + '</div>' +
       '<div class="file-card-bottom">' +
         '<span class="file-size">' + esc(fmtSize(f.file_size)) + '</span>' +
-        '<a href="' + esc(f.url) + '" target="_blank" class="file-btn">⬇️ تحميل</a>' +
+        '<div class="file-card-actions">' +
+          '<button type="button" class="file-btn-view" data-file-id="' + esc(f.id) + '" data-action="preview">👁️ مشاهدة</button>' +
+          '<button type="button" class="file-btn" data-file-id="' + esc(f.id) + '" data-action="download">⬇️ تحميل</button>' +
+        '</div>' +
       '</div>' +
     '</div>';
   }
@@ -581,6 +700,215 @@ footer { background:var(--dark); color:#fff; padding:56px 5% 24px; margin-top:20
   document.getElementById('filterGrade').addEventListener('change', renderFiles);
   document.getElementById('filterTerm').addEventListener('change', renderFiles);
   document.getElementById('filterSubject').addEventListener('change', renderFiles);
+
+  // ══════════════════════════════════════════════
+  // معاينة الملفات (PDF.js) + التحميل الفوري
+  // ══════════════════════════════════════════════
+  var DRIVE_PROXY_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co/functions/v1/drive-file-proxy';
+
+  function extractDriveFileId(url) {
+    if (!url) return null;
+    var m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    return m ? m[1] : null;
+  }
+
+  // رابط قابل للجلب عبر fetch() بدون مشاكل CORS، سواء الملف على Drive أو على Supabase Storage مباشرة
+  function getFetchableUrl(f) {
+    var driveId = extractDriveFileId(f.url);
+    return driveId ? (DRIVE_PROXY_URL + '?id=' + encodeURIComponent(driveId)) : f.url;
+  }
+
+  function getDownloadUrl(f) {
+    var driveId = extractDriveFileId(f.url);
+    var filename = f.file_name || f.title || 'file';
+    return driveId
+      ? (DRIVE_PROXY_URL + '?id=' + encodeURIComponent(driveId) + '&download=1&filename=' + encodeURIComponent(filename))
+      : f.url;
+  }
+
+  function guessIsPdf(f) {
+    var name = (f.file_name || f.title || '').toLowerCase();
+    return name.indexOf('.pdf') !== -1;
+  }
+  function guessIsImage(f) {
+    var name = (f.file_name || f.title || '').toLowerCase();
+    return /\.(png|jpe?g|gif|webp)$/.test(name);
+  }
+
+  async function forceDownload(f) {
+    var url = getDownloadUrl(f);
+    var filename = f.file_name || f.title || 'ملف';
+    try {
+      var res = await fetch(url);
+      if (!res.ok) throw new Error('fetch failed');
+      var blob = await res.blob();
+      var blobUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 4000);
+    } catch (e) {
+      console.error('فشل التحميل المباشر، هفتح الرابط كبديل:', e);
+      window.open(url, '_blank');
+    }
+  }
+
+  // ── حالة عارض الـ PDF ──
+  var pv = {
+    pdfDoc: null,
+    pageNum: 1,
+    scale: 1.2,
+    minScale: 0.5,
+    maxScale: 3,
+    rendering: false,
+    pendingPage: null
+  };
+
+  var previewOverlay   = document.getElementById('previewOverlay');
+  var previewTitle     = document.getElementById('previewTitle');
+  var previewToolbar   = document.getElementById('previewToolbar');
+  var previewLoading   = document.getElementById('previewLoading');
+  var previewUnsupported = document.getElementById('previewUnsupported');
+  var previewError     = document.getElementById('previewError');
+  var pdfCanvas         = document.getElementById('pdfCanvas');
+  var previewImage      = document.getElementById('previewImage');
+  var pageInput          = document.getElementById('pageInput');
+  var pageCountEl        = document.getElementById('pageCount');
+  var zoomLevelEl        = document.getElementById('zoomLevel');
+
+  function showPreviewState(state) {
+    previewLoading.style.display = state === 'loading' ? 'flex' : 'none';
+    previewUnsupported.style.display = state === 'unsupported' ? 'flex' : 'none';
+    previewError.style.display = state === 'error' ? 'flex' : 'none';
+    pdfCanvas.style.display = state === 'pdf' ? 'block' : 'none';
+    previewImage.style.display = state === 'image' ? 'block' : 'none';
+    previewToolbar.style.display = state === 'pdf' ? 'flex' : 'none';
+  }
+
+  function openPreviewModal(f) {
+    previewTitle.textContent = f.title || f.file_name || 'مشاهدة الملف';
+    previewOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    showPreviewState('loading');
+
+    if (guessIsPdf(f)) {
+      loadPdf(f);
+    } else if (guessIsImage(f)) {
+      previewImage.src = getFetchableUrl(f);
+      previewImage.onload = function () { showPreviewState('image'); };
+      previewImage.onerror = function () { showPreviewState('error'); };
+    } else {
+      showPreviewState('unsupported');
+    }
+  }
+
+  function closePreviewModal() {
+    previewOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+    pv.pdfDoc = null;
+    previewImage.src = '';
+  }
+
+  async function loadPdf(f) {
+    try {
+      if (!window.pdfjsLib) throw new Error('pdf.js لم يتم تحميله');
+      var res = await fetch(getFetchableUrl(f));
+      if (!res.ok) throw new Error('فشل جلب الملف');
+      var buf = await res.arrayBuffer();
+      var doc = await pdfjsLib.getDocument({ data: buf }).promise;
+      pv.pdfDoc = doc;
+      pv.pageNum = 1;
+      pv.scale = 1.2;
+      pageCountEl.textContent = doc.numPages;
+      pageInput.max = doc.numPages;
+      pageInput.value = 1;
+      updateZoomLabel();
+      showPreviewState('pdf');
+      renderPdfPage(1);
+    } catch (e) {
+      console.error('خطأ في معاينة PDF:', e);
+      showPreviewState('error');
+    }
+  }
+
+  function renderPdfPage(num) {
+    if (!pv.pdfDoc) return;
+    if (pv.rendering) { pv.pendingPage = num; return; }
+    pv.rendering = true;
+
+    pv.pdfDoc.getPage(num).then(function (page) {
+      var viewport = page.getViewport({ scale: pv.scale });
+      pdfCanvas.width = viewport.width;
+      pdfCanvas.height = viewport.height;
+      var ctx = pdfCanvas.getContext('2d');
+      var renderTask = page.render({ canvasContext: ctx, viewport: viewport });
+      return renderTask.promise;
+    }).then(function () {
+      pv.rendering = false;
+      if (pv.pendingPage !== null) {
+        var next = pv.pendingPage;
+        pv.pendingPage = null;
+        renderPdfPage(next);
+      }
+    }).catch(function (e) {
+      console.error('خطأ في عرض الصفحة:', e);
+      pv.rendering = false;
+    });
+
+    pv.pageNum = num;
+    pageInput.value = num;
+  }
+
+  function goToPage(num) {
+    if (!pv.pdfDoc) return;
+    num = Math.max(1, Math.min(pv.pdfDoc.numPages, num));
+    renderPdfPage(num);
+  }
+
+  function updateZoomLabel() {
+    zoomLevelEl.textContent = Math.round((pv.scale / 1.2) * 100) + '%';
+  }
+
+  document.getElementById('previewClose').addEventListener('click', closePreviewModal);
+  previewOverlay.addEventListener('click', function (e) {
+    if (e.target === previewOverlay) closePreviewModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && previewOverlay.classList.contains('open')) closePreviewModal();
+  });
+
+  document.getElementById('zoomInBtn').addEventListener('click', function () {
+    pv.scale = Math.min(pv.maxScale, pv.scale + 0.2);
+    updateZoomLabel();
+    renderPdfPage(pv.pageNum);
+  });
+  document.getElementById('zoomOutBtn').addEventListener('click', function () {
+    pv.scale = Math.max(pv.minScale, pv.scale - 0.2);
+    updateZoomLabel();
+    renderPdfPage(pv.pageNum);
+  });
+  document.getElementById('prevPageBtn').addEventListener('click', function () { goToPage(pv.pageNum - 1); });
+  document.getElementById('nextPageBtn').addEventListener('click', function () { goToPage(pv.pageNum + 1); });
+  pageInput.addEventListener('change', function () {
+    var n = parseInt(pageInput.value, 10);
+    if (!isNaN(n)) goToPage(n);
+  });
+
+  // تفويض الأحداث لأزرار المعاينة والتحميل داخل الشبكة
+  document.getElementById('filesGrid').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    var f = allFiles.find(function (x) { return String(x.id) === btn.getAttribute('data-file-id'); });
+    if (!f) return;
+    if (btn.getAttribute('data-action') === 'preview') {
+      openPreviewModal(f);
+    } else if (btn.getAttribute('data-action') === 'download') {
+      forceDownload(f);
+    }
+  });
 
   (async function init() {
     await loadPageSettings();
