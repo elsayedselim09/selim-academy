@@ -3711,6 +3711,70 @@ function switchSession(s) {
     } catch(e) {}
   }
 
+  // ── 1ب. تحميل شريط التنقل (Navbar) من Supabase ──
+  var NAV_COLOR_MAP = { blue: 'var(--blue)', green: 'var(--green)', gold: 'var(--gold)' };
+  function navLinkStyle(color) {
+    return color && NAV_COLOR_MAP[color] ? ' style="color:' + NAV_COLOR_MAP[color] + ';font-weight:900;"' : '';
+  }
+  async function loadNavItems() {
+    try {
+      var { data } = await _sb.from('site_settings').select('value').eq('id', 'nav_items').single();
+      var items = data && Array.isArray(data.value) ? data.value : null;
+      if (!items || !items.length) return;
+      var visibleItems = items.filter(function(n){ return n.visible !== false; });
+
+      var desktopUl = document.querySelector('#main-nav .nav-links');
+      if (desktopUl) {
+        desktopUl.innerHTML = visibleItems.map(function(n) {
+          return '<li><a href="' + n.href + '"' + navLinkStyle(n.color) + '>' + (n.icon ? n.icon + ' ' : '') + n.label + '</a></li>';
+        }).join('');
+      }
+
+      var drawerUl = document.querySelector('#nav-drawer > ul');
+      if (drawerUl) {
+        drawerUl.innerHTML = visibleItems.map(function(n) {
+          return '<li><a href="' + n.href + '"' + navLinkStyle(n.color) + ' onclick="closeNavDrawer()">' + (n.icon ? n.icon + ' ' : '') + n.label + '</a></li>';
+        }).join('');
+      }
+    } catch(e) { console.warn('nav items load error:', e); }
+  }
+
+  // ── 1ج. تحميل قسم الهيرو من Supabase ──
+  var HERO_BTN_CLASS = { register: 'btn-register-hero', primary: 'btn-primary', secondary: 'btn-secondary', gold: 'btn-gold' };
+  async function loadHero() {
+    try {
+      var { data } = await _sb.from('site_settings').select('value').eq('id', 'hero_content').single();
+      var h = data && data.value;
+      if (!h || !Object.keys(h).length) return;
+
+      var badgeEl = document.querySelector('.hero-badge');
+      if (badgeEl && h.badge) badgeEl.innerHTML = '<span class="dot"></span> ' + h.badge;
+
+      var titleEl = document.querySelector('.hero-title');
+      if (titleEl && (h.title1 || h.hl1)) {
+        titleEl.innerHTML =
+          (h.title1 || '') + ' <span class="hl-blue">' + (h.hl1 || '') + '</span><br>' +
+          (h.title2 || '') + ' <span class="hl-gold">' + (h.hl2 || '') + '</span>';
+      }
+
+      var subEl = document.querySelector('.hero-sub');
+      if (subEl && h.subtitle) subEl.textContent = h.subtitle;
+
+      var imgEl = document.querySelector('.hero-visual-card img, .hero-visual img');
+      if (imgEl && h.image_url) imgEl.src = h.image_url;
+
+      var btnsEl = document.querySelector('.hero-btns');
+      if (btnsEl && Array.isArray(h.buttons) && h.buttons.length) {
+        var visibleBtns = h.buttons.filter(function(b){ return b.visible !== false; });
+        btnsEl.innerHTML = visibleBtns.map(function(b) {
+          var cls = HERO_BTN_CLASS[b.style] || 'btn-primary';
+          var target = /^https?:\/\//.test(b.href) ? ' target="_blank"' : '';
+          return '<a href="' + b.href + '" class="' + cls + '"' + target + '>' + (b.icon ? b.icon + ' ' : '') + b.label + '</a>';
+        }).join('');
+      }
+    } catch(e) { console.warn('hero content load error:', e); }
+  }
+
   // ── 2. تحميل الأسعار من Supabase ──
   async function loadPricing() {
     try {
@@ -3853,6 +3917,8 @@ function switchSession(s) {
   // ── تشغيل كل الوظائف ──
   document.addEventListener('DOMContentLoaded', function() {
     loadVisibility();
+    loadNavItems();
+    loadHero();
     loadPricing();
     loadTestimonials();
     loadContactInfo();

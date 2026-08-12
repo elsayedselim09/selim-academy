@@ -722,6 +722,8 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       <button class="sc-tab" data-tab="sc-faq"      onclick="scSwitchTab(this,'sc-faq')">❓ الأسئلة الشائعة</button>
       <button class="sc-tab" data-tab="sc-bylaws"   onclick="scSwitchTab(this,'sc-bylaws')">📋 إدارة اللوائح</button>
       <button class="sc-tab" data-tab="sc-statsbar"  onclick="scSwitchTab(this,'sc-statsbar')">📊 شريط الإحصائيات</button>
+      <button class="sc-tab" data-tab="sc-navbar"    onclick="scSwitchTab(this,'sc-navbar')">🧭 شريط التنقل</button>
+      <button class="sc-tab" data-tab="sc-hero"      onclick="scSwitchTab(this,'sc-hero')">🖼️ قسم الهيرو</button>
     </div>
 
     <!-- ────────── TAB: المدرسين ────────── -->
@@ -927,6 +929,78 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
       <div id="sb-mdl" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
         <div style="background:var(--white);border-radius:18px;padding:28px;max-width:440px;width:100%;box-shadow:var(--shadow-lg);animation:fadeIn .2s ease;direction:rtl;">
           <div id="sb-mdl-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── TAB: شريط التنقل (Navbar) ────────── -->
+    <div class="sc-pane" id="sc-navbar">
+      <div class="section-card" style="margin-bottom:16px;">
+        <div class="section-head">
+          <h3>🧭 روابط شريط التنقل</h3>
+          <span style="font-size:.82rem;color:var(--gray);">اسحب لإعادة الترتيب · شغّل/أوقف أي رابط · التعديلات ما بتتحفظش إلا لما تضغط "حفظ التغييرات"</span>
+        </div>
+        <div class="section-body">
+          <div id="sc-nav-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+            <div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn-primary" onclick="scOpenAddNavItem()">➕ إضافة رابط جديد</button>
+            <button class="btn-primary" style="background:var(--green)" onclick="scSaveNavItems()">💾 حفظ التغييرات</button>
+          </div>
+          <div id="sc-nav-msg" style="margin-top:10px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── TAB: قسم الهيرو ────────── -->
+    <div class="sc-pane" id="sc-hero">
+      <div class="section-card" style="margin-bottom:16px;">
+        <div class="section-head"><h3>📝 نصوص قسم الهيرو</h3></div>
+        <div class="section-body">
+          <div class="fg"><label>نص الشارة (Badge) أعلى العنوان</label><input type="text" id="hero-badge" placeholder="أكاديمية رائدة في التعليم الرقمي"></div>
+          <div class="fg-row">
+            <div class="fg"><label>بداية العنوان (عادي)</label><input type="text" id="hero-title1" placeholder="تعلّم مع"></div>
+            <div class="fg"><label>الجزء المميز الأول (لونه أزرق)</label><input type="text" id="hero-hl1" placeholder="أفضل المدرسين"></div>
+          </div>
+          <div class="fg-row">
+            <div class="fg"><label>وسط العنوان (عادي)</label><input type="text" id="hero-title2" placeholder="في"></div>
+            <div class="fg"><label>الجزء المميز الثاني (لونه دهبي)</label><input type="text" id="hero-hl2" placeholder="أكاديمية سليم"></div>
+          </div>
+          <div class="fg"><label>الوصف تحت العنوان</label><textarea id="hero-subtitle" rows="3" placeholder="انضم إلى أكاديميتنا..."></textarea></div>
+          <div id="hero-text-msg" style="margin-bottom:10px;"></div>
+          <button class="btn-primary" onclick="heroSaveText()">💾 حفظ النصوص</button>
+        </div>
+      </div>
+
+      <div class="section-card" style="margin-bottom:16px;">
+        <div class="section-head"><h3>🖼️ صورة الهيرو</h3></div>
+        <div class="section-body" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
+          <img id="hero-img-preview" src="" alt="" style="width:140px;height:100px;object-fit:cover;border-radius:12px;border:1px solid var(--gray-mid);background:var(--gray-light);">
+          <div>
+            <label style="display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:var(--blue-light);color:var(--blue);border-radius:9px;cursor:pointer;font-size:.85rem;font-weight:700;border:1px solid #BFDBFE">
+              📷 اختيار صورة جديدة ورفعها
+              <input type="file" id="hero-img-file" accept="image/*" style="display:none" onchange="heroUploadImage(this)">
+            </label>
+            <div id="hero-img-msg" style="font-size:.8rem;color:var(--gray);margin-top:8px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head">
+          <h3>🔘 أزرار الهيرو</h3>
+          <span style="font-size:.82rem;color:var(--gray);">اسحب لإعادة الترتيب · شغّل/أوقف أي زرار</span>
+        </div>
+        <div class="section-body">
+          <div id="sc-hero-btns-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+            <div class="sc-skeleton"></div><div class="sc-skeleton"></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn-primary" onclick="scOpenAddHeroBtn()">➕ إضافة زرار</button>
+            <button class="btn-primary" style="background:var(--green)" onclick="heroSaveButtons()">💾 حفظ الأزرار</button>
+          </div>
+          <div id="sc-hero-btns-msg" style="margin-top:10px;"></div>
         </div>
       </div>
     </div>
@@ -1232,6 +1306,70 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
     </div>
   </div>
 
+  <!-- Modal: Add/Edit Nav Item -->
+  <div class="mdl" id="mdl-sc-navitem">
+    <div class="mdl-box wide">
+      <div class="mdl-icon">🧭</div>
+      <div class="mdl-title" id="mdl-navitem-title">إضافة رابط</div>
+      <input type="hidden" id="sc-nav-idx">
+      <div class="fg-row">
+        <div class="fg" style="flex:0 0 100px"><label>الأيقونة</label><input type="text" id="sc-nav-icon" placeholder="🏠" maxlength="6" style="text-align:center;font-size:1.2rem"></div>
+        <div class="fg" style="flex:1"><label>اسم الرابط</label><input type="text" id="sc-nav-label" placeholder="الرئيسية"></div>
+      </div>
+      <div class="fg"><label>الرابط (# لقسم في نفس الصفحة، أو اسم صفحة مثل courses.html)</label><input type="text" id="sc-nav-href" placeholder="#hero أو courses.html"></div>
+      <div class="fg">
+        <label>لون الرابط</label>
+        <select id="sc-nav-color" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.9rem;outline:none;background:#fff">
+          <option value="">افتراضي (بدون لون مميز)</option>
+          <option value="blue">🔵 أزرق</option>
+          <option value="green">🟢 أخضر</option>
+          <option value="gold">🟡 دهبي</option>
+        </select>
+      </div>
+      <div class="fg" style="flex-direction:row;align-items:center;gap:10px;">
+        <input type="checkbox" id="sc-nav-visible" checked style="width:18px;height:18px;accent-color:var(--blue);">
+        <label style="font-size:.9rem;font-weight:700;cursor:pointer;" for="sc-nav-visible">ظاهر في الموقع</label>
+      </div>
+      <div id="sc-nav-item-msg"></div>
+      <div class="mdl-btns">
+        <button class="mdl-cancel" onclick="closeMdl('mdl-sc-navitem')">إلغاء</button>
+        <button class="mdl-confirm mc-save" onclick="scConfirmNavItem()">💾 حفظ الرابط</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add/Edit Hero Button -->
+  <div class="mdl" id="mdl-sc-herobtn">
+    <div class="mdl-box wide">
+      <div class="mdl-icon">🔘</div>
+      <div class="mdl-title" id="mdl-herobtn-title">إضافة زرار</div>
+      <input type="hidden" id="sc-hb-idx">
+      <div class="fg-row">
+        <div class="fg" style="flex:0 0 100px"><label>الأيقونة</label><input type="text" id="sc-hb-icon" placeholder="📝" maxlength="6" style="text-align:center;font-size:1.2rem"></div>
+        <div class="fg" style="flex:1"><label>نص الزرار</label><input type="text" id="sc-hb-label" placeholder="سجل الآن"></div>
+      </div>
+      <div class="fg"><label>الرابط</label><input type="text" id="sc-hb-href" placeholder="login.html أو #booking"></div>
+      <div class="fg">
+        <label>شكل الزرار</label>
+        <select id="sc-hb-style" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.9rem;outline:none;background:#fff">
+          <option value="register">أخضر بارز (تسجيل)</option>
+          <option value="primary">أزرق أساسي</option>
+          <option value="secondary">رمادي ثانوي</option>
+          <option value="gold">دهبي</option>
+        </select>
+      </div>
+      <div class="fg" style="flex-direction:row;align-items:center;gap:10px;">
+        <input type="checkbox" id="sc-hb-visible" checked style="width:18px;height:18px;accent-color:var(--blue);">
+        <label style="font-size:.9rem;font-weight:700;cursor:pointer;" for="sc-hb-visible">ظاهر في الموقع</label>
+      </div>
+      <div id="sc-hb-item-msg"></div>
+      <div class="mdl-btns">
+        <button class="mdl-cancel" onclick="closeMdl('mdl-sc-herobtn')">إلغاء</button>
+        <button class="mdl-confirm mc-save" onclick="scConfirmHeroBtn()">💾 حفظ الزرار</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ════════════ CSS for site content page ════════════ -->
   <style>
   /* TABS BAR */
@@ -1255,6 +1393,20 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
   .sc-teacher-item.pinned-item{border-color:var(--gold);background:var(--gold-light)}
   .sc-drag-handle{font-size:1.2rem;color:var(--gray);cursor:grab;flex-shrink:0}
   .sc-pin-badge{background:var(--gold);color:#fff;font-size:.68rem;font-weight:900;padding:2px 8px;border-radius:50px}
+  .sc-row-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--white);border:1px solid var(--gray-mid);border-radius:12px;cursor:grab;transition:all .2s;user-select:none}
+  .sc-row-item:hover{box-shadow:var(--shadow);border-color:var(--blue-mid)}
+  .sc-row-item.dragging{opacity:.5;border-color:var(--blue);box-shadow:0 8px 24px rgba(26,86,219,.2)}
+  .sc-row-item.is-hidden{opacity:.55;background:var(--gray-light)}
+  .sc-row-icon{font-size:1.3rem;flex-shrink:0;width:32px;text-align:center}
+  .sc-row-label{font-weight:800;font-size:.92rem;color:var(--dark)}
+  .sc-row-href{font-size:.76rem;color:var(--gray);direction:ltr;text-align:right;unicode-bidi:plaintext}
+  .sc-color-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;display:inline-block}
+  .sc-toggle{position:relative;width:40px;height:22px;flex-shrink:0;cursor:pointer}
+  .sc-toggle input{opacity:0;width:0;height:0}
+  .sc-toggle .slider{position:absolute;inset:0;background:var(--gray-mid);border-radius:50px;transition:.2s}
+  .sc-toggle .slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+  .sc-toggle input:checked + .slider{background:var(--green)}
+  .sc-toggle input:checked + .slider:before{transform:translateX(-18px)}
   /* SKELETON */
   .sc-skeleton{height:50px;border-radius:10px;background:linear-gradient(90deg,var(--gray-mid) 25%,#f0f0f0 50%,var(--gray-mid) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
   @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -6637,6 +6789,8 @@ function scSwitchTab(btn, paneId) {
   if (paneId === 'sc-faq')            scLoadFaq();
   if (paneId === 'sc-bylaws')         scLoadBylaws();
   if (paneId === 'sc-statsbar')       sbLoadStats();
+  if (paneId === 'sc-navbar')         scLoadNavItems();
+  if (paneId === 'sc-hero')           heroLoadContent();
 }
 
 // ── Init ──
@@ -8334,6 +8488,328 @@ async function sbSaveNew() {
   } catch(e) { toast('خطأ: ' + e.message, 'err'); }
 }
 
+
+// ══════════════════════════════════════════════════════════════════
+//  🧭  شريط التنقل (Navbar) — TAB
+// ══════════════════════════════════════════════════════════════════
+const SC_NAV_DEFAULTS = [
+  { icon:'🏠', label:'الرئيسية',      href:'#hero',              color:'',      visible:true },
+  { icon:'📚', label:'الكورسات',      href:'courses.html',       color:'blue',  visible:true },
+  { icon:'📂', label:'الملفات',       href:'files.html',         color:'green', visible:true },
+  { icon:'🎁', label:'مجاني',         href:'free.html',          color:'green', visible:true },
+  { icon:'💰', label:'الأسعار',       href:'#pricing',           color:'',      visible:true },
+  { icon:'👨‍🏫', label:'فريق التدريس', href:'#teachers',          color:'',      visible:true },
+  { icon:'🧑‍🏫', label:'انضم كمعلم',   href:'join-teacher.html',  color:'gold',  visible:true },
+  { icon:'📢', label:'الإعلانات',     href:'announcements.html', color:'gold',  visible:true },
+  { icon:'⭐', label:'الآراء',        href:'#testimonials',      color:'',      visible:true },
+  { icon:'✨', label:'رؤيتنا',        href:'vision.html',        color:'',      visible:true },
+  { icon:'📋', label:'اللوائح',       href:'bylaws.html',        color:'blue',  visible:true },
+];
+const SC_COLOR_HEX = { blue:'#1A56DB', green:'#0E9F6E', gold:'#C99A44', '':'#9CA3AF' };
+
+let _scNavItems = [];
+
+async function scLoadNavItems() {
+  const cont = document.getElementById('sc-nav-list');
+  cont.innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
+  try {
+    const { data } = await sb.from('site_settings').select('value').eq('id', 'nav_items').single();
+    _scNavItems = (data && Array.isArray(data.value) && data.value.length) ? data.value : JSON.parse(JSON.stringify(SC_NAV_DEFAULTS));
+  } catch(e) {
+    _scNavItems = JSON.parse(JSON.stringify(SC_NAV_DEFAULTS));
+  }
+  scRenderNavItems();
+}
+
+function scRenderNavItems() {
+  const cont = document.getElementById('sc-nav-list');
+  if (!_scNavItems.length) { cont.innerHTML = '<div class="empty-box"><div class="ei">🧭</div><div class="et">لا يوجد روابط</div></div>'; return; }
+  cont.innerHTML = _scNavItems.map((n, i) => `
+    <div class="sc-row-item ${n.visible === false ? 'is-hidden' : ''}" draggable="true"
+         data-idx="${i}"
+         ondragstart="scNavDragStart(event,${i})" ondragover="scNavDragOver(event)" ondrop="scNavDrop(event,${i})" ondragend="scNavDragEnd()">
+      <span class="sc-drag-handle">⠿</span>
+      <span class="sc-row-icon">${n.icon || '🔗'}</span>
+      <div style="flex:1;min-width:0;">
+        <div class="sc-row-label">${n.label || '—'}</div>
+        <div class="sc-row-href">${n.href || ''}</div>
+      </div>
+      <span class="sc-color-dot" style="background:${SC_COLOR_HEX[n.color || '']}" title="لون الرابط"></span>
+      <label class="sc-toggle" title="${n.visible === false ? 'مخفي' : 'ظاهر'}">
+        <input type="checkbox" ${n.visible === false ? '' : 'checked'} onchange="scToggleNavVisible(${i})">
+        <span class="slider"></span>
+      </label>
+      <div class="acts">
+        <button class="btn-ed" onclick="scEditNavItem(${i})">✏️ تعديل</button>
+        <button class="btn-rm" onclick="scDeleteNavItem(${i})">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+let _scNavDragFrom = null;
+function scNavDragStart(e, idx) { _scNavDragFrom = idx; e.currentTarget.classList.add('dragging'); }
+function scNavDragOver(e) { e.preventDefault(); }
+function scNavDragEnd() { document.querySelectorAll('#sc-nav-list .sc-row-item').forEach(el => el.classList.remove('dragging')); }
+function scNavDrop(e, toIdx) {
+  e.preventDefault();
+  if (_scNavDragFrom === null || _scNavDragFrom === toIdx) return;
+  const moved = _scNavItems.splice(_scNavDragFrom, 1)[0];
+  _scNavItems.splice(toIdx, 0, moved);
+  _scNavDragFrom = null;
+  scRenderNavItems();
+}
+
+function scToggleNavVisible(idx) {
+  _scNavItems[idx].visible = _scNavItems[idx].visible === false ? true : false;
+  scRenderNavItems();
+}
+
+function scDeleteNavItem(idx) {
+  if (!confirm(`تحذف رابط "${_scNavItems[idx].label}"؟`)) return;
+  _scNavItems.splice(idx, 1);
+  scRenderNavItems();
+}
+
+function scOpenAddNavItem() {
+  document.getElementById('mdl-navitem-title').textContent = 'إضافة رابط';
+  document.getElementById('sc-nav-idx').value = '';
+  document.getElementById('sc-nav-icon').value = '';
+  document.getElementById('sc-nav-label').value = '';
+  document.getElementById('sc-nav-href').value = '';
+  document.getElementById('sc-nav-color').value = '';
+  document.getElementById('sc-nav-visible').checked = true;
+  document.getElementById('sc-nav-item-msg').innerHTML = '';
+  openMdl('mdl-sc-navitem');
+}
+
+function scEditNavItem(idx) {
+  const n = _scNavItems[idx];
+  document.getElementById('mdl-navitem-title').textContent = 'تعديل رابط';
+  document.getElementById('sc-nav-idx').value = idx;
+  document.getElementById('sc-nav-icon').value = n.icon || '';
+  document.getElementById('sc-nav-label').value = n.label || '';
+  document.getElementById('sc-nav-href').value = n.href || '';
+  document.getElementById('sc-nav-color').value = n.color || '';
+  document.getElementById('sc-nav-visible').checked = n.visible !== false;
+  document.getElementById('sc-nav-item-msg').innerHTML = '';
+  openMdl('mdl-sc-navitem');
+}
+
+function scConfirmNavItem() {
+  const idxRaw = document.getElementById('sc-nav-idx').value;
+  const icon = document.getElementById('sc-nav-icon').value.trim();
+  const label = document.getElementById('sc-nav-label').value.trim();
+  const href = document.getElementById('sc-nav-href').value.trim();
+  const color = document.getElementById('sc-nav-color').value;
+  const visible = document.getElementById('sc-nav-visible').checked;
+  const msg = document.getElementById('sc-nav-item-msg');
+  if (!label || !href) { msg.innerHTML = '<div class="msg-err">❌ الاسم والرابط مطلوبين</div>'; return; }
+  const item = { icon, label, href, color, visible };
+  if (idxRaw === '') {
+    _scNavItems.push(item);
+  } else {
+    _scNavItems[parseInt(idxRaw)] = item;
+  }
+  closeMdl('mdl-sc-navitem');
+  scRenderNavItems();
+}
+
+async function scSaveNavItems() {
+  const msg = document.getElementById('sc-nav-msg');
+  try {
+    const { error } = await sb.from('site_settings').upsert({ id: 'nav_items', value: _scNavItems, updated_at: new Date().toISOString() });
+    if (error) throw error;
+    msg.innerHTML = '<div class="msg-ok">✅ تم حفظ شريط التنقل بنجاح — التغييرات ظاهرة على الموقع فوراً</div>';
+    toast('✅ تم حفظ شريط التنقل');
+  } catch(e) { msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`; }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  🖼️  قسم الهيرو (Hero Section) — TAB
+// ══════════════════════════════════════════════════════════════════
+const HERO_DEFAULTS = {
+  badge: 'أكاديمية رائدة في التعليم الرقمي',
+  title1: 'تعلّم مع', hl1: 'أفضل المدرسين',
+  title2: 'في', hl2: 'أكاديمية سليم',
+  subtitle: 'انضم إلى أكاديميتنا التفاعلية حيث تجد نخبة من المدرسين المختصين في مختلف المواد الدراسية. تعلّم بطريقة ممتعة مع محتوى تفاعلي واختبارات تقييمية.',
+  image_url: 'images/hero-visual-main.webp',
+  buttons: [
+    { icon:'📝', label:'سجل الآن',              href:'login.html',        style:'register',  visible:true },
+    { icon:'🎓', label:'ابدأ رحلتك التعليمية',   href:'#booking',          style:'primary',   visible:true },
+    { icon:'📚', label:'الكورسات',               href:'courses.html',      style:'secondary', visible:true },
+    { icon:'📂', label:'الملفات',                href:'files.html',        style:'secondary', visible:true },
+    { icon:'🎁', label:'محتوى مجاني',            href:'free.html',         style:'secondary', visible:true },
+    { icon:'📋', label:'اللوائح',                href:'bylaws.html',       style:'secondary', visible:true },
+    { icon:'🧑‍🏫', label:'انضم كمعلم',            href:'join-teacher.html', style:'gold',      visible:true },
+    { icon:'✨', label:'اكتشف رؤيتنا',            href:'vision.html',       style:'gold',      visible:true },
+  ]
+};
+const HERO_STYLE_LABEL = { register:'أخضر (تسجيل)', primary:'أزرق أساسي', secondary:'رمادي ثانوي', gold:'دهبي' };
+
+let _heroContent = null;
+let _heroButtons = [];
+
+async function heroLoadContent() {
+  document.getElementById('sc-hero-btns-list').innerHTML = '<div class="sc-skeleton"></div><div class="sc-skeleton"></div>';
+  try {
+    const { data } = await sb.from('site_settings').select('value').eq('id', 'hero_content').single();
+    _heroContent = (data && data.value && Object.keys(data.value).length) ? data.value : JSON.parse(JSON.stringify(HERO_DEFAULTS));
+  } catch(e) {
+    _heroContent = JSON.parse(JSON.stringify(HERO_DEFAULTS));
+  }
+  _heroButtons = Array.isArray(_heroContent.buttons) ? _heroContent.buttons : [];
+
+  document.getElementById('hero-badge').value = _heroContent.badge || '';
+  document.getElementById('hero-title1').value = _heroContent.title1 || '';
+  document.getElementById('hero-hl1').value = _heroContent.hl1 || '';
+  document.getElementById('hero-title2').value = _heroContent.title2 || '';
+  document.getElementById('hero-hl2').value = _heroContent.hl2 || '';
+  document.getElementById('hero-subtitle').value = _heroContent.subtitle || '';
+  document.getElementById('hero-img-preview').src = _heroContent.image_url || 'images/hero-visual-main.webp';
+
+  renderHeroButtons();
+}
+
+async function heroSaveText() {
+  const msg = document.getElementById('hero-text-msg');
+  _heroContent.badge = document.getElementById('hero-badge').value.trim();
+  _heroContent.title1 = document.getElementById('hero-title1').value.trim();
+  _heroContent.hl1 = document.getElementById('hero-hl1').value.trim();
+  _heroContent.title2 = document.getElementById('hero-title2').value.trim();
+  _heroContent.hl2 = document.getElementById('hero-hl2').value.trim();
+  _heroContent.subtitle = document.getElementById('hero-subtitle').value.trim();
+  try {
+    const { error } = await sb.from('site_settings').upsert({ id: 'hero_content', value: _heroContent, updated_at: new Date().toISOString() });
+    if (error) throw error;
+    msg.innerHTML = '<div class="msg-ok">✅ تم حفظ نصوص الهيرو بنجاح</div>';
+    toast('✅ تم حفظ نصوص الهيرو');
+  } catch(e) { msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`; }
+}
+
+async function heroUploadImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const msgEl = document.getElementById('hero-img-msg');
+  msgEl.textContent = '⏳ جاري الرفع...';
+  try {
+    const ext = file.name.split('.').pop();
+    const path = `site/hero-${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const { error: upErr } = await sb.storage.from('public-files').upload(path, file, { upsert: true });
+    if (upErr) throw upErr;
+    const { data: pub } = sb.storage.from('public-files').getPublicUrl(path);
+    _heroContent.image_url = pub.publicUrl;
+    document.getElementById('hero-img-preview').src = pub.publicUrl;
+    const { error: saveErr } = await sb.from('site_settings').upsert({ id: 'hero_content', value: _heroContent, updated_at: new Date().toISOString() });
+    if (saveErr) throw saveErr;
+    msgEl.innerHTML = '<span style="color:var(--green);font-weight:700;">✅ تم رفع الصورة وحفظها</span>';
+    toast('✅ تم تحديث صورة الهيرو');
+  } catch(e) { msgEl.innerHTML = `<span style="color:#e11d48;font-weight:700;">❌ ${e.message}</span>`; }
+}
+
+function renderHeroButtons() {
+  const cont = document.getElementById('sc-hero-btns-list');
+  if (!_heroButtons.length) { cont.innerHTML = '<div class="empty-box"><div class="ei">🔘</div><div class="et">لا يوجد أزرار</div></div>'; return; }
+  cont.innerHTML = _heroButtons.map((b, i) => `
+    <div class="sc-row-item ${b.visible === false ? 'is-hidden' : ''}" draggable="true"
+         data-idx="${i}"
+         ondragstart="heroBtnDragStart(event,${i})" ondragover="heroBtnDragOver(event)" ondrop="heroBtnDrop(event,${i})" ondragend="heroBtnDragEnd()">
+      <span class="sc-drag-handle">⠿</span>
+      <span class="sc-row-icon">${b.icon || '🔗'}</span>
+      <div style="flex:1;min-width:0;">
+        <div class="sc-row-label">${b.label || '—'}</div>
+        <div class="sc-row-href">${b.href || ''} · ${HERO_STYLE_LABEL[b.style] || b.style || ''}</div>
+      </div>
+      <label class="sc-toggle" title="${b.visible === false ? 'مخفي' : 'ظاهر'}">
+        <input type="checkbox" ${b.visible === false ? '' : 'checked'} onchange="heroToggleBtnVisible(${i})">
+        <span class="slider"></span>
+      </label>
+      <div class="acts">
+        <button class="btn-ed" onclick="heroEditBtn(${i})">✏️ تعديل</button>
+        <button class="btn-rm" onclick="heroDeleteBtn(${i})">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+let _heroBtnDragFrom = null;
+function heroBtnDragStart(e, idx) { _heroBtnDragFrom = idx; e.currentTarget.classList.add('dragging'); }
+function heroBtnDragOver(e) { e.preventDefault(); }
+function heroBtnDragEnd() { document.querySelectorAll('#sc-hero-btns-list .sc-row-item').forEach(el => el.classList.remove('dragging')); }
+function heroBtnDrop(e, toIdx) {
+  e.preventDefault();
+  if (_heroBtnDragFrom === null || _heroBtnDragFrom === toIdx) return;
+  const moved = _heroButtons.splice(_heroBtnDragFrom, 1)[0];
+  _heroButtons.splice(toIdx, 0, moved);
+  _heroBtnDragFrom = null;
+  renderHeroButtons();
+}
+
+function heroToggleBtnVisible(idx) {
+  _heroButtons[idx].visible = _heroButtons[idx].visible === false ? true : false;
+  renderHeroButtons();
+}
+
+function heroDeleteBtn(idx) {
+  if (!confirm(`تحذف زرار "${_heroButtons[idx].label}"؟`)) return;
+  _heroButtons.splice(idx, 1);
+  renderHeroButtons();
+}
+
+function scOpenAddHeroBtn() {
+  document.getElementById('mdl-herobtn-title').textContent = 'إضافة زرار';
+  document.getElementById('sc-hb-idx').value = '';
+  document.getElementById('sc-hb-icon').value = '';
+  document.getElementById('sc-hb-label').value = '';
+  document.getElementById('sc-hb-href').value = '';
+  document.getElementById('sc-hb-style').value = 'primary';
+  document.getElementById('sc-hb-visible').checked = true;
+  document.getElementById('sc-hb-item-msg').innerHTML = '';
+  openMdl('mdl-sc-herobtn');
+}
+
+function heroEditBtn(idx) {
+  const b = _heroButtons[idx];
+  document.getElementById('mdl-herobtn-title').textContent = 'تعديل زرار';
+  document.getElementById('sc-hb-idx').value = idx;
+  document.getElementById('sc-hb-icon').value = b.icon || '';
+  document.getElementById('sc-hb-label').value = b.label || '';
+  document.getElementById('sc-hb-href').value = b.href || '';
+  document.getElementById('sc-hb-style').value = b.style || 'primary';
+  document.getElementById('sc-hb-visible').checked = b.visible !== false;
+  document.getElementById('sc-hb-item-msg').innerHTML = '';
+  openMdl('mdl-sc-herobtn');
+}
+
+function scConfirmHeroBtn() {
+  const idxRaw = document.getElementById('sc-hb-idx').value;
+  const icon = document.getElementById('sc-hb-icon').value.trim();
+  const label = document.getElementById('sc-hb-label').value.trim();
+  const href = document.getElementById('sc-hb-href').value.trim();
+  const style = document.getElementById('sc-hb-style').value;
+  const visible = document.getElementById('sc-hb-visible').checked;
+  const msg = document.getElementById('sc-hb-item-msg');
+  if (!label || !href) { msg.innerHTML = '<div class="msg-err">❌ النص والرابط مطلوبين</div>'; return; }
+  const btn = { icon, label, href, style, visible };
+  if (idxRaw === '') {
+    _heroButtons.push(btn);
+  } else {
+    _heroButtons[parseInt(idxRaw)] = btn;
+  }
+  closeMdl('mdl-sc-herobtn');
+  renderHeroButtons();
+}
+
+async function heroSaveButtons() {
+  const msg = document.getElementById('sc-hero-btns-msg');
+  _heroContent.buttons = _heroButtons;
+  try {
+    const { error } = await sb.from('site_settings').upsert({ id: 'hero_content', value: _heroContent, updated_at: new Date().toISOString() });
+    if (error) throw error;
+    msg.innerHTML = '<div class="msg-ok">✅ تم حفظ أزرار الهيرو بنجاح</div>';
+    toast('✅ تم حفظ أزرار الهيرو');
+  } catch(e) { msg.innerHTML = `<div class="msg-err">❌ ${e.message}</div>`; }
+}
 
 // ══════════════════════════════════════════════════════════════════
 //  📊  VISITORS ANALYTICS — إحصائيات الزوار
