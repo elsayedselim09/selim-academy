@@ -6,7 +6,7 @@
 <title>أكاديمية سليم | لوحة الإدارة</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
 @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @keyframes spin   { to{transform:rotate(360deg)} }
@@ -5638,6 +5638,7 @@ async function deleteTeacherApp(id) {
 
 // ══════════════════════════════════
 // تصدير طلبات الانضمام إلى ملف إكسل
+// (منسّق بألوان الأكاديمية + اتجاه RTL + عمود لكل مادة + واتساب قابل للنقر)
 // ══════════════════════════════════
 function exportTeacherAppsToExcel() {
   if (!S.teacherApps || !S.teacherApps.length) {
@@ -5650,63 +5651,113 @@ function exportTeacherAppsToExcel() {
   const dateStr = v => v ? new Date(v).toLocaleDateString('ar-EG') : '';
   const dateTimeStr = v => v ? new Date(v).toLocaleString('ar-EG') : '';
 
-  const rows = S.teacherApps.map((a, i) => ({
-    'م': i + 1,
-    'الاسم بالكامل': a.full_name || '',
-    'تاريخ الميلاد': dateStr(a.birth_date),
-    'الجنس': a.gender || '',
-    'الدولة': a.country || '',
-    'المدينة': a.city || '',
-    'رقم الموبايل': a.phone || '',
-    'رابط الواتساب': a.phone ? `https://wa.me/${String(a.phone).replace(/[^0-9]/g,'').replace(/^0/,'20')}` : '',
+  // أقصى عدد مواد اختارها معلم واحد -> نعمل عمود مستقل لكل مادة
+  const maxSubjects = Math.max(1, ...S.teacherApps.map(a => (a.subjects || []).length));
+  const subjectHeaders = Array.from({ length: maxSubjects }, (_, i) => `المادة ${i + 1}`);
 
-    'المؤهل الدراسي': a.qualification || '',
-    'الجامعة': a.university || '',
-    'الكلية': a.college || '',
-    'سنة التخرج': a.graduation_year || '',
-    'التقدير': a.grade_avg || '',
+  // ترتيب الأعمدة: زي الصورة المرفقة الأول (م / الاسم / المواد / المنهج / المراحل / الموبايل / واتساب)
+  // ثم باقي الأعمدة من الأهم للأقل أهمية
+  const headers = [
+    'م', 'الاسم بالكامل',
+    ...subjectHeaders, 'مادة أخرى',
+    'المناهج', 'منهج آخر',
+    'المراحل الدراسية',
+    'رقم الموبايل', 'واتساب',
+    'المدينة', 'الدولة',
+    'لديه خبرة سابقة؟', 'سنوات الخبرة', 'أماكن العمل السابقة',
+    'خبرة تدريس أونلاين؟', 'منصات التدريس أونلاين', 'منصة أخرى',
+    'الساعات المتاحة أسبوعيًا', 'الأيام المتاحة', 'الفترات المتاحة',
+    'الأجهزة المتاحة',
+    'المؤهل الدراسي', 'الجامعة', 'الكلية', 'سنة التخرج', 'التقدير',
+    'تاريخ الميلاد', 'الجنس',
+    'رابط الفيديو التعريفي',
+    'أكّد صحة البيانات؟', 'موافق على التواصل؟',
+    'تاريخ التقديم'
+  ];
 
-    'المواد المطلوبة': arr(a.subjects),
-    'مادة أخرى': a.subject_other || '',
+  const whatsappColIndex = headers.indexOf('واتساب');
 
-    'المراحل الدراسية': arr(a.grades),
+  const dataRows = S.teacherApps.map((a, i) => {
+    const subjects = a.subjects || [];
+    const subjectCells = subjectHeaders.map((_, idx) => subjects[idx] || '');
+    const waLink = a.phone ? `https://wa.me/${String(a.phone).replace(/[^0-9]/g, '').replace(/^0/, '20')}` : '';
 
-    'المناهج': arr(a.curricula),
-    'منهج آخر': a.curriculum_other || '',
-
-    'لديه خبرة سابقة؟': yn(a.has_experience),
-    'سنوات الخبرة': a.years_experience || '',
-    'أماكن العمل السابقة': a.previous_workplaces || '',
-
-    'خبرة تدريس أونلاين؟': yn(a.has_online_experience),
-    'منصات التدريس أونلاين': arr(a.online_platforms),
-    'منصة أخرى': a.online_platform_other || '',
-
-    'الساعات المتاحة أسبوعيًا': a.weekly_hours || '',
-    'الأيام المتاحة': arr(a.available_days),
-    'الفترات المتاحة': arr(a.available_periods),
-
-    'الأجهزة المتاحة': arr(a.equipment),
-
-    'رابط الفيديو التعريفي': a.video_url || '',
-
-    'أكّد صحة البيانات؟': yn(a.confirmed_accuracy),
-    'موافق على التواصل؟': yn(a.agreed_contact),
-
-    'تاريخ التقديم': dateTimeStr(a.created_at)
-  }));
-
-  const ws = XLSX.utils.json_to_sheet(rows);
-
-  // عرض الأعمدة بشكل مناسب
-  const colWidths = Object.keys(rows[0]).map(key => {
-    const maxLen = Math.max(
-      key.length,
-      ...rows.map(r => String(r[key] || '').length)
-    );
-    return { wch: Math.min(Math.max(maxLen + 2, 10), 45) };
+    return [
+      i + 1, a.full_name || '',
+      ...subjectCells, a.subject_other || '',
+      arr(a.curricula), a.curriculum_other || '',
+      arr(a.grades),
+      a.phone || '', waLink ? 'واتساب 💬' : '',
+      a.city || '', a.country || '',
+      yn(a.has_experience), a.years_experience || '', a.previous_workplaces || '',
+      yn(a.has_online_experience), arr(a.online_platforms), a.online_platform_other || '',
+      a.weekly_hours || '', arr(a.available_days), arr(a.available_periods),
+      arr(a.equipment),
+      a.qualification || '', a.university || '', a.college || '', a.graduation_year || '', a.grade_avg || '',
+      dateStr(a.birth_date), a.gender || '',
+      a.video_url || '',
+      yn(a.confirmed_accuracy), yn(a.agreed_contact),
+      dateTimeStr(a.created_at)
+    ];
   });
-  ws['!cols'] = colWidths;
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+  const range = XLSX.utils.decode_range(ws['!ref']);
+
+  // ─── الألوان (بألوان الأكاديمية: كحلي وذهبي) ───
+  const NAVY = '072A54', GOLD = 'C99A44', WHITE = 'FFFFFF';
+  const ZEBRA = 'EEF2F7', BORDER = 'D9D9D9', WA_GREEN = '1F8A45';
+
+  const thinBorder = { style: 'thin', color: { rgb: BORDER } };
+  const cellBorder = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      const cell = ws[addr];
+      if (!cell) continue;
+
+      if (r === 0) {
+        // صف العناوين
+        cell.s = {
+          fill: { fgColor: { rgb: NAVY } },
+          font: { bold: true, color: { rgb: WHITE }, sz: 12, name: 'Arial' },
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+          border: { top: thinBorder, bottom: { style: 'medium', color: { rgb: GOLD } }, left: thinBorder, right: thinBorder }
+        };
+      } else if (c === whatsappColIndex && cell.v) {
+        // عمود واتساب: رابط مباشر قابل للنقر
+        const rowData = S.teacherApps[r - 1];
+        const link = rowData.phone ? `https://wa.me/${String(rowData.phone).replace(/[^0-9]/g, '').replace(/^0/, '20')}` : '';
+        if (link) cell.l = { Target: link, Tooltip: 'فتح محادثة واتساب' };
+        cell.s = {
+          font: { bold: true, color: { rgb: WA_GREEN }, sz: 11, underline: true },
+          alignment: { horizontal: 'center', vertical: 'center' },
+          fill: { fgColor: { rgb: r % 2 === 0 ? WHITE : ZEBRA } },
+          border: cellBorder
+        };
+      } else {
+        // باقي الخلايا: تلوين متبادل (Zebra) لسهولة القراءة
+        cell.s = {
+          font: { sz: 11, color: { rgb: '1A1A1A' } },
+          alignment: { horizontal: 'right', vertical: 'center', wrapText: false },
+          fill: { fgColor: { rgb: r % 2 === 0 ? WHITE : ZEBRA } },
+          border: cellBorder
+        };
+      }
+    }
+  }
+
+  // عرض الأعمدة حسب المحتوى
+  ws['!cols'] = headers.map((h, ci) => {
+    const maxLen = Math.max(
+      h.length,
+      ...dataRows.map(row => String(row[ci] || '').length)
+    );
+    return { wch: Math.min(Math.max(maxLen + 3, 11), 42) };
+  });
+
+  ws['!rows'] = [{ hpt: 26 }]; // ارتفاع صف العناوين
 
   // تجميد صف العناوين + تفعيل الفلترة التلقائية
   ws['!freeze'] = { xSplit: 0, ySplit: 1 };
@@ -5714,6 +5765,9 @@ function exportTeacherAppsToExcel() {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'طلبات المعلمين');
+
+  // اتجاه الملف من اليمين لليسار (عربي)
+  wb.Workbook = { Views: [{ RTL: true }] };
 
   const today = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, `طلبات_انضمام_المعلمين_${today}.xlsx`);
