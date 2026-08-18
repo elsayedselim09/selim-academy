@@ -6,6 +6,7 @@
 <title>أكاديمية سليم | لوحة الإدارة</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @keyframes spin   { to{transform:rotate(360deg)} }
@@ -632,7 +633,12 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
 
   <!-- TEACHER APPLICATIONS (طلبات الانضمام - View فقط) -->
   <div class="page" id="page-teacher-apps">
-    <div class="page-title">📥 طلبات انضمام المعلمين</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div class="page-title">📥 طلبات انضمام المعلمين</div>
+      <button class="btn-primary" onclick="exportTeacherAppsToExcel()" style="background:var(--green);gap:8px">
+        📊 تصدير إلى إكسل
+      </button>
+    </div>
     <p class="page-sub">استمارات التقديم اللي بعتها معلمين محتملين — للاطلاع فقط. لو حابب تقبل حد، تواصل معاه بنفسك واتساب وقوله يعمل حساب من صفحة التسجيل العادية.</p>
     <div class="section-card">
       <div class="filter-bar">
@@ -5628,6 +5634,90 @@ async function deleteTeacherApp(id) {
   } catch (e) {
     toast('فشل الحذف: ' + e.message, 'err');
   }
+}
+
+// ══════════════════════════════════
+// تصدير طلبات الانضمام إلى ملف إكسل
+// ══════════════════════════════════
+function exportTeacherAppsToExcel() {
+  if (!S.teacherApps || !S.teacherApps.length) {
+    toast('لا توجد طلبات لتصديرها حاليًا.', 'err');
+    return;
+  }
+
+  const arr = v => (Array.isArray(v) && v.length) ? v.join('، ') : '';
+  const yn  = v => v === true ? 'نعم' : (v === false ? 'لا' : '');
+  const dateStr = v => v ? new Date(v).toLocaleDateString('ar-EG') : '';
+  const dateTimeStr = v => v ? new Date(v).toLocaleString('ar-EG') : '';
+
+  const rows = S.teacherApps.map((a, i) => ({
+    'م': i + 1,
+    'الاسم بالكامل': a.full_name || '',
+    'تاريخ الميلاد': dateStr(a.birth_date),
+    'الجنس': a.gender || '',
+    'الدولة': a.country || '',
+    'المدينة': a.city || '',
+    'رقم الموبايل': a.phone || '',
+    'رابط الواتساب': a.phone ? `https://wa.me/${String(a.phone).replace(/[^0-9]/g,'').replace(/^0/,'20')}` : '',
+
+    'المؤهل الدراسي': a.qualification || '',
+    'الجامعة': a.university || '',
+    'الكلية': a.college || '',
+    'سنة التخرج': a.graduation_year || '',
+    'التقدير': a.grade_avg || '',
+
+    'المواد المطلوبة': arr(a.subjects),
+    'مادة أخرى': a.subject_other || '',
+
+    'المراحل الدراسية': arr(a.grades),
+
+    'المناهج': arr(a.curricula),
+    'منهج آخر': a.curriculum_other || '',
+
+    'لديه خبرة سابقة؟': yn(a.has_experience),
+    'سنوات الخبرة': a.years_experience || '',
+    'أماكن العمل السابقة': a.previous_workplaces || '',
+
+    'خبرة تدريس أونلاين؟': yn(a.has_online_experience),
+    'منصات التدريس أونلاين': arr(a.online_platforms),
+    'منصة أخرى': a.online_platform_other || '',
+
+    'الساعات المتاحة أسبوعيًا': a.weekly_hours || '',
+    'الأيام المتاحة': arr(a.available_days),
+    'الفترات المتاحة': arr(a.available_periods),
+
+    'الأجهزة المتاحة': arr(a.equipment),
+
+    'رابط الفيديو التعريفي': a.video_url || '',
+
+    'أكّد صحة البيانات؟': yn(a.confirmed_accuracy),
+    'موافق على التواصل؟': yn(a.agreed_contact),
+
+    'تاريخ التقديم': dateTimeStr(a.created_at)
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // عرض الأعمدة بشكل مناسب
+  const colWidths = Object.keys(rows[0]).map(key => {
+    const maxLen = Math.max(
+      key.length,
+      ...rows.map(r => String(r[key] || '').length)
+    );
+    return { wch: Math.min(Math.max(maxLen + 2, 10), 45) };
+  });
+  ws['!cols'] = colWidths;
+
+  // تجميد صف العناوين + تفعيل الفلترة التلقائية
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+  ws['!autofilter'] = { ref: ws['!ref'] };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'طلبات المعلمين');
+
+  const today = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `طلبات_انضمام_المعلمين_${today}.xlsx`);
+  toast('تم تصدير الملف بنجاح ✅');
 }
 
 function adminSwitchTeacherTab(tab) {
