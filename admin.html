@@ -5655,24 +5655,29 @@ function exportTeacherAppsToExcel() {
   const maxSubjects = Math.max(1, ...S.teacherApps.map(a => (a.subjects || []).length));
   const subjectHeaders = Array.from({ length: maxSubjects }, (_, i) => `المادة ${i + 1}`);
 
-  // ترتيب الأعمدة: زي الصورة المرفقة الأول (م / الاسم / المواد / المنهج / المراحل / الموبايل / واتساب)
-  // ثم باقي الأعمدة من الأهم للأقل أهمية
+  // ترتيب الأعمدة: زي الصورة المرفقة الأول (م / الاسم / المواد / المنهج / المراحل)
+  // ثم الأجهزة قبل الموبايل، وبعد الواتساب الترتيب المطلوب، والمدينة/الدولة في الآخر
   const headers = [
     'م', 'الاسم بالكامل',
-    ...subjectHeaders, 'مادة أخرى',
-    'المناهج', 'منهج آخر',
+    ...subjectHeaders,
+    'المناهج',
     'المراحل الدراسية',
-    'رقم الموبايل', 'واتساب',
-    'المدينة', 'الدولة',
-    'لديه خبرة سابقة؟', 'سنوات الخبرة', 'أماكن العمل السابقة',
-    'خبرة تدريس أونلاين؟', 'منصات التدريس أونلاين', 'منصة أخرى',
-    'الساعات المتاحة أسبوعيًا', 'الأيام المتاحة', 'الفترات المتاحة',
     'الأجهزة المتاحة',
+    'رقم الموبايل', 'واتساب',
+    'رابط الفيديو التعريفي',
+    'الأيام المتاحة',
+    'الفترات المتاحة',
+    'الساعات المتاحة',
+    'أماكن العمل السابقة',
+    'خبرة تدريس أونلاين؟',
+    'سنوات الخبرة',
+    'لديه خبرة سابقة؟',
+    'منصات التدريس أونلاين',
     'المؤهل الدراسي', 'الجامعة', 'الكلية', 'سنة التخرج', 'التقدير',
     'تاريخ الميلاد', 'الجنس',
-    'رابط الفيديو التعريفي',
     'أكّد صحة البيانات؟', 'موافق على التواصل؟',
-    'تاريخ التقديم'
+    'تاريخ التقديم',
+    'المدينة', 'الدولة'
   ];
 
   const whatsappColIndex = headers.indexOf('واتساب');
@@ -5684,20 +5689,25 @@ function exportTeacherAppsToExcel() {
 
     return [
       i + 1, a.full_name || '',
-      ...subjectCells, a.subject_other || '',
-      arr(a.curricula), a.curriculum_other || '',
+      ...subjectCells,
+      arr(a.curricula),
       arr(a.grades),
-      a.phone || '', waLink ? 'واتساب 💬' : '',
-      a.city || '', a.country || '',
-      yn(a.has_experience), a.years_experience || '', a.previous_workplaces || '',
-      yn(a.has_online_experience), arr(a.online_platforms), a.online_platform_other || '',
-      a.weekly_hours || '', arr(a.available_days), arr(a.available_periods),
       arr(a.equipment),
+      a.phone || '', waLink ? 'واتساب 💬' : '',
+      a.video_url || '',
+      arr(a.available_days),
+      arr(a.available_periods),
+      a.weekly_hours || '',
+      a.previous_workplaces || '',
+      yn(a.has_online_experience),
+      a.years_experience || '',
+      yn(a.has_experience),
+      arr(a.online_platforms),
       a.qualification || '', a.university || '', a.college || '', a.graduation_year || '', a.grade_avg || '',
       dateStr(a.birth_date), a.gender || '',
-      a.video_url || '',
       yn(a.confirmed_accuracy), yn(a.agreed_contact),
-      dateTimeStr(a.created_at)
+      dateTimeStr(a.created_at),
+      a.city || '', a.country || ''
     ];
   });
 
