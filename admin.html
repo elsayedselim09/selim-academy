@@ -9472,5 +9472,30 @@ async function loadCommBadge() {
 
 
 </script>
+<!-- ═══ PAGE VIEW TRACKER ═══ -->
+<script>
+(async () => {
+  try {
+    if (typeof sb === 'undefined' || !sb) return;
+    let sid = sessionStorage.getItem('_vsid');
+    if (!sid) { sid = crypto.randomUUID(); sessionStorage.setItem('_vsid', sid); }
+    const { data: { user } } = await sb.auth.getUser().catch(() => ({ data: { user: null } }));
+    let userType = 'guest', userId = null;
+    if (user) {
+      userId = user.id;
+      const { data: prof } = await sb.from('profiles').select('role,staff_role').eq('id', user.id).maybeSingle();
+      const role = prof?.staff_role === 'admin' ? 'admin' : (prof?.role || 'student');
+      userType = (role === 'admin') ? 'admin' : (role === 'teacher') ? 'teacher' : 'student';
+    }
+    await sb.from('page_views').insert({
+      page: window.location.pathname || '/',
+      referrer: document.referrer || null,
+      session_id: sid,
+      user_id: userId,
+      user_type: userType
+    });
+  } catch(e) {}
+})();
+</script>
 </body>
 </html>
