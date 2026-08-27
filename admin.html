@@ -8035,20 +8035,19 @@ async function filesSave() {
   try {
     if (_pickedFile) {
       document.getElementById('file-upload-prog').style.display = 'block';
-      // Supabase Storage بيرفض أي حروف مش ASCII (زي العربي) في مسار الملف (key)
-      // فبنولّد اسم آمن بالإنجليزي بس، والاسم الأصلي (العربي) بيتخزن منفصل في file_name للعرض
-      const origName = _pickedFile.name;
-      const dotIdx   = origName.lastIndexOf('.');
-      const ext      = dotIdx > -1 ? origName.slice(dotIdx + 1).replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : '';
-      const randPart = Math.random().toString(36).slice(2, 8);
-      const path     = `${Date.now()}_${randPart}${ext ? '.' + ext : ''}`;
-      const { error: upErr } = await sb.storage.from('public-files').upload(path, _pickedFile, { upsert: true });
+      // بنرفع على Google Drive بدل Supabase Storage عشان مفيش حد لحجم الملف
+      // (Supabase Storage على الخطة المجانية بيرفض أي ملف أكبر من 50 ميجا، وده حد
+      // عام على مستوى المشروع مش حاجة قابلة للتعديل من غير ترقية الخطة)
+      const fd = new FormData();
+      fd.append('file', _pickedFile);
+      fd.append('type', 'file');
+      const { data: driveData, error: upErr } = await sb.functions.invoke('upload-to-drive', { body: fd });
       if (upErr) throw upErr;
-      const { data: pub } = sb.storage.from('public-files').getPublicUrl(path);
-      // احذف الملف القديم لو بنستبدل ملف في وضع التعديل
-      if (id && storagePath) { sb.storage.from('public-files').remove([storagePath]).catch(()=>{}); }
-      storagePath = path;
-      url = pub.publicUrl;
+      if (!driveData || !driveData.success) throw new Error((driveData && driveData.error) || 'فشل رفع الملف على Google Drive');
+      // احذف الملف القديم لو بنستبدل ملف في وضع التعديل (سواء كان على Drive أو Supabase Storage القديم)
+      if (id && storagePath) { filesDeleteOldStorage(storagePath); }
+      storagePath = 'drive:' + driveData.fileId;
+      url = driveData.viewUrl;
       fileName = _pickedFile.name;
       fileSize = _pickedFile.size;
     }
@@ -8094,12 +8093,23 @@ async function filesToggleVisible(id, chk) {
   } catch(e) { toast('❌ ' + e.message, 'err'); chk.checked = !chk.checked; }
 }
 
+// بيحذف ملف قديم سواء كان مخزّن على Google Drive (مبدوء بـ "drive:") أو على
+// Supabase Storage القديم (path عادي) — مستخدمة عند الحذف أو استبدال الملف
+function filesDeleteOldStorage(storagePath) {
+  if (!storagePath) return;
+  if (storagePath.startsWith('drive:')) {
+    sb.functions.invoke('delete-drive-file', { body: { fileId: storagePath.slice(6) } }).catch(()=>{});
+  } else {
+    sb.storage.from('public-files').remove([storagePath]).catch(()=>{});
+  }
+}
+
 async function filesDelete(id, title, storagePath) {
   if (!confirm(`هل تريد حذف ملف:\n"${title}"؟`)) return;
   try {
     const { error } = await sb.from('site_files').delete().eq('id', id);
     if (error) throw error;
-    if (storagePath) { sb.storage.from('public-files').remove([storagePath]).catch(()=>{}); }
+    filesDeleteOldStorage(storagePath);
     toast('🗑️ تم حذف الملف');
     filesLoad();
   } catch(e) { toast('❌ ' + e.message, 'err'); }
