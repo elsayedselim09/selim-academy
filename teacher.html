@@ -1327,6 +1327,11 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
     </div>
     <!-- STUDENT LIST VIEW -->
     <div id="stu-list-view">
+      <!-- Subject filter -->
+      <div class="grade-selector-bar" id="stu-subject-bar">
+        <span style="font-size:.82rem;font-weight:700;color:var(--gray)">المادة:</span>
+        <!-- injected -->
+      </div>
       <!-- Grade filter -->
       <div class="grade-selector-bar" id="stu-grade-bar">
         <span style="font-size:.82rem;font-weight:700;color:var(--gray)">الصف:</span>
@@ -1343,6 +1348,12 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
       <div class="section-card">
         <div class="section-head">
           <h3>✅ تسجيل حضور وغياب</h3>
+        </div>
+        <!-- subject filter for attendance -->
+        <div style="padding:14px 22px;border-bottom:1px solid var(--gray-mid)">
+          <div class="grade-selector-bar" id="att-subject-bar" style="margin-bottom:0">
+            <span style="font-size:.82rem;font-weight:700;color:var(--gray)">المادة:</span>
+          </div>
         </div>
         <!-- grade filter for attendance -->
         <div style="padding:14px 22px;border-bottom:1px solid var(--gray-mid)">
@@ -4328,6 +4339,8 @@ let stuData      = [];   // enrollments
 let attRecords   = {};   // { studentId: 'present'|'absent' }
 let curGradeForAtt = null;
 let stuCurrentGrade = 'all';
+let stuCurrentSubject = 'all';
+let attCurrentSubject = 'all';
 
 function switchStuTab(tab) {
   document.querySelectorAll('.stu-tab').forEach(t => t.classList.remove('active'));
@@ -4352,24 +4365,65 @@ async function loadStudents() {
   await loadStudentsList('all');
 }
 
-function buildGradeFilters() {
-  // Collect all grades from subjects
-  const grades = [];
-  ST.subjects.forEach(subj => {
-    (subj.teacher_grades||[]).forEach(g => {
-      if(!grades.find(x => x.id === g.id)) grades.push({ ...g, subj_name: subj.name });
+// الصفوف الخاصة بمادة معينة، أو كل الصفوف (لكل المواد) لو subjectId === 'all'
+function gradesForSubject(subjectId) {
+  if(!subjectId || subjectId === 'all') {
+    const grades = [];
+    ST.subjects.forEach(subj => {
+      (subj.teacher_grades||[]).forEach(g => {
+        if(!grades.find(x => x.id === g.id)) grades.push({ ...g, subj_name: subj.name });
+      });
     });
-  });
+    return grades;
+  }
+  const subj = ST.subjects.find(s => s.id === subjectId);
+  return (subj?.teacher_grades || []).map(g => ({ ...g, subj_name: subj.name }));
+}
 
+function buildGradeFilters() {
+  buildSubjectFilters();
+  buildStuGradeBar();
+  buildAttGradeBar();
+}
+
+function buildSubjectFilters() {
+  const subjBar = document.getElementById('stu-subject-bar');
+  if(subjBar) {
+    subjBar.innerHTML = `<span style="font-size:.82rem;font-weight:700;color:var(--gray)">المادة:</span>
+      <button class="grade-sel-btn ${stuCurrentSubject==='all'?'active':''}" onclick="filterStudentsBySubject('all',this)">📋 الكل</button>` +
+      ST.subjects.map(s => `<button class="grade-sel-btn ${stuCurrentSubject===s.id?'active':''}" onclick="filterStudentsBySubject('${s.id}',this)">${s.name}</button>`).join('');
+  }
+  const attSubjBar = document.getElementById('att-subject-bar');
+  if(attSubjBar) {
+    attSubjBar.innerHTML = `<span style="font-size:.82rem;font-weight:700;color:var(--gray)">المادة:</span>
+      <button class="grade-sel-btn ${attCurrentSubject==='all'?'active':''}" onclick="filterAttBySubject('all',this)">📋 الكل</button>` +
+      ST.subjects.map(s => `<button class="grade-sel-btn ${attCurrentSubject===s.id?'active':''}" onclick="filterAttBySubject('${s.id}',this)">${s.name}</button>`).join('');
+  }
+}
+
+function buildStuGradeBar() {
+  const grades = gradesForSubject(stuCurrentSubject);
   const bar = document.getElementById('stu-grade-bar');
   bar.innerHTML = `<span style="font-size:.82rem;font-weight:700;color:var(--gray)">الصف:</span>
-    <button class="grade-sel-btn active" onclick="filterStudentsByGrade('all',this)">📋 الكل</button>` +
-    grades.map(g => `<button class="grade-sel-btn" onclick="filterStudentsByGrade('${g.id}',this)">${g.name}</button>`).join('');
+    <button class="grade-sel-btn ${stuCurrentGrade==='all'?'active':''}" onclick="filterStudentsByGrade('all',this)">📋 الكل</button>` +
+    grades.map(g => `<button class="grade-sel-btn ${stuCurrentGrade===g.id?'active':''}" onclick="filterStudentsByGrade('${g.id}',this)">${g.name}</button>`).join('');
+}
 
-  // Attendance grade bar
+function buildAttGradeBar() {
+  const grades = gradesForSubject(attCurrentSubject);
   const attBar = document.getElementById('att-grade-bar');
   attBar.innerHTML = `<span style="font-size:.82rem;font-weight:700;color:var(--gray)">الصف:</span>` +
-    grades.map(g => `<button class="grade-sel-btn ${!curGradeForAtt?'':''}${curGradeForAtt===g.id?'active':''}" onclick="selectAttGrade('${g.id}','${g.name}',this)">${g.name}</button>`).join('');
+    grades.map(g => `<button class="grade-sel-btn ${curGradeForAtt===g.id?'active':''}" onclick="selectAttGrade('${g.id}','${g.name}',this)">${g.name}</button>`).join('');
+}
+
+// عند اختيار مادة في قائمة الطلاب: يظهر فقط صفوف هذه المادة
+function filterStudentsBySubject(subjectId, btn) {
+  stuCurrentSubject = subjectId;
+  document.querySelectorAll('#stu-subject-bar .grade-sel-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  stuCurrentGrade = 'all';
+  buildStuGradeBar();
+  loadStudentsList('all');
 }
 
 async function filterStudentsByGrade(gradeId, btn) {
@@ -4892,6 +4946,21 @@ function closeStudentDetail() { document.getElementById('mdl-student').classList
 function initAttendanceView() {
   buildGradeFilters();
   // بناء الشريط بعد تحديد الصف
+}
+
+// عند اختيار مادة في تبويب الحضور والغياب: يظهر فقط صفوف هذه المادة
+function filterAttBySubject(subjectId, btn) {
+  attCurrentSubject = subjectId;
+  document.querySelectorAll('#att-subject-bar .grade-sel-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  curGradeForAtt = null;
+  buildAttGradeBar();
+  // إعادة ضبط عرض الحضور لحد ما يختار صف من المادة الجديدة
+  document.getElementById('att-cal-strip').innerHTML = '';
+  document.getElementById('att-no-session-notice').style.display = 'none';
+  document.getElementById('att-summary').style.display = 'none';
+  document.getElementById('save-att-btn').style.display = 'none';
+  document.getElementById('att-list').innerHTML = '<div class="empty-box"><div class="ei">📋</div><div class="et">اختر الصف أولاً لعرض الطلاب</div></div>';
 }
 
 function selectAttGrade(gradeId, gradeName, btn) {
