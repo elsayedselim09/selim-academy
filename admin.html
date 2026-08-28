@@ -357,9 +357,9 @@ button:disabled{opacity:.6;cursor:not-allowed!important}
 
     <!-- Stats Row 1: Requests -->
     <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
-      <div class="stat-card" style="cursor:pointer" onclick="goTo('requests');setFilter('pending')">
+      <div class="stat-card" style="cursor:pointer" onclick="goTo('requests');setTimeout(()=>document.getElementById('new-students-card')?.scrollIntoView({behavior:'smooth'}),150)">
         <div class="stat-icon si-gold">⏳</div>
-        <div><div class="stat-num" id="s-pending">—</div><div class="stat-label">طلبات اشتراك معلقة</div></div>
+        <div><div class="stat-num" id="s-pending">—</div><div class="stat-label">طلاب بدون اشتراك</div></div>
       </div>
       <div class="stat-card" style="cursor:pointer" onclick="goTo('requests');setFilter('approved')">
         <div class="stat-icon si-green">✅</div>
@@ -2573,7 +2573,11 @@ function refreshStats() {
   const elRejected = document.getElementById('s-rejected');
   const elCourses  = document.getElementById('s-courses');
 
-  if (elPending)  elPending.textContent  = all.filter(r => r.status === 'pending').length;
+  // عدد الطلاب الذين ليس لديهم أي طلب اشتراك (بأي حالة) بعد
+  if (elPending) {
+    const subscribedIds = new Set(all.map(r => r.user_id));
+    elPending.textContent = (S.students || []).filter(s => !subscribedIds.has(s.id)).length;
+  }
   if (elApproved) elApproved.textContent = all.filter(r => r.status === 'approved').length;
   if (elRejected) elRejected.textContent = all.filter(r => r.status === 'rejected').length;
   if (elCourses)  elCourses.textContent  = S.teacherSubjects?.length ?? '—';
@@ -4217,6 +4221,7 @@ async function loadStudents() {
     // تحديث العداد في النظرة العامة بعد اكتمال تحميل الطلاب
     const sEl = document.getElementById('s-students');
     if (sEl) sEl.textContent = S.students.length;
+    refreshStats(); // تحديث عدد "طلاب بدون اشتراك" في النظرة العامة بعد اكتمال تحميل الطلاب
 
     // عدد طلبات الاشتراك لكل طالب + هل هو مشترك فعليًا مع معلم (من teacher_enrollments)
     const sids = S.students.map(s => s.id);
@@ -6492,6 +6497,19 @@ async function deleteSubscription() {
 // MANUAL ENROLLMENT (إضافة اشتراك يدوي)
 // ══════════════════════════════════
 let _meSelectedStudent = null;
+
+// يُستدعى من زر "➕ إضافة اشتراك" في قسم "طلاب جدد بدون اشتراك" بصفحة الطلبات
+async function openStudentMgmt(studentId, fullName) {
+  openManualEnroll();
+  let s = (S.students || []).find(x => x.id === studentId);
+  if (!s) {
+    // لو صفحة الطلاب لسه ما اتحملتش، نجيب بيانات الطالب مباشرة
+    const { data } = await sb.from('profiles').select('id,full_name,phone').eq('id', studentId).maybeSingle();
+    s = data || { id: studentId, full_name: fullName, phone: null };
+    S.students = [...(S.students || []), s];
+  }
+  selectManualStudent(studentId);
+}
 
 function openManualEnroll() {
   _meSelectedStudent = null;
