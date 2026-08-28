@@ -6370,47 +6370,36 @@ async function deleteSubscription() {
           <input type="text" id="me-grade-text-custom" placeholder="اكتب الصف يدوياً..." style="width:100%;padding:9px 13px;border:1.5px solid var(--blue);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;display:none;margin-top:6px">
         </div>
 
-        <!-- المادة (مقفولة حتى يختار الصف) -->
-        <div class="fg" style="margin-bottom:10px">
-          <label style="font-size:.78rem;display:flex;align-items:center;gap:6px">
-            المادة <span style="color:var(--gray);font-weight:400">(اختياري)</span>
-            <span id="me-subject-lock" style="font-size:.7rem;color:var(--gray);background:var(--gray-light);padding:2px 8px;border-radius:50px">🔒 اختر الصف أولاً</span>
-          </label>
-          <select id="me-subject" disabled onchange="handleManualSubjectSelect()" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:#f3f4f6;color:var(--gray);cursor:not-allowed">
-            <option value="">— اختر المادة —</option>
-            <option value="رياضيات">رياضيات</option>
-            <option value="فيزياء">فيزياء</option>
-            <option value="كيمياء">كيمياء</option>
-            <option value="أحياء">أحياء</option>
-            <option value="عربي">لغة عربية</option>
-            <option value="انجليزي">لغة إنجليزية</option>
-            <option value="فرنساوي">لغة فرنسية</option>
-            <option value="تاريخ">تاريخ</option>
-            <option value="جغرافيا">جغرافيا</option>
-            <option value="دراسات اجتماعية">دراسات اجتماعية</option>
-            <option value="علوم">علوم</option>
-            <option value="دين">تربية دينية</option>
-            <option value="حاسب آلي">حاسب آلي</option>
-            <option value="__other__">✏️ كتابة يدوية...</option>
-          </select>
-          <input type="text" id="me-subject-custom" placeholder="اكتب اسم المادة يدوياً..." style="width:100%;padding:9px 13px;border:1.5px solid var(--purple);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;display:none;margin-top:6px">
-        </div>
-
-        <!-- المعلم (مقفول حتى يختار المادة) -->
+        <!-- المعلم ثانياً (مقفول حتى يختار الصف) -->
         <div class="fg" style="margin-bottom:10px">
           <label style="font-size:.78rem;display:flex;align-items:center;gap:6px">
             المعلم *
-            <span id="me-teacher-lock" style="font-size:.7rem;color:var(--gray);background:var(--gray-light);padding:2px 8px;border-radius:50px">🔒 اختر المادة أولاً</span>
+            <span id="me-teacher-lock" style="font-size:.7rem;color:var(--gray);background:var(--gray-light);padding:2px 8px;border-radius:50px">🔒 اختر الصف أولاً</span>
           </label>
-          <select id="me-teacher-sel" disabled onchange="loadManualGrades()" style="width:100%;padding:10px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:#f3f4f6;color:var(--gray);cursor:not-allowed">
+          <select id="me-teacher-sel" disabled onchange="handleManualTeacherSelect()" style="width:100%;padding:10px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:#f3f4f6;color:var(--gray);cursor:not-allowed">
             <option value="">— اختر المعلم —</option>
           </select>
         </div>
 
-        <!-- الصف عند المعلم -->
+        <!-- المادة ثالثاً (مقفولة حتى يختار المعلم — تُعرض مواد هذا المعلم فقط) -->
+        <div class="fg" style="margin-bottom:10px">
+          <label style="font-size:.78rem;display:flex;align-items:center;gap:6px">
+            المادة <span style="color:var(--gray);font-weight:400">(اختياري)</span>
+            <span id="me-subject-lock" style="font-size:.7rem;color:var(--gray);background:var(--gray-light);padding:2px 8px;border-radius:50px">🔒 اختر المعلم أولاً</span>
+          </label>
+          <select id="me-subject" disabled onchange="handleManualSubjectSelect()" style="width:100%;padding:9px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:#f3f4f6;color:var(--gray);cursor:not-allowed">
+            <option value="">— اختر المادة —</option>
+          </select>
+          <input type="text" id="me-subject-custom" placeholder="اكتب اسم المادة يدوياً..." style="width:100%;padding:9px 13px;border:1.5px solid var(--purple);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;display:none;margin-top:6px">
+        </div>
+
+        <!-- الصف عند المعلم لهذه المادة رابعاً -->
         <div class="fg" style="margin-bottom:0">
-          <label style="font-size:.78rem">الصف عند المعلم (اختياري)</label>
-          <select id="me-grade-sel" style="width:100%;padding:10px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:var(--white)">
+          <label style="font-size:.78rem;display:flex;align-items:center;gap:6px">
+            الصف عند المعلم (اختياري)
+            <span id="me-gradesel-lock" style="font-size:.7rem;color:var(--gray);background:var(--gray-light);padding:2px 8px;border-radius:50px">🔒 اختر المادة أولاً</span>
+          </label>
+          <select id="me-grade-sel" disabled style="width:100%;padding:10px 13px;border:1.5px solid var(--gray-mid);border-radius:9px;font-family:'Cairo',sans-serif;font-size:.88rem;outline:none;background:#f3f4f6;color:var(--gray);cursor:not-allowed">
             <option value="">— اختر صف المعلم —</option>
           </select>
         </div>
@@ -6530,19 +6519,15 @@ function openManualEnroll() {
   const currEl = document.getElementById('me-currency');
   if (currEl) currEl.value = 'جنيه مصري';
 
-  // إعادة قفل المادة والمعلم
-  const subjectSel = document.getElementById('me-subject');
-  subjectSel.value = ''; subjectSel.disabled = true;
-  subjectSel.style.background = '#f3f4f6'; subjectSel.style.color = 'var(--gray)'; subjectSel.style.cursor = 'not-allowed';
-  document.getElementById('me-subject-custom').value = '';
-  document.getElementById('me-subject-custom').style.display = 'none';
-  document.getElementById('me-subject-lock').style.display = 'inline';
-
+  // إعادة قفل المعلم والمادة والصف عند المعلم (تسلسل: الصف ← المعلم ← المادة ← الصف عند المعلم)
   const teacherSel = document.getElementById('me-teacher-sel');
-  teacherSel.disabled = true;
+  teacherSel.innerHTML = '<option value="">— اختر المعلم —</option>';
+  teacherSel.value = ''; teacherSel.disabled = true;
   teacherSel.style.background = '#f3f4f6'; teacherSel.style.color = 'var(--gray)'; teacherSel.style.cursor = 'not-allowed';
   document.getElementById('me-teacher-lock').style.display = 'inline';
-  document.getElementById('me-grade-sel').innerHTML = '<option value="">— اختر صف المعلم —</option>';
+
+  lockManualSubject(); // بيقفل كمان "الصف عند المعلم" تلقائيًا
+
   document.getElementById('me-student-list').style.display = 'none';
   document.getElementById('me-student-list').innerHTML = '';
   const selDiv = document.getElementById('me-student-selected');
@@ -6656,11 +6641,10 @@ function clearManualStudent() {
   document.getElementById('me-student-search').value = '';
 }
 
-async function loadManualGrades() {
-  const tid = document.getElementById('me-teacher-sel').value;
+async function loadManualGrades(subjectId) {
   const gSel = document.getElementById('me-grade-sel');
-  if (!tid) { gSel.innerHTML = '<option value="">— اختر صف المعلم —</option>'; return; }
-  const { data: grades } = await sb.from('teacher_grades').select('id,name').eq('teacher_id', tid);
+  if (!subjectId) { gSel.innerHTML = '<option value="">— اختر صف المعلم —</option>'; return; }
+  const { data: grades } = await sb.from('teacher_grades').select('id,name').eq('subject_id', subjectId);
   gSel.innerHTML = '<option value="">— اختر صف —</option>' +
     (grades || []).map(g => `<option value="${g.id}">${g.name}</option>`).join('');
 }
@@ -6689,50 +6673,7 @@ function handleManualGradeSelect() {
     custom.value = '';
   }
 
-  const hasGrade = sel.value !== '' && sel.value !== '__other__'
-                   || (sel.value === '__other__' && custom.value.trim() !== '');
-
-  // فتح أو قفل خانة المادة
-  const subjectSel  = document.getElementById('me-subject');
-  const subjectLock = document.getElementById('me-subject-lock');
-  if (sel.value && sel.value !== '__other__') {
-    subjectSel.disabled = false;
-    subjectSel.style.background = 'var(--white)';
-    subjectSel.style.color = 'var(--dark)';
-    subjectSel.style.cursor = 'pointer';
-    subjectLock.style.display = 'none';
-  } else {
-    subjectSel.disabled = true;
-    subjectSel.value = '';
-    subjectSel.style.background = '#f3f4f6';
-    subjectSel.style.color = 'var(--gray)';
-    subjectSel.style.cursor = 'not-allowed';
-    subjectLock.style.display = 'inline';
-    // إعادة قفل المعلم كذلك
-    const teacherSel = document.getElementById('me-teacher-sel');
-    teacherSel.disabled = true;
-    teacherSel.style.background = '#f3f4f6';
-    teacherSel.style.color = 'var(--gray)';
-    teacherSel.style.cursor = 'not-allowed';
-    document.getElementById('me-teacher-lock').style.display = 'inline';
-    document.getElementById('me-subject-custom').style.display = 'none';
-    document.getElementById('me-subject-custom').value = '';
-  }
-}
-
-function handleManualSubjectSelect() {
-  const sel    = document.getElementById('me-subject');
-  const custom = document.getElementById('me-subject-custom');
-
-  if (sel.value === '__other__') {
-    custom.style.display = 'block';
-    custom.focus();
-  } else {
-    custom.style.display = 'none';
-    custom.value = '';
-  }
-
-  // فتح أو قفل المعلم
+  // فتح أو قفل خانة المعلم
   const teacherSel  = document.getElementById('me-teacher-sel');
   const teacherLock = document.getElementById('me-teacher-lock');
   if (sel.value && sel.value !== '__other__') {
@@ -6748,13 +6689,89 @@ function handleManualSubjectSelect() {
     teacherSel.style.cursor = 'pointer';
     teacherLock.style.display = 'none';
   } else {
+    teacherSel.innerHTML = '<option value="">— اختر المعلم —</option>';
     teacherSel.disabled = true;
-    teacherSel.value = '';
     teacherSel.style.background = '#f3f4f6';
     teacherSel.style.color = 'var(--gray)';
     teacherSel.style.cursor = 'not-allowed';
     teacherLock.style.display = 'inline';
-    document.getElementById('me-grade-sel').innerHTML = '<option value="">— اختر صف المعلم —</option>';
+    // إعادة قفل المادة والصف عند المعلم كذلك
+    lockManualSubject();
+  }
+}
+
+function lockManualSubject() {
+  const subjectSel = document.getElementById('me-subject');
+  subjectSel.innerHTML = '<option value="">— اختر المادة —</option>';
+  subjectSel.disabled = true;
+  subjectSel.value = '';
+  subjectSel.style.background = '#f3f4f6';
+  subjectSel.style.color = 'var(--gray)';
+  subjectSel.style.cursor = 'not-allowed';
+  document.getElementById('me-subject-lock').style.display = 'inline';
+  document.getElementById('me-subject-custom').style.display = 'none';
+  document.getElementById('me-subject-custom').value = '';
+  lockManualGradeSel();
+}
+
+function lockManualGradeSel() {
+  const gSel = document.getElementById('me-grade-sel');
+  gSel.innerHTML = '<option value="">— اختر صف المعلم —</option>';
+  gSel.disabled = true;
+  gSel.style.background = '#f3f4f6';
+  gSel.style.color = 'var(--gray)';
+  gSel.style.cursor = 'not-allowed';
+  document.getElementById('me-gradesel-lock').style.display = 'inline';
+}
+
+async function handleManualTeacherSelect() {
+  const teacherId   = document.getElementById('me-teacher-sel').value;
+  const subjectSel  = document.getElementById('me-subject');
+  const subjectLock = document.getElementById('me-subject-lock');
+
+  if (!teacherId) { lockManualSubject(); return; }
+
+  // تعبئة مواد هذا المعلم فقط
+  const { data: subjects } = await sb.from('teacher_subjects')
+    .select('id,name').eq('teacher_id', teacherId).eq('is_approved', true).order('name');
+  subjectSel.innerHTML = '<option value="">— اختر المادة —</option>' +
+    (subjects || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('') +
+    '<option value="__other__">✏️ كتابة يدوية...</option>';
+  subjectSel.disabled = false;
+  subjectSel.value = '';
+  subjectSel.style.background = 'var(--white)';
+  subjectSel.style.color = 'var(--dark)';
+  subjectSel.style.cursor = 'pointer';
+  subjectLock.style.display = 'none';
+  document.getElementById('me-subject-custom').style.display = 'none';
+  document.getElementById('me-subject-custom').value = '';
+  lockManualGradeSel();
+}
+
+function handleManualSubjectSelect() {
+  const sel    = document.getElementById('me-subject');
+  const custom = document.getElementById('me-subject-custom');
+
+  if (sel.value === '__other__') {
+    custom.style.display = 'block';
+    custom.focus();
+  } else {
+    custom.style.display = 'none';
+    custom.value = '';
+  }
+
+  // فتح أو قفل "الصف عند المعلم" — يعرض صفوف المادة المختارة فقط
+  const gSel  = document.getElementById('me-grade-sel');
+  const gLock = document.getElementById('me-gradesel-lock');
+  if (sel.value && sel.value !== '__other__') {
+    gSel.disabled = false;
+    gSel.style.background = 'var(--white)';
+    gSel.style.color = 'var(--dark)';
+    gSel.style.cursor = 'pointer';
+    gLock.style.display = 'none';
+    loadManualGrades(sel.value);
+  } else {
+    lockManualGradeSel();
   }
 }
 
@@ -6767,9 +6784,12 @@ async function saveManualEnroll() {
   if (!_meSelectedStudent) {
     msgEl.innerHTML = '<div class="msg-err">❌ اختر الطالب أولاً</div>'; return;
   }
-  const subjectSelVal = document.getElementById('me-subject').value;
+  const subjectSelVal = document.getElementById('me-subject').value; // subject_id حقيقي، أو '__other__'، أو فاضي
   const subjectCustom = document.getElementById('me-subject-custom').value.trim();
-  const subject = subjectSelVal === '__other__' ? subjectCustom : subjectSelVal;
+  const subjectId   = (subjectSelVal && subjectSelVal !== '__other__') ? subjectSelVal : null;
+  const subject     = subjectSelVal === '__other__'
+    ? subjectCustom
+    : (subjectId ? (document.getElementById('me-subject').selectedOptions[0]?.text || '') : '');
   const teacherId = document.getElementById('me-teacher-sel').value;
   if (!teacherId) {
     msgEl.innerHTML = '<div class="msg-err">❌ اختر المعلم</div>'; return;
@@ -6830,10 +6850,6 @@ async function saveManualEnroll() {
     if (e1) throw e1;
 
     // 2. إضافة teacher_enrollment
-    const teacherSubRes = await sb.from('teacher_subjects')
-      .select('id').eq('teacher_id', teacherId)
-      .order('created_at', { ascending: false }).limit(1).maybeSingle();
-
     const enrollPayload = {
       teacher_id  : teacherId,
       student_id  : _meSelectedStudent.id,
@@ -6842,7 +6858,15 @@ async function saveManualEnroll() {
       subject_name: subject,
       enrolled_at : new Date().toISOString(),
     };
-    if (teacherSubRes.data?.id) enrollPayload.subject_id = teacherSubRes.data.id;
+    if (subjectId) {
+      enrollPayload.subject_id = subjectId;
+    } else {
+      // مادة كتابة يدوية بدون subject_id حقيقي — نحتاط بآخر مادة مسجلة لهذا المعلم
+      const teacherSubRes = await sb.from('teacher_subjects')
+        .select('id').eq('teacher_id', teacherId)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (teacherSubRes.data?.id) enrollPayload.subject_id = teacherSubRes.data.id;
+    }
 
     const { error: e2 } = await sb.from('teacher_enrollments').insert(enrollPayload);
     if (e2 && !e2.message?.includes('duplicate')) throw e2;
