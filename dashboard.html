@@ -1150,6 +1150,149 @@ async function handleLogout() {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// ARABIC NORMALIZATION & SMART ENROLLMENT MATCHING
+// ══════════════════════════════════════════════════════════════════
+
+function normalizeArabicText(str) {
+  if (!str || typeof str !== 'string') return '';
+  let s = str.toLowerCase();
+  s = s.replace(/[\u064B-\u065F\u0670]/g, ''); // حذف التشكيل
+  s = s.replace(/[إأآا]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ؤئ]/g, 'ء');
+  s = s.replace(/\b(الصف|مادة|كتاب|منهج|اللغه|لغه)\b/g, '');
+  s = s.replace(/\b(اولي|الاولى|الاول)\b/g, '1');
+  s = s.replace(/\b(ثانيه|تانيه|الثانيه|التانيه|الثاني|التاني)\b/g, '2');
+  s = s.replace(/\b(ثالثه|تالثه|تالته|الثالثه|التالثه|التالته|الثالث|التالت)\b/g, '3');
+  s = s.replace(/\b(رابعه|الرابعه|الرابع)\b/g, '4');
+  s = s.replace(/\b(خامسه|الخامسه|الخامس)\b/g, '5');
+  s = s.replace(/\b(سادسه|السادسه|السادس)\b/g, '6');
+  s = s.replace(/\b(ثانويه|ثانوي|الثانويه|الثانوي)\b/g, 'ثانوي');
+  s = s.replace(/\b(اعداديه|اعدادي|الاعداديه|الاعدادي)\b/g, 'اعدادي');
+  s = s.replace(/\b(ابتدائيه|ابتدائي|الابتدائيه|الابتدائي)\b/g, 'ابتدائي');
+  s = s.replace(/\b(متوسطه|متوسط|المتوسطه|المتوسط)\b/g, 'متوسط');
+  s = s.replace(/\b(عربيه|عربي|العربيه|العربي)\b/g, 'عربي');
+  s = s.replace(/\b(انجليزيه|انجليزي|الانجليزيه|الانجليزي)\b/g, 'انجليزي');
+  s = s.replace(/[-_–—()]/g, ' ');
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+function isArabicMatch(s1, s2) {
+  if (!s1 || !s2) return false;
+  if (String(s1).trim() === String(s2).trim()) return true;
+  const n1 = normalizeArabicText(String(s1));
+  const n2 = normalizeArabicText(String(s2));
+  if (!n1 || !n2) return false;
+  return n1 === n2 || n1.includes(n2) || n2.includes(n1);
+}
+
+function buildStudentEnrollments(userId, approvedReqs, teEnr, assignedTeachers) {
+  const list = [];
+  const matchedTeKeys = new Set();
+
+  // 1. معالجة طلبات الاشتراك المقبولة
+  (approvedReqs || []).forEach(r => {
+    let matched = null;
+    
+    // أولوية 1: teacher_id + grade_name مطابق
+    matched = (teEnr || []).find(te =>
+      te.teacher_id === r.assigned_teacher_id &&
+      te.grade_name && r.grade &&
+      isArabicMatch(te.grade_name, r.grade)
+    );
+
+    // أولوية 2: teacher_id + subject_name مطابق
+    if (!matched) {
+      matched = (teEnr || []).find(te =>
+        te.teacher_id === r.assigned_teacher_id &&
+        te.subject_name && r.subject &&
+        isArabicMatch(te.subject_name, r.subject)
+      );
+    }
+
+    // أولوية 3: إذا كان لدى المعلم صف واحد فقط مسجل به الطالب
+    if (!matched && r.assigned_teacher_id) {
+      const teacherEnrs = (teEnr || []).filter(te => te.teacher_id === r.assigned_teacher_id);
+      if (teacherEnrs.length === 1) {
+        matched = teacherEnrs[0];
+      }
+    }
+
+    // أولوية 4: مطابقة عامة بالصف أو المادة
+    if (!matched) {
+      matched = (teEnr || []).find(te =>
+        (te.grade_name && r.grade && isArabicMatch(te.grade_name, r.grade)) ||
+        (te.subject_name && r.subject && isArabicMatch(te.subject_name, r.subject))
+      );
+    }
+
+    if (matched) {
+      matchedTeKeys.add(matched.teacher_id + '::' + (matched.grade_id || matched.subject_name));
+    }
+
+    const finalTeacherId = r.assigned_teacher_id || matched?.teacher_id || null;
+    const finalGradeId   = matched?.grade_id || null;
+    const teacherName    = (finalTeacherId && assignedTeachers[finalTeacherId]?.full_name) ||
+                           (matched?.teacher_id && assignedTeachers[matched.teacher_id]?.full_name) || '';
+
+    list.push({
+      id               : 'req-' + r.id,
+      user_id          : userId,
+      course_id        : r.course_id || null,
+      teacher_id       : finalTeacherId,
+      grade_id         : finalGradeId,
+      grade_name       : matched?.grade_name || r.grade || null,
+      subject_name     : r.subject || matched?.subject_name || 'مادة دراسية',
+      enrolled_at      : r.created_at,
+      progress_pct     : 0,
+      completed_lessons: 0,
+      courses: {
+        name        : r.subject || matched?.subject_name || 'اشتراك مقبول',
+        icon        : '📘',
+        icon_bg     : '#EBF5FF',
+        total_lessons: 0,
+        teacher_name: teacherName,
+      },
+      _request: r,
+    });
+  });
+
+  // 2. إضافة أي تسجيلات من teacher_enrollments لم يتم ربطها بطلب اشتراك (تسجيلات مباشرة)
+  (teEnr || []).forEach(te => {
+    const key = te.teacher_id + '::' + (te.grade_id || te.subject_name);
+    if (!matchedTeKeys.has(key)) {
+      const alreadyInList = list.some(item =>
+        item.teacher_id === te.teacher_id &&
+        ((te.grade_id && item.grade_id === te.grade_id) || (te.subject_name && isArabicMatch(item.courses?.name, te.subject_name)))
+      );
+      if (!alreadyInList) {
+        const teacherName = (te.teacher_id && assignedTeachers[te.teacher_id]?.full_name) || '';
+        list.push({
+          id               : 'te-' + (te.grade_id || '0') + '-' + (te.teacher_id || '0'),
+          user_id          : userId,
+          course_id        : null,
+          teacher_id       : te.teacher_id,
+          grade_id         : te.grade_id || null,
+          grade_name       : te.grade_name || null,
+          subject_name     : te.subject_name || 'مادة دراسية',
+          enrolled_at      : new Date().toISOString(),
+          progress_pct     : 0,
+          completed_lessons: 0,
+          courses: {
+            name        : te.subject_name || 'مادة دراسية',
+            icon        : '📘',
+            icon_bg     : '#EBF5FF',
+            total_lessons: 0,
+            teacher_name: teacherName,
+          },
+          _request: null,
+        });
+      }
+    }
+  });
+
+  return list;
+}
+
+// ══════════════════════════════════════════════════════════════════
 // REFRESH SUBSCRIPTION BALANCE
 // ══════════════════════════════════════════════════════════════════
 async function refreshSubscription() {
@@ -1179,27 +1322,7 @@ async function refreshSubscription() {
     const { data: teEnr } = await sb.from('teacher_enrollments')
       .select('teacher_id,grade_id,subject_name,grade_name').eq('student_id', STATE.user.id);
 
-    STATE.enrollments = (freshReqs||[]).map(r => {
-      const matchedEnr = (teEnr||[]).find(te =>
-        te.teacher_id === r.assigned_teacher_id &&
-        te.grade_name  && r.grade &&
-        te.grade_name.trim() === r.grade.trim()
-      ) || (teEnr||[]).find(te =>
-        te.teacher_id === r.assigned_teacher_id &&
-        te.subject_name === r.subject
-      );
-      return {
-        id: 'req-' + r.id, user_id: STATE.user.id,
-        course_id: r.course_id || null, teacher_id: r.assigned_teacher_id,
-        grade_id: matchedEnr ? matchedEnr.grade_id : null,
-        enrolled_at: r.created_at, progress_pct: 0, completed_lessons: 0,
-        courses: {
-          name: r.subject || 'اشتراك مقبول', icon: '📘', icon_bg: '#EBF5FF',
-          total_lessons: 0, teacher_name: assignedTeachers[r.assigned_teacher_id]?.full_name || '',
-        },
-        _request: r,
-      };
-    });
+    STATE.enrollments = buildStudentEnrollments(STATE.user.id, freshReqs || [], teEnr || [], assignedTeachers);
 
     // ── إعادة فلترة الحصص بناءً على الاشتراكات المحدّثة ──
     STATE.sessions = filterSessionsByActiveSubscriptions(STATE.sessions, freshReqs || [], teEnr || []);
@@ -1252,37 +1375,9 @@ async function fetchAllData(userId) {
     (tProfs || []).forEach(p => { assignedTeachers[p.id] = p; });
   }
 
-  // ── بناء قائمة الكورسات من الطلبات المقبولة (بدون تكرار) ──
+  // ── بناء قائمة الكورسات من الطلبات المقبولة والتسجيلات المباشرة ──
   STATE.approvedReqs = approved;
-  STATE.enrollments  = approved.map(r => {
-    // مطابقة بـ teacher_id + grade_name لتمييز المواد المختلفة لنفس المعلم
-    const matchedEnr = teEnr.find(te =>
-      te.teacher_id === r.assigned_teacher_id &&
-      te.grade_name  && r.grade &&
-      te.grade_name.trim() === r.grade.trim()
-    ) || teEnr.find(te =>
-      te.teacher_id === r.assigned_teacher_id &&
-      te.subject_name === r.subject
-    );
-    return {
-      id               : 'req-' + r.id,
-      user_id          : userId,
-      course_id        : r.course_id || null,
-      teacher_id       : r.assigned_teacher_id,
-      grade_id         : matchedEnr ? matchedEnr.grade_id : null,
-      enrolled_at      : r.created_at,
-      progress_pct     : 0,
-      completed_lessons: 0,
-      courses: {
-        name        : r.subject || 'اشتراك مقبول',
-        icon        : '📘',
-        icon_bg     : '#EBF5FF',
-        total_lessons: 0,
-        teacher_name: assignedTeachers[r.assigned_teacher_id]?.full_name || '',
-      },
-      _request: r,
-    };
-  });
+  STATE.enrollments  = buildStudentEnrollments(userId, approved, teEnr, assignedTeachers);
 
   // ── جلب الحصص من teacher_sessions عبر teacher_enrollments ──
   let teacherSessions = [];
@@ -1347,7 +1442,7 @@ async function fetchAllData(userId) {
  * الاشتراك منتهٍ إذا: sessions_remaining = 0، أو end_date مضى
  */
 function isSubscriptionActive(req) {
-  if (!req) return false;
+  if (!req) return true; // التسجيل المباشر بدون طلب يعتبر نشطاً دائماً
 
   // ── التحقق من الحصص المتبقية ──
   const sessRem = req.sessions_remaining;
@@ -1370,25 +1465,28 @@ function isSubscriptionActive(req) {
  */
 function filterSessionsByActiveSubscriptions(sessions, approvedReqs, teEnr) {
   if (!sessions || !sessions.length) return [];
-  if (!approvedReqs || !approvedReqs.length) return [];
 
-  // جمع teacher_ids النشطة من الاشتراكات المقبولة
+  // جمع teacher_ids النشطة من الاشتراكات المقبولة ومن teacher_enrollments
   const activeTeacherIds = new Set();
-  for (const req of approvedReqs) {
-    if (!isSubscriptionActive(req)) continue;
-    if (req.assigned_teacher_id) activeTeacherIds.add(req.assigned_teacher_id);
-  }
+  (approvedReqs || []).forEach(req => {
+    if (isSubscriptionActive(req) && req.assigned_teacher_id) {
+      activeTeacherIds.add(req.assigned_teacher_id);
+    }
+  });
+  (teEnr || []).forEach(te => {
+    if (te.teacher_id) activeTeacherIds.add(te.teacher_id);
+  });
 
-  // بناء مجموعة grade_ids: كل الصفوف التي الطالب مسجّل فيها عند معلم لديه اشتراك نشط
+  // بناء مجموعة grade_ids: كل الصفوف التي الطالب مسجّل فيها عند معلم نشط
   const activeGradeIds = new Set();
-  for (const te of (teEnr || [])) {
-    if (activeTeacherIds.has(te.teacher_id) && te.grade_id) {
+  (teEnr || []).forEach(te => {
+    if (te.grade_id && (activeTeacherIds.has(te.teacher_id) || activeTeacherIds.size === 0)) {
       activeGradeIds.add(te.grade_id);
     }
-  }
+  });
 
-  // إبقاء الحصص التي grade_id الخاصة بها في القائمة النشطة فقط
-  return sessions.filter(s => activeGradeIds.has(s.grade_id));
+  if (activeGradeIds.size === 0) return sessions;
+  return sessions.filter(s => activeGradeIds.has(s.grade_id) || !s.grade_id);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1727,25 +1825,64 @@ function renderPage() {
 
 // ── SUBJECT MATERIALS LOGIC ───────────────────────────────────────────────
 async function openSubjectMaterials(teacher_id, grade_id, subject_name) {
-  if (!teacher_id || !grade_id || teacher_id === 'null' || grade_id === 'null' || teacher_id === 'undefined' || grade_id === 'undefined') {
-    alert("لا تتوفر بيانات لهذه المادة في الوقت الحالي، قد يكون المعلم لم يضف المحتوى بعد أو لم يتم تعيين الصف.");
+  // محاولة حل teacher_id أو grade_id تلقائياً إذا كانا مفقودين
+  if (!teacher_id || teacher_id === 'null' || teacher_id === 'undefined') {
+    const found = (STATE.enrollments || []).find(e => isArabicMatch(e.courses?.name || e.subject_name, subject_name));
+    if (found?.teacher_id) teacher_id = found.teacher_id;
+  }
+  if (!grade_id || grade_id === 'null' || grade_id === 'undefined') {
+    const found = (STATE.enrollments || []).find(e => e.teacher_id === teacher_id && e.grade_id);
+    if (found?.grade_id) grade_id = found.grade_id;
+  }
+
+  if (!teacher_id || teacher_id === 'null' || teacher_id === 'undefined') {
+    alert("لم يتم تعيين معلم لهذه المادة بعد. يرجى التواصل مع إدارة المنصة.");
     return;
   }
+
+  const validGradeId = (grade_id && grade_id !== 'null' && grade_id !== 'undefined') ? grade_id : null;
   STATE.currentPage = 'subjectMaterials';
-  STATE.currentSubject = { teacher_id, grade_id, subject_name, materials: [] };
+  STATE.currentSubject = { teacher_id, grade_id: validGradeId, subject_name, materials: [] };
   STATE.matTab = 'videos';
   
   // Render immediately to show skeleton/loading state
   renderPage();
   
   try {
-    const { data, error } = await sb.from('teacher_materials')
-      .select('*')
-      .eq('teacher_id', teacher_id)
-      .eq('grade_id', grade_id)
-      .order('created_at', { ascending: false });
-    if(error) throw error;
-    STATE.currentSubject.materials = data || [];
+    let mats = [];
+
+    if (validGradeId) {
+      // 1. محاولة جلب المواد الخاصة بالصف المحدد
+      const { data, error } = await sb.from('teacher_materials')
+        .select('*')
+        .eq('teacher_id', teacher_id)
+        .eq('grade_id', validGradeId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      mats = data || [];
+    }
+
+    // 2. إذا لم توجد مواد بالـ grade_id أو لم يكن هناك grade_id، نجلب كل مواد المعلم ونطابق بمرونة
+    if (mats.length === 0) {
+      const { data: allMats, error: e2 } = await sb.from('teacher_materials')
+        .select('*')
+        .eq('teacher_id', teacher_id)
+        .order('created_at', { ascending: false });
+      if (!e2 && allMats) {
+        mats = allMats.filter(m => {
+          if (validGradeId && m.grade_id === validGradeId) return true;
+          if (subject_name && m.subject_name && isArabicMatch(m.subject_name, subject_name)) return true;
+          if (m.is_free) return true;
+          if (!m.grade_id && !m.subject_name) return true; // عام
+          return false;
+        });
+        if (mats.length === 0 && allMats.length > 0) {
+          mats = allMats;
+        }
+      }
+    }
+
+    STATE.currentSubject.materials = mats;
     renderPage(); // re-render with fetched data
   } catch(e) {
     alert('حدث خطأ أثناء تحميل محتوى المادة: ' + e.message);
@@ -1786,22 +1923,23 @@ function home() {
   const upcoming = ses.filter(s => sessionStatus(s) !== 'ended');
   const totalDone = STATE._totalPresent != null ? STATE._totalPresent : 0;
 
-  // المواد النشطة فقط
+  // المواد النشطة (أو كل المواد المسجل بها الطالب)
   const activeEnr = enr.filter(e => isSubscriptionActive(e._request));
+  const displaySubjects = activeEnr.length > 0 ? activeEnr : enr;
 
   // ── قسم بطاقات الواجبات ──
-  const subjectCardsHTML = activeEnr.length === 0 ? '' : `
+  const subjectCardsHTML = displaySubjects.length === 0 ? '' : `
   <div class="home-subjects-section">
     <div class="home-subjects-header">
       <div class="home-subjects-title">
         ✏️ واجباتي
-        <span class="home-subjects-count">${activeEnr.length}</span>
+        <span class="home-subjects-count">${displaySubjects.length}</span>
       </div>
       <button class="home-subjects-viewall" onclick="goTo('homework')">عرض الكل ←</button>
     </div>
     <div class="home-subjects-scroll">
-      ${activeEnr.map((e, idx) => {
-        const subName = e.courses?.name || e._request?.subject || '—';
+      ${displaySubjects.map((e, idx) => {
+        const subName = e.courses?.name || e._request?.subject || e.subject_name || '—';
         const teacher = e.courses?.teacher_name || e.teacher_name || '';
         const tid     = e.teacher_id || '';
         const gid     = e.grade_id   || '';
@@ -3085,19 +3223,20 @@ function starsHTML(stars, big) {
 function homework() {
   const enr    = STATE.enrollments || [];
   const active = enr.filter(e => isSubscriptionActive(e._request));
+  const displaySubjects = active.length > 0 ? active : enr;
 
   return `
     <div class="page-title">واجباتي ✏️</div>
     <p class="page-sub">اختر مادة لعرض واجباتها وتمارينها</p>
-    ${active.length === 0 ? `
+    ${displaySubjects.length === 0 ? `
       <div class="empty-box" style="margin-top:40px">
         <div class="ei">✏️</div>
-        <div class="et">لا توجد مواد نشطة</div>
+        <div class="et">لا توجد مواد دراسية</div>
         <div class="ed">اشترك في مادة أولاً لتظهر هنا واجباتها</div>
       </div>` : `
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:16px;margin-top:4px">
-      ${active.map((e, idx) => {
-        const subName = e.courses?.name || e._request?.subject || '—';
+      ${displaySubjects.map((e, idx) => {
+        const subName = e.courses?.name || e._request?.subject || e.subject_name || '—';
         const teacher = e.courses?.teacher_name || e.teacher_name || '';
         const tid     = e.teacher_id || '';
         const gid     = e.grade_id   || '';
@@ -3286,14 +3425,44 @@ async function loadHomeworkSubjectData() {
   if (!subj) return;
 
   try {
-    // 1. جلب الوحدات (نبحث بـ teacher_id + grade_id فقط لأن subject_name قد يختلف بين التسجيل والواجب)
-    const { data: units, error: uErr } = await sb
-      .from('homework_units')
-      .select('id, title, order_index, subject_name, mode, pdf_type, media_url')
-      .eq('teacher_id', subj.teacher_id)
-      .eq('grade_id', subj.grade_id)
-      .order('order_index', { ascending: true });
-    if (uErr) throw uErr;
+    // محاولة إيجاد grade_id إذا لم يكن موجوداً
+    let gradeId = (subj.grade_id && subj.grade_id !== 'null' && subj.grade_id !== 'undefined') ? subj.grade_id : null;
+    if (!gradeId) {
+      const found = (STATE.enrollments || []).find(e => e.teacher_id === subj.teacher_id && e.grade_id);
+      if (found?.grade_id) gradeId = found.grade_id;
+    }
+
+    let units = [];
+    if (gradeId) {
+      // 1. جلب الوحدات بالـ grade_id
+      const { data, error } = await sb
+        .from('homework_units')
+        .select('id, title, order_index, subject_name, mode, pdf_type, media_url, grade_id')
+        .eq('teacher_id', subj.teacher_id)
+        .eq('grade_id', gradeId)
+        .order('order_index', { ascending: true });
+      if (!error && data) units = data;
+    }
+
+    // 2. إذا لم توجد وحدات بالصف، نبحث بـ teacher_id ونطابق اسم المادة أو نجلب كل وحدات المعلم
+    if (units.length === 0) {
+      const { data: allUnits, error: aErr } = await sb
+        .from('homework_units')
+        .select('id, title, order_index, subject_name, mode, pdf_type, media_url, grade_id')
+        .eq('teacher_id', subj.teacher_id)
+        .order('order_index', { ascending: true });
+      if (!aErr && allUnits) {
+        units = allUnits.filter(u => {
+          if (gradeId && u.grade_id === gradeId) return true;
+          if (subj.subject_name && u.subject_name && isArabicMatch(u.subject_name, subj.subject_name)) return true;
+          if (!u.grade_id) return true;
+          return false;
+        });
+        if (units.length === 0 && allUnits.length > 0) {
+          units = allUnits;
+        }
+      }
+    }
 
     if (!units || units.length === 0) {
       STATE.hwUnits = [];
@@ -3349,7 +3518,7 @@ async function loadHomeworkSubjectData() {
       essayAnswer: essayAnswersMap[u.id] || null,
     }));
 
-    // 5. إعادة رسم المحتوى
+    // 6. إعادة رسم المحتوى
     const c = document.getElementById('hw-units-container');
     if (c) {
       const tmp = document.createElement('div');
