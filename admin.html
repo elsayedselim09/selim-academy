@@ -7,6 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @keyframes spin   { to{transform:rotate(360deg)} }
@@ -4337,102 +4339,98 @@ function filterStudents(q) {
   renderStudentsTable(filtered, rm, approvedReqMap, realEnrollMap);
 }
 
-function downloadStudentCard(studentId) {
+async function downloadStudentCard(studentId) {
   const s = (S.students || []).find(x => x.id === studentId);
   if (!s) { toast('تعذر إيجاد بيانات الطالب', 'err'); return; }
+  if (typeof html2canvas === 'undefined') { toast('تعذر تحميل مكتبة إنشاء الصورة، تأكد من الاتصال بالإنترنت', 'err'); return; }
 
-  const W = 900, H = 540;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
+  toast('جاري تجهيز البطاقة...', 'ok');
 
   const NAVY = '#072A54', GOLD = '#C99A44';
+  const ICONS = {
+    user: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="'+GOLD+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
+    mail: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="'+GOLD+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+    idcard: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="'+GOLD+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M13 10h6M13 14h4"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="'+GOLD+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
+    shield: '<svg viewBox="0 0 24 24" width="46" height="46" fill="'+NAVY+'" stroke="'+GOLD+'" stroke-width="1.5"><path d="M12 2l8 3.5v6c0 5-3.4 8.7-8 10.5C7.4 20.2 4 16.5 4 11.5v-6L12 2z"/></svg>'
+  };
 
-  // خلفية
-  ctx.fillStyle = NAVY;
-  ctx.fillRect(0, 0, W, H);
+  const row = (icon, label, value) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 6px;border-bottom:1px solid #EEF1F6">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:54px;height:54px;border-radius:14px;background:${NAVY};display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon}</div>
+        <div style="background:#EEF3FB;color:${NAVY};font-weight:700;font-size:16px;padding:10px 18px;border-radius:10px;white-space:nowrap">${label}</div>
+      </div>
+      <div style="font-weight:900;font-size:22px;color:${NAVY};text-align:left;word-break:break-word">${value}</div>
+    </div>`;
 
-  // شريط ذهبي علوي
-  ctx.fillStyle = GOLD;
-  ctx.fillRect(0, 0, W, 10);
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;top:-99999px;left:-99999px;width:1000px;direction:rtl;font-family:"Cairo",sans-serif;';
+  wrap.innerHTML = `
+    <div style="position:relative;width:1000px;background:linear-gradient(160deg,#F7F9FD,#EEF2F9);padding:50px 46px;overflow:hidden;border:1px solid #E3E8F2">
+      <div style="position:absolute;top:0;left:0;width:180px;height:180px;background:${NAVY};border-radius:0 0 180px 0"></div>
+      <div style="position:absolute;bottom:0;right:0;width:120px;height:120px;background:${GOLD};opacity:.15;border-radius:120px 0 0 0"></div>
 
-  // اسم المنصة
-  ctx.textAlign = 'center';
-  ctx.fillStyle = GOLD;
-  ctx.font = "700 30px 'Cairo', sans-serif";
-  ctx.fillText('أكاديمية سليم', W / 2, 72);
-  ctx.fillStyle = '#EDEDED';
-  ctx.font = "400 16px 'Cairo', sans-serif";
-  ctx.fillText('بطاقة الحساب الرسمية', W / 2, 100);
+      <div style="position:relative;text-align:center;margin-bottom:8px">
+        <div style="font-size:46px;font-weight:900;color:${NAVY};line-height:1">سليم</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:2px">
+          <span style="display:inline-block;width:34px;height:2px;background:${GOLD}"></span>
+          <span style="font-size:20px;font-weight:700;color:${GOLD}">أكاديمية</span>
+          <span style="display:inline-block;width:34px;height:2px;background:${GOLD}"></span>
+        </div>
+      </div>
 
-  // خط فاصل
-  ctx.strokeStyle = 'rgba(201,154,68,0.4)';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(60, 122); ctx.lineTo(W - 60, 122); ctx.stroke();
+      <div style="position:relative;text-align:center;margin:22px 0 14px">
+        <div style="font-size:34px;font-weight:900;color:${NAVY}">✦ بيانات حسابك ✦</div>
+      </div>
 
-  // دائرة أفاتار بالأحرف الأولى
-  const cx = W / 2, cy = 200, r = 55;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = GOLD;
-  ctx.fill();
-  ctx.fillStyle = NAVY;
-  ctx.font = "700 42px 'Cairo', sans-serif";
-  ctx.textBaseline = 'middle';
-  ctx.fillText(ini(s.full_name), cx, cy + 3);
-  ctx.textBaseline = 'alphabetic';
+      <div style="text-align:center;margin-bottom:26px">
+        <span style="display:inline-flex;align-items:center;gap:8px;background:${GOLD};color:#fff;font-weight:700;font-size:15px;padding:9px 22px;border-radius:30px">🔒 احتفظ بها في مكان آمن</span>
+      </div>
 
-  // اسم الطالب
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = "700 26px 'Cairo', sans-serif";
-  ctx.fillText(s.full_name || '—', W / 2, 288);
+      <div style="position:relative;background:#fff;border-radius:20px;padding:10px 26px;box-shadow:0 10px 30px rgba(7,42,84,.08)">
+        ${row(ICONS.user, 'اسم الطالب', s.full_name || '—')}
+        ${row(ICONS.mail, 'البريد الإلكتروني', s.email || '—')}
+        ${row(ICONS.idcard, 'رقم الطالب', s.student_number || '—')}
+        ${row(ICONS.lock, 'الرقم السري الاحتياطي', s.backup_password || '—')}
+      </div>
 
-  // رقم الطالب كشارة
-  ctx.font = "700 15px 'Cairo', sans-serif";
-  const numText = '🪪 رقم الطالب: ' + (s.student_number || '—');
-  const numW = ctx.measureText(numText).width + 32;
-  ctx.fillStyle = 'rgba(201,154,68,0.15)';
-  roundRect(ctx, W / 2 - numW / 2, 305, numW, 34, 17);
-  ctx.fill();
-  ctx.strokeStyle = GOLD; ctx.lineWidth = 1;
-  roundRect(ctx, W / 2 - numW / 2, 305, numW, 34, 17);
-  ctx.stroke();
-  ctx.fillStyle = GOLD;
-  ctx.fillText(numText, W / 2, 327);
+      <div style="position:relative;display:flex;align-items:center;gap:20px;background:#EAF0FB;border-radius:18px;padding:22px 26px;margin-top:26px">
+        <div style="flex-shrink:0">${ICONS.shield}</div>
+        <div style="flex:1">
+          <div style="font-weight:900;color:${NAVY};font-size:17px;margin-bottom:4px">تذكّر دائمًا:</div>
+          <div style="color:${NAVY};font-size:14px;line-height:1.9">في حال نسيان كلمة المرور، يمكنك استخدام <b style="color:${GOLD}">الرقم السري الاحتياطي</b> أو رقم الطالب لتسجيل الدخول.</div>
+        </div>
+        <div style="flex-shrink:0;text-align:center">
+          <div style="background:${GOLD};color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:6px;white-space:nowrap">امسح للوصول إلى المنصة</div>
+          <div id="sc-qr-box" style="width:100px;height:100px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:6px"></div>
+          <div style="font-size:11px;color:${NAVY};margin-top:6px">🌐 selimacademy.com</div>
+        </div>
+      </div>
 
-  // بيانات إضافية (الهاتف + الرقم الاحتياطي) في صفين
-  const rowY = 400, gap = 130;
-  drawField(ctx, W / 2 - gap, rowY, '📱 الهاتف', s.phone || '—');
-  drawField(ctx, W / 2 + gap, rowY, '🔑 الرقم الاحتياطي', s.backup_password || '—');
+      <div style="position:relative;text-align:center;background:${NAVY};color:${GOLD};font-weight:700;font-size:15px;border-radius:14px;padding:14px;margin-top:26px">
+        هدفنا أن لا تفقد الوصول إلى حسابك أبدًا 💛
+      </div>
+    </div>`;
 
-  // تذييل
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  ctx.font = "400 13px 'Cairo', sans-serif";
-  ctx.fillText('selimacademy.com', W / 2, H - 24);
+  document.body.appendChild(wrap);
 
-  function roundRect(ctx, x, y, w, h, rad) {
-    ctx.beginPath();
-    ctx.moveTo(x + rad, y);
-    ctx.arcTo(x + w, y, x + w, y + h, rad);
-    ctx.arcTo(x + w, y + h, x, y + h, rad);
-    ctx.arcTo(x, y + h, x, y, rad);
-    ctx.arcTo(x, y, x + w, y, rad);
-    ctx.closePath();
+  try {
+    if (typeof QRCode !== 'undefined') {
+      const qrDataUrl = await QRCode.toDataURL('https://selimacademy.com', { width: 200, margin: 0, color: { dark: NAVY, light: '#FFFFFF' } });
+      wrap.querySelector('#sc-qr-box').innerHTML = `<img src="${qrDataUrl}" style="width:100%;height:100%;object-fit:contain">`;
+    }
+
+    const canvas = await html2canvas(wrap.firstElementChild, { scale: 2, backgroundColor: '#F7F9FD', useCORS: true });
+    const link = document.createElement('a');
+    link.download = 'بطاقة-' + (s.full_name || 'طالب').replace(/\s+/g, '-') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (e) {
+    toast('فشل إنشاء البطاقة: ' + e.message, 'err');
+  } finally {
+    document.body.removeChild(wrap);
   }
-  function drawField(ctx, x, y, label, value) {
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.font = "400 13px 'Cairo', sans-serif";
-    ctx.fillText(label, x, y);
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = "700 18px 'Cairo', sans-serif";
-    ctx.fillText(value, x, y + 26);
-  }
-
-  const link = document.createElement('a');
-  link.download = 'بطاقة-' + (s.full_name || 'طالب').replace(/\s+/g, '-') + '.png';
-  link.href = canvas.toDataURL('image/png');
-  link.click();
 }
 
 async function openStudentDetail(studentId) {
