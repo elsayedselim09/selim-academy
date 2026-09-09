@@ -4337,6 +4337,104 @@ function filterStudents(q) {
   renderStudentsTable(filtered, rm, approvedReqMap, realEnrollMap);
 }
 
+function downloadStudentCard(studentId) {
+  const s = (S.students || []).find(x => x.id === studentId);
+  if (!s) { toast('تعذر إيجاد بيانات الطالب', 'err'); return; }
+
+  const W = 900, H = 540;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const NAVY = '#072A54', GOLD = '#C99A44';
+
+  // خلفية
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, 0, W, H);
+
+  // شريط ذهبي علوي
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(0, 0, W, 10);
+
+  // اسم المنصة
+  ctx.textAlign = 'center';
+  ctx.fillStyle = GOLD;
+  ctx.font = "700 30px 'Cairo', sans-serif";
+  ctx.fillText('أكاديمية سليم', W / 2, 72);
+  ctx.fillStyle = '#EDEDED';
+  ctx.font = "400 16px 'Cairo', sans-serif";
+  ctx.fillText('بطاقة الحساب الرسمية', W / 2, 100);
+
+  // خط فاصل
+  ctx.strokeStyle = 'rgba(201,154,68,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(60, 122); ctx.lineTo(W - 60, 122); ctx.stroke();
+
+  // دائرة أفاتار بالأحرف الأولى
+  const cx = W / 2, cy = 200, r = 55;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = GOLD;
+  ctx.fill();
+  ctx.fillStyle = NAVY;
+  ctx.font = "700 42px 'Cairo', sans-serif";
+  ctx.textBaseline = 'middle';
+  ctx.fillText(ini(s.full_name), cx, cy + 3);
+  ctx.textBaseline = 'alphabetic';
+
+  // اسم الطالب
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = "700 26px 'Cairo', sans-serif";
+  ctx.fillText(s.full_name || '—', W / 2, 288);
+
+  // رقم الطالب كشارة
+  ctx.font = "700 15px 'Cairo', sans-serif";
+  const numText = '🪪 رقم الطالب: ' + (s.student_number || '—');
+  const numW = ctx.measureText(numText).width + 32;
+  ctx.fillStyle = 'rgba(201,154,68,0.15)';
+  roundRect(ctx, W / 2 - numW / 2, 305, numW, 34, 17);
+  ctx.fill();
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 1;
+  roundRect(ctx, W / 2 - numW / 2, 305, numW, 34, 17);
+  ctx.stroke();
+  ctx.fillStyle = GOLD;
+  ctx.fillText(numText, W / 2, 327);
+
+  // بيانات إضافية (الهاتف + الرقم الاحتياطي) في صفين
+  const rowY = 400, gap = 130;
+  drawField(ctx, W / 2 - gap, rowY, '📱 الهاتف', s.phone || '—');
+  drawField(ctx, W / 2 + gap, rowY, '🔑 الرقم الاحتياطي', s.backup_password || '—');
+
+  // تذييل
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.font = "400 13px 'Cairo', sans-serif";
+  ctx.fillText('selimacademy.com', W / 2, H - 24);
+
+  function roundRect(ctx, x, y, w, h, rad) {
+    ctx.beginPath();
+    ctx.moveTo(x + rad, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rad);
+    ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad);
+    ctx.arcTo(x, y, x + w, y, rad);
+    ctx.closePath();
+  }
+  function drawField(ctx, x, y, label, value) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = "400 13px 'Cairo', sans-serif";
+    ctx.fillText(label, x, y);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = "700 18px 'Cairo', sans-serif";
+    ctx.fillText(value, x, y + 26);
+  }
+
+  const link = document.createElement('a');
+  link.download = 'بطاقة-' + (s.full_name || 'طالب').replace(/\s+/g, '-') + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
 async function openStudentDetail(studentId) {
   const s = S.students.find(x => x.id === studentId);
   if(!s) return;
