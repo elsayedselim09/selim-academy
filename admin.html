@@ -4343,23 +4343,47 @@ async function downloadStudentCard(studentId) {
 
   toast('جاري إنشاء البطاقة...', 'ok');
   try {
-    const { data, error } = await sb.functions.invoke('generate-card', {
-      body: {
-        fullName: s.full_name || '—',
-        email: s.email || '—',
-        idNumber: s.student_number || '—',
-        backupPassword: s.backup_password || '—'
-      }
-    });
-    if (error) throw error;
+    // نفس تصميم البطاقة الأصلي (صورة ثابتة مخزّنة في Supabase Storage)
+    const TEMPLATE_URL = 'https://hjhoudwknwnxfndrgpfe.supabase.co/storage/v1/object/public/assets/card-template.png';
 
-    const blob = data instanceof Blob ? data : new Blob([data], { type: 'image/png' });
-    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error('تعذر تحميل تصميم البطاقة'));
+      img.src = TEMPLATE_URL;
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+
+    // نفس مواضع الحقول المستخدمة أصلاً في دالة توليد البطاقة (generate-card)
+    const ROWS = [
+      { value: s.full_name || '—',      top: 449, bot: 586, fontSize: 52 },
+      { value: s.email || '—',          top: 586, bot: 723, fontSize: 36 },
+      { value: s.student_number || '—', top: 723, bot: 860, fontSize: 50 },
+      { value: s.backup_password || '—',top: 860, bot: 997, fontSize: 50 }
+    ];
+    const VALUE_X_START = 540, VALUE_X_END = 1052;
+
+    ctx.direction = 'rtl';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#1B2D5B';
+
+    ROWS.forEach(row => {
+      const midY = (row.top + row.bot) / 2;
+      ctx.font = "700 " + row.fontSize + "px 'Cairo', sans-serif";
+      ctx.fillText(row.value, VALUE_X_END - 20, midY, VALUE_X_END - VALUE_X_START - 30);
+    });
+
     const link = document.createElement('a');
-    link.href = url;
     link.download = 'selim-card-' + (s.full_name || 'طالب').replace(/\s+/g, '-') + '.png';
+    link.href = canvas.toDataURL('image/png');
     link.click();
-    URL.revokeObjectURL(url);
   } catch (e) {
     toast('فشل إنشاء البطاقة: ' + (e.message || e), 'err');
   }
