@@ -4441,7 +4441,13 @@ async function loadStudentsList(gradeId) {
     let q = sb.from('teacher_enrollments')
       .select('*')
       .eq('teacher_id', ST.user.id);
-    if(gradeId && gradeId !== 'all') q = q.eq('grade_id', gradeId);
+    if(gradeId && gradeId !== 'all') {
+      q = q.eq('grade_id', gradeId);
+    } else if(stuCurrentSubject && stuCurrentSubject !== 'all') {
+      // مادة محددة + "كل الصفوف": اعرض طلاب صفوف هذه المادة فقط
+      const subjGradeIds = gradesForSubject(stuCurrentSubject).map(g => g.id);
+      q = q.in('grade_id', subjGradeIds.length ? subjGradeIds : ['00000000-0000-0000-0000-000000000000']);
+    }
     const { data, error } = await q.order('enrolled_at',{ascending:false});
     if(error) throw error;
     stuData = data || [];
