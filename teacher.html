@@ -1876,6 +1876,7 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
           <option value="single">يوم واحد / لمرة واحدة</option>
           <option value="multidate">أكثر من يوم (بدون تكرار)</option>
           <option value="recurring" selected>متكررة طوال الشهر (4 أسابيع)</option>
+          <option value="daterange">أيام محددة بين تاريخ بداية ونهاية (بدون تكرار)</option>
         </select>
       </div>
       <div class="fg">
@@ -1901,6 +1902,18 @@ body { font-family:'Cairo',sans-serif; background:#F1F5F9; color:var(--dark); di
         ➕ إضافة تاريخ آخر
       </button>
       <div style="font-size:.74rem;color:var(--gray);margin-top:4px">💡 كل تاريخ سيُنشئ حصة مستقلة بدون تكرار</div>
+    </div>
+
+    <!-- أيام محددة بين تاريخ بداية ونهاية -->
+    <div class="fg-row" id="sess-range-dates-div" style="display:none">
+      <div class="fg">
+        <label>تاريخ البداية *</label>
+        <input type="date" id="sess-range-start" style="direction:ltr">
+      </div>
+      <div class="fg">
+        <label>تاريخ النهاية *</label>
+        <input type="date" id="sess-range-end" style="direction:ltr">
+      </div>
     </div>
 
     <!-- متكررة -->
@@ -4021,7 +4034,8 @@ function toggleSessType() {
   const type = document.getElementById('sess-type').value;
   document.getElementById('sess-single-date-div').style.display    = type === 'single'    ? 'block' : 'none';
   document.getElementById('sess-multidate-div').style.display      = type === 'multidate' ? 'block' : 'none';
-  document.getElementById('sess-recurring-days-div').style.display = type === 'recurring' ? 'block' : 'none';
+  document.getElementById('sess-recurring-days-div').style.display = (type === 'recurring' || type === 'daterange') ? 'block' : 'none';
+  document.getElementById('sess-range-dates-div').style.display    = type === 'daterange' ? 'grid' : 'none';
   // إذا اخترنا أكثر من يوم وكان الحاوية فارغة، أضف تاريخاً واحداً افتراضياً
   if (type === 'multidate') {
     const cont = document.getElementById('multidate-container');
@@ -4104,6 +4118,8 @@ function openSessionModal(id) {
     document.getElementById('sess-type').value = 'recurring';
     document.getElementById('sess-date').value = '';
     document.getElementById('sess-time').value = '';
+    document.getElementById('sess-range-start').value = '';
+    document.getElementById('sess-range-end').value = '';
     document.querySelectorAll('.sess-day-cb').forEach(cb => cb.checked = false);
   }
   // Reset extra grades & multidate
@@ -4227,6 +4243,30 @@ async function saveSession() {
     // تحقق من عدم التكرار
     const unique = [...new Set(targetDates.map(d => d.toDateString()))];
     if (unique.length !== targetDates.length) { setMsg('sess-mdl-msg','لا يمكن تكرار نفس التاريخ','err'); return; }
+  } else if (type === 'daterange') {
+    // أيام محددة من الأسبوع بين تاريخ بداية وتاريخ نهاية
+    const startVal = document.getElementById('sess-range-start').value;
+    const endVal   = document.getElementById('sess-range-end').value;
+    const checkedDays = Array.from(document.querySelectorAll('.sess-day-cb:checked')).map(cb => parseInt(cb.value));
+    if (!startVal || !endVal) { setMsg('sess-mdl-msg','تاريخ البداية وتاريخ النهاية مطلوبان','err'); return; }
+    if (checkedDays.length === 0) { setMsg('sess-mdl-msg','الرجاء اختيار يوم واحد على الأقل','err'); return; }
+
+    const startD = new Date(startVal + 'T00:00:00');
+    const endD   = new Date(endVal   + 'T00:00:00');
+    if (endD < startD) { setMsg('sess-mdl-msg','تاريخ النهاية يجب أن يكون بعد تاريخ البداية','err'); return; }
+    const spanDays = Math.round((endD - startD) / 86400000) + 1;
+    if (spanDays > 180) { setMsg('sess-mdl-msg','الفترة طويلة جداً — الحد الأقصى 180 يوماً','err'); return; }
+
+    const timeParts = time.split(':');
+    for (let i = 0; i < spanDays; i++) {
+      const d = new Date(startD);
+      d.setDate(startD.getDate() + i);
+      if (checkedDays.includes(d.getDay())) {
+        d.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0, 0);
+        targetDates.push(d);
+      }
+    }
+    if (!targetDates.length) { setMsg('sess-mdl-msg','لا توجد أيام مطابقة للأيام المختارة داخل هذه الفترة','err'); return; }
   } else {
     // Recurring
     const checkedDays = Array.from(document.querySelectorAll('.sess-day-cb:checked')).map(cb => parseInt(cb.value));
