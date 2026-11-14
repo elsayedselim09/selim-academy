@@ -1192,11 +1192,11 @@ function buildStudentEnrollments(userId, approvedReqs, teEnr, assignedTeachers) 
   (approvedReqs || []).forEach(r => {
     let matched = null;
     
-    // أولوية 1: teacher_id + grade_name مطابق
+    // أولوية 1: teacher_id + المادة + الصف معاً (الأدق — يفرّق بين مادتين في نفس الصف)
     matched = (teEnr || []).find(te =>
       te.teacher_id === r.assigned_teacher_id &&
-      te.grade_name && r.grade &&
-      isArabicMatch(te.grade_name, r.grade)
+      te.subject_name && r.subject && isArabicMatch(te.subject_name, r.subject) &&
+      te.grade_name && r.grade && isArabicMatch(te.grade_name, r.grade)
     );
 
     // أولوية 2: teacher_id + subject_name مطابق
@@ -1206,6 +1206,16 @@ function buildStudentEnrollments(userId, approvedReqs, teEnr, assignedTeachers) 
         te.subject_name && r.subject &&
         isArabicMatch(te.subject_name, r.subject)
       );
+    }
+
+    // أولوية 2.5: teacher_id + grade_name — فقط لو الصف يخص تسجيلاً واحداً (لتجنّب الخلط بين مادتين في نفس الصف)
+    if (!matched) {
+      const byGrade = (teEnr || []).filter(te =>
+        te.teacher_id === r.assigned_teacher_id &&
+        te.grade_name && r.grade &&
+        isArabicMatch(te.grade_name, r.grade)
+      );
+      if (byGrade.length === 1) matched = byGrade[0];
     }
 
     // أولوية 3: إذا كان لدى المعلم صف واحد فقط مسجل به الطالب
@@ -1394,11 +1404,15 @@ async function fetchAllData(userId) {
 
     // جلب الحصص المرتبطة بصفوف الطالب
     if (gradeIds.length) {
-      const { data: tsess } = await sb.from('teacher_sessions')
-        .select('*')
-        .in('grade_id', gradeIds)
-        .order('scheduled_at', { ascending: true })
-        .limit(50);
+      // الحصص القادمة/الجارية (كلها) + آخر 30 حصة منتهية — حتى لا تدفع الحصص القديمة الحصص الجديدة خارج الحد
+      const _nowIso = new Date().toISOString();
+      const [_upRes, _pastRes] = await Promise.all([
+        sb.from('teacher_sessions').select('*').in('grade_id', gradeIds)
+          .gte('scheduled_at', _nowIso).order('scheduled_at', { ascending: true }).limit(300),
+        sb.from('teacher_sessions').select('*').in('grade_id', gradeIds)
+          .lt('scheduled_at', _nowIso).order('scheduled_at', { ascending: false }).limit(30),
+      ]);
+      const tsess = [...(_pastRes.data || []).reverse(), ...(_upRes.data || [])];
       teacherSessions = (tsess || [])
         .filter(s => {
           if (s.student_ids && s.student_ids.length > 0) {
